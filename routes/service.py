@@ -552,7 +552,13 @@ def create_request():
 @login_required
 @utils.permission_required(SystemPermissions.VIEW_SERVICE)
 def view_request(rid):
-    service=_get_or_404(ServiceRequest, rid, load_options=[joinedload(ServiceRequest.customer), joinedload(ServiceRequest.parts).joinedload(ServicePart.part), joinedload(ServiceRequest.parts).joinedload(ServicePart.warehouse), joinedload(ServiceRequest.tasks)])
+    current_app.logger.info(f"🔍 view_request called with rid={rid}")
+    try:
+        service=_get_or_404(ServiceRequest, rid, load_options=[joinedload(ServiceRequest.customer), joinedload(ServiceRequest.parts).joinedload(ServicePart.part), joinedload(ServiceRequest.parts).joinedload(ServicePart.warehouse), joinedload(ServiceRequest.tasks)])
+        current_app.logger.info(f"✅ Service found: {service.id}, {service.service_number}")
+    except Exception as e:
+        current_app.logger.error(f"❌ Error getting service {rid}: {e}")
+        abort(404)
     warehouses=Warehouse.query.order_by(Warehouse.name.asc()).all()
     
     try:

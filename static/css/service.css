@@ -475,3 +475,42 @@
     font-size: 10pt;
   }
 }
+
+/* ========== إصلاح أزرار الجدول - Table Action Buttons Fix ========== */
+.table .btn-group .btn-outline-primary {
+  color: #0d6efd !important;
+  border-color: #0d6efd !important;
+  background-color: #fff !important;
+}
+
+.table .btn-group .btn-outline-primary:hover {
+  color: #fff !important;
+  background-color: #0d6efd !important;
+}
+
+.table .btn-group .btn-outline-success {
+  color: #198754 !important;
+  border-color: #198754 !important;
+  background-color: #fff !important;
+}
+
+.table .btn-group .btn-outline-success:hover {
+  color: #fff !important;
+  background-color: #198754 !important;
+}
+
+.table .btn-group .btn-outline-danger {
+  color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  background-color: #fff !important;
+}
+
+.table .btn-group .btn-outline-danger:hover {
+  color: #fff !important;
+  background-color: #dc3545 !important;
+}
+
+/* تأكد من ظهور الأيقونات */
+.table .btn-group .btn i {
+  color: inherit !important;
+}

@@ -101,7 +101,10 @@ def _get_or_404(model, ident, *, load_options=None, pk_name: str = "id"):
             if load_options:
                 stmt = stmt.options(*load_options)
             stmt = stmt.where(getattr(model, pk_name) == ident)
-            obj = db.session.execute(stmt).scalar_one_or_none()
+            result = db.session.execute(stmt)
+            if load_options:
+                result = result.unique()
+            obj = result.scalar_one_or_none()
     except Exception:
         obj = None
     if obj is None:
