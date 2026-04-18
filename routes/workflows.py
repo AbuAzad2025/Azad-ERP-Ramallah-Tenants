@@ -10,7 +10,7 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 from functools import wraps
 import json
-from utils import permission_required
+from utils import permission_required, naive_utc_for_delta
 
 workflows_bp = Blueprint('workflows', __name__, url_prefix='/workflows')
 
@@ -407,10 +407,12 @@ def report_summary():
     completed_instances = [i for i in instances if i.status == 'APPROVED' and i.completed_at]
     
     if completed_instances:
-        total_time = sum([
-            (i.completed_at - i.started_at).total_seconds() / 3600
-            for i in completed_instances
-        ])
+        total_time = 0.0
+        for i in completed_instances:
+            sa = naive_utc_for_delta(i.started_at)
+            ca = naive_utc_for_delta(i.completed_at)
+            if sa and ca:
+                total_time += max(0.0, (ca - sa).total_seconds() / 3600.0)
         avg_completion_time = total_time / len(completed_instances)
     
     stats = {
@@ -488,7 +490,9 @@ def report_performance():
         
         for i in range(len(actions) - 1):
             step_name = actions[i].step_name
-            time_diff = (actions[i+1].action_date - actions[i].action_date).total_seconds() / 3600
+            ad0 = naive_utc_for_delta(actions[i].action_date)
+            ad1 = naive_utc_for_delta(actions[i + 1].action_date)
+            time_diff = (max(0.0, (ad1 - ad0).total_seconds()) / 3600.0) if (ad0 and ad1) else 0.0
             
             if step_name not in bottleneck_steps:
                 bottleneck_steps[step_name] = {'times': [], 'avg': 0}

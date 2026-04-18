@@ -136,11 +136,6 @@ def _refresh_service_related_balances(service) -> None:
     except Exception:
         pass
 
-def _has_stock_action(service, action: str) -> bool:
-    if not service or not getattr(service,"id",None): return False
-    q = db.session.query(AuditLog.id).filter(AuditLog.model_name=="ServiceRequest", AuditLog.record_id==service.id, AuditLog.action==(action or "").strip().upper()).limit(1)
-    return bool(db.session.execute(q).first())
-
 def _flash_error(message: str) -> None:
     flash(f'❌ {message}', 'danger')
 
@@ -216,10 +211,11 @@ def _consume_service_stock_once(service) -> bool:
             _ensure_partner_warehouse(key[1])
             new_qty=utils._apply_stock_delta(key[0],key[1],delta)
             items.append({"part_id":key[0],"warehouse_id":key[1],"qty":delta,"stock_after":int(new_qty)})
-    if not items and _has_stock_action(service,"STOCK_CONSUME"): return False
+    if not items:
+        return False
     _log_service_stock_action(service,"STOCK_CONSUME",items)
     current_app.logger.info("service.stock_consume",extra={"event":"service.stock.consume","service_id":service.id,"items":[{"part_id":i["part_id"],"warehouse_id":i["warehouse_id"],"qty":i["qty"]} for i in items]})
-    return bool(items)
+    return True
 
 def _release_service_stock_once(service) -> bool:
     if not _service_consumes_stock(service): return False
@@ -697,15 +693,20 @@ def toggle_service(rid, action):
         if action=='start':
             if not getattr(service,"started_at",None): service.started_at=datetime.now(timezone.utc).replace(tzinfo=None)
             service.status=ServiceStatus.IN_PROGRESS.value
-            # _consume_service_stock_once(service) # Handled by listener on COMPLETE
         elif action=='complete':
             service.completed_at=datetime.now(timezone.utc).replace(tzinfo=None)
-            if service.started_at: service.actual_duration=int((service.completed_at-service.started_at).total_seconds()/60)
+            if service.started_at:
+                sa = utils.naive_utc_for_delta(service.started_at)
+                ca = utils.naive_utc_for_delta(service.completed_at)
+                if sa and ca:
+                    delta_sec = (ca - sa).total_seconds()
+                    service.actual_duration = int(max(0, delta_sec) / 60)
             service.status=ServiceStatus.COMPLETED.value
-            # _consume_service_stock_once(service) # Handled by listener
+            # Idempotent vs per-line STOCK_CONSUME_PART in AuditLog (avoids double deduction)
+            _consume_service_stock_once(service)
         elif action=='reopen':
             if current_status==ServiceStatus.COMPLETED.value:
-                # _release_service_stock_once(service) # Handled by listener
+                _release_service_stock_once(service)
                 service.status=ServiceStatus.IN_PROGRESS.value
                 service.completed_at=None
         else: abort(400)

@@ -11041,43 +11041,14 @@ def _recalc_service_totals_orm_safe(session, service_id: int):
 
 @event.listens_for(ServiceRequest, "before_update")
 def _deduct_stock_on_complete(mapper, connection, target):
-    from sqlalchemy import inspect
-    state = inspect(target)
-    hist = state.get_history("status", True)
-    
-    # Check if status changed to COMPLETED
-    if hist.has_changes():
-        # Case 1: Changed TO COMPLETED -> Deduct Stock
-        if hist.added and hist.added[0] == ServiceStatus.COMPLETED.value:
-            for sp in target.parts:
-                _apply_stock_delta(
-                    connection, 
-                    sp.part_id, 
-                    sp.warehouse_id, 
-                    -int(sp.quantity or 0),
-                    movement_type="SERVICE",
-                    ref_type="SERVICE",
-                    ref_id=target.id,
-                    notes=f"Service Completion {target.service_number or target.id}"
-                )
-        
-        # Case 2: Changed FROM COMPLETED -> Restore Stock (Reopen)
-        elif hist.deleted and hist.deleted[0] == ServiceStatus.COMPLETED.value:
-            for sp in target.parts:
-                _apply_stock_delta(
-                    connection, 
-                    sp.part_id, 
-                    sp.warehouse_id, 
-                    int(sp.quantity or 0), # Positive to restore
-                    movement_type="SERVICE_REVERSAL",
-                    ref_type="SERVICE",
-                    ref_id=target.id,
-                    notes=f"Service Reopen {target.service_number or target.id}"
-                )
-        
-        # session = object_session(target)
-        # if session:
-        #     session.expire_all()
+    """
+    Stock on completion/reopen is handled in routes/service.toggle_service via
+    _consume_service_stock_once / _release_service_stock_once (AuditLog-aware, idempotent).
+
+    The previous implementation deducted again here on COMPLETED while add_part() already
+    applied STOCK_CONSUME_PART via utils._apply_stock_delta — double deduction from inventory.
+    """
+    return
 
 @event.listens_for(ServicePart, "after_insert")
 def _sp_after_insert(mapper, connection, target: ServicePart):

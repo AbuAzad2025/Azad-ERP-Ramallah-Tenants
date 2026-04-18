@@ -40,6 +40,19 @@ except Exception:
 
 from extensions import limiter, db, mail
 
+
+def naive_utc_for_delta(dt):
+    """
+    Normalize datetimes for subtraction (avoids TypeError when mixing aware/naive).
+    Use for DB-backed timestamps on PostgreSQL (TIMESTAMPTZ) vs app naive UTC.
+    """
+    if dt is None:
+        return None
+    if getattr(dt, "tzinfo", None) is None:
+        return dt
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+
 def _get_models():
     from models import Customer, Supplier, Partner
     return Customer, Supplier, Partner
