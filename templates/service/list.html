@@ -7,13 +7,26 @@
   {{ super() }}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/service.css') }}">
   <style>
-    /* تحسينات الوضوح والتباين */
+    /* تقليل حجم الخط للجدول */
+    .service-table {
+      font-size: 0.85rem;
+    }
+    
+    /* تقليل padding للخلايا */
     .service-table thead th {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
       color: white !important;
       font-weight: 600;
       border: none;
       white-space: nowrap;
+      padding: 0.6rem 0.4rem;
+      font-size: 0.8rem;
+    }
+    
+    .service-table tbody td {
+      padding: 0.5rem 0.4rem;
+      vertical-align: middle;
+      border-bottom: 1px solid #e9ecef;
     }
     
     .service-table tbody tr:hover {
@@ -21,23 +34,11 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    .service-table td {
-      vertical-align: middle;
-      border-bottom: 1px solid #e9ecef;
-    }
-    
     /* تحسين الـ Badges */
-    .badge-priority {
+    .badge-priority, .badge-status {
       font-weight: 600;
-      padding: 0.5em 0.8em;
-      font-size: 0.85rem;
-    }
-    
-    .badge-status {
-      font-weight: 600;
-      padding: 0.5em 0.8em;
-      font-size: 0.85rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 0.35em 0.6em;
+      font-size: 0.75rem;
     }
     
     /* ألوان محسنة للأولوية */
@@ -57,7 +58,8 @@
     /* تحسين التواريخ */
     .date-cell {
       font-family: 'Segoe UI', Tahoma, monospace;
-      font-size: 0.9rem;
+      font-size: 0.8rem;
+      white-space: nowrap;
     }
     
     .date-received {
@@ -74,13 +76,14 @@
     .amount-cell {
       font-family: 'Segoe UI', Tahoma, monospace;
       font-weight: 600;
-      font-size: 0.95rem;
+      font-size: 0.85rem;
+      white-space: nowrap;
     }
     
     /* تحسين الأزرار */
     .action-buttons .btn {
-      padding: 0.4rem 0.7rem;
-      font-size: 0.85rem;
+      padding: 0.25rem 0.4rem;
+      font-size: 0.75rem;
     }
     
     /* تحسين الفلاتر */
@@ -92,7 +95,7 @@
     .filter-label {
       font-weight: 600;
       color: #495057;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
     }
     
     /* CSS للطباعة */
@@ -106,15 +109,20 @@
       }
       
       .service-table {
-        font-size: 12pt;
+        font-size: 10pt;
         width: 100%;
       }
       
       .service-table thead th {
         background: #333 !important;
         color: white !important;
+        padding: 0.4rem 0.3rem;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+      }
+      
+      .service-table tbody td {
+        padding: 0.3rem;
       }
       
       .badge-priority, .badge-status {
@@ -134,7 +142,7 @@
       }
       
       body {
-        font-size: 11pt;
+        font-size: 10pt;
       }
       
       a {
@@ -166,6 +174,23 @@
     
     .stat-card:hover {
       transform: translateY(-3px);
+    }
+    
+    /* تصغير حجم العميل والمركبة */
+    .customer-name {
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    
+    .vehicle-badge {
+      font-size: 0.75rem;
+      padding: 0.2em 0.5em;
+    }
+    
+    /* رقم الطلب */
+    .service-number {
+      font-size: 0.85rem;
+      font-weight: 600;
     }
   </style>
 {% endblock %}
@@ -447,21 +472,21 @@
               {% for s in requests %}
               <tr>
                 <td class="ps-3">
-                  <a href="{{ url_for('service.view_request', rid=s.id) }}" class="text-decoration-none fw-bold text-primary">
+                  <a href="{{ url_for('service.view_request', rid=s.id) }}" class="text-decoration-none service-number text-primary">
                     {{ s.service_number }}
                   </a>
                 </td>
                 <td>
                   <div class="d-flex align-items-center">
-                    <div class="avatar-sm bg-light rounded-circle text-muted me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                    <div class="avatar-sm bg-light rounded-circle text-muted me-2 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.75rem;">
                       <i class="fas fa-user"></i>
                     </div>
-                    <span class="fw-semibold">{{ s.customer.name if s.customer else (s.name or '—') }}</span>
+                    <span class="customer-name">{{ s.customer.name if s.customer else (s.name or '—') }}</span>
                   </div>
                 </td>
                 <td>
                   {% if s.vehicle_type %}
-                    <span class="badge bg-light text-dark border">{{ s.vehicle_type.name }}</span>
+                    <span class="badge bg-light text-dark border vehicle-badge">{{ s.vehicle_type.name }}</span>
                   {% else %}
                     <span class="text-muted small">—</span>
                   {% endif %}

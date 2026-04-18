@@ -323,10 +323,10 @@ def list_requests():
     vrn_filter = request.args.get('vrn', '')
     date_filter = request.args.get('date', '')
     
-    # Pagination
+    # Pagination - 5 طلبات في كل صفحة للعرض المريح
     page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 15, type=int)
-    per_page = min(per_page, 100)
+    per_page = request.args.get('per_page', 5, type=int)
+    per_page = min(max(1, per_page), 20)  # الحد الأقصى 20 طلب للصفحة الواحدة
     
     # بناء الاستعلام مع joinedload محسّن - فلترة السجلات غير المؤرشفة
     query = ServiceRequest.query.filter(ServiceRequest.is_archived == False).options(
@@ -418,7 +418,6 @@ def list_requests():
         query = query.order_by(field.asc() if sort_order == 'asc' else field.desc())
     
     # Pagination
-    per_page = min(max(1, per_page), 500)
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     
     # الإحصائيات (مع Cache)
