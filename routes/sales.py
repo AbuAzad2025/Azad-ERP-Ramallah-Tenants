@@ -48,18 +48,6 @@ PAYMENT_METHOD_MAP = {
     PaymentMethod.ONLINE.value: "دفع إلكتروني"
 }
 
-def _get_or_404(model, ident, options: Optional[Iterable[Any]] = None):
-    q = db.session.query(model)
-    if options:
-        for opt in options:
-            q = q.options(opt)
-        obj = q.filter_by(id=ident).first()
-    else:
-        obj = db.session.get(model, ident)
-    if obj is None:
-        abort(404)
-    return obj
-
 def _format_sale(s: Sale) -> None:
     s.customer_name = s.customer.name if s.customer else "-"
     if getattr(s, "seller_employee", None):

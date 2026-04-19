@@ -893,6 +893,112 @@ def delete_part(pid):
         _flash_error(_friendly_error(ve, "لا يمكن إرجاع المخزون لهذه القطعة."))
     return redirect(url_for('service.view_request', rid=rid))
 
+
+@service_bp.route('/<int:rid>/parts/<int:pid>/edit', methods=['POST'])
+@login_required
+@utils.permission_required(SystemPermissions.MANAGE_SERVICE)
+def edit_part(rid, pid):
+    """تعديل قطعة موجودة في طلب الصيانة"""
+    service = _get_or_404(ServiceRequest, rid)
+    part = _get_or_404(ServicePart, pid)
+    
+    # التحقق من أن القطعة تنتمي لهذا الطلب
+    if part.service_id != rid:
+        _flash_error('القطعة لا تنتمي لهذا الطلب')
+        return redirect(url_for('service.view_request', rid=rid))
+    
+    # السماح بالتعديل إذا لم يكن مكتملاً
+    if service.status == ServiceStatus.COMPLETED.value:
+        _flash_error('لا يمكن تعديل صيانة مكتملة. يرجى الضغط على "إعادة للصيانه" أولاً')
+        return redirect(url_for('service.view_request', rid=rid))
+    
+    try:
+        # حفظ القيم القديمة لحساب فرق المخزون
+        old_qty = int(part.quantity or 0)
+        
+        # قراءة القيم من النموذج باستخدام Decimal للدقة
+        from decimal import Decimal as Dec
+        new_quantity = request.form.get('quantity', old_qty, type=int)
+        new_unit_price = Dec(str(request.form.get('unit_price', part.unit_price or 0)))
+        new_discount = Dec(str(request.form.get('discount', part.discount or 0)))
+        
+        # التحقق من صحة البيانات
+        if new_quantity <= 0:
+            _flash_error('الكمية يجب أن تكون أكبر من صفر')
+            return redirect(url_for('service.view_request', rid=rid))
+        
+        if new_unit_price < 0:
+            _flash_error('السعر لا يمكن أن يكون سالباً')
+            return redirect(url_for('service.view_request', rid=rid))
+        
+        if new_discount < 0:
+            _flash_error('الخصم لا يمكن أن يكون سالباً')
+            return redirect(url_for('service.view_request', rid=rid))
+        
+        # التحقق من أن الخصم لا يتجاوز إجمالي البند (مطابق لقاعدة قاعدة البيانات)
+        gross_amount = Dec(new_quantity) * new_unit_price
+        if new_discount > gross_amount:
+            _flash_error(f'الخصم ({new_discount:.2f} ₪) لا يمكن أن يتجاوز إجمالي البند ({gross_amount:.2f} ₪)')
+            return redirect(url_for('service.view_request', rid=rid))
+        
+        # تحديث البيانات
+        part.quantity = new_quantity
+        part.unit_price = new_unit_price
+        part.discount = new_discount
+        # لا حاجة لحساب line_total يدوياً -它是 hybrid_property ويُحسّب تلقائياً
+        
+        # تحديث المخزون إذا كان الطلب يستهلك مخزون وكان هناك تغيير في الكمية
+        qty_diff = new_quantity - old_qty
+        
+        if _service_consumes_stock(service) and qty_diff != 0:
+            try:
+                with db.session.begin_nested():
+                    _ensure_partner_warehouse(part.warehouse_id)
+                    # إذا زادت الكمية، نستهلك من المخزون (سالب)
+                    # إذا قلت الكمية، نعيد للمخزون (موجب)
+                    stock_delta = -qty_diff
+                    updated_stock = utils._apply_stock_delta(part.part_id, part.warehouse_id, stock_delta)
+                    action_type = "STOCK_ADJUST_PART" if qty_diff > 0 else "STOCK_RELEASE_PART"
+                    _log_service_stock_action(
+                        service,
+                        action_type,
+                        [{
+                            "part_id": part.part_id,
+                            "warehouse_id": part.warehouse_id,
+                            "old_qty": old_qty,
+                            "new_qty": new_quantity,
+                            "diff": qty_diff,
+                            "stock_after": int(updated_stock)
+                        }]
+                    )
+            except Exception as stock_e:
+                current_app.logger.exception("service.part_edit.stock_adjust_failed")
+                flash('⚠️ تم تعديل القطعة، لكن تعذر تحديث المخزون.', 'warning')
+        
+        # تحديث إجماليات الطلب
+        _update_service_totals(service)
+        service.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        
+        db.session.commit()
+        
+        # مزامنة الحسابات
+        try:
+            run_service_gl_sync_after_commit(service.id)
+        except Exception as e:
+            current_app.logger.error(f"⚠️ GL Sync Failed: {e}")
+        
+        _refresh_service_related_balances(service)
+        flash('✅ تم تعديل القطعة بنجاح', 'success')
+        
+    except ValueError as ve:
+        db.session.rollback()
+        _flash_error(_friendly_error(ve, "بيانات غير صالحة."))
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        _log_and_flash("service.edit_part", e, "تعذر تعديل القطعة حالياً.")
+    
+    return redirect(url_for('service.view_request', rid=rid))
+
 @service_bp.route('/<int:rid>/tasks/add', methods=['POST'])
 @login_required
 def add_task(rid):
@@ -968,6 +1074,88 @@ def add_task(rid):
     except Exception as e:
         db.session.rollback()
         _log_and_flash("service.add_task_unexpected", e, "حدث خطأ غير متوقع أثناء إضافة المهمة.")
+    
+    return redirect(url_for('service.view_request', rid=rid))
+
+
+@service_bp.route('/<int:rid>/tasks/<int:tid>/edit', methods=['POST'])
+@login_required
+@utils.permission_required(SystemPermissions.MANAGE_SERVICE)
+def edit_task(rid, tid):
+    """تعديل مهمة موجودة في طلب الصيانة"""
+    service = _get_or_404(ServiceRequest, rid)
+    task = _get_or_404(ServiceTask, tid)
+    
+    # التحقق من أن المهمة تنتمي لهذا الطلب
+    if task.service_id != rid:
+        _flash_error('المهمة لا تنتمي لهذا الطلب')
+        return redirect(url_for('service.view_request', rid=rid))
+    
+    # السماح بالتعديل إذا لم يكن مكتملاً
+    if service.status == ServiceStatus.COMPLETED.value:
+        _flash_error('لا يمكن تعديل صيانة مكتملة. يرجى الضغط على "إعادة للصيانه" أولاً')
+        return redirect(url_for('service.view_request', rid=rid))
+    
+    try:
+        # قراءة القيم من النموذج
+        description = (request.form.get('description') or '').strip()
+        quantity = int(request.form.get('quantity', task.quantity or 1))
+        unit_price = Decimal(request.form.get('unit_price', task.unit_price or 0))
+        discount = Decimal(request.form.get('discount', task.discount or 0) or 0)
+        note = (request.form.get('note') or '').strip() or None
+        
+        # التحقق من صحة البيانات
+        if not description:
+            _flash_error('يجب إدخال وصف المهمة')
+            return redirect(url_for('service.view_request', rid=rid))
+        
+        if quantity <= 0:
+            _flash_error('الكمية يجب أن تكون أكبر من صفر')
+            return redirect(url_for('service.view_request', rid=rid))
+        
+        if unit_price < 0:
+            _flash_error('السعر لا يمكن أن يكون سالباً')
+            return redirect(url_for('service.view_request', rid=rid))
+        
+        if discount < 0:
+            _flash_error('الخصم لا يمكن أن يكون سالباً')
+            return redirect(url_for('service.view_request', rid=rid))
+        
+        # التحقق من أن الخصم لا يتجاوز إجمالي البند
+        gross_amount = quantity * unit_price
+        if discount > gross_amount:
+            _flash_error(f'الخصم ({discount:.2f} ₪) لا يمكن أن يتجاوز إجمالي البند ({gross_amount:.2f} ₪)')
+            return redirect(url_for('service.view_request', rid=rid))
+        
+        # تحديث البيانات
+        task.description = description
+        task.quantity = quantity
+        task.unit_price = unit_price
+        task.discount = discount
+        task.note = note
+        # line_total يُحسّب تلقائياً كـ hybrid_property
+        
+        # تحديث إجماليات الطلب
+        _update_service_totals(service)
+        service.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        
+        db.session.commit()
+        
+        # مزامنة الحسابات
+        try:
+            run_service_gl_sync_after_commit(service.id)
+        except Exception as e:
+            current_app.logger.error(f"⚠️ GL Sync Failed for Service #{service.id}: {e}")
+        
+        _refresh_service_related_balances(service)
+        flash('✅ تم تعديل المهمة بنجاح', 'success')
+        
+    except ValueError as ve:
+        db.session.rollback()
+        _flash_error(_friendly_error(ve, "بيانات غير صالحة."))
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        _log_and_flash("service.edit_task", e, "تعذر تعديل المهمة حالياً.")
     
     return redirect(url_for('service.view_request', rid=rid))
 

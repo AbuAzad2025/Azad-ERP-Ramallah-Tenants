@@ -1,3 +1,7 @@
+{# ========================================== #}
+{# جدول المهام - نسخة منظمة مع تعديل #}
+{# ========================================== #}
+
 <div class="card border-0 shadow-lg mb-4">
   <div class="card-header" style="background: linear-gradient(135deg, #f12711 0%, #f5af19 100%); color: white;">
     <div class="d-flex justify-content-between align-items-center">
@@ -17,7 +21,7 @@
             <th><i class="fas fa-dollar-sign"></i> سعر الوحدة</th>
             <th><i class="fas fa-calculator"></i> الإجمالي</th>
             {% if current_user.has_permission('manage_service') and service.status.value != 'COMPLETED' %}
-            <th style="width:80px"><i class="fas fa-cogs"></i> إجراء</th>
+            <th style="width:100px"><i class="fas fa-cogs"></i> إجراء</th>
             {% endif %}
           </tr>
         </thead>
@@ -51,12 +55,17 @@
               </td>
               {% if current_user.has_permission('manage_service') and service.status.value != 'COMPLETED' %}
               <td>
-                <form method="post" action="{{ url_for('service.delete_task', tid=task.id) }}" class="d-inline">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button class="btn btn-danger btn-sm btn-delete" title="حذف المهمة">
-                    <i class="fas fa-trash"></i>
+                <div class="btn-group btn-group-sm">
+                  <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#editTaskModal{{ task.id }}" title="تعديل">
+                    <i class="fas fa-edit"></i>
                   </button>
-                </form>
+                  <form method="post" action="{{ url_for('service.delete_task', tid=task.id) }}" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذه المهمة؟');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger" title="حذف">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
+                </div>
               </td>
               {% endif %}
             </tr>
@@ -86,51 +95,78 @@
   </div>
 </div>
 
+{# ========================================== #}
+{# Modals منفصلة خارج الجدول #}
+{# ========================================== #}
 {% if current_user.has_permission('manage_service') and service.status.value != 'COMPLETED' %}
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-header bg-gradient-info text-white">
-    <h5 class="mb-0"><i class="fas fa-plus"></i> إضافة مهمة جديدة</h5>
+  {% for task in service.tasks %}
+  <!-- Modal تعديل المهمة {{ task.id }} -->
+  <div class="modal fade" id="editTaskModal{{ task.id }}" tabindex="-1" role="dialog" aria-labelledby="editTaskModalLabel{{ task.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-warning">
+          <h5 class="modal-title" id="editTaskModalLabel{{ task.id }}">
+            <i class="fas fa-edit mr-2"></i>تعديل مهمة
+          </h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="إغلاق">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <form method="post" action="{{ url_for('service.edit_task', rid=service.id, tid=task.id) }}">
+          <div class="modal-body">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="form-group mb-3">
+              <label class="form-label font-weight-bold">وصف المهمة</label>
+              <input type="text" name="description" class="form-control form-control-lg" value="{{ task.description or '' }}" required>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-4">
+                <label class="form-label font-weight-bold">الكمية</label>
+                <input type="number" name="quantity" class="form-control form-control-lg" value="{{ task.quantity or 1 }}" min="1" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label font-weight-bold">سعر الوحدة (₪)</label>
+                <input type="number" name="unit_price" class="form-control form-control-lg" value="{{ task.unit_price or 0 }}" step="0.01" min="0" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label font-weight-bold">الخصم (₪)</label>
+                <input type="number" name="discount" class="form-control form-control-lg" value="{{ task.discount or 0 }}" step="0.01" min="0">
+              </div>
+            </div>
+            
+            <div class="form-group mt-3 mb-0">
+              <label class="form-label font-weight-bold">ملاحظات</label>
+              <textarea name="note" class="form-control" rows="2">{{ task.note or '' }}</textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">إلغاء</button>
+            <button type="submit" class="btn btn-warning">
+              <i class="fas fa-save mr-2"></i>حفظ التعديلات
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
-  <div class="card-body">
-    <form method="post" action="{{ url_for('service.add_task', rid=service.id) }}" autocomplete="off">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="service_id" value="{{ service.id }}">
-      
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label fw-bold"><i class="fas fa-clipboard-list"></i> وصف المهمة</label>
-          <input class="form-control" name="description" required placeholder="أدخل وصف المهمة...">
-        </div>
-        <div class="col-md-6">
-          <label class="form-label fw-bold"><i class="fas fa-sticky-note"></i> ملاحظات</label>
-          <input class="form-control" name="note" placeholder="ملاحظات إضافية (اختياري)">
-        </div>
-      </div>
-      
-      <div class="row g-3 mt-2">
-        <div class="col-md-3">
-          <label class="form-label fw-bold"><i class="fas fa-hashtag"></i> الكمية</label>
-          <input class="form-control" type="number" name="quantity" min="1" step="1" value="1">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label fw-bold"><i class="fas fa-dollar-sign"></i> سعر الوحدة</label>
-          <input class="form-control" type="number" name="unit_price" min="0" step="0.01" value="0" placeholder="0.00">
-        </div>
-        <div class="col-md-6">
-          <label class="form-label fw-bold"><i class="fas fa-tag"></i> الخصم (₪)</label>
-          <input class="form-control" type="number" name="discount" min="0" max="999999" step="0.01" value="0" placeholder="مبلغ الخصم">
-        </div>
-      </div>
-      
-      <div class="mt-4 text-end">
-        <button type="submit" class="btn btn-success fw-bold">
-          <i class="fas fa-save"></i> حفظ المهمة
-        </button>
-        <button type="reset" class="btn btn-outline-secondary">
-          <i class="fas fa-undo"></i> إعادة تعيين
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
+  {% endfor %}
+{% endif %}
+
+{# ========================================== #}
+{# JavaScript لمنع الاهتزاز #}
+{# ========================================== #}
+{% if current_user.has_permission('manage_service') and service.status.value != 'COMPLETED' %}
+<script>
+  // منع الاهتزاز عند فتح Modal
+  $(document).ready(function() {
+    $('.modal').on('show.bs.modal', function() {
+      $('body').css('overflow', 'hidden');
+    });
+    $('.modal').on('hidden.bs.modal', function() {
+      $('body').css('overflow', '');
+    });
+  });
+</script>
 {% endif %}

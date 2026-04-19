@@ -166,6 +166,9 @@ form .row:nth-of-type(3) .card-header {
     font-weight: 500 !important;
     font-size: 0.95rem !important;
     background: #f8f9fa !important;
+    display: flex !important;
+    align-items: center !important;
+    min-height: 54px !important;
 }
 
 .form-control:focus, .custom-select:focus {
@@ -173,6 +176,16 @@ form .row:nth-of-type(3) .card-header {
     background: white !important;
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1) !important;
     transform: scale(1.01) !important;
+}
+
+/* تحسين عرض النص في حقول الاختيار */
+.custom-select {
+    text-align: center !important;
+    text-align-last: center !important;
+    -moz-text-align-last: center !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
 }
 .select2-container {
     width: 100% !important;
@@ -190,14 +203,17 @@ form .row:nth-of-type(3) .card-header {
     font-weight: 500 !important;
     font-size: 0.95rem !important;
     color: #2c3e50 !important;
-    white-space: nowrap !important; /* ✅ منع التفاف النص */
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    line-height: 54px !important; /* ✅ مطابقة ارتفاع الحقل لضمان التوسط */
+    white-space: normal !important; /* ✅ السماح بظهور النص كاملاً */
+    overflow: visible !important; /* ✅ عدم إخفاء النص */
+    text-overflow: clip !important; /* ✅ إزالة "..." */
+    line-height: 1.5 !important; /* ✅ ارتفاع مناسب للنص */
     padding-left: 10px !important;
-    padding-right: 0 !important;
+    padding-right: 10px !important;
     margin: 0 !important;
-    display: block !important; /* ✅ ضمان التعامل ككتلة */
+    display: flex !important; /* ✅ توسيط أفضل */
+    align-items: center !important; /* ✅ توسيط عمودي */
+    min-height: 54px !important; /* ✅ الحفاظ على ارتفاع الحقل */
+    height: 100% !important; /* ✅ ملء الحقل بالكامل */
 }
 .select2-container--default .select2-selection--single .select2-selection__arrow {
     height: 54px !important; /* ✅ مطابقة ارتفاع السهم */
