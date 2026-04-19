@@ -198,7 +198,20 @@ def _service_stock_movements(service):
     return totals
 
 def _consume_service_stock_once(service) -> bool:
+    """استهلاك المخزون مرة واحدة فقط - تحقق من عدم التكرار"""
     if not _service_consumes_stock(service): return False
+    
+    # التحقق مما إذا كان قد تم استهلاك المخزون بالفعل
+    existing_consume = db.session.query(AuditLog).filter(
+        AuditLog.model_name == "ServiceRequest",
+        AuditLog.record_id == service.id,
+        AuditLog.action == "STOCK_CONSUME"
+    ).first()
+    
+    if existing_consume:
+        # تم استهلاك المخزون بالفعل
+        return False
+    
     targets=_service_stock_targets(service)
     currents=_service_stock_movements(service)
     for key in list(currents.keys()):
@@ -218,7 +231,20 @@ def _consume_service_stock_once(service) -> bool:
     return True
 
 def _release_service_stock_once(service) -> bool:
+    """إرجاع المخزون مرة واحدة فقط - تحقق من عدم التكرار"""
     if not _service_consumes_stock(service): return False
+    
+    # التحقق مما إذا كان قد تم إرجاع المخزون بالفعل
+    existing_release = db.session.query(AuditLog).filter(
+        AuditLog.model_name == "ServiceRequest",
+        AuditLog.record_id == service.id,
+        AuditLog.action == "STOCK_RELEASE"
+    ).first()
+    
+    if existing_release:
+        # تم إرجاع المخزون بالفعل
+        return False
+    
     currents=_service_stock_movements(service)
     if not currents: return False
     items=[]
