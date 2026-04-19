@@ -62,9 +62,20 @@ PRIORITY_COLORS = {
 def _log_service_stock_action(service, action: str, items: list[dict]) -> None:
     try:
         payload = {"items": items or []}
-        entry = AuditLog(created_at=datetime.now(timezone.utc).replace(tzinfo=None), model_name="ServiceRequest", record_id=service.id, customer_id=getattr(service,"customer_id",None), user_id=(current_user.id if getattr(current_user,"is_authenticated",False) else None), action=(action or "").strip().upper(), old_data=None, new_data=json.dumps(payload, ensure_ascii=False, default=str), ip_address=request.remote_addr, user_agent=request.headers.get("User-Agent",""))
+        # استخدام قيم افتراضية إذا لم يكن هناك request context
+        try:
+            ip = request.remote_addr
+            ua = request.headers.get("User-Agent","")
+        except RuntimeError:
+            ip = None
+            ua = None
+        entry = AuditLog(created_at=datetime.now(timezone.utc).replace(tzinfo=None), model_name="ServiceRequest", record_id=service.id, customer_id=getattr(service,"customer_id",None), user_id=(current_user.id if getattr(current_user,"is_authenticated",False) else None), action=(action or "").strip().upper(), old_data=None, new_data=json.dumps(payload, ensure_ascii=False, default=str), ip_address=ip, user_agent=ua)
         db.session.add(entry)
-    except Exception: pass
+        db.session.flush()
+        current_app.logger.info(f"audit_log.created: {action} for service {service.id}")
+    except Exception as e:
+        current_app.logger.error(f"audit_log.failed: {e}")
+        raise
 
 def _ensure_partner_warehouse(warehouse_id: int) -> Warehouse:
     wid = int(warehouse_id or 0)
@@ -175,7 +186,7 @@ def _service_stock_targets(service):
     return totals
 
 def _service_stock_movements(service):
-    actions=("STOCK_CONSUME","STOCK_RELEASE","STOCK_CONSUME_PART","STOCK_RELEASE_PART","STOCK_ADJUST_PART")
+    actions=("STOCK_CONSUME","STOCK_RELEASE","STOCK_CONSUME_PART","STOCK_RELEASE_PART")
     rows=db.session.query(AuditLog).filter(AuditLog.model_name=="ServiceRequest",AuditLog.record_id==service.id,AuditLog.action.in_(actions)).all()
     totals={}
     for row in rows:
@@ -202,6 +213,7 @@ def _consume_service_stock_once(service) -> bool:
     if not _service_consumes_stock(service): return False
     
     # التحقق مما إذا كان قد تم استهلاك المخزون بالفعل
+    # استخدام with_for_update لتجنب race conditions
     existing_consume = db.session.query(AuditLog).filter(
         AuditLog.model_name == "ServiceRequest",
         AuditLog.record_id == service.id,
@@ -210,6 +222,7 @@ def _consume_service_stock_once(service) -> bool:
     
     if existing_consume:
         # تم استهلاك المخزون بالفعل
+        current_app.logger.info(f"service.stock_consume.skipped service_id={service.id} - already consumed")
         return False
     
     targets=_service_stock_targets(service)
@@ -227,6 +240,7 @@ def _consume_service_stock_once(service) -> bool:
     if not items:
         return False
     _log_service_stock_action(service,"STOCK_CONSUME",items)
+    db.session.flush()  # ✅ تأكد من كتابة AuditLog قبل أي استدعاء لاحق
     current_app.logger.info("service.stock_consume",extra={"event":"service.stock.consume","service_id":service.id,"items":[{"part_id":i["part_id"],"warehouse_id":i["warehouse_id"],"qty":i["qty"]} for i in items]})
     return True
 
@@ -243,6 +257,7 @@ def _release_service_stock_once(service) -> bool:
     
     if existing_release:
         # تم إرجاع المخزون بالفعل
+        current_app.logger.info(f"service.stock_release.skipped service_id={service.id} - already released")
         return False
     
     currents=_service_stock_movements(service)
@@ -256,6 +271,7 @@ def _release_service_stock_once(service) -> bool:
         items.append({"part_id":key[0],"warehouse_id":key[1],"qty":delta,"stock_after":int(new_qty)})
     if not items: return False
     _log_service_stock_action(service,"STOCK_RELEASE",items)
+    db.session.flush()  # ✅ تأكد من كتابة AuditLog قبل أي استدعاء لاحق
     current_app.logger.info("service.stock_release",extra={"event":"service.stock.release","service_id":service.id,"items":[{"part_id":i["part_id"],"warehouse_id":i["warehouse_id"],"qty":i["qty"]} for i in items]})
     return True
 
@@ -973,33 +989,46 @@ def edit_part(rid, pid):
         part.discount = new_discount
         # لا حاجة لحساب line_total يدوياً -它是 hybrid_property ويُحسّب تلقائياً
         
-        # تحديث المخزون إذا كان الطلب يستهلك مخزون وكان هناك تغيير في الكمية
-        qty_diff = new_quantity - old_qty
-        
-        if _service_consumes_stock(service) and qty_diff != 0:
+        # تحديث المخزون: إرجاع القديم وخصم الجديد
+        # هذا يضمن تطابق المخزون مع حالة القطعة الحالية
+        if _service_consumes_stock(service):
             try:
                 with db.session.begin_nested():
                     _ensure_partner_warehouse(part.warehouse_id)
-                    # إذا زادت الكمية، نستهلك من المخزون (سالب)
-                    # إذا قلت الكمية، نعيد للمخزون (موجب)
-                    stock_delta = -qty_diff
-                    updated_stock = utils._apply_stock_delta(part.part_id, part.warehouse_id, stock_delta)
-                    action_type = "STOCK_ADJUST_PART" if qty_diff > 0 else "STOCK_RELEASE_PART"
-                    _log_service_stock_action(
-                        service,
-                        action_type,
-                        [{
-                            "part_id": part.part_id,
-                            "warehouse_id": part.warehouse_id,
-                            "old_qty": old_qty,
-                            "new_qty": new_quantity,
-                            "diff": qty_diff,
-                            "stock_after": int(updated_stock)
-                        }]
-                    )
+                    
+                    # الخطوة 1: إرجاع الكمية القديمة للمستودع
+                    if old_qty > 0:
+                        returned_stock = utils._apply_stock_delta(part.part_id, part.warehouse_id, old_qty)
+                        _log_service_stock_action(
+                            service,
+                            "STOCK_RELEASE_PART",
+                            [{
+                                "part_id": part.part_id,
+                                "warehouse_id": part.warehouse_id,
+                                "qty": old_qty,
+                                "reason": "edit_return_old",
+                                "stock_after": int(returned_stock)
+                            }]
+                        )
+                    
+                    # الخطوة 2: خصم الكمية الجديدة من المستودع
+                    if new_quantity > 0:
+                        consumed_stock = utils._apply_stock_delta(part.part_id, part.warehouse_id, -new_quantity)
+                        _log_service_stock_action(
+                            service,
+                            "STOCK_CONSUME_PART",
+                            [{
+                                "part_id": part.part_id,
+                                "warehouse_id": part.warehouse_id,
+                                "qty": new_quantity,
+                                "reason": "edit_consume_new",
+                                "stock_after": int(consumed_stock)
+                            }]
+                        )
+                    
             except Exception as stock_e:
                 current_app.logger.exception("service.part_edit.stock_adjust_failed")
-                flash('⚠️ تم تعديل القطعة، لكن تعذر تحديث المخزون.', 'warning')
+                flash('⚠️ تم تعديل القطعة، لكن تعذر تحديث المخزون تلقائياً.', 'warning')
         
         # تحديث إجماليات الطلب
         _update_service_totals(service)

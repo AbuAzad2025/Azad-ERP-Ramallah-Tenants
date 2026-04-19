@@ -10227,7 +10227,10 @@ def _service_consumes_stock(sr: "ServiceRequest") -> bool:
         return False
     if not bool(current_app.config.get("SERVICE_CONSUMES_STOCK", True)):
         return False
-    status = str(getattr(sr, "status", "")).upper()
+    status = str(getattr(sr, "status", "") or "").upper()
+    # Handle both Enum and string values
+    if "SERVICESTATUS." in status:
+        status = status.replace("SERVICESTATUS.", "")
     return bool(getattr(sr, "consume_stock", True)) and status in ("PENDING", "DIAGNOSIS", "IN_PROGRESS", "ON_HOLD", "COMPLETED")
 
 def _recalc_service_request_totals(sr: "ServiceRequest"):
