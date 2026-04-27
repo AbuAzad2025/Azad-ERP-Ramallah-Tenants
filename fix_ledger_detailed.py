@@ -240,7 +240,7 @@ def create_detailed_gl_entries(inventory_data):
         print(f"\n📋 دفعة القيود #{batch.id}:")
         
         # 1. Debit: Inventory (total)
-        GLEntry(
+        entry = GLEntry(
             batch_id=batch.id,
             account=ACCOUNTS['INVENTORY'],
             debit=float(inventory_data['total']),
@@ -248,11 +248,12 @@ def create_detailed_gl_entries(inventory_data):
             currency='ILS',
             ref='INV-TOTAL'
         )
+        db.session.add(entry)
         print(f"   مدين: {ACCOUNTS['INVENTORY']} = {inventory_data['total']:,.2f} ₪")
         
         # 2. Credit: Company Equity
         if inventory_data['company']['value'] > 0:
-            GLEntry(
+            entry = GLEntry(
                 batch_id=batch.id,
                 account=ACCOUNTS['EQUITY'],
                 debit=0,
@@ -260,12 +261,13 @@ def create_detailed_gl_entries(inventory_data):
                 currency='ILS',
                 ref='INV-COMPANY'
             )
+            db.session.add(entry)
             print(f"   دائن: {ACCOUNTS['EQUITY']} (الشركة) = {inventory_data['company']['value']:,.2f} ₪")
         
         # 3. Credit: Partner Equity
         for partner_id, data in inventory_data['partners'].items():
             if data['value'] > 0:
-                GLEntry(
+                entry = GLEntry(
                     batch_id=batch.id,
                     account=ACCOUNTS['PARTNER_EQUITY'],
                     debit=0,
@@ -273,12 +275,13 @@ def create_detailed_gl_entries(inventory_data):
                     currency='ILS',
                     ref=f'INV-PARTNER-{partner_id}'
                 )
+                db.session.add(entry)
                 print(f"   دائن: {ACCOUNTS['PARTNER_EQUITY']} ({data['name']}) = {data['value']:,.2f} ₪")
         
         # 4. Credit: Accounts Payable (for consignment)
         for supplier_id, data in inventory_data['consignment'].items():
             if data['value'] > 0:
-                GLEntry(
+                entry = GLEntry(
                     batch_id=batch.id,
                     account=ACCOUNTS['AP'],
                     debit=0,
@@ -286,6 +289,7 @@ def create_detailed_gl_entries(inventory_data):
                     currency='ILS',
                     ref=f'INV-CONSIGN-{supplier_id}'
                 )
+                db.session.add(entry)
                 print(f"   دائن: {ACCOUNTS['AP']} ({data['name']}) = {data['value']:,.2f} ₪")
         
         db.session.commit()
