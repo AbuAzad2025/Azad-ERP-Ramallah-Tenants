@@ -191,9 +191,15 @@ def _service_stock_targets(service):
     return totals
 
 def _service_stock_movements(service):
-    actions=("STOCK_CONSUME","STOCK_RELEASE","STOCK_CONSUME_PART","STOCK_RELEASE_PART")
+    # Support both legacy STOCK_* actions and current SERVICE_* actions.
+    actions=(
+        "STOCK_CONSUME","STOCK_RELEASE","STOCK_CONSUME_PART","STOCK_RELEASE_PART",
+        "SERVICE_CONSUME","SERVICE_RELEASE","SERVICE_ADD_PART","SERVICE_REMOVE_PART",
+    )
     rows=db.session.query(AuditLog).filter(AuditLog.model_name=="ServiceRequest",AuditLog.record_id==service.id,AuditLog.action.in_(actions)).all()
     totals={}
+    consume_actions = {"STOCK_CONSUME", "STOCK_CONSUME_PART", "SERVICE_CONSUME", "SERVICE_ADD_PART"}
+    release_actions = {"STOCK_RELEASE", "STOCK_RELEASE_PART", "SERVICE_RELEASE", "SERVICE_REMOVE_PART"}
     for row in rows:
         payload=None
         try:
@@ -209,6 +215,12 @@ def _service_stock_movements(service):
                 qty=int(item.get("qty") or 0)
             except Exception:
                 continue
+            # Normalize sign by action to protect against historical bad log payloads.
+            action = str(getattr(row, "action", "") or "").upper()
+            if action in consume_actions:
+                qty = -abs(qty)
+            elif action in release_actions:
+                qty = abs(qty)
             key=(part_id,warehouse_id)
             totals[key]=totals.get(key,0)+qty
     return totals
@@ -222,7 +234,7 @@ def _consume_service_stock_once(service) -> bool:
     existing_consume = db.session.query(AuditLog).filter(
         AuditLog.model_name == "ServiceRequest",
         AuditLog.record_id == service.id,
-        AuditLog.action == "STOCK_CONSUME"
+        AuditLog.action.in_(["STOCK_CONSUME", "SERVICE_CONSUME"])
     ).first()
     
     if existing_consume:
@@ -262,11 +274,17 @@ def _release_service_stock_once(service) -> bool:
     last_log = db.session.query(AuditLog).filter(
         AuditLog.model_name == "ServiceRequest",
         AuditLog.record_id == service.id,
-        AuditLog.action.in_(["STOCK_CONSUME", "STOCK_CONSUME_PART", "STOCK_RELEASE"])
+        AuditLog.action.in_([
+            "STOCK_CONSUME", "STOCK_CONSUME_PART", "STOCK_RELEASE",
+            "SERVICE_CONSUME", "SERVICE_ADD_PART", "SERVICE_RELEASE",
+        ])
     ).order_by(AuditLog.id.desc()).first()
     
     # نُرجع المخزون فقط إذا كانت آخر عملية هي استهلاك (وليست إعادة)
-    if not last_log or last_log.action not in ["STOCK_CONSUME", "STOCK_CONSUME_PART"]:
+    if not last_log or last_log.action not in [
+        "STOCK_CONSUME", "STOCK_CONSUME_PART",
+        "SERVICE_CONSUME", "SERVICE_ADD_PART",
+    ]:
         current_app.logger.info(f"service.stock_release.skipped service_id={service.id} - last_action={last_log.action if last_log else 'none'}")
         return False
     
@@ -1080,40 +1098,35 @@ def edit_part(rid, pid):
         part.discount = new_discount
         # لا حاجة لحساب line_total يدوياً -它是 hybrid_property ويُحسّب تلقائياً
         
-        # تحديث المخزون: إرجاع القديم وخصم الجديد
+        # تحديث المخزون بالفرق فقط (delta) لتجنب أي تكرار بالخصم.
         stock_adjusted = False
         if _service_consumes_stock(service):
             try:
                 _ensure_partner_warehouse(part.warehouse_id)
-                
-                # إرجاع الكمية القديمة إذا كانت مخصومة
-                if actual_consumed > 0:
-                    returned_stock = utils._apply_stock_delta(part.part_id, part.warehouse_id, actual_consumed)
-                    _log_service_stock_action(
-                        service,
-                        "STOCK_RELEASE_PART",
-                        [{
-                            "part_id": part.part_id,
-                            "warehouse_id": part.warehouse_id,
-                            "qty": actual_consumed,
-                            "reason": "edit_return_old",
-                            "stock_after": int(returned_stock)
-                        }]
+                qty_delta = int(new_quantity) - int(actual_consumed)
+
+                # زيادة الكمية: نخصم الفرق فقط.
+                if qty_delta > 0:
+                    consumed_stock = utils._apply_stock_delta(part.part_id, part.warehouse_id, -qty_delta)
+                    log_service_part_add(
+                        service=service,
+                        part_id=part.part_id,
+                        warehouse_id=part.warehouse_id,
+                        qty=qty_delta,
+                        stock_after=int(consumed_stock),
+                        reason="تعديل قطعة: خصم فرق الكمية"
                     )
-                
-                # خصم الكمية الجديدة
-                if new_quantity > 0:
-                    consumed_stock = utils._apply_stock_delta(part.part_id, part.warehouse_id, -new_quantity)
-                    _log_service_stock_action(
-                        service,
-                        "STOCK_CONSUME_PART",
-                        [{
-                            "part_id": part.part_id,
-                            "warehouse_id": part.warehouse_id,
-                            "qty": new_quantity,
-                            "reason": "edit_consume_new",
-                            "stock_after": int(consumed_stock)
-                        }]
+                # تقليل الكمية: نُرجع الفرق فقط.
+                elif qty_delta < 0:
+                    qty_to_return = abs(qty_delta)
+                    returned_stock = utils._apply_stock_delta(part.part_id, part.warehouse_id, qty_to_return)
+                    log_service_part_remove(
+                        service=service,
+                        part_id=part.part_id,
+                        warehouse_id=part.warehouse_id,
+                        qty=qty_to_return,
+                        stock_after=int(returned_stock),
+                        reason="تعديل قطعة: إرجاع فرق الكمية"
                     )
                 
                 stock_adjusted = True
