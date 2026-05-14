@@ -1,121 +1,113 @@
+"""AI auto-training trigger.
 
+Keeps automatic training safe and lightweight. It checks whether training is due,
+but can be disabled in production with AI_AUTO_TRAINING_ENABLED=false.
+"""
+
+from __future__ import annotations
 
 import os
-import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
-AUTO_TRAINING_LOG = 'AI/data/ai_auto_training.json'
+from AI.engine.ai_storage import read_json, sync_training_manifest, write_json
+
+AUTO_TRAINING_LOG = "ai_auto_training.json"
+FILES_TO_CHECK = ("models.py", "routes", "templates", "forms.py")
+AUTO_TRAINING_INTERVAL_HOURS = 48
+
+
+def _auto_training_enabled() -> bool:
+    return os.environ.get("AI_AUTO_TRAINING_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _latest_project_mtime() -> float:
+    current_mtime = 0.0
+    for file_path in FILES_TO_CHECK:
+        path = Path(file_path)
+        if not path.exists():
+            continue
+        if path.is_file():
+            current_mtime = max(current_mtime, path.stat().st_mtime)
+        elif path.is_dir():
+            for item in path.rglob("*"):
+                if item.is_file() and item.suffix in {".py", ".html", ".js", ".css"}:
+                    current_mtime = max(current_mtime, item.stat().st_mtime)
+    return current_mtime
+
 
 def should_auto_train():
+    if not _auto_training_enabled():
+        return False
     try:
-        if not os.path.exists(AUTO_TRAINING_LOG):
-            return True  # أول تدريب
-        
-        with open(AUTO_TRAINING_LOG, 'r', encoding='utf-8') as f:
-            log = json.load(f)
-        
-        last_training = log.get('last_training')
+        log = read_json(AUTO_TRAINING_LOG, None)
+        if not isinstance(log, dict):
+            return True
+
+        last_training = log.get("last_training")
         if not last_training:
             return True
-        
-        # فحص إذا مر أكثر من 48 ساعة
-        last_dt = datetime.fromisoformat(last_training)
+
+        last_dt = datetime.fromisoformat(str(last_training))
         hours_passed = (datetime.now() - last_dt).total_seconds() / 3600
-        
-        if hours_passed > 48:
+        if hours_passed > AUTO_TRAINING_INTERVAL_HOURS:
             return True
-        
-        # فحص إذا تغيرت الملفات الحيوية
-        files_to_check = ['models.py', 'routes/', 'templates/', 'forms.py']
-        current_mtime = 0
-        
-        for file_path in files_to_check:
-            path = Path(file_path)
-            if path.exists():
-                if path.is_file():
-                    current_mtime = max(current_mtime, path.stat().st_mtime)
-                elif path.is_dir():
-                    for f in path.rglob('*.py'):
-                        current_mtime = max(current_mtime, f.stat().st_mtime)
-        
-        last_checked_mtime = log.get('last_files_mtime', 0)
-        
-        if current_mtime > last_checked_mtime:
-            return True  # تم تعديل ملفات
-        
-        return False
-    
+
+        current_mtime = _latest_project_mtime()
+        last_checked_mtime = float(log.get("last_files_mtime", 0) or 0)
+        return current_mtime > last_checked_mtime
     except Exception:
         return False
 
+
 def execute_silent_training():
-    """تنفيذ التدريب الصامت"""
+    """Run silent training and rebuild AI maps."""
+    if not _auto_training_enabled():
+        return False
     try:
         from AI.engine.ai_knowledge import get_knowledge_base
         from AI.engine.ai_auto_discovery import build_system_map
         from AI.engine.ai_data_awareness import build_data_schema
 
-        # تنفيذ التدريب
         kb = get_knowledge_base()
         kb.index_all_files(force_reindex=True)
-        
         build_system_map()
         build_data_schema()
-        
-        # تسجيل الحدث
         log_auto_training()
-
+        sync_training_manifest(extra_files=[AUTO_TRAINING_LOG])
         return True
-    
-    except Exception as e:
+    except Exception:
         return False
 
+
 def log_auto_training():
-    """تسجيل حدث التدريب التلقائي"""
     try:
-        os.makedirs('AI/data', exist_ok=True)
-        
-        # حساب mtime للملفات
-        files_to_check = ['models.py', 'routes/', 'templates/', 'forms.py']
-        current_mtime = 0
-        
-        for file_path in files_to_check:
-            path = Path(file_path)
-            if path.exists():
-                if path.is_file():
-                    current_mtime = max(current_mtime, path.stat().st_mtime)
-                elif path.is_dir():
-                    for f in path.rglob('*.py'):
-                        current_mtime = max(current_mtime, f.stat().st_mtime)
-        
+        old_log = read_json(AUTO_TRAINING_LOG, {})
+        if not isinstance(old_log, dict):
+            old_log = {}
         log_entry = {
-            'last_training': datetime.now().isoformat(),
-            'last_files_mtime': current_mtime,
-            'auto_trainings_count': 0
+            "last_training": datetime.now().isoformat(),
+            "last_files_mtime": _latest_project_mtime(),
+            "auto_trainings_count": int(old_log.get("auto_trainings_count", 0) or 0) + 1,
         }
-        
-        if os.path.exists(AUTO_TRAINING_LOG):
-            with open(AUTO_TRAINING_LOG, 'r', encoding='utf-8') as f:
-                old_log = json.load(f)
-                log_entry['auto_trainings_count'] = old_log.get('auto_trainings_count', 0) + 1
-        
-        with open(AUTO_TRAINING_LOG, 'w', encoding='utf-8') as f:
-            json.dump(log_entry, f, ensure_ascii=False, indent=2)
-    
-    except Exception as e:
+        write_json(AUTO_TRAINING_LOG, log_entry)
+        sync_training_manifest(extra_files=[AUTO_TRAINING_LOG])
+    except Exception:
         pass
 
+
 def init_auto_training():
-    """تهيئة نظام التدريب التلقائي (يُستدعى عند بدء النظام)"""
+    """Initialize auto-training if enabled and due."""
     try:
         if should_auto_train():
             execute_silent_training()
     except Exception:
         pass
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     if should_auto_train():
         execute_silent_training()
-    else:
-        pass
+
+
+__all__ = ["should_auto_train", "execute_silent_training", "log_auto_training", "init_auto_training"]
