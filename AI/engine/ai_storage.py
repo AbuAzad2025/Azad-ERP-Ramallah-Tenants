@@ -20,12 +20,17 @@ KNOWN_AI_DATA_FILES = (
     "api_keys.enc.json",
     "training_jobs.json",
     "model_training_status.json",
+    "ai_training_manifest.json",
+    "ai_training_policy.json",
+    "ai_self_audit.json",
     "ai_interactions.json",
+    "conversations.json",
     "ai_learning_log.json",
     "ai_discovery_log.json",
     "ai_data_schema.json",
     "ai_system_map.json",
     "ai_knowledge_cache.json",
+    "ai_local_mode_log.json",
     "ai_security_events.jsonl",
 )
 
@@ -44,7 +49,10 @@ def data_path(filename: str | Path) -> Path:
     raw = Path(filename)
     if raw.is_absolute():
         return raw
-    if str(raw).replace("\\", "/").startswith(f"{AI_DATA_DIR}/"):
+    normalized = str(raw).replace("\\", "/")
+    default_prefix = "AI/data/"
+    configured_prefix = str(Path(AI_DATA_DIR)).replace("\\", "/").rstrip("/") + "/"
+    if normalized.startswith(default_prefix) or normalized.startswith(configured_prefix):
         return raw
     return ensure_data_dir() / raw
 
