@@ -1,227 +1,216 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, current_app
-from flask_login import login_required, current_user
-from functools import wraps
+from collections import defaultdict
 from datetime import datetime
-from typing import List, Dict
-import json
-import os
+from functools import wraps
+from typing import Any, Dict, List
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
+
 from utils import permission_required
 from permissions_config.enums import SystemPermissions
 
-from AI.engine.ai_service import (
-    ai_chat_with_search,
-    search_database_for_query,
-    gather_system_context,
-    build_system_message,
-    get_system_setting
-)
+from AI.engine.ai_service import ai_chat_with_search, gather_system_context
 from AI.engine.ai_management import (
-    save_api_key_encrypted,
-    test_api_key,
-    list_configured_apis,
-    start_training_job,
-    get_training_job_status,
     get_live_ai_stats,
-    get_model_status
+    get_model_status,
+    get_training_job_status,
+    list_configured_apis,
+    save_api_key_encrypted,
+    start_training_job,
+    test_api_key,
 )
+from AI.engine.ai_storage import append_json_list, read_json
 
-# Blueprint للمساعد الذكي
-ai_bp = Blueprint('ai', __name__, url_prefix='/ai')
+
+ai_bp = Blueprint("ai", __name__, url_prefix="/ai")
 
 
 # ============================================================
-# Decorators - للتحكم بالصلاحيات
+# Helpers
 # ============================================================
+
+
+def _has_permission(permission: Any) -> bool:
+    checker = getattr(current_user, "has_permission", None)
+    if not callable(checker):
+        return False
+    candidates = [getattr(permission, "value", permission), permission]
+    for candidate in candidates:
+        try:
+            if checker(candidate):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _normalize_ai_response(response: Any) -> Dict[str, Any]:
+    """Return one stable response shape for templates and JSON endpoints."""
+    if isinstance(response, dict):
+        text = response.get("response") or response.get("answer") or response.get("message") or ""
+        return {
+            "success": bool(response.get("success", True)),
+            "response": str(text),
+            "confidence": response.get("confidence", 0),
+            "sources": response.get("sources", []) or [],
+            "warnings": response.get("warnings", []) or [],
+            "tips": response.get("tips", []) or [],
+            "raw": response,
+        }
+    return {
+        "success": True,
+        "response": str(response or ""),
+        "confidence": 0,
+        "sources": [],
+        "warnings": [],
+        "tips": [],
+        "raw": response,
+    }
+
+
+def _chat_for_current_user(message: str) -> Dict[str, Any]:
+    raw_response = ai_chat_with_search(message=message, session_id=f"user_{current_user.id}")
+    return _normalize_ai_response(raw_response)
+
+
+# ============================================================
+# Decorators
+# ============================================================
+
 
 def ai_access(f):
-    """وصول للمساعد - حسب الإعدادات"""
+    """Access guard for AI pages and endpoints."""
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            flash('⛔ يجب تسجيل الدخول', 'danger')
-            return redirect(url_for('auth.login'))
-        
-        # فحص إذا كان المساعد مفعّل
-        from AI.engine.ai_permissions import is_ai_enabled
-        
-        if not is_ai_enabled() and not current_user.has_permission(SystemPermissions.ACCESS_OWNER_DASHBOARD):
-            flash('⛔ المساعد الذكي معطّل حالياً', 'warning')
-            return redirect(url_for('main.dashboard'))
-        
-        # الحماية: فقط للمالك والمطور (Level 0)
-        if not (current_user.is_system or current_user.role_name_l in ['owner', 'developer']):
-            flash('⛔ غير مصرح لك بالوصول للمساعد الذكي (تتطلب صلاحيات المالك)', 'danger')
-            return redirect(url_for('main.dashboard'))
+            flash("⛔ يجب تسجيل الدخول", "danger")
+            return redirect(url_for("auth.login"))
 
-        # التحقق من الصلاحية (يكفي هذا الشرط لأنه ممنوح للمالك فقط)
-        if current_user.has_permission(SystemPermissions.ACCESS_AI_ASSISTANT):
+        from AI.engine.ai_permissions import is_ai_enabled
+
+        if not is_ai_enabled() and not _has_permission(SystemPermissions.ACCESS_OWNER_DASHBOARD):
+            flash("⛔ المساعد الذكي معطّل حالياً", "warning")
+            return redirect(url_for("main.dashboard"))
+
+        is_owner_like = bool(
+            getattr(current_user, "is_system", False)
+            or getattr(current_user, "is_system_account", False)
+            or getattr(current_user, "role_name_l", "") in {"owner", "developer"}
+            or _has_permission(SystemPermissions.ACCESS_OWNER_DASHBOARD)
+        )
+        if not is_owner_like:
+            flash("⛔ غير مصرح لك بالوصول للمساعد الذكي", "danger")
+            return redirect(url_for("main.dashboard"))
+
+        if _has_permission(SystemPermissions.ACCESS_AI_ASSISTANT):
             return f(*args, **kwargs)
-        
-        flash('⛔ غير مصرح لك بالوصول للمساعد الذكي', 'danger')
-        return redirect(url_for('main.dashboard'))
-    
+
+        flash("⛔ غير مصرح لك بالوصول للمساعد الذكي", "danger")
+        return redirect(url_for("main.dashboard"))
+
     return decorated_function
 
 
 # ============================================================
-# Main Routes - المسارات الرئيسية
+# Main Routes
 # ============================================================
 
-@ai_bp.route('/hub')
+
+@ai_bp.route("/hub")
 @ai_access
 def hub():
-    """
-    🤖 AI Hub - مركز التحكم الرئيسي
-    """
-    tab = request.args.get('tab', 'assistant')
-    
-    # جمع الإحصائيات
-    ai_stats = _get_ai_stats()
-    system_stats = _get_system_stats()
-    recent_queries = _get_recent_queries(limit=5)
-    predictions = _get_predictions()
-    
-    # التحقق من تفعيل API keys
-    api_keys_configured = _check_api_keys()
-    
-    # جلب حالة النماذج
-    from AI.engine.ai_management import get_model_status
+    tab = request.args.get("tab", "assistant")
     model_statuses = get_model_status()
-    models_status = model_statuses.get('models', {}) if isinstance(model_statuses, dict) else {}
-    
+    models_status = model_statuses.get("models", {}) if isinstance(model_statuses, dict) else {}
+
     return render_template(
-        'ai/ai_hub.html',
+        "ai/ai_hub.html",
         active_tab=tab,
-        ai_stats=ai_stats,
-        system_stats=system_stats,
-        recent_queries=recent_queries,
-        predictions=predictions,
-        api_keys_configured=api_keys_configured,
-        model_statuses=models_status
+        ai_stats=_get_ai_stats(),
+        system_stats=_get_system_stats(),
+        recent_queries=_get_recent_queries(limit=5),
+        predictions=_get_predictions(),
+        api_keys_configured=_check_api_keys(),
+        model_statuses=models_status,
     )
 
 
-@ai_bp.route('/assistant', methods=['GET', 'POST'])
+@ai_bp.route("/assistant", methods=["GET", "POST"])
 @ai_access
 def assistant():
-    """
-    💬 AI Assistant - المساعد المباشر
-    
-    يدعم:
-    - محادثة تفاعلية
-    - أسئلة بالعربية
-    - تنفيذ عمليات
-    - شرح أي رقم
-    - تحليل محاسبي
-    """
-    if request.method == 'POST':
-        query = request.form.get('query', '').strip()
-        
+    if request.method == "POST":
+        query = request.form.get("query", "").strip()
         if not query:
-            flash('⚠️ الرجاء إدخال سؤال', 'warning')
-            return redirect(url_for('ai.assistant'))
-        
+            flash("⚠️ الرجاء إدخال سؤال", "warning")
+            return redirect(url_for("ai.assistant"))
+
         try:
-            response = ai_chat_with_search(
-                message=query,
-                session_id=f"user_{current_user.id}"
-            )
-            
-            # حفظ المحادثة
+            response = _chat_for_current_user(query)
             _save_conversation(query, response)
-            
             return render_template(
-                'ai/ai_assistant.html',
+                "ai/ai_assistant.html",
                 query=query,
                 response=response,
-                suggestions=_get_ai_suggestions()
+                suggestions=_get_ai_suggestions(),
             )
-        
-        except Exception as e:
-            flash(f'❌ خطأ: {str(e)}', 'danger')
-            return redirect(url_for('ai.assistant'))
-    
-    # GET request - عرض الصفحة مع اقتراحات
-    suggestions = _get_ai_suggestions()
-    recent_conversations = _get_recent_conversations(limit=5)
-    
+        except Exception as exc:
+            flash(f"❌ خطأ: {exc}", "danger")
+            return redirect(url_for("ai.assistant"))
+
     return render_template(
-        'ai/ai_assistant.html',
-        suggestions=suggestions,
-        recent_conversations=recent_conversations
+        "ai/ai_assistant.html",
+        suggestions=_get_ai_suggestions(),
+        recent_conversations=_get_recent_conversations(limit=5),
     )
 
 
-@ai_bp.route('/chat', methods=['POST'])
+@ai_bp.route("/chat", methods=["POST"])
 @ai_access
 def chat():
-    """
-    💬 API للمحادثة مع AI
-    يستخدم من JavaScript
-    """
     try:
-        data = request.get_json()
-        message = data.get('message', '').strip()
-        
+        data = request.get_json(silent=True) or {}
+        message = data.get("message", "").strip()
         if not message:
-            return jsonify({
-                'success': False,
-                'error': 'الرسالة فارغة'
-            }), 400
-        
-        response = ai_chat_with_search(
-            message=message,
-            session_id=f"user_{current_user.id}"
-        )
-        
-        # حفظ المحادثة
+            return jsonify({"success": False, "error": "الرسالة فارغة"}), 400
+
+        response = _chat_for_current_user(message)
         _save_conversation(message, response)
-        
-        return jsonify({
-            'success': True,
-            'response': response.get('response', 'عذراً، لم أتمكن من الإجابة'),
-            'confidence': response.get('confidence', 0),
-            'sources': response.get('sources', []),
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+
+        return jsonify(
+            {
+                "success": response.get("success", True),
+                "response": response.get("response") or "عذراً، لم أتمكن من الإجابة",
+                "confidence": response.get("confidence", 0),
+                "sources": response.get("sources", []),
+                "warnings": response.get("warnings", []),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
 
 
 # ============================================================
 # System Map Routes
 # ============================================================
 
-@ai_bp.route('/system-map', methods=['GET', 'POST'])
+
+@ai_bp.route("/system-map", methods=["GET", "POST"])
 @permission_required(SystemPermissions.MANAGE_AI)
 def system_map():
-    """
-    🗺️ خريطة النظام - Auto Discovery
-    """
-    from AI.engine.ai_auto_discovery import (
-        build_system_map,
-        load_system_map,
-        SYSTEM_MAP_FILE,
-        DISCOVERY_LOG_FILE
-    )
-    
-    if request.method == 'POST':
-        action = request.form.get('action')
-        
-        if action == 'rebuild':
+    from AI.engine.ai_auto_discovery import build_system_map, load_system_map, DISCOVERY_LOG_FILE
+
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "rebuild":
             try:
-                system_map_data = build_system_map()
-                flash('✅ تم إعادة بناء خريطة النظام بنجاح!', 'success')
-            except Exception as e:
-                flash(f'⚠️ خطأ: {str(e)}', 'danger')
-            
-            return redirect(url_for('ai.system_map'))
-    
-    # تحميل الخريطة
+                build_system_map()
+                flash("✅ تم إعادة بناء خريطة النظام بنجاح!", "success")
+            except Exception as exc:
+                flash(f"⚠️ خطأ: {exc}", "danger")
+            return redirect(url_for("ai.system_map"))
+
     system_map_data = load_system_map()
     map_exists = system_map_data is not None
     if system_map_data is None:
@@ -240,566 +229,257 @@ def system_map():
             "blueprints": [],
             "modules": [],
         }
-    
-    # تحميل السجلات
-    logs = []
-    if os.path.exists(DISCOVERY_LOG_FILE):
-        try:
-            with open(DISCOVERY_LOG_FILE, 'r', encoding='utf-8') as f:
-                logs = json.load(f)
-                logs = logs[-10:]  # آخر 10 سجلات
-        except Exception:
-            pass
-    
-    return render_template(
-        'ai/system_map.html',
-        system_map=system_map_data,
-        map_exists=map_exists,
-        logs=logs
-    )
+
+    logs = read_json(DISCOVERY_LOG_FILE, [])
+    if not isinstance(logs, list):
+        logs = []
+
+    return render_template("ai/system_map.html", system_map=system_map_data, map_exists=map_exists, logs=logs[-10:])
 
 
 # ============================================================
 # Training Routes
 # ============================================================
 
-@ai_bp.route('/training/start', methods=['POST'])
+
+@ai_bp.route("/training/start", methods=["POST"])
 @permission_required(SystemPermissions.TRAIN_AI)
 def start_training():
-    """
-    🎓 بدء تدريب نموذج
-    """
     try:
-        data = request.get_json()
-        model_name = data.get('model_name', 'unknown')
-        training_type = data.get('training_type', 'quick')
-        data_range = data.get('data_range', 'all')
-        
-        # استخدام نظام الإدارة المتقدم
-        result = start_training_job(model_name, training_type, data_range)
-        
-        if result.get('success'):
-            return jsonify(result)
-        else:
-            return jsonify(result), 500
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        data = request.get_json(silent=True) or {}
+        result = start_training_job(
+            data.get("model_name", "unknown"),
+            data.get("training_type", "quick"),
+            data.get("data_range", "all"),
+        )
+        return jsonify(result), 200 if result.get("success") else 500
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
 
 
-@ai_bp.route('/training/status/<training_id>')
+@ai_bp.route("/training/status/<training_id>")
 @permission_required(SystemPermissions.MANAGE_AI)
 def training_status(training_id):
-    """
-    📊 حالة التدريب
-    """
     job = get_training_job_status(training_id)
-    
     if job:
-        return jsonify({
-            'success': True,
-            'job': job
-        })
-    else:
-        return jsonify({
-            'success': False,
-            'error': 'التدريب غير موجود'
-        }), 404
+        return jsonify({"success": True, "job": job})
+    return jsonify({"success": False, "error": "التدريب غير موجود"}), 404
 
 
-@ai_bp.route('/models/status', methods=['GET'])
+@ai_bp.route("/models/status", methods=["GET"])
 @ai_access
 def models_status():
-    """
-    📊 حالة جميع النماذج
-    """
     try:
-        from AI.engine.ai_management import get_model_status
         model_statuses = get_model_status()
-        models_status = model_statuses.get('models', {}) if isinstance(model_statuses, dict) else {}
-        
-        return jsonify({
-            'success': True,
-            'models': models_status
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        models = model_statuses.get("models", {}) if isinstance(model_statuses, dict) else {}
+        return jsonify({"success": True, "models": models})
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
 
 
 # ============================================================
 # API Keys Management
 # ============================================================
 
-@ai_bp.route('/api-keys/save', methods=['POST'])
+
+@ai_bp.route("/api-keys/save", methods=["POST"])
 @permission_required(SystemPermissions.MANAGE_AI)
 def save_api_key():
-    """
-    💾 حفظ مفتاح API مشفر
-    """
     try:
-        data = request.get_json()
-        api_name = data.get('api_name')
-        api_key = data.get('api_key')
-        
+        data = request.get_json(silent=True) or {}
+        api_name = data.get("api_name")
+        api_key = data.get("api_key")
         if not api_name or not api_key:
-            return jsonify({
-                'success': False,
-                'error': 'بيانات ناقصة'
-            }), 400
-        
-        # حفظ المفتاح مشفر
+            return jsonify({"success": False, "error": "بيانات ناقصة"}), 400
+
         success = save_api_key_encrypted(api_name, api_key)
-        
         if success:
-            return jsonify({
-                'success': True,
-                'message': f'تم حفظ مفتاح {api_name} بنجاح (مشفر)'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'فشل في حفظ المفتاح'
-            }), 500
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+            return jsonify({"success": True, "message": f"تم حفظ مفتاح {api_name} بنجاح (مشفر)"})
+        return jsonify({"success": False, "error": "فشل في حفظ المفتاح"}), 500
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
 
 
-@ai_bp.route('/api-keys/test', methods=['POST'])
+@ai_bp.route("/api-keys/test", methods=["POST"])
 @permission_required(SystemPermissions.MANAGE_AI)
 def test_api_key_route():
-    """
-    🔍 اختبار مفتاح API
-    """
     try:
-        data = request.get_json()
-        api_name = data.get('api_name')
-        
+        data = request.get_json(silent=True) or {}
+        api_name = data.get("api_name")
         if not api_name:
-            return jsonify({
-                'success': False,
-                'error': 'اسم API مطلوب'
-            }), 400
-        
-        # اختبار المفتاح
-        result = test_api_key(api_name)
-        
-        return jsonify(result)
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+            return jsonify({"success": False, "error": "اسم API مطلوب"}), 400
+        return jsonify(test_api_key(api_name))
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
 
 
 # ============================================================
 # Analytics & Stats Routes
 # ============================================================
 
-@ai_bp.route('/stats/live')
+
+@ai_bp.route("/stats/live")
 @ai_access
 def live_stats():
-    """
-    📊 إحصائيات حية (Real-time)
-    """
-    stats = get_live_ai_stats()
-    
-    return jsonify({
-        'success': True,
-        'stats': stats
-    })
+    return jsonify({"success": True, "stats": get_live_ai_stats()})
 
 
-@ai_bp.route('/analytics/queries')
+@ai_bp.route("/analytics/queries")
 @permission_required(SystemPermissions.MANAGE_AI)
 def analytics_queries():
-    """
-    📈 تحليلات الاستعلامات
-    """
-    period = request.args.get('period', '7days')
-    
-    # جلب البيانات الفعلية من ai_interactions.json
-    try:
-        interactions_file = 'AI/data/ai_interactions.json'
-        
-        if os.path.exists(interactions_file):
-            with open(interactions_file, 'r', encoding='utf-8') as f:
-                interactions = json.load(f)
-                
-                # تجميع حسب اليوم
-                from collections import defaultdict
-                daily_counts = defaultdict(int)
-                
-                for interaction in interactions[-100:]:  # آخر 100
-                    timestamp = interaction.get('timestamp', '')
-                    if timestamp:
-                        day = timestamp[:10]  # YYYY-MM-DD
-                        daily_counts[day] += 1
-                
-                # آخر 7 أيام
-                labels = list(daily_counts.keys())[-7:]
-                values = [daily_counts[day] for day in labels]
-                
-                return jsonify({
-                    'success': True,
-                    'data': {
-                        'labels': labels,
-                        'values': values
-                    }
-                })
-    except Exception:
-        pass
-    
-    # Fallback data
-    return jsonify({
-        'success': True,
-        'data': {
-            'labels': ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'],
-            'values': [12, 19, 15, 25, 22, 30, 28]
-        }
-    })
+    interactions = read_json("ai_interactions.json", [])
+    if isinstance(interactions, list) and interactions:
+        daily_counts = defaultdict(int)
+        for interaction in interactions[-100:]:
+            timestamp = str(interaction.get("timestamp", ""))
+            if timestamp:
+                daily_counts[timestamp[:10]] += 1
+        labels = list(daily_counts.keys())[-7:]
+        return jsonify({"success": True, "data": {"labels": labels, "values": [daily_counts[day] for day in labels]}})
+
+    return jsonify({"success": True, "data": {"labels": [], "values": []}})
 
 
 @ai_bp.route("/evolution-report")
 @login_required
 @permission_required(SystemPermissions.MANAGE_AI)
 def evolution_report():
-    """
-    تقرير التطور الذاتي للنظام
-    يعرض مقاييس الأداء التاريخية وتحليل النمو
-    """
     try:
         from AI.engine.evolution_manager import get_evolution_metrics
-        # جلب البيانات الحقيقية من مدير التطور
-        # نفترض أن الدالة تعود بـ dict يحتوي على labels, gii_scores, error_rates, skills, recent_improvements
+
         report_data = get_evolution_metrics()
-    except ImportError:
-        # Fallback data for demonstration if module not fully ready
+    except Exception:
         report_data = {
-            'labels': ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
-            'gii_scores': [65, 68, 72, 75, 82, 88],
-            'error_rates': [12, 10, 8, 5, 3, 2],
-            'skills': {
-                'data_analysis': 95,
-                'nlp': 88,
-                'pattern_recognition': 72,
-                'recommendations': 60
-            },
-            'stats': {
-                'data_points': '5.2M',
-                'training_cycles': 124,
-                'uptime': '99.9%',
-                'inference_speed': '0.02s'
-            },
-            'improvements': [
-                {'title': 'تحسين دقة التنبؤ', 'desc': 'زيادة 15%', 'date': 'منذ يومين', 'icon': 'fas fa-arrow-up', 'color': 'success'},
-                {'title': 'دعم مصطلحات جديدة', 'desc': '50 مصطلح', 'date': 'منذ أسبوع', 'icon': 'fas fa-language', 'color': 'info'}
-            ]
+            "labels": [],
+            "gii_scores": [],
+            "error_rates": [],
+            "skills": {},
+            "stats": {},
+            "improvements": [],
         }
 
     return render_template("ai/evolution_report.html", report=report_data)
 
 
 # ============================================================
-# Helper Functions - دوال مساعدة
+# Helper Functions
 # ============================================================
+
 
 def _get_ai_stats():
     try:
         from AI.engine.ai_performance_tracker import get_performance_tracker
         from AI.engine.ai_self_evolution import get_evolution_engine
         from AI.engine.ai_learning_system import get_learning_system
-        
-        tracker = get_performance_tracker()
-        evolution = get_evolution_engine()
-        learning = get_learning_system()
-        
-        perf = tracker.get_performance_report()
-        evo = evolution.get_evolution_report()
-        learn = learning.get_learning_stats()
-        
+
+        perf = get_performance_tracker().get_performance_report()
+        evo = get_evolution_engine().get_evolution_report()
+        learn = get_learning_system().get_learning_stats()
+
         return {
-            'total_interactions': perf.get('total_queries', 0),
-            'success_rate': perf.get('success_rate', 0),
-            'avg_confidence': perf.get('avg_confidence', 0),
-            'evolution_level': evo.get('evolution_level', 1),
-            'learned_queries': learn.get('total_learned_queries', 0)
+            "total_interactions": perf.get("total_queries", 0),
+            "success_rate": perf.get("success_rate", 0),
+            "avg_confidence": perf.get("avg_confidence", 0),
+            "evolution_level": evo.get("evolution_level", 1),
+            "learned_queries": learn.get("total_learned_queries", 0),
         }
     except Exception:
-        pass
-    
-    return {'total_interactions': 0, 'success_rate': 0, 'avg_confidence': 0}
-
-
-def _get_ai_stats_old():
-    """جمع إحصائيات AI"""
-    try:
-        interactions_file = 'AI/data/ai_interactions.json'
-        
-        if os.path.exists(interactions_file):
-            with open(interactions_file, 'r', encoding='utf-8') as f:
-                interactions = json.load(f)
-                
-                total = len(interactions)
-                successful = sum(1 for i in interactions if i.get('confidence', 0) > 70)
-                
-                # حساب متوسط وقت الاستجابة
-                avg_time = 0.8  # افتراضي
-                
-                # استعلامات اليوم
-                today = datetime.now().date().isoformat()
-                today_count = sum(1 for i in interactions 
-                                if i.get('timestamp', '').startswith(today))
-                
-                return {
-                    'total_queries': total,
-                    'successful': successful,
-                    'success_rate': round((successful / total * 100) if total > 0 else 0, 1),
-                    'avg_response_time': avg_time,
-                    'today': today_count
-                }
-        
-        return {
-            'total_queries': 0,
-            'successful': 0,
-            'success_rate': 0,
-            'avg_response_time': 0,
-            'today': 0
-        }
-        
-    except Exception:
-        return {
-            'total_queries': 0,
-            'successful': 0,
-            'success_rate': 0,
-            'avg_response_time': 0,
-            'today': 0
-        }
+        return {"total_interactions": 0, "success_rate": 0, "avg_confidence": 0}
 
 
 def _get_system_stats():
     try:
-        from AI.engine.ai_service import gather_system_context
-        ctx = gather_system_context()
-        return ctx
+        return gather_system_context()
     except Exception:
-        pass
-    
-    return {}
+        return {}
 
 
-def _get_system_stats_old():
-    """إحصائيات النظام"""
-    try:
-        from AI.engine.ai_auto_discovery import load_system_map
-        system_map = load_system_map()
-        
-        if system_map:
-            return {
-                'total_routes': system_map.get('statistics', {}).get('total_routes', 0),
-                'total_templates': system_map.get('statistics', {}).get('total_templates', 0),
-                'total_models': len(system_map.get('models', [])) if system_map.get('models') else 45,
-                'total_relationships': len(system_map.get('relationships', [])) if system_map.get('relationships') else 120
-            }
-    except Exception:
-        pass
-    
-    return {
-        'total_routes': 362,
-        'total_templates': 150,
-        'total_models': 45,
-        'total_relationships': 120
-    }
-
-
-def _get_recent_queries(limit=5):
-    """آخر الاستعلامات"""
-    try:
-        interactions_file = 'AI/data/ai_interactions.json'
-        
-        if os.path.exists(interactions_file):
-            with open(interactions_file, 'r', encoding='utf-8') as f:
-                interactions = json.load(f)
-                
-                # آخر N استعلامات
-                recent = interactions[-limit:] if len(interactions) > limit else interactions
-                recent.reverse()
-                
-                return recent
-        
-    except Exception:
-        pass
-    
-    return []
+def _get_recent_queries(limit: int = 5) -> List[Dict[str, Any]]:
+    interactions = read_json("ai_interactions.json", [])
+    if not isinstance(interactions, list):
+        return []
+    return list(reversed(interactions[-limit:]))
 
 
 def _get_predictions():
     try:
         from AI.engine.ai_performance_tracker import get_performance_tracker
-        tracker = get_performance_tracker()
-        report = tracker.get_performance_report()
-        
-        trend = report.get('recent_trend', 'stable')
-        
+
+        report = get_performance_tracker().get_performance_report()
+        trend = report.get("recent_trend", "stable")
+        success_rate = report.get("success_rate", 0)
         predictions = []
-        
-        if trend == 'improving':
-            predictions.append({
-                'type': 'positive',
-                'message': 'الأداء في تحسن مستمر',
-                'icon': 'arrow-up'
-            })
-        elif trend == 'declining':
-            predictions.append({
-                'type': 'warning',
-                'message': 'الأداء في تراجع - يحتاج مراجعة',
-                'icon': 'arrow-down'
-            })
-        
-        success_rate = report.get('success_rate', 0)
+
+        if trend == "improving":
+            predictions.append({"type": "positive", "message": "الأداء في تحسن مستمر", "icon": "arrow-up"})
+        elif trend == "declining":
+            predictions.append({"type": "warning", "message": "الأداء في تراجع - يحتاج مراجعة", "icon": "arrow-down"})
         if success_rate >= 90:
-            predictions.append({
-                'type': 'success',
-                'message': f'نسبة نجاح ممتازة: {success_rate}%',
-                'icon': 'check-circle'
-            })
-        
-        if len(predictions) == 0:
-            predictions = [
-                {'type': 'مبيعات', 'period': 'الشهر القادم', 'value': '+15%', 'confidence': 87},
-                {'type': 'مخزون', 'period': 'الأسبوع القادم', 'value': 'نقص متوقع', 'confidence': 92},
-                {'type': 'إيرادات', 'period': 'الربع القادم', 'value': '₪125,000', 'confidence': 89}
-            ]
-        
+            predictions.append({"type": "success", "message": f"نسبة نجاح ممتازة: {success_rate}%", "icon": "check-circle"})
         return predictions
     except Exception:
-        pass
-    
-    return [
-        {'type': 'مبيعات', 'period': 'الشهر القادم', 'value': '+15%', 'confidence': 87},
-        {'type': 'مخزون', 'period': 'الأسبوع القادم', 'value': 'نقص متوقع', 'confidence': 92},
-        {'type': 'إيرادات', 'period': 'الربع القادم', 'value': '₪125,000', 'confidence': 89}
-    ]
-
-
-def _get_predictions_old():
-    """التنبؤات المتاحة"""
-    return [
-        {'type': 'مبيعات', 'period': 'الشهر القادم', 'value': '+15%', 'confidence': 87},
-        {'type': 'مخزون', 'period': 'الأسبوع القادم', 'value': 'نقص متوقع', 'confidence': 92},
-        {'type': 'إيرادات', 'period': 'الربع القادم', 'value': '₪125,000', 'confidence': 89}
-    ]
+        return []
 
 
 def _check_api_keys():
-    """التحقق من تفعيل API keys"""
-    configured = list_configured_apis()
-    return len(configured) > 0
+    return len(list_configured_apis()) > 0
 
 
-def _save_conversation(query: str, response: dict):
-    """حفظ المحادثة في السجل"""
+def _save_conversation(query: str, response: Any):
     try:
-        conversations_file = 'AI/data/conversations.json'
-        os.makedirs('AI/data', exist_ok=True)
-        
-        if os.path.exists(conversations_file):
-            with open(conversations_file, 'r', encoding='utf-8') as f:
-                conversations = json.load(f)
-        else:
-            conversations = []
-        
-        conversations.append({
-            'user_id': current_user.id,
-            'username': current_user.username,
-            'query': query,
-            'response': response.get('response', ''),
-            'timestamp': datetime.now().isoformat()
-        })
-        
-        # الاحتفاظ بآخر 1000 محادثة
-        conversations = conversations[-1000:]
-        
-        with open(conversations_file, 'w', encoding='utf-8') as f:
-            json.dump(conversations, f, ensure_ascii=False, indent=2)
-    
-    except Exception as e:
-        current_app.logger.error(f"Error saving conversation: {e}")
+        normalized = _normalize_ai_response(response)
+        append_json_list(
+            "conversations.json",
+            {
+                "user_id": current_user.id,
+                "username": current_user.username,
+                "query": query,
+                "response": normalized.get("response", ""),
+                "confidence": normalized.get("confidence", 0),
+                "timestamp": datetime.now().isoformat(),
+            },
+            max_items=1000,
+        )
+    except Exception as exc:
+        current_app.logger.error(f"Error saving conversation: {exc}")
 
 
-def _get_recent_conversations(limit: int = 5) -> List[Dict]:
-    """الحصول على آخر المحادثات"""
+def _get_recent_conversations(limit: int = 5) -> List[Dict[str, Any]]:
     try:
-        conversations_file = 'AI/data/conversations.json'
-        
-        if os.path.exists(conversations_file):
-            with open(conversations_file, 'r', encoding='utf-8') as f:
-                conversations = json.load(f)
-                
-            # فلترة حسب المستخدم الحالي
-            user_conversations = [
-                c for c in conversations 
-                if c.get('user_id') == current_user.id
-            ]
-            
-            return user_conversations[-limit:]
-        
-        return []
-    
-    except Exception as e:
-        current_app.logger.error(f"Error loading conversations: {e}")
+        conversations = read_json("conversations.json", [])
+        if not isinstance(conversations, list):
+            return []
+        user_conversations = [c for c in conversations if c.get("user_id") == current_user.id]
+        return user_conversations[-limit:]
+    except Exception as exc:
+        current_app.logger.error(f"Error loading conversations: {exc}")
         return []
 
 
 def _get_ai_suggestions():
-    """اقتراحات ذكية للمستخدم"""
     return [
-        {
-            'type': 'info',
-            'title': '💡 نصيحة اليوم',
-            'action': 'استخدم "صباح الخير" لرؤية ملخص يومك'
-        },
-        {
-            'type': 'success',
-            'title': '✅ تحديث متاح',
-            'action': 'تدريب جديد متاح للنماذج'
-        }
+        {"type": "info", "title": "💡 نصيحة اليوم", "action": "استخدم \"صباح الخير\" لرؤية ملخص يومك"},
+        {"type": "success", "title": "✅ تحديث متاح", "action": "تدريب جديد متاح للنماذج"},
     ]
 
 
 def _analyze_query(query):
-    """تحليل استعلام المستخدم"""
     try:
-        response = ai_chat_with_search(
-            message=query,
-            session_id=f"user_{current_user.id}"
-        )
-        
+        response = _chat_for_current_user(query)
         return {
-            'query': query,
-            'response': response.get('response', ''),
-            'confidence': response.get('confidence', 0),
-            'sources': response.get('sources', []),
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            "query": query,
+            "response": response.get("response", ""),
+            "confidence": response.get("confidence", 0),
+            "sources": response.get("sources", []),
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
-        
-    except Exception as e:
+    except Exception as exc:
         return {
-            'query': query,
-            'response': f'عذراً، حدث خطأ: {str(e)}',
-            'confidence': 0,
-            'sources': [],
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            "query": query,
+            "response": f"عذراً، حدث خطأ: {exc}",
+            "confidence": 0,
+            "sources": [],
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
 
 
@@ -807,18 +487,12 @@ def _analyze_query(query):
 # Error Handlers
 # ============================================================
 
+
 @ai_bp.errorhandler(404)
 def not_found(error):
-    return jsonify({
-        'success': False,
-        'error': 'المسار غير موجود'
-    }), 404
+    return jsonify({"success": False, "error": "المسار غير موجود"}), 404
 
 
 @ai_bp.errorhandler(500)
 def internal_error(error):
-    return jsonify({
-        'success': False,
-        'error': 'خطأ في الخادم'
-    }), 500
-
+    return jsonify({"success": False, "error": "خطأ في الخادم"}), 500
