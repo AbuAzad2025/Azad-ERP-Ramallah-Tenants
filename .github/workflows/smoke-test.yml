@@ -1,0 +1,52 @@
+name: Smoke Test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      APP_ENV: local
+      DEBUG: "true"
+      FLASK_APP: app:create_app
+      AI_SYSTEMS_ENABLED: "false"
+      ENABLE_AUTOMATED_BACKUPS: "false"
+      SKIP_SYSTEM_INTEGRITY: "false"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          pip install -r requirements.txt
+
+      - name: Run database migrations
+        run: flask db upgrade
+
+      - name: Import application
+        run: python -c "from app import create_app; app = create_app(); print('APP_CREATED_OK')"
+
+      - name: Start application briefly
+        run: |
+          python run_local.py > app.log 2>&1 &
+          APP_PID=$!
+          sleep 15
+          if ! kill -0 $APP_PID 2>/dev/null; then
+            cat app.log
+            exit 1
+          fi
+          kill $APP_PID
+          cat app.log
