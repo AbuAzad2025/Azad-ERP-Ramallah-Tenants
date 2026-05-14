@@ -1,12 +1,13 @@
 """AI Deep Memory.
 
 Persistent bounded memory stores for facts, concepts, procedures, and episodes.
-Uses ai_storage so files are written atomically and tracked in the manifest.
+Sensitive keys/values are redacted before persistence.
 """
 
 from __future__ import annotations
 
 import hashlib
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -18,6 +19,18 @@ PROCEDURAL_FILE = "deep_memory/procedural_memory.json"
 EPISODIC_FILE = "deep_memory/episodic_memory.json"
 DEEP_MEMORY_FILES = [LONG_TERM_FILE, SEMANTIC_FILE, PROCEDURAL_FILE, EPISODIC_FILE]
 MAX_MEMORY_ITEMS = 1000
+SENSITIVE_RE = re.compile(r"(password|secret|token|api[_-]?key|authorization|bearer|cookie|session|csrf|private[_-]?key)", re.IGNORECASE)
+
+
+def _redact(value: Any):
+    if isinstance(value, dict):
+        return {k: ("[REDACTED]" if SENSITIVE_RE.search(str(k)) else _redact(v)) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_redact(v) for v in value[:100]]
+    text = str(value) if value is not None else value
+    if isinstance(text, str) and SENSITIVE_RE.search(text):
+        return SENSITIVE_RE.sub("[REDACTED]", text)[:4000]
+    return value
 
 
 class DeepMemory:
@@ -43,65 +56,38 @@ class DeepMemory:
             self.procedural_memory = {}
 
     def remember_fact(self, category: str, key: str, value: Any, importance: int = 5):
+        category = str(category or "")[:120]
+        key = str(key or "")[:200]
+        safe_value = _redact(value)
         memory_id = hashlib.md5(f"{category}_{key}".encode()).hexdigest()
-        memory_entry = {
-            "id": memory_id,
-            "category": category,
-            "key": key,
-            "value": value,
-            "importance": int(importance or 0),
-            "created_at": datetime.now().isoformat(),
-            "access_count": 0,
-            "last_accessed": None,
-        }
+        memory_entry = {"id": memory_id, "category": category, "key": key, "value": safe_value, "importance": int(importance or 0), "created_at": datetime.now().isoformat(), "access_count": 0, "last_accessed": None}
         self.short_term_memory[memory_id] = memory_entry
         if len(self.short_term_memory) > MAX_MEMORY_ITEMS:
-            first_key = next(iter(self.short_term_memory))
-            self.short_term_memory.pop(first_key, None)
+            self.short_term_memory.pop(next(iter(self.short_term_memory)), None)
         if memory_entry["importance"] >= 7:
             self.long_term_memory[memory_id] = memory_entry
             self._save_long_term_memory()
 
     def remember_concept(self, concept: str, definition: str, examples: List[str] = None, related: List[str] = None):
         concept_id = hashlib.md5(str(concept).encode()).hexdigest()
-        self.semantic_memory[concept_id] = {
-            "concept": concept,
-            "definition": definition,
-            "examples": (examples or [])[:20],
-            "related_concepts": (related or [])[:20],
-            "created_at": datetime.now().isoformat(),
-            "mastery_level": 0,
-        }
+        self.semantic_memory[concept_id] = {"concept": str(concept or "")[:300], "definition": str(_redact(definition) or "")[:4000], "examples": [_redact(x) for x in (examples or [])[:20]], "related_concepts": (related or [])[:20], "created_at": datetime.now().isoformat(), "mastery_level": 0}
         self._trim_dict(self.semantic_memory)
         self._save_semantic_memory()
 
     def remember_procedure(self, name: str, steps: List[str], context: Dict = None):
         proc_id = hashlib.md5(str(name).encode()).hexdigest()
-        self.procedural_memory[proc_id] = {
-            "name": name,
-            "steps": (steps or [])[:100],
-            "context": context or {},
-            "times_executed": 0,
-            "success_rate": 0.0,
-            "created_at": datetime.now().isoformat(),
-        }
+        self.procedural_memory[proc_id] = {"name": str(name or "")[:300], "steps": [_redact(s) for s in (steps or [])[:100]], "context": _redact(context or {}), "times_executed": 0, "success_rate": 0.0, "created_at": datetime.now().isoformat()}
         self._trim_dict(self.procedural_memory)
         self._save_procedural_memory()
 
     def remember_experience(self, event: str, outcome: str, lessons_learned: List[str]):
-        self.episodic_memory.append(
-            {"event": event, "outcome": outcome, "lessons_learned": (lessons_learned or [])[:20], "timestamp": datetime.now().isoformat()}
-        )
+        self.episodic_memory.append({"event": str(_redact(event) or "")[:4000], "outcome": str(_redact(outcome) or "")[:4000], "lessons_learned": [_redact(x) for x in (lessons_learned or [])[:20]], "timestamp": datetime.now().isoformat()})
         self.episodic_memory = self.episodic_memory[-MAX_MEMORY_ITEMS:]
         self._save_episodic_memory()
 
     def recall_fact(self, key: str = None, category: str = None) -> Optional[Dict]:
         for memory in {**self.long_term_memory, **self.short_term_memory}.values():
-            if key and memory.get("key") == key:
-                memory["access_count"] = int(memory.get("access_count", 0) or 0) + 1
-                memory["last_accessed"] = datetime.now().isoformat()
-                return memory
-            if category and memory.get("category") == category:
+            if key and memory.get("key") == key or category and memory.get("category") == category:
                 memory["access_count"] = int(memory.get("access_count", 0) or 0) + 1
                 memory["last_accessed"] = datetime.now().isoformat()
                 return memory
@@ -144,14 +130,7 @@ class DeepMemory:
         return consolidated
 
     def get_memory_stats(self) -> Dict:
-        return {
-            "short_term": len(self.short_term_memory),
-            "long_term": len(self.long_term_memory),
-            "semantic": len(self.semantic_memory),
-            "procedural": len(self.procedural_memory),
-            "episodic": len(self.episodic_memory),
-            "total": len(self.short_term_memory) + len(self.long_term_memory) + len(self.semantic_memory) + len(self.procedural_memory) + len(self.episodic_memory),
-        }
+        return {"short_term": len(self.short_term_memory), "long_term": len(self.long_term_memory), "semantic": len(self.semantic_memory), "procedural": len(self.procedural_memory), "episodic": len(self.episodic_memory), "total": len(self.short_term_memory) + len(self.long_term_memory) + len(self.semantic_memory) + len(self.procedural_memory) + len(self.episodic_memory)}
 
     def search_all_memories(self, query: str) -> Dict[str, List]:
         query_lower = str(query or "").lower()
