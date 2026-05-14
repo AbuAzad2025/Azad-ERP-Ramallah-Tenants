@@ -142,7 +142,8 @@ class BookReader:
             return {"success": False, "error": str(exc)}
 
     def _store_book(self, book_data: Dict[str, Any]) -> Dict[str, Any]:
-        book_id = f"book_{re.sub(r'[^a-zA-Z0-9_\u0600-\u06FF-]', '_', book_data['title'])}"
+        safe_title = re.sub(r"[^a-zA-Z0-9_\u0600-\u06FF-]", "_", str(book_data.get("title", "book")))
+        book_id = f"book_{safe_title}"
         self.memorized_books[book_id] = book_data
         self.book_index[book_id] = {
             "title": book_data["title"],
