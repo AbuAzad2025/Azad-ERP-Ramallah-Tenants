@@ -40,13 +40,9 @@ application = create_app()
 
 def prepare_local_database():
     with application.app_context():
-        try:
-            from flask_migrate import upgrade
-            upgrade()
-        except Exception as exc:
-            print(f'WARNING: flask db upgrade failed: {exc}')
-            print('Trying db.create_all() for local testing...')
-            db.create_all()
+        print('Preparing local SQLite database with db.create_all()...')
+        db.create_all()
+        print('Local database is ready.')
 
 
 if __name__ == '__main__':
