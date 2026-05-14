@@ -1,13 +1,13 @@
-"""AI Database Search Engine.
+"""Read-only database search helpers for AI.
 
-Read-only helpers used by the AI assistant. The functions avoid random ordering,
-limit result sizes, and tolerate small model/column naming differences.
+Uses actual SQLAlchemy model fields and avoids fabricated/static data.
 """
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Iterable, List
 
 from sqlalchemy import func, or_
 
@@ -27,6 +27,34 @@ def _sum_column(model, *column_names):
             except Exception:
                 continue
     return 0
+
+
+def _first_existing(model, names: Iterable[str]):
+    for name in names:
+        value = getattr(model, name, None)
+        if value is not None:
+            return value
+    return None
+
+
+def _search_terms(query: str) -> List[str]:
+    terms = []
+    for token in re.split(r"[\s،,؛;:]+", str(query or "")):
+        token = token.strip()
+        if len(token) >= 3 and token not in {"كم", "عدد", "رصيد", "عميل", "مورد", "منتج", "قطعة", "مبيعات", "دفع", "دفعة", "مصروف", "صيانة", "customer", "supplier", "product", "sales", "payment", "expense", "service"}:
+            terms.append(token)
+    return terms[:6]
+
+
+def _or_ilike(model, fields: Iterable[str], terms: List[str]):
+    clauses = []
+    for field in fields:
+        col = getattr(model, field, None)
+        if col is None:
+            continue
+        for term in terms:
+            clauses.append(col.ilike(f"%{term}%"))
+    return or_(*clauses) if clauses else None
 
 
 def search_database_for_query(query: str) -> Dict[str, Any]:
@@ -64,7 +92,6 @@ def search_database_for_query(query: str) -> Dict[str, Any]:
 def analyze_query_intent(query_lower: str) -> Dict[str, Any]:
     query_lower = _query_text(query_lower)
     intent = {"type": "general", "entities": [], "time_scope": "all", "action": "search"}
-
     if any(word in query_lower for word in ["كم", "عدد", "how many", "count"]):
         intent.update(type="count", action="calculate")
     elif any(word in query_lower for word in ["رصيد", "balance", "حساب"]):
@@ -116,14 +143,13 @@ def get_time_range(scope: str) -> tuple:
 def search_customers(query: str) -> Dict[str, Any]:
     try:
         from models import Customer
-
         result = {"customers_count": Customer.query.count(), "customers_active": Customer.query.filter_by(is_active=True).count()}
-        if len(query) > 3:
-            search_results = Customer.query.filter(or_(Customer.name.ilike(f"%{query}%"), Customer.phone.ilike(f"%{query}%"), Customer.email.ilike(f"%{query}%"))).limit(10).all()
-            if search_results:
-                result["customers_found"] = [
-                    {"id": c.id, "name": c.name, "phone": c.phone, "balance": float(getattr(c, "balance", 0) or 0)} for c in search_results
-                ]
+        terms = _search_terms(query)
+        clause = _or_ilike(Customer, ["name", "phone", "email", "whatsapp"], terms)
+        if clause is not None:
+            found = Customer.query.filter(clause).limit(10).all()
+            if found:
+                result["customers_found"] = [{"id": c.id, "name": c.name, "phone": c.phone, "balance": float(getattr(c, "balance", 0) or 0)} for c in found]
         samples = Customer.query.order_by(Customer.id.desc()).limit(5).all()
         result["customers_sample"] = [{"id": c.id, "name": c.name, "phone": c.phone} for c in samples]
         return result
@@ -134,12 +160,13 @@ def search_customers(query: str) -> Dict[str, Any]:
 def search_suppliers(query: str) -> Dict[str, Any]:
     try:
         from models import Supplier
-
         result = {"suppliers_count": Supplier.query.count()}
-        if len(query) > 3:
-            search_results = Supplier.query.filter(or_(Supplier.name.ilike(f"%{query}%"), Supplier.phone.ilike(f"%{query}%"))).limit(10).all()
-            if search_results:
-                result["suppliers_found"] = [{"id": s.id, "name": s.name, "phone": s.phone} for s in search_results]
+        terms = _search_terms(query)
+        clause = _or_ilike(Supplier, ["name", "phone", "email", "contact", "identity_number"], terms)
+        if clause is not None:
+            found = Supplier.query.filter(clause).limit(10).all()
+            if found:
+                result["suppliers_found"] = [{"id": s.id, "name": s.name, "phone": s.phone, "balance": float(getattr(s, "balance", 0) or 0)} for s in found]
         return result
     except Exception as exc:
         return {"suppliers_error": str(exc)}
@@ -148,14 +175,13 @@ def search_suppliers(query: str) -> Dict[str, Any]:
 def search_products(query: str) -> Dict[str, Any]:
     try:
         from models import Product
-
         result = {"products_count": Product.query.count()}
-        if len(query) > 2:
-            search_results = Product.query.filter(or_(Product.name.ilike(f"%{query}%"), Product.barcode.ilike(f"%{query}%"), Product.sku.ilike(f"%{query}%"))).limit(10).all()
-            if search_results:
-                result["products_found"] = [
-                    {"id": p.id, "name": p.name, "sku": p.sku, "price": float(getattr(p, "price", 0) or getattr(p, "selling_price", 0) or 0)} for p in search_results
-                ]
+        terms = _search_terms(query)
+        clause = _or_ilike(Product, ["name", "sku", "barcode", "part_number", "brand", "commercial_name"], terms)
+        if clause is not None:
+            found = Product.query.filter(clause).limit(10).all()
+            if found:
+                result["products_found"] = [{"id": p.id, "name": p.name, "sku": p.sku, "price": float(getattr(p, "price", 0) or 0), "selling_price": float(getattr(p, "selling_price", 0) or 0)} for p in found]
         return result
     except Exception as exc:
         return {"products_error": str(exc)}
@@ -163,29 +189,26 @@ def search_products(query: str) -> Dict[str, Any]:
 
 def search_services(query: str) -> Dict[str, Any]:
     try:
-        from models import ServiceRequest
-
-        return {
-            "services_total": ServiceRequest.query.count(),
-            "services_pending": ServiceRequest.query.filter_by(status="pending").count(),
-            "services_completed": ServiceRequest.query.filter_by(status="completed").count(),
-        }
+        from models import ServiceRequest, ServiceStatus
+        pending = ServiceStatus.PENDING.value
+        completed = ServiceStatus.COMPLETED.value
+        return {"services_total": ServiceRequest.query.count(), "services_pending": ServiceRequest.query.filter_by(status=pending).count(), "services_completed": ServiceRequest.query.filter_by(status=completed).count()}
     except Exception as exc:
         return {"services_error": str(exc)}
 
 
 def search_sales(query: str) -> Dict[str, Any]:
     try:
-        from models import Sale
-
-        total_count = Sale.query.filter_by(status="CONFIRMED").count()
-        total_amount = _sum_column(Sale, "sale_total", "total_amount", "total")
+        from models import Sale, SaleStatus
+        confirmed = SaleStatus.CONFIRMED.value
+        total_count = Sale.query.filter_by(status=confirmed).count()
+        total_amount = _sum_column(Sale, "total_amount")
         today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        sale_date = getattr(Sale, "sale_date", None) or getattr(Sale, "created_at", None)
-        amount_col = getattr(Sale, "sale_total", None) or getattr(Sale, "total_amount", None) or getattr(Sale, "total", None)
+        sale_date = _first_existing(Sale, ["sale_date", "created_at"])
+        amount_col = _first_existing(Sale, ["total_amount"])
         today_sales = 0
         if sale_date is not None and amount_col is not None:
-            today_sales = db.session.query(func.sum(amount_col)).filter(Sale.status == "CONFIRMED", sale_date >= today).scalar() or 0
+            today_sales = db.session.query(func.sum(amount_col)).filter(Sale.status == confirmed, sale_date >= today).scalar() or 0
         return {"sales_count": total_count, "sales_total": float(total_amount), "sales_today": float(today_sales)}
     except Exception as exc:
         return {"sales_error": str(exc)}
@@ -194,8 +217,7 @@ def search_sales(query: str) -> Dict[str, Any]:
 def search_payments(query: str) -> Dict[str, Any]:
     try:
         from models import Payment
-
-        return {"payments_count": Payment.query.count(), "payments_total": float(_sum_column(Payment, "amount", "total_amount"))}
+        return {"payments_count": Payment.query.count(), "payments_total": float(_sum_column(Payment, "total_amount"))}
     except Exception as exc:
         return {"payments_error": str(exc)}
 
@@ -203,7 +225,6 @@ def search_payments(query: str) -> Dict[str, Any]:
 def search_expenses(query: str) -> Dict[str, Any]:
     try:
         from models import Expense
-
         return {"expenses_count": Expense.query.count(), "expenses_total": float(_sum_column(Expense, "amount", "total_amount"))}
     except Exception as exc:
         return {"expenses_error": str(exc)}
@@ -212,9 +233,9 @@ def search_expenses(query: str) -> Dict[str, Any]:
 def search_inventory(query: str) -> Dict[str, Any]:
     try:
         from models import StockLevel, Warehouse
-
         products_in_stock = db.session.query(func.count(func.distinct(StockLevel.product_id))).scalar() or 0
-        return {"inventory_products_count": products_in_stock, "warehouses_count": Warehouse.query.count()}
+        low_stock = StockLevel.query.filter(StockLevel.min_stock.isnot(None), StockLevel.quantity < StockLevel.min_stock).count() if hasattr(StockLevel, "min_stock") else 0
+        return {"inventory_products_count": products_in_stock, "warehouses_count": Warehouse.query.count(), "low_stock_count": low_stock}
     except Exception as exc:
         return {"inventory_error": str(exc)}
 
@@ -222,23 +243,12 @@ def search_inventory(query: str) -> Dict[str, Any]:
 def get_general_statistics() -> Dict[str, Any]:
     try:
         from models import Customer, Expense, Product, Sale, ServiceRequest, Supplier, User, Warehouse
-
-        return {
-            "general_customers": Customer.query.count(),
-            "general_suppliers": Supplier.query.count(),
-            "general_products": Product.query.count(),
-            "general_services": ServiceRequest.query.count(),
-            "general_users": User.query.count(),
-            "general_warehouses": Warehouse.query.count(),
-            "general_sales": Sale.query.count(),
-            "general_expenses": Expense.query.count(),
-        }
+        return {"general_customers": Customer.query.count(), "general_suppliers": Supplier.query.count(), "general_products": Product.query.count(), "general_services": ServiceRequest.query.count(), "general_users": User.query.count(), "general_warehouses": Warehouse.query.count(), "general_sales": Sale.query.count(), "general_expenses": Expense.query.count()}
     except Exception as exc:
         return {"general_error": str(exc)}
 
 
 def search_in_database(query: str) -> Dict[str, Any]:
-    """Compatibility alias used by older AI modules."""
     return search_database_for_query(query)
 
 
