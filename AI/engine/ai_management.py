@@ -1,824 +1,503 @@
-"""
-🔧 AI Management - إدارة متقدمة للمساعد الذكي
-=================================================
+"""AI management utilities.
 
-ميزات:
-- إدارة مفاتيح API (تشفير، حفظ، اختبار)
-- إدارة التدريب (بدء، إيقاف، مراقبة)
-- إحصائيات حية
-- إدارة النماذج
+Responsibilities:
+- encrypted API key storage
+- provider key testing
+- training job lifecycle
+- model status tracking
+- live AI health/statistics
+
+The public function names are kept stable because routes import them directly.
 """
 
-import os
+from __future__ import annotations
+
 import json
+import os
+import threading
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
 from cryptography.fernet import Fernet
-from pathlib import Path
+
+
+API_DATA_DIR = "AI/data"
+API_KEYS_FILE = f"{API_DATA_DIR}/api_keys.enc.json"
+ENCRYPTION_KEY_FILE = "instance/.ai_encryption_key"
+TRAINING_JOBS_FILE = f"{API_DATA_DIR}/training_jobs.json"
+MODEL_STATUS_FILE = f"{API_DATA_DIR}/model_training_status.json"
+
+DEFAULT_MODELS = {
+    "نموذج التنبؤ بالمبيعات": {"status": "pending", "accuracy": 0, "last_update": None, "last_trained": None, "training_jobs": []},
+    "نموذج إدارة المخزون": {"status": "pending", "accuracy": 0, "last_update": None, "last_trained": None, "training_jobs": []},
+    "نموذج تحليل العملاء": {"status": "pending", "accuracy": 0, "last_update": None, "last_trained": None, "training_jobs": []},
+}
+
+AVAILABLE_MODELS = [
+    {
+        "id": "sales_predictor",
+        "name": "نموذج التنبؤ بالمبيعات",
+        "description": "تنبؤ بالمبيعات المستقبلية بناءً على البيانات التاريخية",
+        "icon": "fa-chart-line",
+        "status": "pending",
+        "accuracy": 0,
+        "last_trained": None,
+    },
+    {
+        "id": "inventory_optimizer",
+        "name": "نموذج إدارة المخزون",
+        "description": "التنبؤ بالنقص في المخزون وتحسين الطلبات",
+        "icon": "fa-boxes",
+        "status": "pending",
+        "accuracy": 0,
+        "last_trained": None,
+    },
+    {
+        "id": "customer_analyzer",
+        "name": "نموذج تحليل العملاء",
+        "description": "تحليل سلوك العملاء والتنبؤ بالاحتياجات",
+        "icon": "fa-users",
+        "status": "pending",
+        "accuracy": 0,
+        "last_trained": None,
+    },
+]
+
+
+def _ensure_dirs() -> None:
+    os.makedirs(API_DATA_DIR, exist_ok=True)
+    os.makedirs("instance", exist_ok=True)
+
+
+def _read_json(path: str, default: Any) -> Any:
+    try:
+        if not os.path.exists(path):
+            return default
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return default
+
+
+def _write_json(path: str, data: Any) -> None:
+    _ensure_dirs()
+    tmp_path = f"{path}.tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp_path, path)
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 # ============================================================
-# API Keys Management - إدارة المفاتيح
+# API Keys Management
 # ============================================================
 
-API_KEYS_FILE = 'AI/data/api_keys.enc.json'
-ENCRYPTION_KEY_FILE = 'instance/.ai_encryption_key'
 
-
-def _get_or_create_encryption_key():
-    """الحصول على مفتاح التشفير أو إنشائه"""
-    os.makedirs('instance', exist_ok=True)
-    
+def _get_or_create_encryption_key() -> bytes:
+    _ensure_dirs()
     if os.path.exists(ENCRYPTION_KEY_FILE):
-        with open(ENCRYPTION_KEY_FILE, 'rb') as f:
-            return f.read()
-    else:
-        key = Fernet.generate_key()
-        with open(ENCRYPTION_KEY_FILE, 'wb') as f:
-            f.write(key)
-        return key
+        with open(ENCRYPTION_KEY_FILE, "rb") as f:
+            key = f.read()
+            if key:
+                return key
+    key = Fernet.generate_key()
+    with open(ENCRYPTION_KEY_FILE, "wb") as f:
+        f.write(key)
+    return key
 
 
 def save_api_key_encrypted(api_name: str, api_key: str) -> bool:
-    """
-    حفظ مفتاح API مشفر
-    
-    Args:
-        api_name: اسم الـ API (groq, openai, anthropic)
-        api_key: المفتاح
-    
-    Returns:
-        True إذا تم الحفظ بنجاح
-    """
+    """Save or replace an API key in encrypted local storage."""
+    api_name = (api_name or "").strip().lower()
+    api_key = (api_key or "").strip()
+    if not api_name or not api_key:
+        return False
+
     try:
-        os.makedirs('AI/data', exist_ok=True)
-        
-        # تشفير المفتاح
-        encryption_key = _get_or_create_encryption_key()
-        fernet = Fernet(encryption_key)
-        encrypted_key = fernet.encrypt(api_key.encode()).decode()
-        
-        # تحميل المفاتيح الموجودة
-        keys = {}
-        if os.path.exists(API_KEYS_FILE):
-            with open(API_KEYS_FILE, 'r', encoding='utf-8') as f:
-                keys = json.load(f)
-        
-        # إضافة/تحديث المفتاح
+        fernet = Fernet(_get_or_create_encryption_key())
+        keys = _read_json(API_KEYS_FILE, {})
         keys[api_name] = {
-            'encrypted_key': encrypted_key,
-            'created_at': datetime.now(timezone.utc).isoformat(),
-            'status': 'active'
+            "encrypted_key": fernet.encrypt(api_key.encode()).decode(),
+            "created_at": _utc_now(),
+            "status": "active",
         }
-        
-        # حفظ
-        with open(API_KEYS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(keys, f, ensure_ascii=False, indent=2)
-        
+        _write_json(API_KEYS_FILE, keys)
         return True
-        
-    except Exception as e:
-        print(f"Error saving API key: {e}")
+    except Exception as exc:
+        print(f"Error saving API key: {exc}")
         return False
 
 
-def get_api_key_decrypted(api_name: str) -> str:
-    """
-    الحصول على مفتاح API مفكوك التشفير
-    
-    Args:
-        api_name: اسم الـ API
-    
-    Returns:
-        المفتاح المفكوك أو None
-    """
+def get_api_key_decrypted(api_name: str) -> Optional[str]:
+    """Return decrypted API key, or None."""
+    api_name = (api_name or "").strip().lower()
+    if not api_name:
+        return None
     try:
-        if not os.path.exists(API_KEYS_FILE):
+        keys = _read_json(API_KEYS_FILE, {})
+        item = keys.get(api_name)
+        if not item:
             return None
-        
-        with open(API_KEYS_FILE, 'r', encoding='utf-8') as f:
-            keys = json.load(f)
-        
-        if api_name not in keys:
-            return None
-        
-        # فك التشفير
-        encryption_key = _get_or_create_encryption_key()
-        fernet = Fernet(encryption_key)
-        encrypted_key = keys[api_name]['encrypted_key'].encode()
-        decrypted_key = fernet.decrypt(encrypted_key).decode()
-        
-        return decrypted_key
-        
-    except Exception as e:
-        print(f"Error decrypting API key: {e}")
+        fernet = Fernet(_get_or_create_encryption_key())
+        return fernet.decrypt(item["encrypted_key"].encode()).decode()
+    except Exception as exc:
+        print(f"Error decrypting API key: {exc}")
         return None
 
 
 def test_api_key(api_name: str) -> dict:
-    """
-    اختبار مفتاح API
-    
-    Args:
-        api_name: اسم الـ API
-    
-    Returns:
-        dict مع النتيجة
-    """
-    try:
-        api_key = get_api_key_decrypted(api_name)
-        
-        if not api_key:
-            return {
-                'success': False,
-                'message': 'المفتاح غير موجود'
-            }
-        
-        # اختبار حسب نوع API
-        if api_name.lower() == 'groq':
-            return _test_groq_key(api_key)
-        elif api_name.lower() == 'openai':
-            return _test_openai_key(api_key)
-        elif api_name.lower() == 'anthropic':
-            return _test_anthropic_key(api_key)
-        else:
-            return {
-                'success': False,
-                'message': 'نوع API غير مدعوم'
-            }
-        
-    except Exception as e:
-        return {
-            'success': False,
-            'message': str(e)
-        }
+    """Test a configured API key."""
+    name = (api_name or "").strip().lower()
+    api_key = get_api_key_decrypted(name)
+    if not api_key:
+        return {"success": False, "message": "المفتاح غير موجود"}
+
+    if name == "groq":
+        return _test_groq_key(api_key)
+    if name == "openai":
+        return {"success": False, "message": "OpenAI غير مفعّل - النظام يستخدم Groq"}
+    if name == "anthropic":
+        return {"success": False, "message": "Anthropic غير مفعّل - النظام يستخدم Groq"}
+    return {"success": False, "message": "نوع API غير مدعوم"}
 
 
 def _test_groq_key(api_key: str) -> dict:
-    """اختبار مفتاح Groq"""
     try:
         import requests
-        
+
         response = requests.post(
-            'https://api.groq.com/openai/v1/chat/completions',
-            headers={
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json'
-            },
-            json={
-                'model': 'llama-3.3-70b-versatile',
-                'messages': [{'role': 'user', 'content': 'test'}],
-                'max_tokens': 10
-            },
-            timeout=10
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": "test"}], "max_tokens": 10},
+            timeout=10,
         )
-        
         if response.status_code == 200:
             return {
-                'success': True,
-                'message': 'المفتاح يعمل بشكل صحيح',
-                'model': 'Llama 3.3 70B',
-                'latency': f'{response.elapsed.total_seconds():.2f}s'
+                "success": True,
+                "message": "المفتاح يعمل بشكل صحيح",
+                "model": "Llama 3.3 70B",
+                "latency": f"{response.elapsed.total_seconds():.2f}s",
             }
-        else:
-            return {
-                'success': False,
-                'message': f'فشل الاتصال: {response.status_code}'
-            }
-        
-    except Exception as e:
-        return {
-            'success': False,
-            'message': str(e)
-        }
-
-
-def _test_openai_key(api_key: str) -> dict:
-    """اختبار مفتاح OpenAI - غير مفعّل (نستخدم Groq)"""
-    return {'success': False, 'message': 'OpenAI غير مفعّل - النظام يستخدم Groq'}
-
-
-def _test_anthropic_key(api_key: str) -> dict:
-    """اختبار مفتاح Anthropic - غير مفعّل (نستخدم Groq)"""
-    return {'success': False, 'message': 'Anthropic غير مفعّل - النظام يستخدم Groq'}
+        return {"success": False, "message": f"فشل الاتصال: {response.status_code}"}
+    except Exception as exc:
+        return {"success": False, "message": str(exc)}
 
 
 def list_configured_apis() -> list:
-    """قائمة APIs المفعلة"""
-    try:
-        if not os.path.exists(API_KEYS_FILE):
-            return []
-        
-        with open(API_KEYS_FILE, 'r', encoding='utf-8') as f:
-            keys = json.load(f)
-        
-        return [
-            {
-                'name': name,
-                'status': data.get('status', 'unknown'),
-                'created_at': data.get('created_at', 'unknown')
-            }
-            for name, data in keys.items()
-        ]
-        
-    except Exception:
+    keys = _read_json(API_KEYS_FILE, {})
+    if not isinstance(keys, dict):
         return []
+    return [
+        {"name": name, "status": data.get("status", "unknown"), "created_at": data.get("created_at", "unknown")}
+        for name, data in keys.items()
+        if isinstance(data, dict)
+    ]
 
 
 # ============================================================
-# Training Management - إدارة التدريب
+# Training Management
 # ============================================================
 
-TRAINING_JOBS_FILE = 'AI/data/training_jobs.json'
-MODEL_STATUS_FILE = 'AI/data/model_training_status.json'
 
-
-def start_training_job(model_name: str, training_type: str = 'quick', data_range: str = 'all') -> dict:
-    """
-    بدء عملية تدريب
-    
-    Args:
-        model_name: اسم النموذج
-        training_type: نوع التدريب (quick, deep, custom)
-        data_range: نطاق البيانات (all, 30days, 90days, 1year)
-    
-    Returns:
-        dict مع معلومات الـ job
-    """
-    try:
-        os.makedirs('AI/data', exist_ok=True)
-        
-        # إنشاء job جديد
-        job_id = f"train_{datetime.now().timestamp()}"
-        
-        job = {
-            'job_id': job_id,
-            'model_name': model_name,
-            'training_type': training_type,
-            'data_range': data_range,
-            'status': 'running',
-            'progress': 0,
-            'started_at': datetime.now(timezone.utc).isoformat(),
-            'estimated_completion': None,
-            'error': None
-        }
-        
-        # حفظ في السجل
+def _save_training_job(job: Dict[str, Any]) -> None:
+    jobs = _read_json(TRAINING_JOBS_FILE, [])
+    if not isinstance(jobs, list):
         jobs = []
-        if os.path.exists(TRAINING_JOBS_FILE):
-            with open(TRAINING_JOBS_FILE, 'r', encoding='utf-8') as f:
-                jobs = json.load(f)
-        
+    for idx, existing in enumerate(jobs):
+        if existing.get("job_id") == job.get("job_id"):
+            jobs[idx] = job
+            break
+    else:
         jobs.append(job)
-        
-        with open(TRAINING_JOBS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(jobs, f, ensure_ascii=False, indent=2)
-        
-        _update_model_status(model_name, 'training', None, None, job_id)
-        
-        # التدريب الحقيقي في الخلفية - استخدام نظام التدريب الشامل
-        import threading
-        
-        def _save_job_progress():
-            if os.path.exists(TRAINING_JOBS_FILE):
-                try:
-                    with open(TRAINING_JOBS_FILE, 'r', encoding='utf-8') as f:
-                        all_jobs = json.load(f)
-                    
-                    for j in all_jobs:
-                        if j['job_id'] == job_id:
-                            j.update(job)
-                            break
-                    
-                    with open(TRAINING_JOBS_FILE, 'w', encoding='utf-8') as f:
-                        json.dump(all_jobs, f, ensure_ascii=False, indent=2)
-                except Exception as e:
-                    print(f"Error saving job progress: {e}")
-        
-        def train_in_background():
-            from flask import current_app
-            try:
-                from app import create_app
-                app_instance = create_app()
-                
-                with app_instance.app_context():
-                    from AI.engine.ai_training_engine import AITrainingEngine
-                    from AI.engine.ai_system_deep_trainer import get_system_deep_trainer
-                    
-                    job['progress'] = 5
-                    job['status'] = 'running'
-                    job['current_step'] = 'تهيئة النظام...'
-                    _save_job_progress()
-                    
-                    if training_type == 'deep' or training_type == 'custom':
-                        job['progress'] = 10
-                        job['current_step'] = 'بدء التدريب الشامل...'
-                        _save_job_progress()
-                        
-                        trainer = get_system_deep_trainer()
-                        
-                        job['progress'] = 15
-                        job['current_step'] = 'تحليل قاعدة البيانات...'
-                        _save_job_progress()
-                        
-                        result = trainer.train_system_comprehensive()
-                        
-                        job['progress'] = 50
-                        job['status'] = 'analyzing'
-                        job['current_step'] = 'تحليل النتائج والتدريب التفصيلي...'
-                        _save_job_progress()
-                        
-                        training_engine = AITrainingEngine()
-                        
-                        job['progress'] = 60
-                        job['current_step'] = 'تدريب النماذج...'
-                        _save_job_progress()
-                        
-                        training_result = training_engine.run_full_training(force=True)
-                        
-                        job['progress'] = 90
-                        job['current_step'] = 'حفظ النتائج...'
-                        _save_job_progress()
-                        
-                        job['progress'] = 100
-                        job['status'] = 'completed'
-                        job['completed_at'] = datetime.now(timezone.utc).isoformat()
-                        job['current_step'] = 'اكتمل التدريب بنجاح!'
-                        job['result'] = {
-                            'deep_training': result,
-                            'detailed_training': training_result
-                        }
-                    else:
-                        job['progress'] = 20
-                        job['current_step'] = 'بدء التدريب السريع...'
-                        _save_job_progress()
-                        
-                        training_engine = AITrainingEngine()
-                        
-                        job['progress'] = 40
-                        job['current_step'] = 'معالجة البيانات...'
-                        _save_job_progress()
-                        
-                        training_result = training_engine.run_full_training(force=False)
-                        
-                        job['progress'] = 80
-                        job['current_step'] = 'حفظ النتائج...'
-                        _save_job_progress()
-                        
-                        job['progress'] = 100
-                        job['status'] = 'completed'
-                        job['completed_at'] = datetime.now(timezone.utc).isoformat()
-                        job['current_step'] = 'اكتمل التدريب بنجاح!'
-                        job['result'] = training_result
-                    
-                    if training_type == 'deep' or training_type == 'custom':
-                        _update_model_status(model_name, 'completed', result, training_result)
-                    else:
-                        _update_model_status(model_name, 'completed', None, training_result)
-                    
-                    _save_job_progress()
-                            
-            except Exception as e:
-                import traceback
-                job['status'] = 'failed'
-                job['error'] = str(e)
-                job['completed_at'] = datetime.now(timezone.utc).isoformat()
-                job['traceback'] = traceback.format_exc()
-                
-                if os.path.exists(TRAINING_JOBS_FILE):
-                    with open(TRAINING_JOBS_FILE, 'r', encoding='utf-8') as f:
-                        all_jobs = json.load(f)
-                    
-                    for j in all_jobs:
-                        if j['job_id'] == job_id:
-                            j.update(job)
-                            break
-                    
-                    with open(TRAINING_JOBS_FILE, 'w', encoding='utf-8') as f:
-                        json.dump(all_jobs, f, ensure_ascii=False, indent=2)
-        
-        # بدء التدريب في thread منفصل
-        thread = threading.Thread(target=train_in_background, daemon=True)
-        thread.start()
-        
-        return {
-            'success': True,
-            'job_id': job_id,
-            'message': f'تم بدء تدريب {model_name} - التدريب الشامل لجميع أجزاء النظام'
-        }
-        
-    except Exception as e:
-        return {
-            'success': False,
-            'error': str(e)
-        }
+    _write_json(TRAINING_JOBS_FILE, jobs[-200:])
 
 
-def get_training_job_status(job_id: str) -> dict:
-    """الحصول على حالة التدريب"""
+def start_training_job(model_name: str, training_type: str = "quick", data_range: str = "all") -> dict:
+    """Start a background training job and return its id."""
+    model_name = (model_name or "unknown").strip()
+    training_type = (training_type or "quick").strip().lower()
+    data_range = (data_range or "all").strip()
+
+    job = {
+        "job_id": f"train_{datetime.now(timezone.utc).timestamp()}",
+        "model_name": model_name,
+        "training_type": training_type,
+        "data_range": data_range,
+        "status": "running",
+        "progress": 0,
+        "started_at": _utc_now(),
+        "estimated_completion": None,
+        "error": None,
+        "current_step": "تم إنشاء مهمة التدريب",
+    }
+
     try:
-        if not os.path.exists(TRAINING_JOBS_FILE):
-            return None
-        
-        with open(TRAINING_JOBS_FILE, 'r', encoding='utf-8') as f:
-            jobs = json.load(f)
-        
-        for job in jobs:
-            if job['job_id'] == job_id:
-                return job
-        
+        _save_training_job(job)
+        _update_model_status(model_name, "training", job_id=job["job_id"])
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+    def train_in_background() -> None:
+        try:
+            job.update({"progress": 5, "current_step": "تهيئة تطبيق Flask..."})
+            _save_training_job(job)
+
+            from app import create_app
+
+            app_instance = create_app()
+            with app_instance.app_context():
+                from AI.engine.ai_training_engine import AITrainingEngine
+
+                deep_result = None
+                training_result = None
+
+                if training_type in {"deep", "custom"}:
+                    job.update({"progress": 15, "current_step": "تشغيل التدريب العميق..."})
+                    _save_training_job(job)
+                    from AI.engine.ai_system_deep_trainer import get_system_deep_trainer
+
+                    deep_result = get_system_deep_trainer().train_system_comprehensive()
+
+                job.update({"progress": 55, "current_step": "تشغيل محرك التدريب..."})
+                _save_training_job(job)
+                training_result = AITrainingEngine().run_full_training(force=training_type in {"deep", "custom"})
+
+                job.update({
+                    "progress": 100,
+                    "status": "completed",
+                    "completed_at": _utc_now(),
+                    "current_step": "اكتمل التدريب بنجاح",
+                    "result": {"deep_training": deep_result, "detailed_training": training_result},
+                })
+                _update_model_status(model_name, "completed", deep_result, training_result, job["job_id"])
+                _save_training_job(job)
+        except Exception as exc:
+            import traceback
+
+            job.update({
+                "status": "failed",
+                "error": str(exc),
+                "traceback": traceback.format_exc(),
+                "completed_at": _utc_now(),
+                "current_step": "فشل التدريب",
+            })
+            _update_model_status(model_name, "failed", job_id=job["job_id"])
+            _save_training_job(job)
+
+    thread = threading.Thread(target=train_in_background, daemon=True)
+    thread.start()
+
+    return {"success": True, "job_id": job["job_id"], "message": f"تم بدء تدريب {model_name}"}
+
+
+def get_training_job_status(job_id: str) -> Optional[dict]:
+    jobs = _read_json(TRAINING_JOBS_FILE, [])
+    if not isinstance(jobs, list):
         return None
-        
-    except Exception:
-        return None
+    for job in jobs:
+        if job.get("job_id") == job_id:
+            return job
+    return None
 
 
 def list_training_jobs(limit: int = 10) -> list:
-    """قائمة آخر عمليات التدريب"""
-    try:
-        if not os.path.exists(TRAINING_JOBS_FILE):
-            return []
-        
-        with open(TRAINING_JOBS_FILE, 'r', encoding='utf-8') as f:
-            jobs = json.load(f)
-        
-        # آخر N jobs
-        return jobs[-limit:] if len(jobs) > limit else jobs
-        
-    except Exception:
+    jobs = _read_json(TRAINING_JOBS_FILE, [])
+    if not isinstance(jobs, list):
         return []
+    return jobs[-max(1, int(limit or 10)):]
 
 
 # ============================================================
-# Live Statistics - إحصائيات حية
+# Live Statistics
 # ============================================================
+
 
 def get_live_ai_stats() -> dict:
-    """
-    إحصائيات AI حية ومفصلة
-    """
+    """Return one canonical live stats shape."""
     try:
-        stats = {
-            'timestamp': datetime.now(timezone.utc).isoformat(),
-            'interactions': _get_interactions_stats(),
-            'training': _get_training_stats(),
-            'system': _get_system_health(),
-            'performance': _get_performance_stats()
-        }
-        
-        return stats
-        
-    except Exception as e:
+        ping = _get_ping_stats()
         return {
-            'error': str(e),
-            'timestamp': datetime.now(timezone.utc).isoformat()
+            "timestamp": _utc_now(),
+            "status": ping.get("status", "active"),
+            "latency": ping.get("latency", 0),
+            "queries_today": ping.get("queries_today", 0),
+            "interactions": _get_interactions_stats(),
+            "training": _get_training_stats(),
+            "system": _get_system_health(),
+            "performance": _get_performance_stats(),
         }
+    except Exception as exc:
+        return {"status": "error", "error": str(exc), "timestamp": _utc_now()}
+
+
+def _get_ping_stats() -> dict:
+    start_time = datetime.now(timezone.utc)
+    queries_today = 0
+    try:
+        from AI.engine.evolution_manager import _load_history
+
+        hist = _load_history()
+        queries_today = hist.get("stats", {}).get("total_queries", 0)
+    except Exception:
+        pass
+    latency = (datetime.now(timezone.utc) - start_time).total_seconds()
+    return {"status": "active", "latency": round(latency + 0.05, 3), "queries_today": queries_today}
 
 
 def _get_interactions_stats() -> dict:
-    """إحصائيات التفاعلات"""
-    try:
-        interactions_file = 'AI/data/ai_interactions.json'
-        
-        if not os.path.exists(interactions_file):
-            return {
-                'total': 0,
-                'today': 0,
-                'success_rate': 0,
-                'avg_confidence': 0
-            }
-        
-        with open(interactions_file, 'r', encoding='utf-8') as f:
-            interactions = json.load(f)
-        
-        total = len(interactions)
-        today_date = datetime.now(timezone.utc).date().isoformat()
-        today_count = sum(1 for i in interactions if i.get('timestamp', '').startswith(today_date))
-        
-        # حساب معدل النجاح
-        successful = sum(1 for i in interactions if i.get('confidence', 0) > 70)
-        success_rate = (successful / total * 100) if total > 0 else 0
-        
-        # متوسط الثقة
-        avg_confidence = sum(i.get('confidence', 0) for i in interactions) / total if total > 0 else 0
-        
-        return {
-            'total': total,
-            'today': today_count,
-            'success_rate': round(success_rate, 1),
-            'avg_confidence': round(avg_confidence, 1)
-        }
-        
-    except Exception:
-        return {
-            'total': 0,
-            'today': 0,
-            'success_rate': 0,
-            'avg_confidence': 0
-        }
+    interactions = _read_json(f"{API_DATA_DIR}/ai_interactions.json", [])
+    if not isinstance(interactions, list) or not interactions:
+        return {"total": 0, "today": 0, "success_rate": 0, "avg_confidence": 0}
+    today = datetime.now(timezone.utc).date().isoformat()
+    total = len(interactions)
+    today_count = sum(1 for i in interactions if str(i.get("timestamp", "")).startswith(today))
+    successful = sum(1 for i in interactions if float(i.get("confidence", 0) or 0) > 70)
+    avg_confidence = sum(float(i.get("confidence", 0) or 0) for i in interactions) / total
+    return {
+        "total": total,
+        "today": today_count,
+        "success_rate": round((successful / total) * 100, 1),
+        "avg_confidence": round(avg_confidence, 1),
+    }
 
 
 def _get_training_stats() -> dict:
-    """إحصائيات التدريب"""
-    try:
-        if not os.path.exists(TRAINING_JOBS_FILE):
-            return {
-                'total_jobs': 0,
-                'completed': 0,
-                'running': 0,
-                'failed': 0
-            }
-        
-        with open(TRAINING_JOBS_FILE, 'r', encoding='utf-8') as f:
-            jobs = json.load(f)
-        
-        total = len(jobs)
-        completed = sum(1 for j in jobs if j.get('status') == 'completed')
-        running = sum(1 for j in jobs if j.get('status') == 'running')
-        failed = sum(1 for j in jobs if j.get('status') == 'failed')
-        
-        return {
-            'total_jobs': total,
-            'completed': completed,
-            'running': running,
-            'failed': failed
-        }
-        
-    except Exception:
-        return {
-            'total_jobs': 0,
-            'completed': 0,
-            'running': 0,
-            'failed': 0
-        }
+    jobs = _read_json(TRAINING_JOBS_FILE, [])
+    if not isinstance(jobs, list):
+        jobs = []
+    return {
+        "total_jobs": len(jobs),
+        "completed": sum(1 for j in jobs if j.get("status") == "completed"),
+        "running": sum(1 for j in jobs if j.get("status") == "running"),
+        "failed": sum(1 for j in jobs if j.get("status") == "failed"),
+    }
 
 
 def _get_system_health() -> dict:
-    """صحة النظام"""
-    try:
-        # فحص الملفات الأساسية
-        essential_files = [
-            'AI/data/ai_knowledge_cache.json',
-            'AI/data/ai_data_schema.json',
-            'AI/data/ai_system_map.json'
-        ]
-        
-        files_ok = sum(1 for f in essential_files if os.path.exists(f))
-        health_score = (files_ok / len(essential_files) * 100)
-        
-        return {
-            'status': 'healthy' if health_score > 66 else 'warning' if health_score > 33 else 'critical',
-            'score': round(health_score, 1),
-            'files_ok': files_ok,
-            'files_total': len(essential_files)
-        }
-        
-    except Exception:
-        return {
-            'status': 'unknown',
-            'score': 0,
-            'files_ok': 0,
-            'files_total': 0
-        }
+    essential_files = [
+        f"{API_DATA_DIR}/ai_knowledge_cache.json",
+        f"{API_DATA_DIR}/ai_data_schema.json",
+        f"{API_DATA_DIR}/ai_system_map.json",
+    ]
+    files_ok = sum(1 for path in essential_files if os.path.exists(path))
+    score = round((files_ok / len(essential_files)) * 100, 1)
+    status = "healthy" if score > 66 else "warning" if score > 33 else "critical"
+    return {"status": status, "score": score, "files_ok": files_ok, "files_total": len(essential_files)}
 
 
 def _get_performance_stats() -> dict:
-    """إحصائيات الأداء"""
-    try:
-        # حساب من البيانات الفعلية
-        return {
-            'avg_response_time': 0.8,  # يُحسب من ai_interactions.json
-            'cache_hit_rate': 75,
-            'memory_usage': 'normal'
-        }
-        
-    except Exception:
-        return {
-            'avg_response_time': 0,
-            'cache_hit_rate': 0,
-            'memory_usage': 'unknown'
-        }
+    return {"avg_response_time": 0.8, "cache_hit_rate": 75, "memory_usage": "normal"}
 
 
 # ============================================================
-# Model Management - إدارة النماذج
+# Model Management
 # ============================================================
-
-AVAILABLE_MODELS = [
-    {
-        'id': 'sales_predictor',
-        'name': 'نموذج التنبؤ بالمبيعات',
-        'description': 'تنبؤ بالمبيعات المستقبلية بناءً على البيانات التاريخية',
-        'icon': 'fa-chart-line',
-        'status': 'trained',
-        'accuracy': 94.5,
-        'last_trained': '2025-10-28'
-    },
-    {
-        'id': 'inventory_optimizer',
-        'name': 'نموذج إدارة المخزون',
-        'description': 'التنبؤ بالنقص في المخزون وتحسين الطلبات',
-        'icon': 'fa-boxes',
-        'status': 'pending',
-        'accuracy': 0,
-        'last_trained': None
-    },
-    {
-        'id': 'customer_analyzer',
-        'name': 'نموذج تحليل العملاء',
-        'description': 'تحليل سلوك العملاء والتنبؤ بالاحتياجات',
-        'icon': 'fa-users',
-        'status': 'pending',
-        'accuracy': 0,
-        'last_trained': None
-    }
-]
 
 
 def get_available_models() -> list:
-    """قائمة النماذج المتاحة"""
-    return AVAILABLE_MODELS
-
-
-def get_model_info(model_id: str) -> dict:
-    """معلومات عن نموذج محدد"""
+    status = get_model_status().get("models", {})
+    output = []
     for model in AVAILABLE_MODELS:
-        if model['id'] == model_id:
+        item = dict(model)
+        stored = status.get(item["name"], {})
+        item.update({
+            "status": stored.get("status", item.get("status")),
+            "accuracy": stored.get("accuracy", item.get("accuracy")),
+            "last_trained": stored.get("last_trained", item.get("last_trained")),
+        })
+        output.append(item)
+    return output
+
+
+def get_model_info(model_id: str) -> Optional[dict]:
+    for model in get_available_models():
+        if model.get("id") == model_id:
             return model
     return None
 
 
-def get_live_ai_stats() -> dict:
-    """
-    الحصول على إحصائيات حية للنظام
-    """
-    try:
-        start_time = datetime.now()
-        # محاكاة فحص بسيط (Ping)
-        check = True 
-        latency = (datetime.now() - start_time).total_seconds()
-        
-        # قراءة عدد الاستعلامات من ملف السجل اليومي (لو وجد)
-        queries_today = 0
-        try:
-            from AI.engine.evolution_manager import _load_history
-            hist = _load_history()
-            queries_today = hist.get('stats', {}).get('total_queries', 0)
-        except:
-            pass
-            
-        return {
-            'status': 'active' if check else 'inactive',
-            'latency': round(latency + 0.05, 3), # Base latency
-            'queries_today': queries_today
-        }
-    except Exception:
-        return {'status': 'error', 'latency': 0, 'queries_today': 0}
+def _default_model_status() -> dict:
+    return {"models": json.loads(json.dumps(DEFAULT_MODELS, ensure_ascii=False))}
 
-def get_model_status() -> dict:
-    """
-    الحصول على ملخص حالة النماذج
-    """
-    try:
-        if os.path.exists(MODEL_STATUS_FILE):
-            with open(MODEL_STATUS_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                # البحث عن أحدث تاريخ تدريب
-                last_trained = "لم يتم التدريب"
-                for m in data.get('models', {}).values():
-                    if m.get('last_trained'):
-                        last_trained = m['last_trained']
-                        break
-                return {'last_trained': last_trained}
-    except:
-        pass
-        
-    return {'last_trained': 'غير معروف'}
+
+def get_model_status(model_name: str = None) -> dict:
+    """Return status for one model or all models."""
+    model_status = _read_json(MODEL_STATUS_FILE, _default_model_status())
+    if not isinstance(model_status, dict) or "models" not in model_status:
+        model_status = _default_model_status()
+    if model_name:
+        return model_status.get("models", {}).get(model_name, {"status": "pending", "accuracy": 0, "last_update": None, "last_trained": None})
+    return model_status
+
+
+def _update_model_status(model_name: str, status: str, deep_result: dict = None, training_result: dict = None, job_id: str = None) -> None:
+    model_status = get_model_status()
+    models = model_status.setdefault("models", {})
+    info = models.setdefault(model_name, {"status": "pending", "accuracy": 0, "last_update": None, "last_trained": None, "training_jobs": []})
+    info["status"] = "trained" if status == "completed" else status
+    info["last_update"] = _utc_now()
+
+    if status == "completed":
+        info["last_trained"] = _utc_now()
+        total_items = 0
+        for result in (deep_result, training_result):
+            if isinstance(result, dict):
+                total_items += int(result.get("items_learned", result.get("total_items", 0)) or 0)
+        info["accuracy"] = round(min(100, max(85, 85 + min(10, total_items // 100))), 1) if total_items else 85.0
+
+    if job_id:
+        jobs = info.setdefault("training_jobs", [])
+        if job_id not in jobs:
+            jobs.append(job_id)
+
+    _write_json(MODEL_STATUS_FILE, model_status)
 
 
 # ============================================================
-# Utilities - مساعدات
+# Utilities
 # ============================================================
+
 
 def format_timestamp(iso_timestamp: str) -> str:
-    """تنسيق الوقت بشكل قابل للقراءة"""
     try:
-        dt = datetime.fromisoformat(iso_timestamp.replace('Z', '+00:00'))
-        return dt.strftime('%Y-%m-%d %H:%M:%S')
+        dt = datetime.fromisoformat(str(iso_timestamp).replace("Z", "+00:00"))
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
     except Exception:
         return iso_timestamp
 
 
 def calculate_eta(progress: float, started_at: str) -> str:
-    """حساب الوقت المتبقي المتوقع"""
     try:
+        progress = float(progress or 0)
         if progress <= 0:
-            return 'غير معروف'
-        
-        started = datetime.fromisoformat(started_at.replace('Z', '+00:00'))
+            return "غير معروف"
+        started = datetime.fromisoformat(str(started_at).replace("Z", "+00:00"))
         elapsed = (datetime.now(timezone.utc) - started).total_seconds()
-        
-        total_estimated = elapsed / (progress / 100)
-        remaining = total_estimated - elapsed
-        
+        remaining = max(0, elapsed / (progress / 100) - elapsed)
         if remaining < 60:
-            return f'{int(remaining)} ثانية'
-        elif remaining < 3600:
-            return f'{int(remaining / 60)} دقيقة'
-        else:
-            return f'{int(remaining / 3600)} ساعة'
-        
+            return f"{int(remaining)} ثانية"
+        if remaining < 3600:
+            return f"{int(remaining / 60)} دقيقة"
+        return f"{int(remaining / 3600)} ساعة"
     except Exception:
-        return 'غير معروف'
+        return "غير معروف"
 
 
-def _update_model_status(model_name: str, status: str, deep_result: dict = None, training_result: dict = None, job_id: str = None):
-    """تحديث حالة النموذج بعد التدريب"""
-    try:
-        os.makedirs('AI/data', exist_ok=True)
-        
-        if not os.path.exists(MODEL_STATUS_FILE):
-            model_status = {
-                'models': {
-                    'نموذج التنبؤ بالمبيعات': {'status': 'pending', 'accuracy': 0, 'last_update': None, 'last_trained': None, 'training_jobs': []},
-                    'نموذج إدارة المخزون': {'status': 'pending', 'accuracy': 0, 'last_update': None, 'last_trained': None, 'training_jobs': []},
-                    'نموذج تحليل العملاء': {'status': 'pending', 'accuracy': 0, 'last_update': None, 'last_trained': None, 'training_jobs': []}
-                }
-            }
-        else:
-            with open(MODEL_STATUS_FILE, 'r', encoding='utf-8') as f:
-                model_status = json.load(f)
-        
-        if 'models' not in model_status:
-            model_status['models'] = {}
-        
-        if model_name not in model_status['models']:
-            model_status['models'][model_name] = {
-                'status': 'pending',
-                'accuracy': 0,
-                'last_update': None,
-                'last_trained': None,
-                'training_jobs': []
-            }
-        
-        model_info = model_status['models'][model_name]
-        model_info['status'] = status
-        model_info['last_update'] = datetime.now(timezone.utc).isoformat()
-        
-        if status == 'completed':
-            model_info['last_trained'] = datetime.now(timezone.utc).isoformat()
-            
-            total_items = 0
-            if deep_result and isinstance(deep_result, dict):
-                items = deep_result.get('items_learned', 0)
-                if items:
-                    total_items += items
-            if training_result and isinstance(training_result, dict):
-                items = training_result.get('items_learned', training_result.get('total_items', 0))
-                if items:
-                    total_items += items
-            
-            if total_items > 0:
-                accuracy = min(100, max(85, 85 + min(10, total_items // 100)))
-                model_info['accuracy'] = round(accuracy, 1)
-            else:
-                model_info['accuracy'] = 85.0
-            
-            model_info['status'] = 'trained'
-            print(f"[MODEL STATUS] Updated {model_name}: status=trained, accuracy={model_info['accuracy']}")
-        
-        if job_id:
-            if 'training_jobs' not in model_info:
-                model_info['training_jobs'] = []
-            if job_id not in model_info['training_jobs']:
-                model_info['training_jobs'].append(job_id)
-        
-        with open(MODEL_STATUS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(model_status, f, ensure_ascii=False, indent=2)
-            
-    except Exception as e:
-        print(f"Error updating model status: {e}")
-
-
-def get_model_status(model_name: str = None) -> dict:
-    """الحصول على حالة النموذج/النماذج"""
-    try:
-        if not os.path.exists(MODEL_STATUS_FILE):
-            return {
-                'models': {
-                    'نموذج التنبؤ بالمبيعات': {'status': 'pending', 'accuracy': 0, 'last_update': None, 'last_trained': None},
-                    'نموذج إدارة المخزون': {'status': 'pending', 'accuracy': 0, 'last_update': None, 'last_trained': None},
-                    'نموذج تحليل العملاء': {'status': 'pending', 'accuracy': 0, 'last_update': None, 'last_trained': None}
-                }
-            }
-        
-        with open(MODEL_STATUS_FILE, 'r', encoding='utf-8') as f:
-            model_status = json.load(f)
-        
-        if model_name:
-            return model_status.get('models', {}).get(model_name, {'status': 'pending', 'accuracy': 0, 'last_update': None, 'last_trained': None})
-        
-        return model_status
-        
-    except Exception:
-        return {'models': {}}
-
+__all__ = [
+    "save_api_key_encrypted",
+    "get_api_key_decrypted",
+    "test_api_key",
+    "list_configured_apis",
+    "start_training_job",
+    "get_training_job_status",
+    "list_training_jobs",
+    "get_live_ai_stats",
+    "get_available_models",
+    "get_model_info",
+    "get_model_status",
+    "format_timestamp",
+    "calculate_eta",
+]
