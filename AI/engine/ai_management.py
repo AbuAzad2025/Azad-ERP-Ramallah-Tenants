@@ -7,25 +7,28 @@ Responsibilities:
 - model status tracking
 - live AI health/statistics
 
-The public function names are kept stable because routes import them directly.
+Generated JSON/JSONL files are handled through AI.engine.ai_storage so the AI
+runtime has one storage policy instead of repeated ad-hoc json.load/json.dump.
 """
 
 from __future__ import annotations
 
-import json
+import copy
 import os
 import threading
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from cryptography.fernet import Fernet
 
+from AI.engine.ai_storage import file_metadata, read_json, sync_training_manifest, utc_now, write_json
 
-API_DATA_DIR = "AI/data"
-API_KEYS_FILE = f"{API_DATA_DIR}/api_keys.enc.json"
+
+API_KEYS_FILE = "api_keys.enc.json"
 ENCRYPTION_KEY_FILE = "instance/.ai_encryption_key"
-TRAINING_JOBS_FILE = f"{API_DATA_DIR}/training_jobs.json"
-MODEL_STATUS_FILE = f"{API_DATA_DIR}/model_training_status.json"
+TRAINING_JOBS_FILE = "training_jobs.json"
+MODEL_STATUS_FILE = "model_training_status.json"
+INTERACTIONS_FILE = "ai_interactions.json"
 
 DEFAULT_MODELS = {
     "نموذج التنبؤ بالمبيعات": {"status": "pending", "accuracy": 0, "last_update": None, "last_trained": None, "training_jobs": []},
@@ -64,40 +67,13 @@ AVAILABLE_MODELS = [
 ]
 
 
-def _ensure_dirs() -> None:
-    os.makedirs(API_DATA_DIR, exist_ok=True)
-    os.makedirs("instance", exist_ok=True)
-
-
-def _read_json(path: str, default: Any) -> Any:
-    try:
-        if not os.path.exists(path):
-            return default
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return default
-
-
-def _write_json(path: str, data: Any) -> None:
-    _ensure_dirs()
-    tmp_path = f"{path}.tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp_path, path)
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
 # ============================================================
 # API Keys Management
 # ============================================================
 
 
 def _get_or_create_encryption_key() -> bytes:
-    _ensure_dirs()
+    os.makedirs("instance", exist_ok=True)
     if os.path.exists(ENCRYPTION_KEY_FILE):
         with open(ENCRYPTION_KEY_FILE, "rb") as f:
             key = f.read()
@@ -118,13 +94,16 @@ def save_api_key_encrypted(api_name: str, api_key: str) -> bool:
 
     try:
         fernet = Fernet(_get_or_create_encryption_key())
-        keys = _read_json(API_KEYS_FILE, {})
+        keys = read_json(API_KEYS_FILE, {})
+        if not isinstance(keys, dict):
+            keys = {}
         keys[api_name] = {
             "encrypted_key": fernet.encrypt(api_key.encode()).decode(),
-            "created_at": _utc_now(),
+            "created_at": utc_now(),
             "status": "active",
         }
-        _write_json(API_KEYS_FILE, keys)
+        write_json(API_KEYS_FILE, keys)
+        sync_training_manifest()
         return True
     except Exception as exc:
         print(f"Error saving API key: {exc}")
@@ -137,8 +116,8 @@ def get_api_key_decrypted(api_name: str) -> Optional[str]:
     if not api_name:
         return None
     try:
-        keys = _read_json(API_KEYS_FILE, {})
-        item = keys.get(api_name)
+        keys = read_json(API_KEYS_FILE, {})
+        item = keys.get(api_name) if isinstance(keys, dict) else None
         if not item:
             return None
         fernet = Fernet(_get_or_create_encryption_key())
@@ -187,7 +166,7 @@ def _test_groq_key(api_key: str) -> dict:
 
 
 def list_configured_apis() -> list:
-    keys = _read_json(API_KEYS_FILE, {})
+    keys = read_json(API_KEYS_FILE, {})
     if not isinstance(keys, dict):
         return []
     return [
@@ -203,7 +182,7 @@ def list_configured_apis() -> list:
 
 
 def _save_training_job(job: Dict[str, Any]) -> None:
-    jobs = _read_json(TRAINING_JOBS_FILE, [])
+    jobs = read_json(TRAINING_JOBS_FILE, [])
     if not isinstance(jobs, list):
         jobs = []
     for idx, existing in enumerate(jobs):
@@ -212,7 +191,8 @@ def _save_training_job(job: Dict[str, Any]) -> None:
             break
     else:
         jobs.append(job)
-    _write_json(TRAINING_JOBS_FILE, jobs[-200:])
+    write_json(TRAINING_JOBS_FILE, jobs[-200:])
+    sync_training_manifest()
 
 
 def start_training_job(model_name: str, training_type: str = "quick", data_range: str = "all") -> dict:
@@ -228,7 +208,7 @@ def start_training_job(model_name: str, training_type: str = "quick", data_range
         "data_range": data_range,
         "status": "running",
         "progress": 0,
-        "started_at": _utc_now(),
+        "started_at": utc_now(),
         "estimated_completion": None,
         "error": None,
         "current_step": "تم إنشاء مهمة التدريب",
@@ -268,7 +248,7 @@ def start_training_job(model_name: str, training_type: str = "quick", data_range
                 job.update({
                     "progress": 100,
                     "status": "completed",
-                    "completed_at": _utc_now(),
+                    "completed_at": utc_now(),
                     "current_step": "اكتمل التدريب بنجاح",
                     "result": {"deep_training": deep_result, "detailed_training": training_result},
                 })
@@ -281,7 +261,7 @@ def start_training_job(model_name: str, training_type: str = "quick", data_range
                 "status": "failed",
                 "error": str(exc),
                 "traceback": traceback.format_exc(),
-                "completed_at": _utc_now(),
+                "completed_at": utc_now(),
                 "current_step": "فشل التدريب",
             })
             _update_model_status(model_name, "failed", job_id=job["job_id"])
@@ -294,7 +274,7 @@ def start_training_job(model_name: str, training_type: str = "quick", data_range
 
 
 def get_training_job_status(job_id: str) -> Optional[dict]:
-    jobs = _read_json(TRAINING_JOBS_FILE, [])
+    jobs = read_json(TRAINING_JOBS_FILE, [])
     if not isinstance(jobs, list):
         return None
     for job in jobs:
@@ -304,7 +284,7 @@ def get_training_job_status(job_id: str) -> Optional[dict]:
 
 
 def list_training_jobs(limit: int = 10) -> list:
-    jobs = _read_json(TRAINING_JOBS_FILE, [])
+    jobs = read_json(TRAINING_JOBS_FILE, [])
     if not isinstance(jobs, list):
         return []
     return jobs[-max(1, int(limit or 10)):]
@@ -320,7 +300,7 @@ def get_live_ai_stats() -> dict:
     try:
         ping = _get_ping_stats()
         return {
-            "timestamp": _utc_now(),
+            "timestamp": utc_now(),
             "status": ping.get("status", "active"),
             "latency": ping.get("latency", 0),
             "queries_today": ping.get("queries_today", 0),
@@ -328,9 +308,10 @@ def get_live_ai_stats() -> dict:
             "training": _get_training_stats(),
             "system": _get_system_health(),
             "performance": _get_performance_stats(),
+            "manifest": sync_training_manifest().get("summary", {}),
         }
     except Exception as exc:
-        return {"status": "error", "error": str(exc), "timestamp": _utc_now()}
+        return {"status": "error", "error": str(exc), "timestamp": utc_now()}
 
 
 def _get_ping_stats() -> dict:
@@ -348,7 +329,7 @@ def _get_ping_stats() -> dict:
 
 
 def _get_interactions_stats() -> dict:
-    interactions = _read_json(f"{API_DATA_DIR}/ai_interactions.json", [])
+    interactions = read_json(INTERACTIONS_FILE, [])
     if not isinstance(interactions, list) or not interactions:
         return {"total": 0, "today": 0, "success_rate": 0, "avg_confidence": 0}
     today = datetime.now(timezone.utc).date().isoformat()
@@ -365,7 +346,7 @@ def _get_interactions_stats() -> dict:
 
 
 def _get_training_stats() -> dict:
-    jobs = _read_json(TRAINING_JOBS_FILE, [])
+    jobs = read_json(TRAINING_JOBS_FILE, [])
     if not isinstance(jobs, list):
         jobs = []
     return {
@@ -377,15 +358,12 @@ def _get_training_stats() -> dict:
 
 
 def _get_system_health() -> dict:
-    essential_files = [
-        f"{API_DATA_DIR}/ai_knowledge_cache.json",
-        f"{API_DATA_DIR}/ai_data_schema.json",
-        f"{API_DATA_DIR}/ai_system_map.json",
-    ]
-    files_ok = sum(1 for path in essential_files if os.path.exists(path))
+    essential_files = ["ai_knowledge_cache.json", "ai_data_schema.json", "ai_system_map.json"]
+    metadata = [file_metadata(filename) for filename in essential_files]
+    files_ok = sum(1 for item in metadata if item.get("exists"))
     score = round((files_ok / len(essential_files)) * 100, 1)
     status = "healthy" if score > 66 else "warning" if score > 33 else "critical"
-    return {"status": status, "score": score, "files_ok": files_ok, "files_total": len(essential_files)}
+    return {"status": status, "score": score, "files_ok": files_ok, "files_total": len(essential_files), "files": metadata}
 
 
 def _get_performance_stats() -> dict:
@@ -420,12 +398,12 @@ def get_model_info(model_id: str) -> Optional[dict]:
 
 
 def _default_model_status() -> dict:
-    return {"models": json.loads(json.dumps(DEFAULT_MODELS, ensure_ascii=False))}
+    return {"models": copy.deepcopy(DEFAULT_MODELS)}
 
 
 def get_model_status(model_name: str = None) -> dict:
     """Return status for one model or all models."""
-    model_status = _read_json(MODEL_STATUS_FILE, _default_model_status())
+    model_status = read_json(MODEL_STATUS_FILE, _default_model_status())
     if not isinstance(model_status, dict) or "models" not in model_status:
         model_status = _default_model_status()
     if model_name:
@@ -438,10 +416,10 @@ def _update_model_status(model_name: str, status: str, deep_result: dict = None,
     models = model_status.setdefault("models", {})
     info = models.setdefault(model_name, {"status": "pending", "accuracy": 0, "last_update": None, "last_trained": None, "training_jobs": []})
     info["status"] = "trained" if status == "completed" else status
-    info["last_update"] = _utc_now()
+    info["last_update"] = utc_now()
 
     if status == "completed":
-        info["last_trained"] = _utc_now()
+        info["last_trained"] = utc_now()
         total_items = 0
         for result in (deep_result, training_result):
             if isinstance(result, dict):
@@ -453,7 +431,8 @@ def _update_model_status(model_name: str, status: str, deep_result: dict = None,
         if job_id not in jobs:
             jobs.append(job_id)
 
-    _write_json(MODEL_STATUS_FILE, model_status)
+    write_json(MODEL_STATUS_FILE, model_status)
+    sync_training_manifest()
 
 
 # ============================================================
