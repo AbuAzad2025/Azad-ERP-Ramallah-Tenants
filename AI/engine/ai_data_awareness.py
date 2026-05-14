@@ -7,7 +7,6 @@ function names stable for existing AI modules.
 
 from __future__ import annotations
 
-import json
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -15,9 +14,10 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import class_mapper
 
 from extensions import db
+from AI.engine.ai_storage import append_json_list, read_json, sync_training_manifest, write_json
 
-DATA_SCHEMA_FILE = "AI/data/ai_data_schema.json"
-LEARNING_LOG_FILE = "AI/data/ai_learning_log.json"
+DATA_SCHEMA_FILE = "ai_data_schema.json"
+LEARNING_LOG_FILE = "ai_learning_log.json"
 SCHEMA_MAX_AGE_DAYS = 7
 
 MODEL_SYNONYMS = {
@@ -41,28 +41,6 @@ MODEL_SYNONYMS = {
     "عملة": ["currency", "exchange"],
     "حساب": ["account", "ledger", "gl"],
 }
-
-
-def _ensure_data_dir() -> None:
-    os.makedirs("AI/data", exist_ok=True)
-
-
-def _read_json(path: str, default: Any) -> Any:
-    try:
-        if not os.path.exists(path):
-            return default
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return default
-
-
-def _write_json(path: str, data: Any) -> None:
-    _ensure_data_dir()
-    tmp_path = f"{path}.tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp_path, path)
 
 
 def discover_all_models() -> List[type]:
@@ -170,28 +148,25 @@ def build_data_schema() -> Dict[str, Any]:
     schema["statistics"]["total_tables"] = len(schema["models"])
     save_data_schema(schema)
     log_learning_event("schema_built", {"models_discovered": len(models), "models_saved": len(schema["models"])})
+    sync_training_manifest()
     return schema
 
 
 def save_data_schema(schema: Dict[str, Any]) -> None:
     try:
-        _write_json(DATA_SCHEMA_FILE, schema)
+        write_json(DATA_SCHEMA_FILE, schema)
     except Exception:
         pass
 
 
 def load_data_schema() -> Optional[Dict[str, Any]]:
-    data = _read_json(DATA_SCHEMA_FILE, None)
+    data = read_json(DATA_SCHEMA_FILE, None)
     return data if isinstance(data, dict) else None
 
 
 def log_learning_event(event_type: str, details: Any) -> None:
     try:
-        logs = _read_json(LEARNING_LOG_FILE, [])
-        if not isinstance(logs, list):
-            logs = []
-        logs.append({"timestamp": datetime.now().isoformat(), "event": event_type, "details": details})
-        _write_json(LEARNING_LOG_FILE, logs[-100:])
+        append_json_list(LEARNING_LOG_FILE, {"timestamp": datetime.now().isoformat(), "event": event_type, "details": details}, max_items=100)
     except Exception:
         pass
 
@@ -252,10 +227,11 @@ def find_model_by_keyword(keyword: str) -> Optional[Dict[str, Any]]:
 
 
 def auto_build_if_needed() -> Optional[Dict[str, Any]]:
-    if not os.path.exists(DATA_SCHEMA_FILE):
+    path = os.path.join("AI/data", DATA_SCHEMA_FILE)
+    if not os.path.exists(path):
         return build_data_schema()
     try:
-        age_days = (datetime.now().timestamp() - os.path.getmtime(DATA_SCHEMA_FILE)) / (3600 * 24)
+        age_days = (datetime.now().timestamp() - os.path.getmtime(path)) / (3600 * 24)
         if age_days > SCHEMA_MAX_AGE_DAYS:
             return build_data_schema()
     except Exception:
