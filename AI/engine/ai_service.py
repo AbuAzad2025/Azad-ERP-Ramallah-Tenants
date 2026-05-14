@@ -1,9 +1,9 @@
 """AI service facade.
 
-This module is intentionally conservative: it preserves the public functions used
-by routes/controllers while removing brittle hard-coded claims and broken prompt
-construction. Database reads are guarded, remote AI is optional, and local mode is
-always available.
+Stable public facade for the Azad Accounting/Garage AI assistant.
+It keeps the old public function names, removes broken prompt construction,
+uses guarded database reads, and keeps local mode available when external APIs
+are unavailable.
 """
 
 from __future__ import annotations
@@ -20,14 +20,12 @@ from sqlalchemy import func, text
 
 from extensions import cache, db
 from models import SystemSettings
-from AI.engine.ai_accounting_professional import get_professional_accounting_knowledge
 from AI.engine.ai_auto_discovery import auto_discover_if_needed, find_route_by_keyword, get_route_suggestions
-from AI.engine.ai_auto_training import init_auto_training, should_auto_train
-from AI.engine.ai_data_awareness import auto_build_if_needed, find_model_by_keyword, load_data_schema
-from AI.engine.ai_gl_knowledge import analyze_gl_batch, detect_gl_error, explain_any_number, explain_gl_entry, get_gl_knowledge_for_ai, suggest_gl_correction, trace_transaction_flow
+from AI.engine.ai_data_awareness import auto_build_if_needed
+from AI.engine.ai_gl_knowledge import get_gl_knowledge_for_ai
 from AI.engine.ai_knowledge import analyze_error, format_error_response, get_knowledge_base, get_local_faq_responses, get_local_quick_rules
-from AI.engine.ai_knowledge_finance import calculate_palestine_income_tax, calculate_vat, get_customs_info, get_finance_knowledge, get_tax_knowledge_detailed
-from AI.engine.ai_self_review import check_policy_compliance, generate_self_audit_report, get_system_status, log_interaction
+from AI.engine.ai_knowledge_finance import calculate_palestine_income_tax, calculate_vat
+from AI.engine.ai_self_review import generate_self_audit_report, log_interaction
 from AI.engine.ai_storage import read_json, sync_training_manifest, write_json
 
 _conversation_memory: Dict[str, Dict[str, Any]] = {}
@@ -39,9 +37,17 @@ _system_state = "LOCAL_ONLY"
 LOCAL_MODE_LOG_FILE = "ai_local_mode_log.json"
 MAX_MEMORY_MESSAGES = 50
 
+COMPANY_PROFILE = {
+    "company_name": "Azad company",
+    "system_name": "نظام أزاد لإدارة الكراج والمحاسبة",
+    "owner_name": "Ahmad ghannam",
+    "owner_display_name": "المهندس أحمد غنام",
+    "phone": "0562150193",
+}
+
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Small safe helpers
+# Safe helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _now() -> datetime:
@@ -99,28 +105,17 @@ def _sum_column(model, names: List[str], filters: Optional[List[Any]] = None) ->
         return Decimal("0")
 
 
-def _serialize_basic(obj: Any, fields: List[str]) -> Dict[str, Any]:
-    data = {}
-    for field in fields:
-        value = getattr(obj, field, None)
-        if isinstance(value, Decimal):
-            value = float(value)
-        elif isinstance(value, datetime):
-            value = value.isoformat()
-        data[field] = value
-    return data
-
-
 def _knowledge_structure() -> Dict[str, Any]:
     try:
         kb = get_knowledge_base()
         if hasattr(kb, "get_system_structure"):
             return kb.get_system_structure()
         knowledge = getattr(kb, "knowledge", {}) or {}
+        templates = knowledge.get("templates", {})
         return {
             "models_count": len(knowledge.get("models", {})),
             "routes_count": len(knowledge.get("routes", {})),
-            "templates_count": sum(len(v) if isinstance(v, list) else 1 for v in knowledge.get("templates", {}).values()),
+            "templates_count": sum(len(v) if isinstance(v, list) else 1 for v in templates.values()),
             "relationships_count": len(knowledge.get("relationships", {})),
             "business_rules_count": len(knowledge.get("business_rules", [])),
             "models": list(knowledge.get("models", {}).keys()),
@@ -130,8 +125,12 @@ def _knowledge_structure() -> Dict[str, Any]:
         return {"models_count": 0, "routes_count": 0, "templates_count": 0, "relationships_count": 0, "business_rules_count": 0, "models": [], "routes": {}}
 
 
+def get_company_profile() -> Dict[str, str]:
+    return dict(COMPANY_PROFILE)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
-# Settings and context
+# Settings and live context
 # ─────────────────────────────────────────────────────────────────────────────
 
 def get_system_setting(key, default=""):
@@ -190,7 +189,8 @@ def gather_system_context():
         )
 
         return {
-            "system_name": "نظام أزاد لإدارة الكراج",
+            **COMPANY_PROFILE,
+            "system_name": COMPANY_PROFILE["system_name"],
             "version": get_system_setting("SYSTEM_VERSION", "غير محدد"),
             "roles_count": _cached_count(Role, "roles_count"),
             "roles": roles,
@@ -223,7 +223,7 @@ def gather_system_context():
             "current_stats": current_stats,
         }
     except Exception as exc:
-        return {"system_name": "نظام أزاد", "version": "غير محدد", "modules_count": 0, "modules": [], "roles_count": 0, "roles": [], "current_stats": f"خطأ في جمع الإحصائيات: {exc}"}
+        return {**COMPANY_PROFILE, "system_name": COMPANY_PROFILE["system_name"], "version": "غير محدد", "roles_count": 0, "roles": [], "current_stats": f"خطأ في جمع الإحصائيات: {exc}"}
 
 
 def get_system_navigation_context():
@@ -355,7 +355,7 @@ def get_conversation_context(session_id):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Read-only analysis/reporting
+# Reporting and analysis
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _time_range(scope: Optional[str]) -> Tuple[datetime, datetime]:
@@ -470,7 +470,7 @@ def generate_smart_report(intent):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Prompt building and direct accounting queries
+# Prompt, accounting and search
 # ─────────────────────────────────────────────────────────────────────────────
 
 def build_system_message(system_context):
@@ -486,7 +486,12 @@ def build_system_message(system_context):
     elif data_context.get("functional_modules"):
         modules_hint = data_context.get("functional_modules", [])[:15]
 
-    return f"""أنت {identity['name']} داخل نظام أزاد لإدارة الكراج.
+    return f"""أنت {identity['name']} داخل {COMPANY_PROFILE['system_name']}.
+
+هوية النظام والشركة:
+- الشركة: {COMPANY_PROFILE['company_name']}
+- المالك/المطور: {COMPANY_PROFILE['owner_display_name']} ({COMPANY_PROFILE['owner_name']})
+- هاتف التواصل: {COMPANY_PROFILE['phone']}
 
 وضع التشغيل: {identity['mode']}
 Groq API: {identity['status']['groq_api']}
@@ -528,8 +533,7 @@ def query_accounting_data(query_type, filters=None):
             customer_id = filters.get("customer_id")
             customer = db.session.get(Customer, int(customer_id)) if customer_id else None
             if customer:
-                balance = _safe_float(getattr(customer, "balance", 0))
-                results["customer"] = {"id": customer.id, "name": customer.name, "balance": balance, "meaning": "موجب = عليه حسب إعدادات النظام إن كان الرصيد مدينًا، وسالب/دائن يحتاج قراءة سياسة الرصيد المعتمدة"}
+                results["customer"] = {"id": customer.id, "name": customer.name, "balance": _safe_float(getattr(customer, "balance", 0))}
 
         elif query_type == "supplier_balance":
             supplier_id = filters.get("supplier_id")
@@ -558,33 +562,24 @@ def query_accounting_data(query_type, filters=None):
                 q = q.filter(account_col == account_code)
             rows = q.group_by(account_col).all()
             results["gl_summary"] = [{"account": row.account, "total_debit": _safe_float(row.total_debit), "total_credit": _safe_float(row.total_credit), "balance": _safe_float(row.total_debit) - _safe_float(row.total_credit)} for row in rows]
-            if query_type == "account_balance" and account_code:
+            if query_type == "account_balance" and account_code and results["gl_summary"]:
                 account = None
                 try:
                     account = Account.query.filter_by(code=account_code).first()
                 except Exception:
                     pass
-                if results["gl_summary"]:
-                    first = results["gl_summary"][0]
-                    results["account_balance"] = {**first, "account_name": getattr(account, "name", account_code), "account_code": account_code}
+                results["account_balance"] = {**results["gl_summary"][0], "account_name": getattr(account, "name", account_code), "account_code": account_code}
 
         elif query_type == "financial_summary":
             date_from = filters.get("date_from", _now() - timedelta(days=30))
             date_to = filters.get("date_to", _now())
             sale_date = _first_attr(Sale, ["created_at", "sale_date"])
-            sale_amount_names = ["total_amount", "sale_total", "total"]
-            sale_filters = []
-            if sale_date is not None:
-                sale_filters = [sale_date >= date_from, sale_date <= date_to]
+            sale_filters = [sale_date >= date_from, sale_date <= date_to] if sale_date is not None else []
             expense_date = _first_attr(Expense, ["date", "created_at"])
-            expense_filters = []
-            if expense_date is not None:
-                expense_filters = [expense_date >= date_from, expense_date <= date_to]
+            expense_filters = [expense_date >= date_from, expense_date <= date_to] if expense_date is not None else []
             payment_date = _first_attr(Payment, ["payment_date", "created_at"])
-            payment_filters_base = []
-            if payment_date is not None:
-                payment_filters_base = [payment_date >= date_from, payment_date <= date_to]
-            total_sales = _sum_column(Sale, sale_amount_names, sale_filters)
+            payment_filters_base = [payment_date >= date_from, payment_date <= date_to] if payment_date is not None else []
+            total_sales = _sum_column(Sale, ["total_amount", "sale_total", "total"], sale_filters)
             total_expenses = _sum_column(Expense, ["amount", "total_amount"], expense_filters)
             direction_col = getattr(Payment, "direction", None)
             payments_in_filters = list(payment_filters_base)
@@ -653,19 +648,13 @@ def search_database_for_query(query):
                 vat_info = calculate_vat(amount, country)
                 vat_info["country"] = country
                 results["vat_calculation"] = vat_info
-
-        if intent.get("currency") or "صرف" in query_lower or "سعر" in query_lower:
-            from models import ExchangeTransaction
-            recent_fx = ExchangeTransaction.query.order_by(ExchangeTransaction.created_at.desc()).limit(5).all()
-            if recent_fx:
-                results["recent_exchange_rates"] = [{"from_currency": fx.from_currency, "to_currency": fx.to_currency, "rate": float(fx.rate), "date": fx.created_at.strftime("%Y-%m-%d") if fx.created_at else "N/A"} for fx in recent_fx]
     except Exception as exc:
         results["error"] = str(exc)
     return results
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Health, identity, local fallback
+# Health, identity and local fallback
 # ─────────────────────────────────────────────────────────────────────────────
 
 def check_groq_health():
@@ -690,6 +679,7 @@ def get_system_identity():
         "name": "المساعد الذكي في نظام Garage Manager",
         "version": "AI Service Stable",
         "mode": _system_state,
+        "company": get_company_profile(),
         "capabilities": {"local_analysis": True, "database_access": True, "knowledge_base": True, "finance_calculations": True, "auto_discovery": True, "self_training": True},
         "status": {"groq_api": "offline" if _local_fallback_mode else "online", "groq_failures_24h": len(_groq_failures), "local_mode_active": _local_fallback_mode},
         "data_sources": ["AI/data عبر ai_storage", "قاعدة البيانات المحلية SQLAlchemy", "خريطة النظام عند توفرها"],
@@ -710,7 +700,8 @@ def log_local_mode_usage():
 
 def get_local_fallback_response(message, search_results):
     try:
-        response = "🤖 أعمل الآن بالوضع المحلي داخل نظام Garage Manager.\n\n"
+        response = f"🤖 أعمل الآن بالوضع المحلي داخل {COMPANY_PROFILE['system_name']}.\n"
+        response += f"🏢 الشركة: {COMPANY_PROFILE['company_name']} | المطور: {COMPANY_PROFILE['owner_display_name']} | الهاتف: {COMPANY_PROFILE['phone']}\n\n"
         if search_results and any(k for k in search_results if k not in {"intent", "error"} and search_results.get(k)):
             response += "📊 البيانات المتوفرة من قاعدة البيانات:\n"
             for key, value in list(search_results.items())[:12]:
@@ -879,9 +870,15 @@ def local_intelligent_response(message, session_id=None):
     except Exception:
         pass
 
-    if context.get("context_type") == "greeting":
+    if context.get("context_type") == "greeting" or any(w in message_lower for w in ["من انت", "من أنت", "الشركة", "المطور", "رقم الهاتف", "تواصل"]):
         stats = gather_system_context()
-        return f"👋 أهلاً. أنا المساعد الذكي داخل نظام Garage Manager.\n\n📊 حالة مختصرة:\n{stats.get('current_stats', 'غير متوفر')}"
+        return (
+            f"👋 أهلاً. أنا المساعد الذكي داخل {COMPANY_PROFILE['system_name']}.\n"
+            f"🏢 الشركة: {COMPANY_PROFILE['company_name']}\n"
+            f"👤 المالك/المطور: {COMPANY_PROFILE['owner_display_name']} ({COMPANY_PROFILE['owner_name']})\n"
+            f"☎️ الهاتف: {COMPANY_PROFILE['phone']}\n\n"
+            f"📊 حالة مختصرة:\n{stats.get('current_stats', 'غير متوفر')}"
+        )
 
     if context.get("intent") == "navigation" or any(w in message_lower for w in ["وين", "اين", "أين", "افتح", "رابط", "صفحة"]):
         return handle_navigation_request(message)
@@ -1005,6 +1002,10 @@ def explain_system_structure():
         models = structure.get("models", [])[:15]
         return f"""🏗️ هيكل نظام أزاد
 
+الشركة: {COMPANY_PROFILE['company_name']}
+المطور: {COMPANY_PROFILE['owner_display_name']}
+الهاتف: {COMPANY_PROFILE['phone']}
+
 📊 قاعدة البيانات:
 • {structure.get('models_count', 0)} موديل/جدول مفهرس
 {chr(10).join(f'  - {m}' for m in models)}
@@ -1019,6 +1020,7 @@ def explain_system_structure():
 
 
 __all__ = [
+    "get_company_profile",
     "get_system_setting",
     "gather_system_context",
     "get_system_navigation_context",
