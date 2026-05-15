@@ -37,7 +37,34 @@ def bind_ai_flask_feedback(app) -> bool:
         def ai_transaction_level_class(level):
             mapping = {"danger": "alert-danger", "warning": "alert-warning", "info": "alert-info", "success": "alert-success"}
             return mapping.get(str(level or "info"), "alert-info")
-        return {"ai_transaction_level_class": ai_transaction_level_class}
+
+        def ai_transaction_feedback(limit=3):
+            try:
+                from AI.engine.ai_transaction_feedback import get_recent_transaction_feedback
+                return get_recent_transaction_feedback(limit=limit, user_only=True)
+            except Exception:
+                return []
+
+        def ai_transaction_latest_message():
+            try:
+                from AI.engine.ai_transaction_feedback import get_latest_transaction_message
+                return get_latest_transaction_message(user_only=True)
+            except Exception:
+                return ""
+
+        def ai_transaction_summary(limit=5):
+            try:
+                from AI.engine.ai_transaction_feedback import transaction_feedback_summary
+                return transaction_feedback_summary(limit=limit)
+            except Exception:
+                return {"count": 0, "messages": [], "severity_counts": {}, "events": []}
+
+        return {
+            "ai_transaction_level_class": ai_transaction_level_class,
+            "ai_transaction_feedback": ai_transaction_feedback,
+            "ai_transaction_latest_message": ai_transaction_latest_message,
+            "ai_transaction_summary": ai_transaction_summary,
+        }
 
     _BOUND_APPS.add(app_id)
     return True
