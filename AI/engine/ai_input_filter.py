@@ -5,8 +5,11 @@ from __future__ import annotations
 import re
 from typing import Any, Dict
 
+from AI.engine.ai_storage import append_json_list, utc_now
+
 BLOCK_MESSAGE = "⛔ تم رفض الطلب لأنه غير آمن أو خارج صلاحيات المستخدم الحالي."
 MAX_TEXT = 6000
+SECURITY_LOG_FILE = "ai_security_events.json"
 
 _OVERRIDE_WORDS = (
     "ignore previous",
@@ -60,6 +63,32 @@ def _norm(value: Any) -> str:
     return " ".join(str(value or "").replace("\u200f", "").replace("\u200e", "").split()).lower()
 
 
+def _user_snapshot() -> Dict[str, Any]:
+    try:
+        from flask_login import current_user
+        if current_user and getattr(current_user, "is_authenticated", False):
+            return {"user_id": getattr(current_user, "id", None), "username": getattr(current_user, "username", None), "role": getattr(current_user, "role_name_l", None)}
+    except Exception:
+        pass
+    return {"user_id": None, "username": None, "role": None}
+
+
+def log_security_event(issues, sample: Any = "") -> None:
+    try:
+        append_json_list(
+            SECURITY_LOG_FILE,
+            {
+                "timestamp": utc_now(),
+                "issues": list(issues or []),
+                "sample": clean_text(str(sample or "")[:300]),
+                **_user_snapshot(),
+            },
+            max_items=1000,
+        )
+    except Exception:
+        pass
+
+
 def inspect_text(value: Any) -> Dict[str, Any]:
     raw = str(value or "")
     text = _norm(raw)
@@ -74,6 +103,8 @@ def inspect_text(value: Any) -> Dict[str, Any]:
         issues.append("unsafe_action")
     if re.search(r"(?i)select\s+.+\s+from\s+(users|auth|audit|permissions|roles|settings)", raw):
         issues.append("sensitive_query")
+    if issues:
+        log_security_event(issues, raw)
     return {"allowed": not issues, "issues": issues, "message": BLOCK_MESSAGE if issues else ""}
 
 
@@ -105,4 +136,4 @@ def clean_data(value: Any):
     return value
 
 
-__all__ = ["inspect_text", "deny", "clean_text", "clean_data", "BLOCK_MESSAGE"]
+__all__ = ["inspect_text", "deny", "clean_text", "clean_data", "log_security_event", "BLOCK_MESSAGE"]
