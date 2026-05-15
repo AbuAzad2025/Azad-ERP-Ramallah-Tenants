@@ -18,6 +18,15 @@ _CRITICAL_MODE_KEY = "ai_erp_guard_block_critical"
 _BOUND = False
 
 
+class AITransactionBlocked(ValueError):
+    """Raised when strict ERP guard mode blocks a critical transaction."""
+
+    def __init__(self, message: str, findings: List[Dict[str, Any]] = None):
+        super().__init__(message)
+        self.findings = findings or []
+        self.user_message = message
+
+
 def _dec(value: Any) -> Decimal:
     try:
         return Decimal(str(value if value not in (None, "") else 0))
@@ -112,15 +121,19 @@ def inspect_object(obj: Any, state: str) -> List[Dict[str, Any]]:
     return findings
 
 
+def _build_user_message(findings: Iterable[Dict[str, Any]]) -> str:
+    try:
+        from AI.engine.ai_transaction_copilot import compact_user_message
+        return compact_user_message(findings)
+    except Exception:
+        return ""
+
+
 def _log_findings(findings: Iterable[Dict[str, Any]]) -> None:
     items = list(findings or [])
     if not items:
         return
-    try:
-        from AI.engine.ai_transaction_copilot import compact_user_message
-        user_message = compact_user_message(items)
-    except Exception:
-        user_message = ""
+    user_message = _build_user_message(items)
     try:
         append_json_list(GUARD_LOG_FILE, {"timestamp": utc_now(), "findings": items, "user_message": user_message, **_user_snapshot()}, max_items=1000)
     except Exception:
@@ -156,12 +169,8 @@ def bind_erp_transaction_guard() -> bool:
         if _setting_bool(_CRITICAL_MODE_KEY, False):
             critical = [f for f in findings if f.get("severity") == "CRITICAL"]
             if critical:
-                try:
-                    from AI.engine.ai_transaction_copilot import compact_user_message
-                    message = compact_user_message(critical)
-                except Exception:
-                    message = "AI ERP Guard blocked a critical-risk transaction."
-                raise ValueError(message or "AI ERP Guard blocked a critical-risk transaction.")
+                message = _build_user_message(critical) or "تم منع حفظ الحركة لأنها تحتوي خطراً حرجاً يحتاج تصحيحاً."
+                raise AITransactionBlocked(message, critical)
 
     try:
         event.listen(Session, "before_flush", before_flush, retval=False)
@@ -171,4 +180,4 @@ def bind_erp_transaction_guard() -> bool:
         return False
 
 
-__all__ = ["bind_erp_transaction_guard", "inspect_object"]
+__all__ = ["AITransactionBlocked", "bind_erp_transaction_guard", "inspect_object"]
