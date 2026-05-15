@@ -13,3 +13,8 @@ AI/
 تم التوحيد الكامل في: 2025-10-31
 """
 
+try:
+    from AI.engine.ai_access_bind import bind_ai_service_access
+    bind_ai_service_access()
+except Exception:
+    pass
