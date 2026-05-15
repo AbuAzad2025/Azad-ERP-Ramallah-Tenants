@@ -92,6 +92,10 @@ class MasterController:
             if result:
                 return result
 
+            result = self._try_database_expert(query, operation)
+            if result:
+                return result
+
             result = self._try_user_guide(query, operation)
             if result:
                 return result
@@ -150,6 +154,27 @@ class MasterController:
             return {"answer": self._format_python_error_answer(result), "confidence": 0.9, "sources": ["Python Expert"]}
         return None
 
+    def _try_database_expert(self, query: str, operation: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        text = (query or "").lower()
+        if not any(word in text for word in ("جدول", "موديل", "model", "table", "schema", "قاعدة", "استعلام", "query", "sql", "حقل", "field", "علاقة", "relation")):
+            return None
+        expert = self.subsystems.get("database_expert")
+        if not expert:
+            return None
+        operation["subsystems_used"].append("database_expert")
+        result = None
+        if "select" in text or "sql" in text:
+            result = expert.analyze_query(query)
+            answer = self._format_sql_analysis(result)
+        else:
+            result = expert.describe_business_question(query) if hasattr(expert, "describe_business_question") else None
+            answer = self._format_database_expert_answer(result)
+        if result and answer:
+            operation["result"] = result
+            self._track_operation(operation)
+            return {"answer": answer, "confidence": 0.86, "sources": ["Database Expert"]}
+        return None
+
     def _try_user_guide(self, query: str, operation: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         guide = self.subsystems.get("guide_master")
         if not guide:
@@ -157,9 +182,6 @@ class MasterController:
         operation["subsystems_used"].append("guide_master")
         result = guide.answer_question(query)
         if result and isinstance(result, dict) and result.get("steps"):
-            route_source = result.get("route_source")
-            if result.get("route") == "غير مفهرس حالياً" and route_source == "not_found":
-                return None
             operation["result"] = result
             self._track_operation(operation)
             return {"answer": self._format_guide_answer(result), "confidence": 0.9, "sources": ["Expert User Guide"]}
@@ -177,6 +199,31 @@ class MasterController:
             parts.append("\n🛡️ الوقاية:")
             for tip in result["prevention_tips"][:3]:
                 parts.append(f"  - {tip}")
+        return "\n".join(parts)
+
+    def _format_sql_analysis(self, result: Dict) -> str:
+        if not result:
+            return ""
+        parts = ["🗄️ تحليل الاستعلام:", f"درجة الأداء التقديرية: {result.get('performance_score', 'غير معروف')}/100", f"التعقيد: {result.get('estimated_complexity', 'unknown')}"]
+        if result.get("issues"):
+            parts.append("\n⚠️ مشاكل:")
+            for item in result.get("issues", [])[:6]:
+                parts.append(f"  • {item.get('message')} — الحل: {item.get('fix', 'راجع الاستعلام')}")
+        self._add_list_section(parts, "💡 اقتراحات", result.get("suggestions"), 6)
+        return "\n".join(parts)
+
+    def _format_database_expert_answer(self, result: Dict) -> str:
+        if not result or not result.get("best_match"):
+            return ""
+        best = result["best_match"]
+        parts = [f"🗄️ فهم قاعدة البيانات للسؤال: {best.get('domain')}"]
+        if best.get("models"):
+            parts.append("\n📌 الموديلات المرشحة:")
+            for model in best.get("models", [])[:8]:
+                parts.append(f"  • {model}")
+        self._add_list_section(parts, "✅ ما يراجعه المستخدم الخبير", best.get("expert_focus"), 8)
+        self._add_list_section(parts, "🔎 فلاتر آمنة ومفيدة", best.get("safe_filters"), 8)
+        parts.append("\nملاحظة: هذه خريطة ترشيح ذكية؛ القراءة النهائية يجب أن تتم من الحقول والعلاقات الفعلية في النظام.")
         return "\n".join(parts)
 
     def _add_list_section(self, parts: List[str], title: str, values, limit: int = 8) -> None:
@@ -263,16 +310,7 @@ class MasterController:
         return {"success": False, "error": "Unknown command"}
 
     def _scan_all_systems(self) -> Dict:
-        return {
-            "success": True,
-            "results": {
-                "timestamp": datetime.now().isoformat(),
-                "subsystems": {
-                    name: {"status": "operational" if subsystem else "offline", "type": type(subsystem).__name__ if subsystem else None, "error": self.subsystem_errors.get(name)}
-                    for name, subsystem in self.subsystems.items()
-                },
-            },
-        }
+        return {"success": True, "results": {"timestamp": datetime.now().isoformat(), "subsystems": {name: {"status": "operational" if subsystem else "offline", "type": type(subsystem).__name__ if subsystem else None, "error": self.subsystem_errors.get(name)} for name, subsystem in self.subsystems.items()}}}
 
     def _run_accounting_audit(self) -> Dict:
         auditor = self.subsystems.get("auditor")
@@ -320,7 +358,6 @@ class MasterController:
             return {"success": False, "error": "file_path is required"}
         if os.path.isabs(file_path) or ".." in file_path.replace("\\", "/").split("/"):
             return {"success": False, "error": "Unsafe file path"}
-
         reader = self.subsystems.get("book_reader")
         if not reader:
             return {"success": False, "error": "Book reader not available"}
