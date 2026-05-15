@@ -1,8 +1,7 @@
-"""Finance and tax knowledge helpers for the AI assistant.
+"""Finance knowledge helpers for the AI assistant.
 
-The information here is operational guidance, not legal advice. Tax and currency
-values can change, so calculations prefer live system settings and clearly mark
-fallback defaults when they are used.
+Operational guidance only. Rates and brackets are read from live system settings;
+no statutory numeric fallbacks are calculated in this module.
 """
 
 from __future__ import annotations
@@ -10,19 +9,6 @@ from __future__ import annotations
 import json
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional
-
-
-FALLBACK_RATES = {
-    "palestine_vat": Decimal("16"),
-    "israel_vat": Decimal("17"),
-}
-
-FALLBACK_PALESTINE_INCOME_BRACKETS = [
-    {"from": 0, "to": 75000, "rate": 5},
-    {"from": 75000, "to": 150000, "rate": 10},
-    {"from": 150000, "to": 300000, "rate": 15},
-    {"from": 300000, "to": None, "rate": 20},
-]
 
 FINANCE_KNOWLEDGE = {
     "accounting_principles": {
@@ -32,27 +18,27 @@ FINANCE_KNOWLEDGE = {
         "استمرارية": "المنشأة مستمرة ما لم يثبت العكس.",
         "حيطة_حذر": "عدم المبالغة في تقدير الأصول والإيرادات.",
     },
-    "tax_policy": {
-        "warning": "النسب والشرائح الضريبية تتغير. استخدم إعدادات النظام أو مصدرًا رسميًا حديثًا قبل اعتماد أي رقم.",
-        "vat": "تحسب من إعدادات النظام عند توفرها، وإلا يستعمل النظام fallback مع تحذير.",
-        "income_tax": "يفضل ضبط الشرائح في SystemSettings بدل تثبيتها في الكود.",
+    "policy": {
+        "warning": "أي نسبة أو شريحة يجب أن تأتي من إعدادات النظام أو مصدر رسمي حديث قبل الاعتماد.",
+        "vat": "تحسب من إعدادات النظام فقط عند توفرها.",
+        "income": "يجب ضبط الشرائح في SystemSettings قبل الاحتساب.",
     },
     "customs_codes": {
         "8703": {"description": "سيارات ركاب وعربات أخرى", "rate": "varies", "notes": "الرسوم تعتمد على النوع والسنة والسعة والوقود ومصدر الاستيراد."},
         "8704": {"description": "شاحنات نقل البضائع", "rate": "varies", "notes": "المركبات التجارية لها معاملة مختلفة حسب التصنيف."},
-        "8708": {"description": "قطع غيار للسيارات", "rate": "varies", "notes": "راجع التعرفة الجمركية الرسمية قبل الاحتساب."},
-        "8507": {"description": "بطاريات كهربائية", "rate": "varies", "notes": "قد تخضع لرسوم بيئية أو تنظيمية إضافية."},
+        "8708": {"description": "قطع غيار للسيارات", "rate": "varies", "notes": "راجع التعرفة الرسمية قبل الاحتساب."},
+        "8507": {"description": "بطاريات كهربائية", "rate": "varies", "notes": "قد تخضع لرسوم تنظيمية إضافية."},
     },
     "financial_formulas": {
         "gross_profit": "الربح الإجمالي = الإيرادات - تكلفة البضاعة المباعة",
-        "net_profit": "صافي الربح = الربح الإجمالي - المصروفات التشغيلية - الضرائب",
-        "vat_calculation": "VAT = المبلغ الأساسي × (نسبة الضريبة / 100)",
+        "net_profit": "صافي الربح = الربح الإجمالي - المصروفات التشغيلية - الالتزامات المستحقة",
+        "vat_calculation": "VAT = المبلغ الأساسي × (النسبة المقروءة من الإعدادات / 100)",
         "gross_up": "إذا كان السعر شامل الضريبة: الصافي = الإجمالي / (1 + النسبة)",
         "roi": "العائد على الاستثمار = (الربح / رأس المال) × 100",
     },
     "accounting_terms": {
-        "دائن": "Creditor/Credit - حسب السياق: طرف دائن أو حساب يزيد بالدائن.",
-        "مدين": "Debtor/Debit - حسب السياق: طرف مدين أو حساب يزيد بالمدين.",
+        "دائن": "Credit - حسب السياق: طرف دائن أو حساب يزيد بالدائن.",
+        "مدين": "Debit - حسب السياق: طرف مدين أو حساب يزيد بالمدين.",
         "أصول": "Assets - ممتلكات المنشأة وحقوقها.",
         "خصوم": "Liabilities - التزامات المنشأة.",
         "حقوق_ملكية": "Equity - صافي حق المالك/الشركاء.",
@@ -66,24 +52,12 @@ FINANCE_KNOWLEDGE = {
         "USD": {"name": "دولار أمريكي", "symbol": "$"},
         "JOD": {"name": "دينار أردني", "symbol": "د.أ"},
         "EUR": {"name": "يورو", "symbol": "€"},
-        "notes": ["أسعار الصرف تتغير؛ استخدم آخر سعر مسجل في ExchangeTransaction أو إعدادات النظام.", "لا توجد أسعار صرف ثابتة داخل هذا الملف."],
+        "notes": ["أسعار الصرف تتغير؛ استخدم آخر سعر مسجل في ExchangeRate أو إعدادات النظام.", "لا توجد أسعار صرف ثابتة داخل هذا الملف."],
     },
 }
 
-TAX_KNOWLEDGE_PALESTINE = {
-    "country": "فلسطين",
-    "warning": "تحقق من وزارة المالية/الإعدادات قبل اعتماد النسب.",
-    "vat": {"name": "ضريبة القيمة المضافة", "rate_source": "SystemSettings/utils.get_vat_rate أو fallback مع تحذير"},
-    "income_tax": {"name": "ضريبة الدخل", "brackets_source": "SystemSettings أو fallback مع تحذير"},
-    "customs_duties": {"description": "تختلف حسب كود HS والاتفاقيات والتصنيف."},
-}
-
-TAX_KNOWLEDGE_ISRAEL = {
-    "country": "إسرائيل",
-    "warning": "تحقق من سلطة الضرائب/الإعدادات قبل اعتماد النسب.",
-    "vat": {"name": "VAT", "rate_source": "SystemSettings أو fallback مع تحذير"},
-    "income_tax": {"name": "Income Tax", "brackets_source": "مصدر رسمي حديث أو إعدادات النظام"},
-}
+TAX_KNOWLEDGE_PALESTINE = {"country": "فلسطين", "warning": "تحقق من الإعدادات أو مصدر رسمي حديث قبل اعتماد النسب.", "vat": {"name": "ضريبة القيمة المضافة", "rate_source": "SystemSettings/utils.get_vat_rate"}, "income_tax": {"name": "ضريبة الدخل", "brackets_source": "SystemSettings"}, "customs_duties": {"description": "تختلف حسب كود HS والاتفاقيات والتصنيف."}}
+TAX_KNOWLEDGE_ISRAEL = {"country": "إسرائيل", "warning": "تحقق من الإعدادات أو مصدر رسمي حديث قبل اعتماد النسب.", "vat": {"name": "VAT", "rate_source": "SystemSettings"}, "income_tax": {"name": "Income Tax", "brackets_source": "SystemSettings أو مصدر رسمي حديث"}}
 
 
 def _decimal(value: Any, default: Decimal = Decimal("0")) -> Decimal:
@@ -96,11 +70,10 @@ def _decimal(value: Any, default: Decimal = Decimal("0")) -> Decimal:
 def _get_setting_value(*keys: str) -> Optional[str]:
     try:
         from models import SystemSettings
-
         for key in keys:
             setting = SystemSettings.query.filter_by(key=key).first()
             if setting and setting.value not in (None, ""):
-                return setting.value
+                return str(setting.value)
     except Exception:
         return None
     return None
@@ -116,12 +89,11 @@ def _get_json_setting(*keys: str) -> Optional[Any]:
         return None
 
 
-def _get_vat_rate(country: str) -> tuple[Decimal, str, str]:
+def _get_vat_rate(country: str) -> tuple[Optional[Decimal], str, str]:
     country = str(country or "palestine").lower()
     if country == "palestine":
         try:
             from utils import get_vat_rate, is_vat_enabled
-
             if not is_vat_enabled():
                 return Decimal("0"), "system_settings", "VAT disabled in system settings"
             return _decimal(get_vat_rate()), "system_settings", "VAT read from system settings"
@@ -129,15 +101,11 @@ def _get_vat_rate(country: str) -> tuple[Decimal, str, str]:
             setting_rate = _get_setting_value("vat_rate", "VAT_RATE", "palestine_vat_rate")
             if setting_rate is not None:
                 return _decimal(setting_rate), "system_settings", "VAT read from SystemSettings"
-            return FALLBACK_RATES["palestine_vat"], "fallback_default", "Fallback VAT rate used; verify with official/current settings"
-
+            return None, "not_configured", "VAT rate is not configured; no fallback rate was used"
     setting_rate = _get_setting_value(f"{country}_vat_rate", "vat_rate")
     if setting_rate is not None:
         return _decimal(setting_rate), "system_settings", "VAT read from SystemSettings"
-    fallback_key = f"{country}_vat"
-    if fallback_key in FALLBACK_RATES:
-        return FALLBACK_RATES[fallback_key], "fallback_default", "Fallback VAT rate used; verify with official/current settings"
-    return Decimal("0"), "not_configured", "VAT rate not configured"
+    return None, "not_configured", "VAT rate is not configured; no fallback rate was used"
 
 
 def get_finance_knowledge():
@@ -145,17 +113,7 @@ def get_finance_knowledge():
 
 
 def get_tax_knowledge_detailed():
-    return {
-        "palestine": TAX_KNOWLEDGE_PALESTINE,
-        "israel": TAX_KNOWLEDGE_ISRAEL,
-        "comparison": {
-            "vat": "اقرأ من الإعدادات أو مصدر رسمي حديث.",
-            "corporate_tax": "اقرأ من الإعدادات أو مصدر رسمي حديث.",
-            "personal_tax": "اقرأ من الإعدادات أو مصدر رسمي حديث.",
-        },
-        "tax_planning_tips": ["وثق المصروفات", "التزم بالمواعيد", "احتفظ بسجلات منظمة", "استشر محاسبًا قانونيًا عند الحاجة"],
-        "warning": "هذه معرفة تشغيلية عامة وليست فتوى ضريبية أو قانونية.",
-    }
+    return {"palestine": TAX_KNOWLEDGE_PALESTINE, "israel": TAX_KNOWLEDGE_ISRAEL, "comparison": {"vat": "اقرأ من الإعدادات أو مصدر رسمي حديث.", "corporate_tax": "اقرأ من الإعدادات أو مصدر رسمي حديث.", "personal_tax": "اقرأ من الإعدادات أو مصدر رسمي حديث."}, "tax_planning_tips": ["وثق المصروفات", "التزم بالمواعيد", "احتفظ بسجلات منظمة", "استشر مختصاً عند الحاجة"], "warning": "هذه معرفة تشغيلية عامة وليست فتوى ضريبية أو قانونية."}
 
 
 def _normalise_brackets(raw_brackets: Any) -> List[Dict[str, Any]]:
@@ -175,19 +133,12 @@ def _normalise_brackets(raw_brackets: Any) -> List[Dict[str, Any]]:
 
 
 def calculate_palestine_income_tax(income):
-    """Calculate Palestine income tax using configured brackets when possible.
-
-    Return value stays numeric for backward compatibility. If no configured
-    brackets exist, fallback brackets are used and callers should treat the result
-    as an estimate requiring verification.
-    """
     income_dec = _decimal(income)
     if income_dec <= 0:
         return 0.0
-
-    configured = _get_json_setting("palestine_income_tax_brackets", "income_tax_brackets_palestine")
-    brackets = _normalise_brackets(configured) or _normalise_brackets(FALLBACK_PALESTINE_INCOME_BRACKETS)
-
+    brackets = _normalise_brackets(_get_json_setting("palestine_income_tax_brackets", "income_tax_brackets_palestine"))
+    if not brackets:
+        return 0.0
     total_tax = Decimal("0")
     for bracket in brackets:
         start = bracket["from"]
@@ -204,16 +155,11 @@ def calculate_palestine_income_tax(income):
 def calculate_vat(amount, country="palestine"):
     amount_dec = _decimal(amount)
     rate, source, warning = _get_vat_rate(country)
+    if rate is None:
+        return {"base_amount": float(amount_dec), "vat_rate": None, "vat_amount": None, "total_with_vat": None, "rate_source": source, "warning": warning}
     vat_amount = amount_dec * (rate / Decimal("100"))
     total_with_vat = amount_dec + vat_amount
-    return {
-        "base_amount": float(amount_dec),
-        "vat_rate": float(rate),
-        "vat_amount": float(vat_amount),
-        "total_with_vat": float(total_with_vat),
-        "rate_source": source,
-        "warning": warning,
-    }
+    return {"base_amount": float(amount_dec), "vat_rate": float(rate), "vat_amount": float(vat_amount), "total_with_vat": float(total_with_vat), "rate_source": source, "warning": warning}
 
 
 def get_customs_info(hs_code):
@@ -221,31 +167,7 @@ def get_customs_info(hs_code):
 
 
 def get_all_system_modules():
-    """Fallback module map. Prefer ai_auto_discovery when current routes are needed."""
-    return {
-        "auth": {"name": "المصادقة", "route_hint": "/auth"},
-        "customers": {"name": "العملاء", "route_hint": "/customers"},
-        "service": {"name": "الصيانة", "route_hint": "/service أو /services حسب التسجيل الفعلي"},
-        "sales": {"name": "المبيعات", "route_hint": "/sales"},
-        "shop": {"name": "المتجر", "route_hint": "/shop"},
-        "warehouses": {"name": "المستودعات", "route_hint": "/warehouses"},
-        "expenses": {"name": "النفقات", "route_hint": "/expenses"},
-        "payments": {"name": "المدفوعات", "route_hint": "/payments"},
-        "vendors": {"name": "الموردين", "route_hint": "/vendors أو /suppliers حسب التسجيل الفعلي"},
-        "ledger": {"name": "دفتر الأستاذ", "route_hint": "/gl أو /ledger حسب التسجيل الفعلي"},
-        "security": {"name": "الأمان", "route_hint": "/security"},
-        "note": "هذه خريطة fallback؛ خريطة المسارات الفعلية تأتي من ai_auto_discovery.",
-    }
+    return {"auth": {"name": "المصادقة", "route_hint": "/auth"}, "customers": {"name": "العملاء", "route_hint": "/customers"}, "service": {"name": "الصيانة", "route_hint": "/service أو /services حسب التسجيل الفعلي"}, "sales": {"name": "المبيعات", "route_hint": "/sales"}, "shop": {"name": "المتجر", "route_hint": "/shop"}, "warehouses": {"name": "المستودعات", "route_hint": "/warehouses"}, "expenses": {"name": "النفقات", "route_hint": "/expenses"}, "payments": {"name": "المدفوعات", "route_hint": "/payments"}, "vendors": {"name": "الموردين", "route_hint": "/vendors أو /suppliers حسب التسجيل الفعلي"}, "ledger": {"name": "دفتر الأستاذ", "route_hint": "/gl أو /ledger حسب التسجيل الفعلي"}, "security": {"name": "الأمان", "route_hint": "/security"}, "note": "هذه خريطة fallback؛ خريطة المسارات الفعلية تأتي من ai_auto_discovery."}
 
 
-__all__ = [
-    "FINANCE_KNOWLEDGE",
-    "TAX_KNOWLEDGE_PALESTINE",
-    "TAX_KNOWLEDGE_ISRAEL",
-    "get_finance_knowledge",
-    "get_tax_knowledge_detailed",
-    "calculate_palestine_income_tax",
-    "calculate_vat",
-    "get_customs_info",
-    "get_all_system_modules",
-]
+__all__ = ["FINANCE_KNOWLEDGE", "TAX_KNOWLEDGE_PALESTINE", "TAX_KNOWLEDGE_ISRAEL", "get_finance_knowledge", "get_tax_knowledge_detailed", "calculate_palestine_income_tax", "calculate_vat", "get_customs_info", "get_all_system_modules"]
