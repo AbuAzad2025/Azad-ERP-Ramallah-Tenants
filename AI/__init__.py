@@ -36,3 +36,9 @@ try:
     bind_erp_transaction_guard()
 except Exception:
     pass
+
+try:
+    from AI.engine.ai_flask_feedback_bind import install_ai_flask_feedback_signal
+    install_ai_flask_feedback_signal()
+except Exception:
+    pass
