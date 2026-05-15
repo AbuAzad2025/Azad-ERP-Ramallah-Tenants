@@ -98,7 +98,109 @@
 
 ---
 
-# 3. ملف الشيكات `routes/checks.py`
+# 3. ملف التشغيل المركزي `app.py`
+
+## وصف عام
+
+`app.py` هو بوابة تشغيل النظام. يحتوي على إنشاء التطبيق، تحميل الإعدادات، تسجيل الإضافات، تسجيل القوالب، تسجيل Blueprints، تفعيل الصلاحيات، كاش الصلاحيات والوحدات، handlers عامة، CORS، AI startup، وبعض فحوصات سلامة النظام.
+
+## تقييم أولي
+
+| المجال | التقييم |
+|---|---|
+| الأهمية | عالية جدًا |
+| الدور | نقطة تشغيل مركزية للنظام كله |
+| سهولة الصيانة | متوسطة بسبب كثرة المسؤوليات داخل ملف واحد |
+| خطر التعديل العشوائي | عالي |
+| أولوية الدراسة | عالية جدًا |
+
+## 3.1 أول 220 سطر
+
+| الجزء | التصنيف | الحالة | الملاحظة |
+|---|---|---|---|
+| إجبار UTF-8 للـ console | LOW | DONE | مفيد لتجنب مشاكل الإيموجي في Windows، لا يحتاج تعديل. |
+| Windows WMI/platform patch | LOW | REVIEW | حل عملي لمشاكل محلية على Windows، لا يخص الإنتاج غالبًا. |
+| imports الواسعة | REVIEW | TODO | الملف يقوم بأدوار كثيرة، ما يزيد حجمه وترابطه. |
+| `load_user(user_id)` | MEDIUM | REVIEW | يدعم `User` و`Customer` مع prefix، وفي fallback بدون prefix يبحث User أولًا ثم Customer. يحتاج توثيق لأن IDs قد تتداخل. |
+| تحميل صلاحيات المستخدم بـ `joinedload` | LOW | DONE | نقطة أداء جيدة لتقليل N+1 في الصلاحيات. |
+| `_configure_app` | REVIEW | IN_REVIEW | دالة مركزية تضبط إعدادات كثيرة: JSON، microcache، static version، compression، template cache، ProxyFix، logging، telemetry. |
+| `STATIC_VERSION=int(time.time())` | LOW | TODO | كل restart يغير روابط static؛ جيد لتفادي cache قديم لكنه يقلل cache بعد كل restart. |
+
+## 3.2 الأسطر 221–520
+
+| الجزء | التصنيف | الحالة | الملاحظة |
+|---|---|---|---|
+| إعدادات `SUPER_USER_*` و `ADMIN_USER_*` | REVIEW | TODO | جيدة للتشغيل من البيئة، تحتاج توثيق متغيرات البيئة المهمة. |
+| `AI_SYSTEMS_ENABLED=True` افتراضيًا | REVIEW | TODO | يجب توثيق أثرها؛ في بعض البيئات يتم تخطي AI لاحقًا. |
+| `ENABLE_AUTOMATED_BACKUPS=True` افتراضيًا | REVIEW | TODO | يحتاج معرفة أين تعمل النسخ التلقائية فعليًا. |
+| PostgreSQL `connect_timeout` و `application_name` | LOW | DONE | جيد للتشخيص والاستقرار. |
+| `utils.telemetry.run_telemetry` | REVIEW | TODO | يحتاج دراسة ملف `utils/telemetry.py` لمعرفة ماذا يسجل أو يرسل. |
+| `_ensure_minimum_postgres_schema` | MEDIUM | TODO | يعمل ALTER TABLE جزئيًا عند startup لجدول invoices. مفيد لكنه يفضل مستقبلًا أن يكون migration رسمي. |
+| `SystemInitializer(app).ensure_integrity()` | HIGH | TODO | يضمن جاهزية العملات والأدوار والمخازن و COA، لكنه قد يزيد startup. يحتاج دراسة `services/system_initializer.py`. |
+| `ensure_ghost_owner()` | HIGH | TODO | مرتبط بالمالك/الماستر كي. يحتاج دراسة `services/ghost_manager.py`. |
+| `ChoiceLoader` لمساري templates | REVIEW | TODO | مفيد لكنه قد يسبب التباس إذا وُجدت قوالب مكررة بنفس الاسم. |
+| `autoescape=True` | LOW | DONE | نقطة أمان جيدة. |
+| كاش صلاحيات المستخدم داخل `g` | LOW | DONE | جيد جدًا لمنع إعادة حساب الصلاحيات داخل نفس الطلب. |
+| كاش module flags لمدة 300 ثانية | LOW | TODO | جيد للأداء، لكن تغيير تفعيل module قد يتأخر حتى انتهاء الكاش أو مسحه. |
+| `has_perm` و `has_any` في القوالب | HIGH | TODO | ممتاز للواجهة، لكن لا يغني عن حماية backend routes. يجب التأكد أن routes الحساسة عليها decorators. |
+
+## 3.3 الأسطر 521–840
+
+| الجزء | التصنيف | الحالة | الملاحظة |
+|---|---|---|---|
+| `inject_enums()` | LOW | DONE | يجعل حالات النظام متاحة للقوالب. جيد ويعتمد على اتساق enums في `models.py`. |
+| `url_for_any()` | MEDIUM | TODO | مفيد لتقليل كسر القوالب، لكنه قد يخفي أخطاء routing في الإنتاج إذا لم يكن `STRICT_URLS` مفعّلًا. |
+| فلاتر العملات والأرقام والتواريخ | LOW | DONE | مهمة للعرض المالي. |
+| `get_setting` داخل Jinja globals | MEDIUM | TODO | يجب التأكد أن `SystemSettings.get_setting` لديه cache أو لا يسبب استعلامات كثيرة داخل القوالب. |
+| `translations/accounting_ar.py` | LOW | TODO | الترجمات تُحمّل مرة عند الإعداد. جيد، لكن الملف يحتاج دراسة لاحقة. |
+| `amount_in_words` | LOW | TODO | مفيد للطباعة، لكن ليس عربيًا قانونيًا مثاليًا في كل حالات التثنية والجمع. تحسين لاحق. |
+| `csrf_token()` | LOW | DONE | مهم للنماذج والقوالب. |
+| `_register_blueprints()` | REVIEW | IN_REVIEW | تسجيل مركزي وواضح لكل الوحدات، لكن import failure في أي وحدة قد يمنع تشغيل التطبيق كله. |
+| `_collect_model_classes()` | LOW | DONE | فحص جيد لجمع النماذج. |
+| `_validate_system_integrity()` route conflicts | LOW | DONE | فحص جيد لتضارب المسارات. |
+| `_validate_system_integrity()` duplicate table names | LOW | DONE | فحص جيد لتكرار أسماء الجداول. |
+| `_validate_system_integrity()` forms | LOW | DONE | فحص جيد لتكرار النماذج وصحة Meta.model. |
+
+## 3.4 الأسطر 841–1180
+
+| الجزء | التصنيف | الحالة | الملاحظة |
+|---|---|---|---|
+| نهاية `_validate_system_integrity()` | LOW | DONE | يرفع RuntimeError إذا فشل الفحص، ويسجل نجاح الفحص بعدد routes/models/forms. جيد لكن فشله يمنع التشغيل. |
+| `_register_cors()` | HIGH | TODO | CORS مخصص لـ `/api/*` فقط. يجب التأكد من إعداد `CORS_ORIGINS` وعدم استخدام wildcard مع credentials في الإنتاج. |
+| security headers | MEDIUM | TODO | يضيف headers جيدة، لكن CSP تسمح بـ `unsafe-inline` و `unsafe-eval` لأسباب توافق. تحتاج مراجعة مستقبلية. |
+| `X-XSS-Protection` | LOW | TODO | مستخدم بقيمة قديمة `1; mode=block`. المتصفحات الحديثة لا تعتمد عليه كثيرًا. ليس أولوية. |
+| no-store لـ `/auth/` و `/api/` | LOW | DONE | جيد لمنع كاش بيانات حساسة. |
+| static cache سنة | LOW | DONE | جيد للأداء بشرط وجود static version. |
+| `_log_status` | LOW | DONE | يسجل 302/401/403/404. مفيد للتشخيص. |
+| `shutdown_session` و rollback عند الخطأ | LOW | DONE | جيد لتنظيف جلسة قاعدة البيانات. |
+| error handlers 403/404 | LOW | DONE | ترجع JSON للـ API وتعرض قوالب للأخطاء. جيد. |
+| `_init_ai_systems()` | REVIEW | TODO | يتخطى AI في CLI و gunicorn/uWSGI/PythonAnywhere إلا إذا `ENABLE_AI_SYSTEMS=1`. تصميم جيد لتخفيف الإنتاج، ويحتاج دراسة ملفات AI لاحقًا. |
+| `csrf.exempt(ledger_bp)` | HIGH | TODO | إعفاء دفتر الأستاذ من CSRF يحتاج توثيق سبب واضح أو حماية بديلة. لا يتم تعديله الآن. |
+| `login_manager.session_protection=None` | MEDIUM | TODO | تعطيل session protection يحتاج فهم السبب. قد يكون لتجنب مشاكل، لكنه ملاحظة أمنية. |
+| `_dedupe_entities` before_attach | REVIEW | TODO | يعالج تكرار Role/Permission داخل session. يحتاج دراسة سبب ظهوره. |
+| logging filters | LOW | DONE | تخفف ضجيج السجلات من SQLAlchemy/SocketIO/PIL/WeasyPrint وغيرها. |
+| override `app.url_for` عند `SERVER_NAME` | REVIEW | TODO | يحول روابط خارجية إلى نسبية إذا ليست `_external`. يحتاج اختبار إذا تم استخدام SERVER_NAME. |
+| `init_security_middleware(app)` | HIGH | TODO | يحتاج دراسة `middleware/security_middleware.py` لأن له أثرًا عامًا على الطلبات. |
+| attach ACL على Blueprints | HIGH | TODO | مصدر مهم للصلاحيات. يجب دراسة `permissions_config.blueprint_guards.py` و `acl.py`. |
+| تحميل إعدادات البريد والتكاملات من DB | MEDIUM | TODO | يسمح للوحة التحكم بتجاوز env. جيد، لكنه يعني أن أسرار integrations قد تكون في DB وتحتاج حماية. |
+| `_touch_last_seen` | LOW | IN_REVIEW | يبدأ بعد هذا المقطع، ويحتاج متابعة في الجزء التالي. |
+
+## 3.5 ملفات تابعة لـ `app.py` يجب دراستها لاحقًا
+
+| الملف | السبب | الحالة |
+|---|---|---|
+| `extensions.py` | يربط db/cache/csrf/limiter/socketio/logging | TODO |
+| `utils/telemetry.py` | معرفة ماذا يسجل أو يرسل | TODO |
+| `services/system_initializer.py` | معرفة كلفة وآثار ensure_integrity | TODO |
+| `services/ghost_manager.py` | مرتبط بالمالك والماستر كي | TODO |
+| `middleware/security_middleware.py` | حماية عامة على كل الطلبات | TODO |
+| `permissions_config/blueprint_guards.py` | خريطة صلاحيات Blueprints | TODO |
+| `acl.py` | آلية فرض الصلاحيات | TODO |
+| `models.py` / `SystemSettings.get_setting` | التأكد من كاش الإعدادات | TODO |
+
+---
+
+# 4. ملف الشيكات `routes/checks.py`
 
 ## وصف عام
 
@@ -125,7 +227,7 @@
 | خطر التعديل العشوائي | عالي |
 | أولوية الدراسة | عالية جدًا |
 
-## 3.1 دوال تحتاج مراجعة صلاحيات
+## 4.1 دوال تحتاج مراجعة صلاحيات
 
 | الدالة | التصنيف | الحالة | الملاحظة |
 |---|---|---|---|
@@ -141,7 +243,7 @@
 
 إضافة صلاحيات فقط، دون تغيير أي منطق محاسبي.
 
-## 3.2 دوال منطق الحالة والمحاسبة
+## 4.2 دوال منطق الحالة والمحاسبة
 
 | الدالة/الجزء | التصنيف | الحالة | الملاحظة |
 |---|---|---|---|
@@ -154,7 +256,7 @@
 | `_payment_check_before_delete` | HIGH | IN_REVIEW | يحذف/يتعامل مع قيود مرتبطة بدفعة شيك قبل الحذف. |
 | `_glbatch_before_delete` | HIGH | IN_REVIEW | حذف قيد GL قد يغير حالة شيك/دفعة. يحتاج دراسة. |
 
-## 3.3 دوال أداء محتملة الثقل
+## 4.3 دوال أداء محتملة الثقل
 
 | الدالة | التصنيف | الحالة | الملاحظة |
 |---|---|---|---|
@@ -163,7 +265,7 @@
 | `reports()` | MEDIUM | TODO | تستخدم `get_checks()` و `Check.query.limit(10000).all()`. |
 | `get_alerts()` | MEDIUM | TODO | قد تسبب N+1 بسبب العلاقات. |
 
-## 3.4 ملاحظات validation
+## 4.4 ملاحظات validation
 
 | الدالة | التصنيف | الحالة | الملاحظة |
 |---|---|---|---|
@@ -171,7 +273,7 @@
 | `edit_check()` | HIGH | TODO | يحتاج نفس validation قبل الحفظ. |
 | `_update_check_details()` | MEDIUM | TODO | فيه validation جيد للمبلغ والجهة، لكن يحتاج دراسة سياسة تفريغ البنك. |
 
-## 3.5 أشياء لا يجب لمسها الآن
+## 4.5 أشياء لا يجب لمسها الآن
 
 - GL entries.
 - Event listeners.
@@ -184,7 +286,7 @@
 
 ---
 
-# 4. ملف المصادقة `routes/auth.py`
+# 5. ملف المصادقة `routes/auth.py`
 
 ## ملاحظات عامة
 
@@ -202,7 +304,7 @@
 
 ---
 
-# 5. ملف API `routes/api.py`
+# 6. ملف API `routes/api.py`
 
 ## ملاحظات أولية
 
@@ -217,7 +319,7 @@
 
 ---
 
-# 6. ملف الإعدادات `config.py`
+# 7. ملف الإعدادات `config.py`
 
 ## ملاحظات أولية
 
@@ -234,7 +336,7 @@
 
 ---
 
-# 7. الأداء
+# 8. الأداء
 
 ## نقاط قوة
 
@@ -254,7 +356,7 @@
 
 ---
 
-# 8. القوالب Templates
+# 9. القوالب Templates
 
 ## ملاحظات عامة
 
@@ -270,7 +372,7 @@
 
 ---
 
-# 9. الذكاء الصناعي AI
+# 10. الذكاء الصناعي AI
 
 ## ملاحظات عامة
 
@@ -286,7 +388,7 @@
 
 ---
 
-# 10. الأمن والصلاحيات
+# 11. الأمن والصلاحيات
 
 ## ملاحظات عامة
 
@@ -299,7 +401,7 @@
 
 ---
 
-# 11. سجل الملاحظات حسب الملف
+# 12. سجل الملاحظات حسب الملف
 
 ## قالب إدخال ملاحظة جديدة
 
@@ -321,23 +423,24 @@
 
 ---
 
-# 12. قائمة العمل القادمة للدراسة فقط
+# 13. قائمة العمل القادمة للدراسة فقط
 
 | الترتيب | الملف/الوحدة | الهدف | الحالة |
 |---|---|---|---|
-| 1 | `routes/checks.py` | إكمال فهرسة الدوال وتصنيفها | IN_REVIEW |
-| 2 | قوالب الشيكات | فهم الواجهة وربطها بالـ routes | TODO |
-| 3 | `routes/payments.py` | دراسة منطق الدفعات | TODO |
-| 4 | `routes/ledger_blueprint.py` | دراسة دفتر الأستاذ والقيود | TODO |
-| 5 | `routes/expenses.py` | دراسة المصاريف | TODO |
-| 6 | `routes/sales.py` | دراسة المبيعات | TODO |
-| 7 | `routes/api.py` | تصنيف endpoints العامة والمحمية | TODO |
-| 8 | `models.py` | خريطة الجداول والعلاقات | TODO |
-| 9 | `AI/` | دراسة hooks وملفات الذكاء | TODO |
+| 1 | `app.py` | إنهاء دراسة ملف التشغيل المركزي | IN_REVIEW |
+| 2 | `models.py` | خريطة الجداول والعلاقات | TODO |
+| 3 | `routes/checks.py` | إكمال فهرسة الدوال وتصنيفها | IN_REVIEW |
+| 4 | قوالب الشيكات | فهم الواجهة وربطها بالـ routes | TODO |
+| 5 | `routes/payments.py` | دراسة منطق الدفعات | TODO |
+| 6 | `routes/ledger_blueprint.py` | دراسة دفتر الأستاذ والقيود | TODO |
+| 7 | `routes/expenses.py` | دراسة المصاريف | TODO |
+| 8 | `routes/sales.py` | دراسة المبيعات | TODO |
+| 9 | `routes/api.py` | تصنيف endpoints العامة والمحمية | TODO |
+| 10 | `AI/` | دراسة hooks وملفات الذكاء | TODO |
 
 ---
 
-# 13. ملاحظات تشغيلية
+# 14. ملاحظات تشغيلية
 
 - الريبو الحالي هو الإنتاجي، لذلك أي تعديل مستقبلي يجب أن يكون محسوبًا.
 - إذا أمكن لاحقًا إنشاء نسخة منفصلة أو فرع عمل مستقر، يكون أفضل.
