@@ -155,7 +155,7 @@
 | logging filters | LOW | DONE | تخفف ضجيج السجلات من SQLAlchemy/SocketIO/PIL/WeasyPrint وغيرها. |
 | override `app.url_for` عند `SERVER_NAME` | REVIEW | TODO | يحول روابط خارجية إلى نسبية إذا ليست `_external`. يحتاج اختبار إذا تم استخدام SERVER_NAME. |
 | `init_security_middleware(app)` | HIGH | TODO | يحتاج دراسة `middleware/security_middleware.py` لأن له أثرًا عامًا على الطلبات. |
-| attach ACL على Blueprints | HIGH | TODO | مصدر مهم للصلاحيات. يجب دراسة `permissions_config.blueprint_guards.py` و `acl.py`. |
+| attach ACL على Blueprints | HIGH | TODO | مصدر مهم للصلاحيات. يجب دراسة `permissions_config/blueprint_guards.py` و `acl.py`. |
 | تحميل إعدادات البريد والتكاملات من DB | MEDIUM | TODO | يسمح للوحة التحكم بتجاوز env. جيد، لكنه يعني أن أسرار integrations قد تكون في DB وتحتاج حماية. |
 | `_touch_last_seen` | LOW | IN_REVIEW | يبدأ بعد هذا المقطع، ويحتاج متابعة في الجزء التالي. |
 
@@ -169,7 +169,7 @@
 | `_serve_microcache` | MEDIUM | REVIEW | microcache لصفحات GET HTML حسب المستخدم والمسار. جيد للأداء، لكنه يحتاج مراقبة حتى لا يخزن صفحات فيها Set-Cookie أو محتوى ديناميكي حساس. |
 | `_store_microcache` | MEDIUM | REVIEW | لا يخزن إلا status 200 وHTML وبدون Set-Cookie. تصميم جيد، لكن أي صفحة حساسة لا يجب أن تعتمد على GET فقط بدون تغيير user_key. |
 | `_access_log` | LOW | DONE | يسجل الطلبات البطيئة أو ذات status >= 400، ويتجنب static. جيد للتشخيص. |
-| error handlers 400/401/429/500/502/503 | MEDIUM | TODO | جيدة عمومًا، لكن handler 500 يرجع traceback كامل في الرد، وهذا خطر في الإنتاج ويجب مراجعته لاحقًا. |
+| error handlers 400/401/429/500/502/503 | MEDIUM | DONE | تم تحسين handler 500 على فرع `review/app-safe-hardening`: لا يكشف traceback في الإنتاج، ويرجع JSON/قالب عام مع `request_id`، ويبقي traceback في التطوير فقط. |
 | `_memory_error` | LOW | DONE | يحول MemoryError إلى 413 مع رسالة أو قالب. جيد. |
 | `restrict_customer_from_admin` | HIGH | TODO | يمنع دور customer من دخول الإدارة ويسمح فقط `/shop`, `/static`, `/auth/logout`. جيد، لكن يجب التأكد أن عملاء بدون role slug customer محميون كذلك. |
 | فحص `CRITICAL_ENDPOINTS` | MEDIUM | TODO | يسجل endpoints مفقودة عند startup. مفيد، لكنه لا يفشل التشغيل. يجب مراجعة القائمة حسب أسماء endpoints الحالية. |
@@ -192,7 +192,8 @@
 | التصنيف | الحالة | الملاحظة |
 |---|---|---|
 | REVIEW | DONE | `app.py` مدروس من أوله لآخره على مراحل. |
-| HIGH | TODO | أكثر نقطة أمنية تحتاج مراجعة لاحقة: traceback في handler 500، CSRF exemption للـ ledger، CORS origins، session_protection، وأسرار integrations من DB. |
+| HIGH | DONE | تم إنجاز أول تحسين أمني آمن: منع كشف traceback في handler 500 بالإنتاج، مع إبقائه ظاهرًا في بيئة التطوير فقط. |
+| HIGH | TODO | نقاط أمنية متبقية تحتاج مراجعة لاحقة: CSRF exemption للـ ledger، CORS origins، session_protection، وأسرار integrations من DB. |
 | MEDIUM | TODO | أكثر نقطة أداء تحتاج مراجعة لاحقة: `inject_system_settings` لأنه يعمل direct DB queries داخل context processor. |
 | MEDIUM | TODO | أكثر نقطة تنظيمية: وجود seed/init logic في أكثر من مكان: `SystemInitializer`, إضافة العملات, إضافة الأدوار, `bootstrap_database`. |
 | LOW | DONE | توجد نقاط أداء جيدة: microcache، request id، access log، static cache، كاش last_seen، وكاش module flags. |
@@ -413,7 +414,7 @@
 | CSRF exemptions | HIGH | TODO | يجب توثيق أي إعفاء ولماذا موجود، خصوصًا `ledger_bp`. |
 | master key | HIGH | IN_REVIEW | يبقى يعمل، مع audit وحماية جلسة. |
 | حذف مالي مباشر | HIGH | TODO | الحذف في الملفات المالية يجب مراجعته، والأفضل الأرشفة أو القيود العكسية. |
-| handler 500 | HIGH | TODO | لا يجب كشف traceback كامل للمستخدم في الإنتاج. |
+| handler 500 | HIGH | DONE | تم منع كشف traceback كامل للمستخدم في الإنتاج، مع إرجاع رسالة عامة و`request_id`، وبقاء التفاصيل في logs وفي التطوير فقط. |
 | أسرار integrations في DB | HIGH | TODO | يجب معرفة من يستطيع رؤيتها وهل تُخفى أو تُشفر. |
 | CORS مع credentials | HIGH | TODO | يجب التأكد من أن `CORS_ORIGINS` ليست wildcard في الإنتاج. |
 
@@ -445,7 +446,7 @@
 
 | الترتيب | الملف/الوحدة | الهدف | الحالة |
 |---|---|---|---|
-| 1 | `app.py` | إنهاء دراسة ملف التشغيل المركزي | DONE |
+| 1 | `app.py` | إنهاء دراسة ملف التشغيل المركزي وتحسيناته الآمنة | IN_REVIEW |
 | 2 | `models.py` | خريطة الجداول والعلاقات | TODO |
 | 3 | `extensions.py` | فهم db/cache/csrf/limiter/socketio/logging | TODO |
 | 4 | `middleware/security_middleware.py` | فهم الحماية العامة | TODO |
