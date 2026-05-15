@@ -1,0 +1,21 @@
+{% set ai_feedback_items = ai_transaction_feedback(3) if ai_transaction_feedback is defined else [] %}
+{% if ai_feedback_items %}
+  <div class="ai-transaction-feedback mb-3" aria-live="polite">
+    {% for item in ai_feedback_items %}
+      {% if item.message %}
+        <div class="alert alert-info alert-dismissible fade show shadow-sm" role="alert" style="position: relative; z-index: 1049;">
+          <div class="d-flex align-items-start">
+            <i class="fas fa-robot ml-2 mt-1"></i>
+            <div class="flex-grow-1">
+              <strong>مساعد الحركة الذكي</strong>
+              <div style="white-space: pre-line;">{{ item.message }}</div>
+            </div>
+          </div>
+          <button type="button" class="close" data-dismiss="alert" aria-label="إغلاق">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endif %}
