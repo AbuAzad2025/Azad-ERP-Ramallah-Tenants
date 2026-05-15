@@ -1,4 +1,9 @@
-"""AI Performance Tracker."""
+"""AI Performance Tracker.
+
+Tracks answer quality from real signals. A textual fallback such as "لم أجد بيانات"
+is not counted as a successful smart answer unless it is supported by data or high
+confidence.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +14,18 @@ from typing import Any, Dict
 from AI.engine.ai_storage import read_json, sync_training_manifest, write_json
 
 PERFORMANCE_METRICS_FILE = "performance_metrics.json"
+LOW_VALUE_PHRASES = (
+    "لم أجد بيانات",
+    "لم أتمكن",
+    "غير متوفر",
+    "غير مفهرس",
+    "غير مهيأ",
+    "لا توجد بيانات",
+    "عذراً",
+    "sorry",
+    "not available",
+    "no data",
+)
 
 
 def _to_regular_dict(value):
@@ -29,12 +46,32 @@ def _normalize_confidence(value: Any) -> float:
     return max(0.0, min(1.0, num))
 
 
+def _answer_text(response: Dict) -> str:
+    return str(response.get("answer") or response.get("response") or "")
+
+
+def _is_quality_success(response: Dict, confidence: float) -> bool:
+    answer = _answer_text(response).strip()
+    if not answer:
+        return False
+    low = answer.lower()
+    low_value = any(phrase.lower() in low for phrase in LOW_VALUE_PHRASES)
+    has_sources = bool(response.get("sources"))
+    has_data = bool(response.get("data_used") or response.get("action_result"))
+    if low_value and not (has_sources or has_data or confidence >= 0.75):
+        return False
+    if confidence < 0.35 and not (has_sources or has_data):
+        return False
+    return True
+
+
 class PerformanceTracker:
     def __init__(self):
         self.metrics = {
             "total_queries": 0,
             "successful_queries": 0,
             "failed_queries": 0,
+            "low_value_responses": 0,
             "avg_confidence": 0.0,
             "avg_response_time": 0.0,
             "queries_by_type": defaultdict(int),
@@ -51,6 +88,7 @@ class PerformanceTracker:
         saved = data.get("metrics", {})
         if isinstance(saved, dict):
             self.metrics.update(saved)
+            self.metrics.setdefault("low_value_responses", 0)
             self.metrics["queries_by_type"] = defaultdict(int, saved.get("queries_by_type", {}))
             self.metrics["errors_by_type"] = defaultdict(int, saved.get("errors_by_type", {}))
             self.metrics["expert_usage"] = defaultdict(int, saved.get("expert_usage", {}))
@@ -59,14 +97,17 @@ class PerformanceTracker:
 
     def record_query(self, query: str, response: Dict, execution_time: float):
         response = response if isinstance(response, dict) else {}
-        self.metrics["total_queries"] += 1
+        confidence = _normalize_confidence(response.get("confidence", 0.0))
+        success = _is_quality_success(response, confidence)
 
-        if response.get("answer") or response.get("response"):
+        self.metrics["total_queries"] += 1
+        if success:
             self.metrics["successful_queries"] += 1
         else:
             self.metrics["failed_queries"] += 1
+            if _answer_text(response):
+                self.metrics["low_value_responses"] = int(self.metrics.get("low_value_responses", 0) or 0) + 1
 
-        confidence = _normalize_confidence(response.get("confidence", 0.0))
         total = self.metrics["total_queries"]
         self.metrics["avg_confidence"] = ((self.metrics["avg_confidence"] * (total - 1)) + confidence) / total
         self.metrics["avg_response_time"] = ((self.metrics["avg_response_time"] * (total - 1)) + float(execution_time or 0)) / total
@@ -83,7 +124,9 @@ class PerformanceTracker:
                 "query_type": query_type,
                 "confidence": confidence,
                 "execution_time": float(execution_time or 0),
-                "success": bool(response.get("answer") or response.get("response")),
+                "success": success,
+                "sources": response.get("sources", []) or [],
+                "low_value": not success and bool(_answer_text(response)),
             }
         )
         self.performance_log = self.performance_log[-1000:]
@@ -99,6 +142,8 @@ class PerformanceTracker:
             return "balance_query"
         if any(w in q for w in ["أضف", "اضف", "add", "create"]):
             return "action"
+        if any(w in q for w in ["vat", "ضريبة", "tax"]):
+            return "tax"
         return "general"
 
     def _save_metrics(self):
@@ -117,14 +162,16 @@ class PerformanceTracker:
 
     def get_performance_report(self) -> Dict:
         success_rate = 0.0
-        total = self.metrics["total_queries"]
+        total = int(self.metrics.get("total_queries", 0) or 0)
         if total > 0:
-            success_rate = (self.metrics["successful_queries"] / total) * 100
+            success_rate = (int(self.metrics.get("successful_queries", 0) or 0) / total) * 100
+        low_value_rate = (int(self.metrics.get("low_value_responses", 0) or 0) / total * 100) if total else 0.0
         return {
             "total_queries": total,
             "success_rate": round(success_rate, 2),
-            "avg_confidence": round(self.metrics["avg_confidence"] * 100, 2),
-            "avg_response_time": round(self.metrics["avg_response_time"], 3),
+            "low_value_rate": round(low_value_rate, 2),
+            "avg_confidence": round(float(self.metrics.get("avg_confidence", 0) or 0) * 100, 2),
+            "avg_response_time": round(float(self.metrics.get("avg_response_time", 0) or 0), 3),
             "top_query_types": dict(sorted(self.metrics["queries_by_type"].items(), key=lambda x: x[1], reverse=True)[:5]),
             "expert_usage": dict(self.metrics["expert_usage"]),
             "recent_trend": self._calculate_trend(),
