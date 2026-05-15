@@ -1,8 +1,9 @@
 """AI Learning System.
 
 Stores compact learned responses and reusable patterns. Stored answers that look
-like live data, routes, IDs, money, percentages, or totals are not reused as
-final answers because they can become stale or misleading.
+like live data, routes, IDs, money, percentages, totals, weak fallbacks, or
+missing-data messages are not reused as final answers because they can become
+stale or misleading.
 """
 
 from __future__ import annotations
@@ -18,6 +19,8 @@ LEARNED_RESPONSES_FILE = "learned_responses.json"
 MAX_RESPONSES_PER_QUERY = 10
 MAX_PATTERNS_PER_TYPE = 100
 STALE_RESPONSE_RE = re.compile(r"(\d{2,}|₪|%|/\w+|\bILS\b|\bUSD\b|\bJOD\b|\bEUR\b|\bid\s*[:#]?\s*\d+)", re.IGNORECASE)
+LOW_VALUE_RE = re.compile(r"(لم أجد بيانات|لم أتمكن|غير متوفر|غير مفهرس|غير مهيأ|عذراً|لا توجد بيانات|not available|no data|sorry)", re.IGNORECASE)
+LIVE_QUERY_RE = re.compile(r"(رصيد|كم|عدد|سعر|ضريبة|vat|tax|دولار|شيقل|مبيعات|مدفوعات|مخزون|اليوم|الشهر|السنة|تقرير|balance|count|price|today|report)", re.IGNORECASE)
 
 
 class LearningSystem:
@@ -39,20 +42,38 @@ class LearningSystem:
     def _looks_stale(self, text: str) -> bool:
         return bool(STALE_RESPONSE_RE.search(str(text or "")))
 
+    def _looks_low_value(self, text: str) -> bool:
+        return bool(LOW_VALUE_RE.search(str(text or "")))
+
+    def _query_needs_live_data(self, query: str) -> bool:
+        return bool(LIVE_QUERY_RE.search(str(query or "")))
+
+    def _is_reusable_response(self, query: str, response: str, feedback: str = None) -> bool:
+        if feedback == "negative":
+            return False
+        if self._query_needs_live_data(query):
+            return False
+        if self._looks_stale(response) or self._looks_low_value(response):
+            return False
+        text = str(response or "").strip()
+        return len(text) >= 20
+
     def learn_from_interaction(self, query: str, response: str, feedback: str = None):
         query_normalized = self._normalize_query(query)
         if not query_normalized:
             return
         response = str(response or "")[:8000]
-        reusable = not self._looks_stale(response)
+        reusable = self._is_reusable_response(query, response, feedback)
         learned = self.learned_responses.setdefault(query_normalized, {"responses": [], "best_response": None, "count": 0, "success_count": 0, "reusable": True})
         learned["responses"].append({"response": response, "timestamp": datetime.now().isoformat(), "feedback": feedback, "reusable": reusable})
         learned["responses"] = learned["responses"][-MAX_RESPONSES_PER_QUERY:]
         learned["count"] += 1
         learned["reusable"] = bool(reusable)
-        if reusable and (feedback == "positive" or feedback is None):
+        if reusable and feedback in {"positive", None}:
             learned["success_count"] += 1
             learned["best_response"] = response
+        elif not reusable and learned.get("best_response") == response:
+            learned["best_response"] = None
         self._extract_patterns(query, response)
         self._save_learned_data()
 
@@ -66,9 +87,11 @@ class LearningSystem:
         self._save_learned_data()
 
     def get_learned_response(self, query: str) -> Optional[str]:
+        if self._query_needs_live_data(query):
+            return None
         query_normalized = self._normalize_query(query)
         learned = self.learned_responses.get(query_normalized)
-        if learned and learned.get("best_response") and learned.get("reusable", True) and not self._looks_stale(learned.get("best_response")):
+        if learned and learned.get("best_response") and learned.get("reusable", True) and self._is_reusable_response(query, learned.get("best_response")):
             learned["count"] += 1
             self._save_learned_data()
             return learned["best_response"]
@@ -96,10 +119,10 @@ class LearningSystem:
         best_similarity = 0.0
         for learned_q, data in self.learned_responses.items():
             response = data.get("best_response")
-            if not data.get("reusable", True) or self._looks_stale(response):
+            if not data.get("reusable", True) or not self._is_reusable_response(query_normalized, response):
                 continue
             similarity = self._calculate_similarity(query_normalized, learned_q)
-            if similarity > best_similarity and similarity > 0.8:
+            if similarity > best_similarity and similarity > 0.85:
                 best_similarity = similarity
                 best_response = response
         return best_response
@@ -119,7 +142,8 @@ class LearningSystem:
             pass
 
     def get_learning_stats(self) -> Dict:
-        return {"total_learned_queries": len(self.learned_responses), "total_corrections": sum(len(corr) for corr in self.error_corrections.values()), "total_patterns": sum(len(patterns) for patterns in self.pattern_library.values()), "success_rate": self._calculate_success_rate()}
+        reusable_count = sum(1 for data in self.learned_responses.values() if data.get("reusable") and data.get("best_response"))
+        return {"total_learned_queries": len(self.learned_responses), "reusable_learned_queries": reusable_count, "total_corrections": sum(len(corr) for corr in self.error_corrections.values()), "total_patterns": sum(len(patterns) for patterns in self.pattern_library.values()), "success_rate": self._calculate_success_rate()}
 
     def _calculate_success_rate(self) -> float:
         if not self.learned_responses:
