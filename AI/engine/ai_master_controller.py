@@ -1,31 +1,22 @@
 """AI Master Controller.
 
-Central coordinator for the AI subsystems. The controller keeps the existing
-public API stable while making subsystem startup resilient. It enforces the same
-application permission model inside the assistant so AI cannot become a backdoor
-around roles and permissions.
+Coordinates AI subsystems and enforces application permissions inside the
+assistant so AI cannot bypass normal user roles.
 """
 
 from __future__ import annotations
 
 import os
+import re
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from AI.engine.ai_permission_guard import (
-    can_access_module,
-    denied_response,
-    get_permission_context,
-    require_any_permission,
-    require_module,
-)
+from AI.engine.ai_permission_guard import can_access_module, denied_response, get_permission_context, require_any_permission
 
 SubsystemFactory = Tuple[str, str, str]
 
 
 class MasterController:
-    """Coordinate reasoning, guide, learning, audit, and memory subsystems."""
-
     SUBSYSTEM_FACTORIES: Tuple[SubsystemFactory, ...] = (
         ("reasoning", "AI.engine.ai_reasoning_engine", "get_reasoning_engine"),
         ("python_expert", "AI.engine.ai_python_expert", "get_python_expert"),
@@ -93,25 +84,13 @@ class MasterController:
 
     def process_intelligent_query(self, query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         context = context or {}
-        permission_context = context.get("permission_context") or get_permission_context()
-        context["permission_context"] = permission_context
+        context["permission_context"] = context.get("permission_context") or get_permission_context()
         operation = self._new_operation(query)
         try:
-            result = self._try_control_audit(query, context, operation)
-            if result:
-                return result
-            result = self._try_reasoning(query, context, operation)
-            if result:
-                return result
-            result = self._try_python_expert(query, context, operation)
-            if result:
-                return result
-            result = self._try_database_expert(query, context, operation)
-            if result:
-                return result
-            result = self._try_user_guide(query, context, operation)
-            if result:
-                return result
+            for handler in (self._try_control_audit, self._try_reasoning, self._try_python_expert, self._try_database_expert, self._try_user_guide):
+                result = handler(query, context, operation)
+                if result:
+                    return result
             fallback = {"answer": "", "confidence": 0.0, "sources": [], "defer_to_service": True}
             operation["result"] = fallback
             self._track_operation(operation)
@@ -139,15 +118,12 @@ class MasterController:
         if not auditor or not hasattr(auditor, "run_control_audit"):
             return None
         operation["subsystems_used"].append("auditor")
-        days = self._extract_days(text) or 7
-        user_id = self._extract_user_id(text)
-        report = auditor.run_control_audit(days=days, user_id=user_id, permission_context=permission_context)
+        report = auditor.run_control_audit(days=self._extract_days(text) or 7, user_id=self._extract_user_id(text))
         operation["result"] = report
         self._track_operation(operation)
         return {"answer": self._format_control_audit_report(report), "confidence": 0.92, "sources": ["Control Auditor"], "data_used": ["permitted_control_audit_scope"]}
 
     def _extract_days(self, text: str) -> Optional[int]:
-        import re
         m = re.search(r"(?:آخر|اخر|last)\s*(\d+)\s*(?:يوم|ايام|أيام|day|days)", text)
         if m:
             return max(1, min(365, int(m.group(1))))
@@ -158,7 +134,6 @@ class MasterController:
         return None
 
     def _extract_user_id(self, text: str) -> Optional[int]:
-        import re
         m = re.search(r"(?:user|مستخدم)\s*#?\s*(\d+)", text)
         return int(m.group(1)) if m else None
 
@@ -175,14 +150,12 @@ class MasterController:
             operation["result"] = result
             operation["reasoning_steps"] = result.get("reasoning_steps", [])
             operation["confidence_breakdown"]["reasoning"] = result.get("confidence", 0)
-            if result.get("data_used"):
-                operation["data_accessed"] = result["data_used"]
             self._track_operation(operation)
             return result
         return None
 
     def _try_python_expert(self, query: str, context: Dict, operation: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        text = (query or "").lower()
+        text = str(query or "").lower()
         if not any(word in text for word in ("error", "خطأ", "python", "traceback")):
             return None
         expert = self.subsystems.get("python_expert")
@@ -197,7 +170,7 @@ class MasterController:
         return None
 
     def _try_database_expert(self, query: str, context: Dict, operation: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        text = (query or "").lower()
+        text = str(query or "").lower()
         if not any(word in text for word in ("جدول", "موديل", "model", "table", "schema", "قاعدة", "استعلام", "query", "sql", "حقل", "field", "علاقة", "relation")):
             return None
         permission_context = context.get("permission_context")
@@ -292,13 +265,12 @@ class MasterController:
         if not models:
             return denied_response(module=best.get("domain"), action="database_expert").get("response")
         parts = [f"🗄️ فهم قاعدة البيانات للسؤال: {best.get('domain')}"]
-        if models:
-            parts.append("\n📌 الموديلات المرشحة ضمن صلاحيتك:")
-            for model in models[:8]:
-                parts.append(f"  • {model}")
+        parts.append("\n📌 الموديلات المرشحة ضمن صلاحيتك:")
+        for model in models[:8]:
+            parts.append(f"  • {model}")
         self._add_list_section(parts, "✅ ما يراجعه المستخدم الخبير", best.get("expert_focus"), 8)
         self._add_list_section(parts, "🔎 فلاتر آمنة ومفيدة", best.get("safe_filters"), 8)
-        parts.append("\nملاحظة: هذه خريطة ترشيح ذكية؛ القراءة النهائية يجب أن تتم من الحقول والعلاقات الفعلية المصرح بها للمستخدم الحالي.")
+        parts.append("\nملاحظة: القراءة النهائية تتم فقط من الحقول والعلاقات المصرح بها للمستخدم الحالي.")
         return "\n".join(parts)
 
     def _add_list_section(self, parts: List[str], title: str, values, limit: int = 8) -> None:
@@ -400,7 +372,7 @@ class MasterController:
         auditor = self.subsystems.get("auditor")
         if not auditor or not hasattr(auditor, "run_control_audit"):
             return {"success": False, "error": "Control auditor not available"}
-        report = auditor.run_control_audit(days=params.get("days"), user_id=params.get("user_id"), permission_context=params.get("permission_context"))
+        report = auditor.run_control_audit(days=params.get("days"), user_id=params.get("user_id"))
         return {"success": True, "report": report, "summary": report.get("summary", {}), "risk_level": report.get("risk_level"), "status": report.get("status")}
 
     def _optimize_all_systems(self) -> Dict:
