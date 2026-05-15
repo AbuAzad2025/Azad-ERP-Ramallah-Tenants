@@ -1450,9 +1450,13 @@ def create_app(config_object=Config) -> Flask:
             try:
                 rows = SystemSettings.query.filter(SystemSettings.key.in_(list(lookup_keys))).all()
                 raw_settings = {row.key: row.value for row in rows}
-                cache.set(cache_key, raw_settings, timeout=120)
             except Exception:
                 raw_settings = {}
+            else:
+                try:
+                    cache.set(cache_key, raw_settings, timeout=120)
+                except Exception as exc:
+                    current_app.logger.warning("template_settings_cache_set_failed: %s", exc)
 
         def _coerce(val, default=None):
             if val is None:
