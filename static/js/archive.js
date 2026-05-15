@@ -303,3 +303,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// AI transaction feedback loader. archive.js is loaded globally from base.html,
+// so this safely enables smart ERP guidance without editing the large base template.
+(function () {
+    if (window.__AI_TRANSACTION_FEEDBACK_LOADER__) return;
+    window.__AI_TRANSACTION_FEEDBACK_LOADER__ = true;
+    function loadFeedbackScript() {
+        if (window.showAiTransactionMessage) return;
+        var script = document.createElement('script');
+        script.src = '/static/js/ai_transaction_feedback.js';
+        script.defer = true;
+        document.head.appendChild(script);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadFeedbackScript);
+    } else {
+        loadFeedbackScript();
+    }
+})();
