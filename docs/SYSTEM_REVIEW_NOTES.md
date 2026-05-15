@@ -534,6 +534,7 @@ models.py
 |---|---:|---|---|
 | 1 | 1–1580 تقريبًا | IN_REVIEW | بداية الملف، event listeners، Archive، الجداول الوسيطة للصلاحيات، enums، SystemSettings، العملات وأسعار الصرف. |
 | 2 | 1581–2700 تقريبًا | IN_REVIEW | سياسات الدفعات، Audit/Auth، User/Role/Permission، Customer، GL للرصيد الافتتاحي، بداية Supplier. |
+| 3 | 2701–4500 تقريبًا | IN_REVIEW | Supplier، تسويات الموردين، Partner، تسويات الشركاء، بداية Employee، بداية Product. |
 
 ## 16.2 ملاحظات الجولة الأولى
 
@@ -565,7 +566,32 @@ models.py
 | REVIEW | TODO | Auto customer for counterparty | `_ensure_customer_for_counterparty()` ينشئ عميلًا تلقائيًا للجهات المقابلة ويستخدم fallback phone من timestamp عند غياب الهاتف. عملي، لكنه قد ينشئ بيانات غير حقيقية تحتاج تمييز واضح في الواجهة. |
 | HIGH | TODO | Supplier link to customer | بداية `Supplier` تحتوي `customer_id` لربط تلقائي مع العملاء. يحتاج فهم كامل لأنه قد يؤثر على الأرصدة المشتركة بين supplier/customer. |
 
-## 16.4 تحسينات مرشحة بعد إكمال `models.py`
+## 16.4 ملاحظات الجولة الثالثة
+
+| التصنيف | الحالة | المجال | الملاحظة |
+|---|---|---|---|
+| HIGH | TODO | Supplier totals | `Supplier.total_paid` يجمع دفعات مباشرة، دفعات loan settlements، ومصاريف المورد. هذا مهم ماليًا وقد يكون ثقيلًا في القوائم، كما يجب مطابقته مع أعمدة الأرصدة المخزنة في `Supplier`. |
+| HIGH | TODO | Supplier auto customer | عند إضافة مورد يتم ربط/إنشاء Customer تلقائيًا عبر `supplier_after_insert_create_customer`. هذا يربط كيان مورد بكيان عميل وقد يسبب لبسًا في الأرصدة أو البحث إذا لم تعرض الواجهة مصدر الربط بوضوح. |
+| HIGH | TODO | Supplier opening balance GL | `_supplier_opening_balance_gl` ينشئ/يحذف قيود GL للرصيد الافتتاحي للمورد من داخل model event. نفس حساسية Customer GL ويحتاج فحص `_gl_upsert_batch_and_entries`. |
+| MEDIUM | TODO | SupplierSettlement code | `SupplierSettlement.ensure_code()` يعتمد على COUNT للأكواد المتطابقة، وقد ينتج تصادم عند عمليات متزامنة إذا لم يُحمَ بقيد unique ومحاولة retry. يوجد unique على `code`، لكن تجربة الخطأ تحتاج معالجة في routes/services. |
+| HIGH | TODO | SupplierSettlement confirmation | `before_update` يمنع تأكيد التسوية إذا فيها بنود تحتاج تسعير أو مصادر مستخدمة سابقًا. جيد، لكنه يعتمد على مقارنة `source_type/source_id` عبر استعلامات subquery ويحتاج اختبار فعلي مع NULL source_id. |
+| MEDIUM | TODO | SupplierSettlement payments | `SupplierSettlement.total_paid` يعتمد على `Payment.reference == SupplierSettle:{code}`. الاعتماد على نص reference حساس؛ الأفضل لاحقًا وجود FK أو حقل ربط صريح إن أمكن. |
+| HIGH | TODO | SupplierLoanSettlement | بعد إدخال تسوية قرض مورد يتم تحديث `ProductSupplierLoan` مباشرة إلى `is_settled=True`. هذا جيد لكنه model event مالي ويحتاج فحص مسارات حذف/تعديل التسوية وهل تعكس حالة القرض. |
+| REVIEW | TODO | API helpers in models | توجد دوال `_ok`, `_created`, `_err` داخل `models.py` وتستخدم `jsonify`. هذا خلط طبقات؛ مكانها الطبيعي routes/utils وليس models. لا يعدل الآن لكن يوثق للتنظيم. |
+| HIGH | TODO | Partner balances | `Partner` يحتوي أعمدة أرصدة كثيرة مثل `inventory_balance`, `sales_share_balance`, `payments_in/out`, `returned_checks`. تحتاج مطابقة مع محدثات `utils.partner_balance_updater`. |
+| HIGH | TODO | Partner auto customer | عند إضافة شريك يتم إنشاء/ربط Customer تلقائيًا كما يحدث مع Supplier. نفس خطر خلط كيان شريك/عميل إذا لم يتم تمييزه بوضوح. |
+| HIGH | TODO | Partner opening balance GL | `_partner_opening_balance_gl` يستخدم حساب AP مثل الموردين. يجب التأكد محاسبيًا أن الشريك دائمًا يعامل كالتزام وليس ذمة مختلفة حسب طبيعة الرصيد. |
+| MEDIUM | TODO | update_partner_balance | إذا أُمرر connection غير Session، يفتح `db.session.begin()` ويتجاهل connection الفعلي. قد يسبب فصلًا بين transaction الحالية وتحديث الرصيد. |
+| HIGH | TODO | PartnerSettlement approval | `PartnerSettlement.after_update` عند `is_approved` يحدّث `partners.opening_balance` إلى `closing_balance` مباشرة. هذا سلوك مالي قوي جدًا ويجب التأكد أنه مقصود ولا يعيد فتح GL opening balance بطريقة غير متوقعة. |
+| HIGH | TODO | Partner settlement draft | `build_partner_settlement_draft` يضيف `INVENTORY_SHARE` إلى `total_due` حسب تعليق داخل الكود نفسه. هذا قرار محاسبي حساس: هل يدفع للشريك مقابل المخزون الحالي أم يعرض فقط كمعلومة؟ يحتاج قرار واضح. |
+| MEDIUM | TODO | Partner settlement returns | مرتجعات المبيعات تستخدم `Product.selling_price` كقيمة تقريبية عند غياب سعر الإرجاع. قد يعطي تسويات غير دقيقة إذا تغير السعر. |
+| HIGH | TODO | Employee totals | خصائص `Employee.total_expenses`, `total_paid`, `total_advances`, `total_deductions` تستخدم استعلامات داخل properties وقد تكون ثقيلة وتسبب N+1 في قوائم الموظفين. |
+| REVIEW | TODO | Employee tax logic | `income_tax_amount` يحتوي منطق ضريبة تقريبي وثابت داخل model. يحتاج نقله لإعدادات/خدمة أو توثيق أنه تقديري وليس مرجعًا قانونيًا. |
+| MEDIUM | TODO | Employee advance tables | جداول السلف والأقساط موجودة لكن تحتاج فحص routes/services للتأكد من تحديث `installments_paid`, `fully_paid`, و`paid` بشكل متسق. |
+| HIGH | TODO | Product unique indexes | `Product` يستخدم unique indexes مشروطة لـ name+warehouse وname global وsku/barcode/serial. جيد في PostgreSQL، لكن يجب التأكد من توافق SQLite/local إن كان يستخدم للتجربة. |
+| MEDIUM | TODO | Product pricing fields | توجد حقول أسعار كثيرة: `purchase_price`, `selling_price`, `cost_before_shipping`, `cost_after_shipping`, `unit_price_before_tax`, `price`, `online_price`. تحتاج توحيد معنى كل حقل في routes والقوالب حتى لا يحصل خلط سعر البيع/التكلفة. |
+
+## 16.5 تحسينات مرشحة بعد إكمال `models.py`
 
 لا يتم تنفيذها الآن قبل إنهاء الملف:
 
@@ -574,9 +600,13 @@ models.py
 3. إضافة آلية تفريغ `_get_rate_cached` عند إدخال أو تعديل سعر يدوي.
 4. مراجعة سياسات `validate_payment_policies()` مقابل الشيكات والدفعات والمصاريف.
 5. فحص listeners التي تكتب GL من داخل models قبل أي تعديل.
-6. مراجعة أداء properties الثقيلة في Customer/Supplier قبل القوائم والتقارير.
+6. مراجعة أداء properties الثقيلة في Customer/Supplier/Partner/Employee قبل القوائم والتقارير.
 7. فحص سجل AuthAudit وهل يجب أن يحفظ مستقلًا عن معاملات الطلب.
-8. مراجعة ربط supplier/customer التلقائي والبيانات الافتراضية الناتجة عنه.
+8. مراجعة ربط supplier/customer وpartner/customer التلقائي والبيانات الافتراضية الناتجة عنه.
+9. مراجعة تسويات الموردين والشركاء التي تعتمد على `Payment.reference` النصي، والبحث عن ربط أقوى لاحقًا.
+10. اتخاذ قرار محاسبي واضح حول إدخال حصة المخزون الحالية في `PartnerSettlement.total_due`.
+11. مراجعة منطق تحديث opening_balance للشريك عند اعتماد التسوية.
+12. توثيق حقول أسعار المنتج وتوحيد استخدامها في routes والقوالب.
 
 ---
 
