@@ -25,11 +25,6 @@ from AI.engine.ai_storage import append_json_list, read_json
 ai_bp = Blueprint("ai", __name__, url_prefix="/ai")
 
 
-# ============================================================
-# Helpers
-# ============================================================
-
-
 def _has_permission(permission: Any) -> bool:
     checker = getattr(current_user, "has_permission", None)
     if not callable(checker):
@@ -45,7 +40,6 @@ def _has_permission(permission: Any) -> bool:
 
 
 def _normalize_ai_response(response: Any) -> Dict[str, Any]:
-    """Return one stable response shape for templates and JSON endpoints."""
     if isinstance(response, dict):
         text = response.get("response") or response.get("answer") or response.get("message") or ""
         return {
@@ -57,15 +51,7 @@ def _normalize_ai_response(response: Any) -> Dict[str, Any]:
             "tips": response.get("tips", []) or [],
             "raw": response,
         }
-    return {
-        "success": True,
-        "response": str(response or ""),
-        "confidence": 0,
-        "sources": [],
-        "warnings": [],
-        "tips": [],
-        "raw": response,
-    }
+    return {"success": True, "response": str(response or ""), "confidence": 0, "sources": [], "warnings": [], "tips": [], "raw": response}
 
 
 def _chat_for_current_user(message: str) -> Dict[str, Any]:
@@ -73,14 +59,7 @@ def _chat_for_current_user(message: str) -> Dict[str, Any]:
     return _normalize_ai_response(raw_response)
 
 
-# ============================================================
-# Decorators
-# ============================================================
-
-
 def ai_access(f):
-    """Access guard for AI pages and endpoints."""
-
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
@@ -112,28 +91,13 @@ def ai_access(f):
     return decorated_function
 
 
-# ============================================================
-# Main Routes
-# ============================================================
-
-
 @ai_bp.route("/hub")
 @ai_access
 def hub():
     tab = request.args.get("tab", "assistant")
     model_statuses = get_model_status()
     models_status = model_statuses.get("models", {}) if isinstance(model_statuses, dict) else {}
-
-    return render_template(
-        "ai/ai_hub.html",
-        active_tab=tab,
-        ai_stats=_get_ai_stats(),
-        system_stats=_get_system_stats(),
-        recent_queries=_get_recent_queries(limit=5),
-        predictions=_get_predictions(),
-        api_keys_configured=_check_api_keys(),
-        model_statuses=models_status,
-    )
+    return render_template("ai/ai_hub.html", active_tab=tab, ai_stats=_get_ai_stats(), system_stats=_get_system_stats(), recent_queries=_get_recent_queries(limit=5), predictions=_get_predictions(), api_keys_configured=_check_api_keys(), model_statuses=models_status)
 
 
 @ai_bp.route("/assistant", methods=["GET", "POST"])
@@ -144,25 +108,14 @@ def assistant():
         if not query:
             flash("⚠️ الرجاء إدخال سؤال", "warning")
             return redirect(url_for("ai.assistant"))
-
         try:
             response = _chat_for_current_user(query)
             _save_conversation(query, response)
-            return render_template(
-                "ai/ai_assistant.html",
-                query=query,
-                response=response,
-                suggestions=_get_ai_suggestions(),
-            )
+            return render_template("ai/ai_assistant.html", query=query, response=response, suggestions=_get_ai_suggestions())
         except Exception as exc:
             flash(f"❌ خطأ: {exc}", "danger")
             return redirect(url_for("ai.assistant"))
-
-    return render_template(
-        "ai/ai_assistant.html",
-        suggestions=_get_ai_suggestions(),
-        recent_conversations=_get_recent_conversations(limit=5),
-    )
+    return render_template("ai/ai_assistant.html", suggestions=_get_ai_suggestions(), recent_conversations=_get_recent_conversations(limit=5))
 
 
 @ai_bp.route("/chat", methods=["POST"])
@@ -173,34 +126,17 @@ def chat():
         message = data.get("message", "").strip()
         if not message:
             return jsonify({"success": False, "error": "الرسالة فارغة"}), 400
-
         response = _chat_for_current_user(message)
         _save_conversation(message, response)
-
-        return jsonify(
-            {
-                "success": response.get("success", True),
-                "response": response.get("response") or "عذراً، لم أتمكن من الإجابة",
-                "confidence": response.get("confidence", 0),
-                "sources": response.get("sources", []),
-                "warnings": response.get("warnings", []),
-                "timestamp": datetime.now().isoformat(),
-            }
-        )
+        return jsonify({"success": response.get("success", True), "response": response.get("response") or "عذراً، لم أتمكن من الإجابة", "confidence": response.get("confidence", 0), "sources": response.get("sources", []), "warnings": response.get("warnings", []), "timestamp": datetime.now().isoformat()})
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500
-
-
-# ============================================================
-# System Map Routes
-# ============================================================
 
 
 @ai_bp.route("/system-map", methods=["GET", "POST"])
 @permission_required(SystemPermissions.MANAGE_AI)
 def system_map():
     from AI.engine.ai_auto_discovery import build_system_map, load_system_map, DISCOVERY_LOG_FILE
-
     if request.method == "POST":
         action = request.form.get("action")
         if action == "rebuild":
@@ -210,36 +146,14 @@ def system_map():
             except Exception as exc:
                 flash(f"⚠️ خطأ: {exc}", "danger")
             return redirect(url_for("ai.system_map"))
-
     system_map_data = load_system_map()
     map_exists = system_map_data is not None
     if system_map_data is None:
-        system_map_data = {
-            "generated_at": "",
-            "system_name": "",
-            "version": "",
-            "statistics": {
-                "total_routes": 0,
-                "total_templates": 0,
-                "linked_routes": 0,
-                "unlinked_routes": 0,
-            },
-            "routes": {"all": [], "by_category": {}},
-            "templates": {"all": [], "by_module": {}},
-            "blueprints": [],
-            "modules": [],
-        }
-
+        system_map_data = {"generated_at": "", "system_name": "", "version": "", "statistics": {"total_routes": 0, "total_templates": 0, "linked_routes": 0, "unlinked_routes": 0}, "routes": {"all": [], "by_category": {}}, "templates": {"all": [], "by_module": {}}, "blueprints": [], "modules": []}
     logs = read_json(DISCOVERY_LOG_FILE, [])
     if not isinstance(logs, list):
         logs = []
-
     return render_template("ai/system_map.html", system_map=system_map_data, map_exists=map_exists, logs=logs[-10:])
-
-
-# ============================================================
-# Training Routes
-# ============================================================
 
 
 @ai_bp.route("/training/start", methods=["POST"])
@@ -247,11 +161,7 @@ def system_map():
 def start_training():
     try:
         data = request.get_json(silent=True) or {}
-        result = start_training_job(
-            data.get("model_name", "unknown"),
-            data.get("training_type", "quick"),
-            data.get("data_range", "all"),
-        )
+        result = start_training_job(data.get("model_name", "unknown"), data.get("training_type", "quick"), data.get("data_range", "all"))
         return jsonify(result), 200 if result.get("success") else 500
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500
@@ -277,11 +187,6 @@ def models_status():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
-# ============================================================
-# API Keys Management
-# ============================================================
-
-
 @ai_bp.route("/api-keys/save", methods=["POST"])
 @permission_required(SystemPermissions.MANAGE_AI)
 def save_api_key():
@@ -291,11 +196,10 @@ def save_api_key():
         api_key = data.get("api_key")
         if not api_name or not api_key:
             return jsonify({"success": False, "error": "بيانات ناقصة"}), 400
-
         success = save_api_key_encrypted(api_name, api_key)
         if success:
-            return jsonify({"success": True, "message": f"تم حفظ مفتاح {api_name} بنجاح (مشفر)"})
-        return jsonify({"success": False, "error": "فشل في حفظ المفتاح"}), 500
+            return jsonify({"success": True, "message": f"تم تحديث إعداد {api_name} بنجاح"})
+        return jsonify({"success": False, "error": "فشل في تحديث الإعداد"}), 500
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500
 
@@ -307,15 +211,10 @@ def test_api_key_route():
         data = request.get_json(silent=True) or {}
         api_name = data.get("api_name")
         if not api_name:
-            return jsonify({"success": False, "error": "اسم API مطلوب"}), 400
+            return jsonify({"success": False, "error": "اسم المزود مطلوب"}), 400
         return jsonify(test_api_key(api_name))
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500
-
-
-# ============================================================
-# Analytics & Stats Routes
-# ============================================================
 
 
 @ai_bp.route("/stats/live")
@@ -336,7 +235,6 @@ def analytics_queries():
                 daily_counts[timestamp[:10]] += 1
         labels = list(daily_counts.keys())[-7:]
         return jsonify({"success": True, "data": {"labels": labels, "values": [daily_counts[day] for day in labels]}})
-
     return jsonify({"success": True, "data": {"labels": [], "values": []}})
 
 
@@ -346,24 +244,10 @@ def analytics_queries():
 def evolution_report():
     try:
         from AI.engine.evolution_manager import get_evolution_metrics
-
         report_data = get_evolution_metrics()
     except Exception:
-        report_data = {
-            "labels": [],
-            "gii_scores": [],
-            "error_rates": [],
-            "skills": {},
-            "stats": {},
-            "improvements": [],
-        }
-
+        report_data = {"labels": [], "gii_scores": [], "error_rates": [], "skills": {}, "stats": {}, "improvements": []}
     return render_template("ai/evolution_report.html", report=report_data)
-
-
-# ============================================================
-# Helper Functions
-# ============================================================
 
 
 def _get_ai_stats():
@@ -371,18 +255,10 @@ def _get_ai_stats():
         from AI.engine.ai_performance_tracker import get_performance_tracker
         from AI.engine.ai_self_evolution import get_evolution_engine
         from AI.engine.ai_learning_system import get_learning_system
-
         perf = get_performance_tracker().get_performance_report()
         evo = get_evolution_engine().get_evolution_report()
         learn = get_learning_system().get_learning_stats()
-
-        return {
-            "total_interactions": perf.get("total_queries", 0),
-            "success_rate": perf.get("success_rate", 0),
-            "avg_confidence": perf.get("avg_confidence", 0),
-            "evolution_level": evo.get("evolution_level", 1),
-            "learned_queries": learn.get("total_learned_queries", 0),
-        }
+        return {"total_interactions": perf.get("total_queries", 0), "success_rate": perf.get("success_rate", 0), "avg_confidence": perf.get("avg_confidence", 0), "evolution_level": evo.get("evolution_level", 1), "learned_queries": learn.get("total_learned_queries", 0)}
     except Exception:
         return {"total_interactions": 0, "success_rate": 0, "avg_confidence": 0}
 
@@ -404,18 +280,16 @@ def _get_recent_queries(limit: int = 5) -> List[Dict[str, Any]]:
 def _get_predictions():
     try:
         from AI.engine.ai_performance_tracker import get_performance_tracker
-
         report = get_performance_tracker().get_performance_report()
         trend = report.get("recent_trend", "stable")
-        success_rate = report.get("success_rate", 0)
+        success_rate = report.get("success_rate", 0) or 0
         predictions = []
-
         if trend == "improving":
-            predictions.append({"type": "positive", "message": "الأداء في تحسن مستمر", "icon": "arrow-up"})
+            predictions.append({"type": "positive", "message": "الأداء في تحسن حسب سجل التفاعلات", "icon": "arrow-up"})
         elif trend == "declining":
-            predictions.append({"type": "warning", "message": "الأداء في تراجع - يحتاج مراجعة", "icon": "arrow-down"})
+            predictions.append({"type": "warning", "message": "الأداء في تراجع حسب سجل التفاعلات", "icon": "arrow-down"})
         if success_rate >= 90:
-            predictions.append({"type": "success", "message": f"نسبة نجاح ممتازة: {success_rate}%", "icon": "check-circle"})
+            predictions.append({"type": "success", "message": f"نسبة نجاح مسجلة: {success_rate}%", "icon": "check-circle"})
         return predictions
     except Exception:
         return []
@@ -428,18 +302,7 @@ def _check_api_keys():
 def _save_conversation(query: str, response: Any):
     try:
         normalized = _normalize_ai_response(response)
-        append_json_list(
-            "conversations.json",
-            {
-                "user_id": current_user.id,
-                "username": current_user.username,
-                "query": query,
-                "response": normalized.get("response", ""),
-                "confidence": normalized.get("confidence", 0),
-                "timestamp": datetime.now().isoformat(),
-            },
-            max_items=1000,
-        )
+        append_json_list("conversations.json", {"user_id": current_user.id, "username": current_user.username, "query": query, "response": normalized.get("response", ""), "confidence": normalized.get("confidence", 0), "timestamp": datetime.now().isoformat()}, max_items=1000)
     except Exception as exc:
         current_app.logger.error(f"Error saving conversation: {exc}")
 
@@ -457,35 +320,27 @@ def _get_recent_conversations(limit: int = 5) -> List[Dict[str, Any]]:
 
 
 def _get_ai_suggestions():
-    return [
-        {"type": "info", "title": "💡 نصيحة اليوم", "action": "استخدم \"صباح الخير\" لرؤية ملخص يومك"},
-        {"type": "success", "title": "✅ تحديث متاح", "action": "تدريب جديد متاح للنماذج"},
-    ]
+    suggestions = [{"type": "info", "title": "💡 تلميح", "action": "اسأل عن صفحة أو عميل أو منتج أو قيد، وسأستخدم البيانات المفهرسة والمتاحة فقط."}]
+    try:
+        live = get_live_ai_stats()
+        training = live.get("training", {}) if isinstance(live, dict) else {}
+        running = int(training.get("running", 0) or 0)
+        failed = int(training.get("failed", 0) or 0)
+        if running:
+            suggestions.append({"type": "info", "title": "تدريب جارٍ", "action": f"يوجد {running} مهمة تدريب قيد التشغيل."})
+        if failed:
+            suggestions.append({"type": "warning", "title": "مراجعة مطلوبة", "action": f"يوجد {failed} مهمة تدريب فاشلة في السجل."})
+    except Exception:
+        pass
+    return suggestions
 
 
 def _analyze_query(query):
     try:
         response = _chat_for_current_user(query)
-        return {
-            "query": query,
-            "response": response.get("response", ""),
-            "confidence": response.get("confidence", 0),
-            "sources": response.get("sources", []),
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        }
+        return {"query": query, "response": response.get("response", ""), "confidence": response.get("confidence", 0), "sources": response.get("sources", []), "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
     except Exception as exc:
-        return {
-            "query": query,
-            "response": f"عذراً، حدث خطأ: {exc}",
-            "confidence": 0,
-            "sources": [],
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        }
-
-
-# ============================================================
-# Error Handlers
-# ============================================================
+        return {"query": query, "response": f"عذراً، حدث خطأ: {exc}", "confidence": 0, "sources": [], "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 
 @ai_bp.errorhandler(404)
