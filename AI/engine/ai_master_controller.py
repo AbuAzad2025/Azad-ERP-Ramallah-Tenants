@@ -1,9 +1,9 @@
 """AI Master Controller.
 
 Central coordinator for the AI subsystems. The controller keeps the existing
-public API stable while making subsystem startup resilient. It also exposes a
-safe control-audit command so the assistant can act as a financial,
-administrative, and operational auditor without making accusations.
+public API stable while making subsystem startup resilient. It enforces the same
+application permission model inside the assistant so AI cannot become a backdoor
+around roles and permissions.
 """
 
 from __future__ import annotations
@@ -12,6 +12,13 @@ import os
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from AI.engine.ai_permission_guard import (
+    can_access_module,
+    denied_response,
+    get_permission_context,
+    require_any_permission,
+    require_module,
+)
 
 SubsystemFactory = Tuple[str, str, str]
 
@@ -86,6 +93,8 @@ class MasterController:
 
     def process_intelligent_query(self, query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         context = context or {}
+        permission_context = context.get("permission_context") or get_permission_context()
+        context["permission_context"] = permission_context
         operation = self._new_operation(query)
         try:
             result = self._try_control_audit(query, context, operation)
@@ -97,10 +106,10 @@ class MasterController:
             result = self._try_python_expert(query, context, operation)
             if result:
                 return result
-            result = self._try_database_expert(query, operation)
+            result = self._try_database_expert(query, context, operation)
             if result:
                 return result
-            result = self._try_user_guide(query, operation)
+            result = self._try_user_guide(query, context, operation)
             if result:
                 return result
             fallback = {"answer": "", "confidence": 0.0, "sources": [], "defer_to_service": True}
@@ -115,20 +124,27 @@ class MasterController:
     def _new_operation(self, query: str) -> Dict[str, Any]:
         return {"id": datetime.now().strftime("%Y%m%d%H%M%S%f"), "query": query, "start_time": datetime.now(), "subsystems_used": [], "reasoning_steps": [], "confidence_breakdown": {}, "result": None}
 
+    def _result_from_denied(self, denied: Dict[str, Any]) -> Dict[str, Any]:
+        return {"answer": denied.get("response") or denied.get("error"), "confidence": 1.0, "sources": denied.get("sources", ["permission_guard"]), "permission_denied": True}
+
     def _try_control_audit(self, query: str, context: Dict, operation: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         text = str(query or "").lower()
         if not any(term.lower() in text for term in self.CONTROL_AUDIT_TERMS):
             return None
+        permission_context = context.get("permission_context")
+        denied = require_any_permission(("view_audit_logs", "manage_ai", "access_owner_dashboard"), permission_context, module="control_audit")
+        if denied:
+            return self._result_from_denied(denied)
         auditor = self.subsystems.get("auditor")
         if not auditor or not hasattr(auditor, "run_control_audit"):
             return None
         operation["subsystems_used"].append("auditor")
         days = self._extract_days(text) or 7
         user_id = self._extract_user_id(text)
-        report = auditor.run_control_audit(days=days, user_id=user_id)
+        report = auditor.run_control_audit(days=days, user_id=user_id, permission_context=permission_context)
         operation["result"] = report
         self._track_operation(operation)
-        return {"answer": self._format_control_audit_report(report), "confidence": 0.92, "sources": ["Control Auditor"], "data_used": ["AuthAudit", "AuditLog", "Archive", "Payment", "Expense", "Sale", "Invoice", "StockLevel", "Product", "User"]}
+        return {"answer": self._format_control_audit_report(report), "confidence": 0.92, "sources": ["Control Auditor"], "data_used": ["permitted_control_audit_scope"]}
 
     def _extract_days(self, text: str) -> Optional[int]:
         import re
@@ -180,10 +196,15 @@ class MasterController:
             return {"answer": self._format_python_error_answer(result), "confidence": 0.9, "sources": ["Python Expert"]}
         return None
 
-    def _try_database_expert(self, query: str, operation: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _try_database_expert(self, query: str, context: Dict, operation: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         text = (query or "").lower()
         if not any(word in text for word in ("جدول", "موديل", "model", "table", "schema", "قاعدة", "استعلام", "query", "sql", "حقل", "field", "علاقة", "relation")):
             return None
+        permission_context = context.get("permission_context")
+        if any(w in text for w in ("permission", "صلاح", "user", "مستخدم", "audit", "تدقيق", "role", "دور")):
+            denied = require_any_permission(("view_audit_logs", "manage_users", "manage_roles", "manage_permissions", "access_owner_dashboard"), permission_context, module="users")
+            if denied:
+                return self._result_from_denied(denied)
         expert = self.subsystems.get("database_expert")
         if not expert:
             return None
@@ -193,26 +214,31 @@ class MasterController:
             answer = self._format_sql_analysis(result)
         else:
             result = expert.describe_business_question(query) if hasattr(expert, "describe_business_question") else None
-            answer = self._format_database_expert_answer(result)
+            answer = self._format_database_expert_answer(result, permission_context=permission_context)
         if result and answer:
             operation["result"] = result
             self._track_operation(operation)
             return {"answer": answer, "confidence": 0.86, "sources": ["Database Expert"]}
         return None
 
-    def _try_user_guide(self, query: str, operation: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _try_user_guide(self, query: str, context: Dict, operation: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         guide = self.subsystems.get("guide_master")
         if not guide:
             return None
         operation["subsystems_used"].append("guide_master")
         result = guide.answer_question(query)
         if result and isinstance(result, dict) and result.get("steps"):
+            module_key = result.get("module_key")
+            if module_key and not can_access_module(module_key, context.get("permission_context")):
+                return self._result_from_denied(denied_response(module=module_key, action=result.get("action")))
             operation["result"] = result
             self._track_operation(operation)
             return {"answer": self._format_guide_answer(result), "confidence": 0.9, "sources": ["Expert User Guide"]}
         return None
 
     def _format_control_audit_report(self, report: Dict[str, Any]) -> str:
+        if report.get("denied") or report.get("status") == "denied":
+            return report.get("response") or report.get("error") or "⛔ غير مصرح."
         parts = ["🛡️ تقرير التدقيق الرقابي الذكي", f"الفترة: آخر {report.get('lookback_days')} أيام", f"مستوى الخطر: {report.get('risk_level')} | الحالة: {report.get('status')}", f"درجة الخطر: {report.get('risk_score', 0)}", "\nتنبيه مهني: هذه مؤشرات رقابية وليست اتهاماً. القرار النهائي يحتاج مراجعة بشرية وسندات."]
         summary = report.get("summary", {}) or {}
         parts.append(f"\n📊 عدد الملاحظات: {summary.get('total_findings', 0)}")
@@ -258,18 +284,21 @@ class MasterController:
         self._add_list_section(parts, "💡 اقتراحات", result.get("suggestions"), 6)
         return "\n".join(parts)
 
-    def _format_database_expert_answer(self, result: Dict) -> str:
+    def _format_database_expert_answer(self, result: Dict, permission_context: Optional[Dict[str, Any]] = None) -> str:
         if not result or not result.get("best_match"):
             return ""
         best = result["best_match"]
+        models = [m for m in best.get("models", []) if can_access_module(m, permission_context)]
+        if not models:
+            return denied_response(module=best.get("domain"), action="database_expert").get("response")
         parts = [f"🗄️ فهم قاعدة البيانات للسؤال: {best.get('domain')}"]
-        if best.get("models"):
-            parts.append("\n📌 الموديلات المرشحة:")
-            for model in best.get("models", [])[:8]:
+        if models:
+            parts.append("\n📌 الموديلات المرشحة ضمن صلاحيتك:")
+            for model in models[:8]:
                 parts.append(f"  • {model}")
         self._add_list_section(parts, "✅ ما يراجعه المستخدم الخبير", best.get("expert_focus"), 8)
         self._add_list_section(parts, "🔎 فلاتر آمنة ومفيدة", best.get("safe_filters"), 8)
-        parts.append("\nملاحظة: هذه خريطة ترشيح ذكية؛ القراءة النهائية يجب أن تتم من الحقول والعلاقات الفعلية في النظام.")
+        parts.append("\nملاحظة: هذه خريطة ترشيح ذكية؛ القراءة النهائية يجب أن تتم من الحقول والعلاقات الفعلية المصرح بها للمستخدم الحالي.")
         return "\n".join(parts)
 
     def _add_list_section(self, parts: List[str], title: str, values, limit: int = 8) -> None:
@@ -326,29 +355,36 @@ class MasterController:
 
     def execute_system_command(self, command: str, params: Optional[Dict] = None) -> Dict:
         params = params or {}
+        permission_context = params.get("permission_context") or get_permission_context()
         command = (command or "").strip()
         if command not in self.SAFE_COMMANDS:
             return {"success": False, "error": "Unknown or unsafe command"}
         if command == "scan_system":
-            return self._scan_all_systems()
+            denied = require_any_permission(("manage_system_health", "manage_ai", "access_owner_dashboard"), permission_context, module="system")
+            return denied if denied else self._scan_all_systems()
         if command == "audit_accounting":
-            return self._run_accounting_audit()
-        if command == "audit_controls":
-            return self._run_control_audit(params)
-        if command == "audit_user_activity":
-            return self._run_control_audit(params)
+            denied = require_any_permission(("validate_accounting", "view_ledger", "manage_ledger", "access_owner_dashboard"), permission_context, module="ledger")
+            return denied if denied else self._run_accounting_audit()
+        if command in {"audit_controls", "audit_user_activity"}:
+            denied = require_any_permission(("view_audit_logs", "manage_ai", "access_owner_dashboard"), permission_context, module="control_audit")
+            return denied if denied else self._run_control_audit(params)
         if command == "optimize_performance":
-            return self._optimize_all_systems()
+            denied = require_any_permission(("manage_ai", "manage_system_health", "access_owner_dashboard"), permission_context, module="ai")
+            return denied if denied else self._optimize_all_systems()
         if command == "self_diagnose":
-            return self._diagnose_system_health()
+            denied = require_any_permission(("manage_ai", "access_owner_dashboard"), permission_context, module="ai")
+            return denied if denied else self._diagnose_system_health()
         if command == "start_learning_session":
-            return self._start_learning_session()
+            denied = require_any_permission(("train_ai", "manage_ai", "access_owner_dashboard"), permission_context, module="ai")
+            return denied if denied else self._start_learning_session()
         if command == "read_book":
-            return self._read_book(params.get("file_path"), params.get("format", "markdown"))
+            denied = require_any_permission(("manage_ai", "train_ai", "access_owner_dashboard"), permission_context, module="ai")
+            return denied if denied else self._read_book(params.get("file_path"), params.get("format", "markdown"))
         if command == "comprehend_concept":
             return self._comprehend_concept(params.get("concept"))
         if command == "consolidate_memory":
-            return self._consolidate_all_memory()
+            denied = require_any_permission(("manage_ai", "access_owner_dashboard"), permission_context, module="ai")
+            return denied if denied else self._consolidate_all_memory()
         return {"success": False, "error": "Unknown command"}
 
     def _scan_all_systems(self) -> Dict:
@@ -364,7 +400,7 @@ class MasterController:
         auditor = self.subsystems.get("auditor")
         if not auditor or not hasattr(auditor, "run_control_audit"):
             return {"success": False, "error": "Control auditor not available"}
-        report = auditor.run_control_audit(days=params.get("days"), user_id=params.get("user_id"))
+        report = auditor.run_control_audit(days=params.get("days"), user_id=params.get("user_id"), permission_context=params.get("permission_context"))
         return {"success": True, "report": report, "summary": report.get("summary", {}), "risk_level": report.get("risk_level"), "status": report.get("status")}
 
     def _optimize_all_systems(self) -> Dict:
