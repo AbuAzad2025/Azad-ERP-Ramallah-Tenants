@@ -141,7 +141,7 @@ def _check_disk_space() -> Dict[str, Any]:
     except Exception as e:
         return {
             "status": "unknown",
-            "error": str(e)
+            "error": "disk_check_error"
         }
 
 def _check_memory() -> Dict[str, Any]:
@@ -168,7 +168,7 @@ def _check_memory() -> Dict[str, Any]:
     except Exception as e:
         return {
             "status": "unknown",
-            "error": str(e)
+            "error": "memory_check_error"
         }
 
 def _check_socketio() -> Dict[str, Any]:
@@ -188,7 +188,7 @@ def _check_socketio() -> Dict[str, Any]:
     except Exception as e:
         return {
             "status": "unhealthy",
-            "error": str(e)
+            "error": "socketio_check_error"
         }
 
 def _get_system_info() -> Dict[str, Any]:
@@ -202,7 +202,7 @@ def _get_system_info() -> Dict[str, Any]:
         }
     except Exception as e:
         return {
-            "error": str(e)
+            "error": "system_info_error"
         }
 
 @health_bp.route("/", methods=["GET"])
@@ -283,11 +283,15 @@ def readiness():
             "status": "ready",
             "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         }), 200
-    except Exception as e:
+    except Exception:
+        try:
+            current_app.logger.exception("Readiness check failed")
+        except Exception:
+            pass
         return jsonify({
             "status": "not_ready",
             "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
-            "error": str(e)
+            "error": "readiness_check_failed"
         }), 503
 
 @health_bp.route("/live", methods=["GET"])
@@ -302,6 +306,8 @@ def liveness():
     }), 200
 
 @health_bp.route("/metrics", methods=["GET"])
+@login_required
+@permission_required(SystemPermissions.MANAGE_SYSTEM_HEALTH)
 def metrics():
     """
     مقاييس التطبيق
@@ -329,8 +335,12 @@ def metrics():
         }
 
         return jsonify(metrics_data), 200
-    except Exception as e:
+    except Exception:
+        try:
+            current_app.logger.exception("Health metrics failed")
+        except Exception:
+            pass
         return jsonify({
-            "error": str(e)
+            "error": "metrics_check_failed"
         }), 500
 
