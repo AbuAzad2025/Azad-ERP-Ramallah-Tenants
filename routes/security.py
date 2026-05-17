@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import text, func, and_
 from sqlalchemy.exc import SAWarning
 from datetime import datetime, timedelta, timezone
-from extensions import db, cache
+from extensions import db, cache, limiter
 from models import User, AuditLog, SystemSettings
 import utils
 from functools import wraps
@@ -3433,6 +3433,9 @@ def trigger_webhook(event_name, data):
                 
                 # إنشاء signature
                 secret = _get_setting('webhook_secret', '')
+                if not secret:
+                    current_app.logger.warning("Webhook secret is empty — skipping webhook dispatch")
+                    continue
                 signature = hmac.new(
                     secret.encode(),
                     json.dumps(payload).encode(),
@@ -5151,6 +5154,7 @@ def system_branding():
 
 @security_bp.route('/db-editor/add-column/<table_name>', methods=['POST'])
 @permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
+@limiter.limit("10/minute")
 def db_add_column(table_name):
     """إضافة عمود جديد"""
     _assert_valid_table(table_name)
@@ -5180,13 +5184,15 @@ def db_add_column(table_name):
         flash(f'تم إضافة العمود {column_name} بنجاح', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ: {str(e)}', 'danger')
+        current_app.logger.error("DB add column error: %s", e)
+        flash('خطأ في إضافة العمود', 'danger')
     
     return redirect(url_for('security.database_manager', tab='edit', table=table_name))
 
 
 @security_bp.route('/db-editor/update-cell/<table_name>', methods=['POST'])
 @permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
+@limiter.limit("30/minute")
 def db_update_cell(table_name):
     """تحديث خلية واحدة مباشرة - للتعديل السريع"""
     try:
@@ -5220,10 +5226,12 @@ def db_update_cell(table_name):
         })
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.error("DB update cell error: %s", e)
+        return jsonify({'success': False, 'error': 'خطأ في تحديث الخلية'}), 500
 
 @security_bp.route('/db-editor/edit-row/<table_name>/<int:row_id>', methods=['POST'])
 @permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
+@limiter.limit("20/minute")
 def db_edit_row(table_name, row_id):
     """تعديل صف في الجدول"""
     try:
@@ -5251,13 +5259,15 @@ def db_edit_row(table_name, row_id):
     
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ: {str(e)}', 'danger')
+        current_app.logger.error("DB edit row error: %s", e)
+        flash('خطأ في تعديل الصف', 'danger')
     
     return redirect(url_for('security.database_manager', tab='edit', table=table_name))
 
 
 @security_bp.route('/db-editor/delete-row/<table_name>/<row_id>', methods=['POST'])
 @permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
+@limiter.limit("10/minute")
 def db_delete_row(table_name, row_id):
     """حذف صف من الجدول"""
     try:
@@ -5275,12 +5285,14 @@ def db_delete_row(table_name, row_id):
         flash(f'✅ تم حذف الصف #{row_id} بنجاح', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ في الحذف: {str(e)}', 'danger')
+        current_app.logger.error("DB delete row error: %s", e)
+        flash('خطأ في حذف الصف', 'danger')
     
     return redirect(url_for('security.database_manager', tab='edit', table=table_name))
 
 @security_bp.route('/db-editor/delete-column/<table_name>', methods=['POST'])
 @permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
+@limiter.limit("5/minute")
 def db_delete_column(table_name):
     """حذف عمود كامل من الجدول"""
     _assert_valid_table(table_name)
@@ -5306,13 +5318,15 @@ def db_delete_column(table_name):
         flash(f'✅ تم حذف العمود {column_name} بنجاح', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ في حذف العمود: {str(e)}', 'danger')
+        current_app.logger.error("DB delete column error: %s", e)
+        flash('خطأ في حذف العمود', 'danger')
     
     return redirect(url_for('security.database_manager', tab='edit', table=table_name))
 
 
 @security_bp.route('/db-editor/add-row/<table_name>', methods=['POST'])
 @permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
+@limiter.limit("20/minute")
 def db_add_row(table_name):
     """إضافة صف جديد"""
     try:
@@ -5375,13 +5389,15 @@ def db_bulk_update(table_name):
         flash(f'تم تحديث {result.rowcount} صف بنجاح', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ: {str(e)}', 'danger')
+        current_app.logger.error("DB add row error: %s", e)
+        flash('خطأ في إضافة الصف', 'danger')
     
     return redirect(url_for('security.database_manager', tab='edit', table=table_name))
 
 
 @security_bp.route('/db-editor/fill-missing/<table_name>', methods=['POST'])
 @permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
+@limiter.limit("5/minute")
 def db_fill_missing(table_name):
     """ملء البيانات الناقصة"""
     _assert_valid_table(table_name)
@@ -5403,7 +5419,8 @@ def db_fill_missing(table_name):
         flash(f'تم ملء {result.rowcount} حقل ناقص بنجاح', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ: {str(e)}', 'danger')
+        current_app.logger.error("DB fill missing error: %s", e)
+        flash('خطأ في ملء البيانات الناقصة', 'danger')
     
     return redirect(url_for('security.database_manager', tab='edit', table=table_name))
 
@@ -5721,6 +5738,10 @@ def _cleanup_tables(tables):
             else:
                 # تنظيف عادي للجداول الأخرى
                 try:
+                    if not _is_safe_identifier(table):
+                        errors.append(f"اسم جدول غير صالح: {table}")
+                        continue
+                    _assert_valid_table(table)
                     deleted_count = db.session.execute(text(f"DELETE FROM {table}")).rowcount
                     db.session.commit()
                     current_app.logger.info(f"[INFO] Cleaned table '{table}': {deleted_count} rows deleted")

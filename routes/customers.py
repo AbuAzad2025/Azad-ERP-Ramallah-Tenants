@@ -2921,7 +2921,7 @@ def restore_customer(customer_id):
 
 def _generate_smart_password(customer):
     """Generate a unique password per customer: AZ-<phone_tail>-<random>."""
-    phone = (getattr(customer, 'phone', None) or '').strip()
+    phone = (customer.phone or '').strip()
     tail = phone[-4:] if len(phone) >= 4 else str(customer.id).zfill(4)
     rand = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(4))
     return f"AZ-{tail}-{rand}"
@@ -2947,6 +2947,12 @@ def reset_passwords():
         for cust in customers:
             try:
                 pw = manual_password if manual_password else _generate_smart_password(cust)
+                credentials.append({
+                    'id': cust.id,
+                    'name': cust.name,
+                    'phone': (cust.phone or '').strip(),
+                    'password': pw,
+                })
                 cust.password_hash = generate_password_hash(pw)
                 cust.is_online = True
                 if not (cust.email and str(cust.email).strip()) and (cust.phone and str(cust.phone).strip()):
@@ -2954,14 +2960,9 @@ def reset_passwords():
                     exists = Customer.query.filter(func.lower(Customer.email) == target_email.lower(), Customer.id != cust.id).first()
                     if not exists:
                         cust.email = target_email
-                credentials.append({
-                    'id': cust.id,
-                    'name': cust.name,
-                    'phone': (cust.phone or '').strip(),
-                    'password': pw,
-                })
                 updated += 1
             except Exception:
+                credentials.pop()
                 continue
 
         db.session.commit()
@@ -2991,7 +2992,8 @@ def reset_passwords():
         )
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ في تعيين كلمات المرور: {str(e)}', 'error')
+        current_app.logger.error("خطأ في تعيين كلمات المرور: %s", e)
+        flash('خطأ في تعيين كلمات المرور', 'error')
         return redirect(url_for('customers_bp.list_customers'))
 
 
@@ -3015,15 +3017,17 @@ def make_online_all():
                         cust.email = target_email
                 if not (cust.password_hash and str(cust.password_hash).strip()):
                     pw = manual_password if manual_password else _generate_smart_password(cust)
-                    cust.password_hash = generate_password_hash(pw)
                     new_passwords.append({
                         'id': cust.id,
                         'name': cust.name,
                         'phone': (cust.phone or '').strip(),
                         'password': pw,
                     })
+                    cust.password_hash = generate_password_hash(pw)
                 updated += 1
             except Exception:
+                if new_passwords and new_passwords[-1]['id'] == cust.id:
+                    new_passwords.pop()
                 continue
         db.session.commit()
 
@@ -3052,7 +3056,8 @@ def make_online_all():
         return redirect(url_for('customers_bp.list_customers'))
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ أثناء تحويل العملاء للأونلاين: {str(e)}', 'error')
+        current_app.logger.error("خطأ في تحويل العملاء للأونلاين: %s", e)
+        flash('خطأ أثناء تحويل العملاء للأونلاين', 'error')
         return redirect(url_for('customers_bp.list_customers'))
 
 
@@ -3065,7 +3070,7 @@ def set_default_emails():
         q = Customer.query.filter((Customer.email.is_(None)) | (Customer.email == ''))
         customers = q.all()
         for cust in customers:
-            phone = (getattr(cust, 'phone', None) or '').strip()
+            phone = (cust.phone or '').strip()
             if not phone:
                 skipped += 1
                 continue
@@ -3081,18 +3086,20 @@ def set_default_emails():
         return redirect(url_for('customers_bp.list_customers'))
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ أثناء ضبط البريد الافتراضي: {str(e)}', 'error')
+        current_app.logger.error("خطأ في ضبط البريد الافتراضي: %s", e)
+        flash('خطأ أثناء ضبط البريد الافتراضي', 'error')
         return redirect(url_for('customers_bp.list_customers'))
+
 @customers_bp.route('/export-online-credentials', methods=['GET'])
 @login_required
 def export_online_credentials():
     customers = Customer.query.order_by(Customer.id.asc()).all()
     rows = []
     for c in customers:
-        phone = (getattr(c, 'phone', None) or '').strip()
-        email = (getattr(c, 'email', None) or '').strip()
+        phone = (c.phone or '').strip()
+        email = (c.email or '').strip()
         login = f"AZAD@{phone}" if phone else (email or '')
-        has_password = bool(getattr(c, 'password_hash', None) and str(c.password_hash).strip())
+        has_password = bool(c.password_hash and str(c.password_hash).strip())
         rows.append({
             'id': c.id,
             'name': c.name,

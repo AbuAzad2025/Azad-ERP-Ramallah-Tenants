@@ -1,9 +1,13 @@
+import logging
+
 from extensions import db
 from models import WorkflowDefinition, WorkflowInstance, WorkflowAction, User
 from sqlalchemy import text as sa_text
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
 import json
+
+logger = logging.getLogger(__name__)
 
 
 class WorkflowEngine:
@@ -73,7 +77,7 @@ class WorkflowEngine:
             
         except Exception as e:
             db.session.rollback()
-            print(f"Error starting workflow: {str(e)}")
+            logger.error("Error starting workflow: %s", e)
             return None
     
     @staticmethod
@@ -141,7 +145,7 @@ class WorkflowEngine:
             
         except Exception as e:
             db.session.rollback()
-            print(f"Error executing workflow action: {str(e)}")
+            logger.error("Error executing workflow action: %s", e)
             return False
     
     @staticmethod
@@ -176,7 +180,7 @@ class WorkflowEngine:
             
         except Exception as e:
             db.session.rollback()
-            print(f"Error cancelling workflow: {str(e)}")
+            logger.error("Error cancelling workflow: %s", e)
             return False
     
     @staticmethod
@@ -201,7 +205,7 @@ class WorkflowEngine:
             return pending
             
         except Exception as e:
-            print(f"Error getting pending actions: {str(e)}")
+            logger.error("Error getting pending actions: %s", e)
             return []
     
     @staticmethod
@@ -212,7 +216,7 @@ class WorkflowEngine:
             ).order_by(WorkflowAction.action_date).all()
             
         except Exception as e:
-            print(f"Error getting workflow history: {str(e)}")
+            logger.error("Error getting workflow history: %s", e)
             return []
     
     @staticmethod
@@ -244,7 +248,7 @@ class WorkflowEngine:
             
         except Exception as e:
             db.session.rollback()
-            print(f"Error checking timeouts: {str(e)}")
+            logger.error("Error checking timeouts: %s", e)
     
     @staticmethod
     def _on_workflow_approved(instance: WorkflowInstance):
@@ -347,7 +351,7 @@ class WorkflowEngine:
             db.session.commit()
             
         except Exception as e:
-            print(f"Error escalating workflow: {str(e)}")
+            logger.error("Error escalating workflow: %s", e)
             db.session.rollback()
     
     @staticmethod
@@ -389,7 +393,7 @@ class WorkflowEngine:
             }
             
         except Exception as e:
-            print(f"Error getting workflow stats: {str(e)}")
+            logger.error("Error getting workflow stats: %s", e)
             return {
                 'total': 0,
                 'in_progress': 0,
