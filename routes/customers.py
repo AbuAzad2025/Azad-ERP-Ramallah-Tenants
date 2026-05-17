@@ -3048,4 +3048,4 @@ def export_online_credentials():
     for r in rows:
         html.append(f"<tr><td>{r['id']}</td><td>{_esc(r['name'])}</td><td>{_esc(r['phone'])}</td><td>{_esc(r['login'])}</td><td>{_esc(r['password']) or '—'}</td></tr>")
     html.append("</tbody></table></div>")
-    return render_template_string("".join(html))
+    return render_template_string("{{ html_content|safe }}", html_content="".join(html))

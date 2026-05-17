@@ -399,10 +399,10 @@ def assert_production_sanity(cfg) -> None:
     app_env = str(getattr(cfg, "APP_ENV", "production")).lower()
     is_prod = (not debug) and (app_env not in {"dev", "development", "local"})
     sk = getattr(cfg, "SECRET_KEY", None)
-    if is_prod and (not sk or sk == "dev-secret-key" or len(sk or "") < 16):
+    if is_prod and sk in {"production-secret-key-2024", "change-me", "secret", "dev-secret-key"}:
+        raise RuntimeError("SECRET_KEY is a well-known default — change it immediately")
+    if is_prod and (not sk or len(sk or "") < 16):
         raise RuntimeError("SECRET_KEY is missing or too weak for production (min 16 chars)")
-    if is_prod and sk in {"production-secret-key-2024", "change-me", "secret"}:
-        logging.warning("CONFIG WARNING: SECRET_KEY appears to be a well-known default — change it immediately")
     db_uri = getattr(cfg, "SQLALCHEMY_DATABASE_URI", "")
     if is_prod and not db_uri:
         raise RuntimeError("DATABASE_URL/SQLALCHEMY_DATABASE_URI missing")
