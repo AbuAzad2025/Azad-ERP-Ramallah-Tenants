@@ -1213,7 +1213,6 @@ def product_info(pid: int):
     })
 
 @bp.post("/categories")
-@csrf.exempt
 @login_required
 @permission_required(SystemPermissions.MANAGE_INVENTORY, SystemPermissions.MANAGE_WAREHOUSES)
 @limiter.limit("30/minute")
