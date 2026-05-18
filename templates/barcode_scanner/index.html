@@ -1188,6 +1188,7 @@ $(document).ready(function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}',
             },
             body: JSON.stringify({ barcode: barcode })
         })
@@ -1283,6 +1284,7 @@ $(document).ready(function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}',
             },
             body: JSON.stringify({ 
                 product_id: productId, 
@@ -1353,6 +1355,7 @@ $(document).ready(function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}',
             },
             body: JSON.stringify(requestData)
         })
@@ -1482,6 +1485,7 @@ $(document).ready(function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}',
             },
             body: JSON.stringify({
                 product_ids: productIds,
@@ -1548,6 +1552,7 @@ $(document).ready(function() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}',
                 }
             })
             .then(response => response.json())

@@ -155,9 +155,9 @@ async function startLearningSession() {
   statusDiv.innerHTML = '<div class="alert alert-info">جاري بدء جلسة التعلم...</div>';
   
   try {
-    const response = await fetch('/ai/admin/command/start_learning_session', {
+    const response = await fetch('/ai-admin/command/start_learning_session', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'}
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'}
     });
     
     const data = await response.json();
@@ -202,8 +202,9 @@ async function uploadAndReadBook() {
   statusDiv.innerHTML = '<div class="alert alert-info">جاري الرفع والقراءة...</div>';
   
   try {
-    const response = await fetch('/ai/admin/upload_book', {
+    const response = await fetch('/ai-admin/upload_book', {
       method: 'POST',
+      headers: {'X-CSRFToken': '{{ csrf_token() }}'},
       body: formData
     });
     
@@ -243,9 +244,9 @@ async function explainConcept() {
   resultDiv.innerHTML = '<div class="text-center"><div class="spinner-border text-info"></div><p class="mt-2">جاري الفهم العميق...</p></div>';
   
   try {
-    const response = await fetch('/ai/admin/command/comprehend_concept', {
+    const response = await fetch('/ai-admin/command/comprehend_concept', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
       body: JSON.stringify({concept: concept})
     });
     
@@ -264,9 +265,9 @@ async function explainConcept() {
 
 async function consolidateMemory() {
   try {
-    const response = await fetch('/ai/admin/command/consolidate_memory', {
+    const response = await fetch('/ai-admin/command/consolidate_memory', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'}
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'}
     });
     
     const data = await response.json();
@@ -289,7 +290,7 @@ async function loadMemoryStats() {
   const statsDiv = document.getElementById('memory-stats');
   
   try {
-    const response = await fetch('/ai/admin/memory_stats');
+    const response = await fetch('/ai-admin/memory_stats');
     const data = await response.json();
     
     if (data.success && data.stats) {
@@ -315,7 +316,7 @@ async function loadSystemHealth() {
   const healthDiv = document.getElementById('system-health');
   
   try {
-    const response = await fetch('/ai/admin/system_status');
+    const response = await fetch('/ai-admin/system_status');
     const data = await response.json();
     
     if (data.success && data.status) {

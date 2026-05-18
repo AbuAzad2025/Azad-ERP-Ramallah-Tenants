@@ -195,9 +195,9 @@ async function trainPackage(packageId) {
   statusDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> جاري التدريب...</div>';
   
   try {
-    const response = await fetch('/ai/admin/train-package', {
+    const response = await fetch('/ai-admin/train-package', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
       body: JSON.stringify({package_id: packageId})
     });
     
@@ -242,9 +242,9 @@ async function trainAllPackages() {
       statusDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> جاري التدريب الشامل...</div>';
       
       try {
-        const response = await fetch('/ai/admin/train-all-packages', {
+        const response = await fetch('/ai-admin/train-all-packages', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'}
+          headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'}
         });
         
         const data = await response.json();

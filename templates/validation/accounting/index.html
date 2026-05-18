@@ -295,7 +295,8 @@
             showLoading();
             
             fetch('/validation/accounting/fix-unbalanced-batches', {
-                method: 'POST'
+                method: 'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token() }}'}
             })
                 .then(response => response.json())
                 .then(data => {

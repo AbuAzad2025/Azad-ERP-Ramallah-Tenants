@@ -2898,6 +2898,56 @@ def get_ar_ap_summary():
         current_app.logger.exception('API error')
         return jsonify({"error": "حدث خطأ داخلي"}), 500
 
+@ledger_bp.route("/stats", methods=["GET"], endpoint="get_dashboard_stats")
+@login_required
+@utils.permission_required(SystemPermissions.MANAGE_LEDGER)
+def get_dashboard_stats():
+    """إحصائيات سريعة للوحة القيادة: النقد، الذمم المدينة، الذمم الدائنة، الأرباح"""
+    try:
+        base_gl = db.session.query(GLEntry).join(GLBatch).filter(GLBatch.status == "POSTED")
+
+        cash_accounts = db.session.query(Account.code).filter(
+            or_(Account.type == "ASSET", Account.code.like("1%")),
+            or_(Account.name.ilike("%cash%"), Account.name.ilike("%نقد%"), Account.name.ilike("%صندوق%"))
+        ).all()
+        cash_codes = [c[0] for c in cash_accounts] if cash_accounts else []
+        cash = 0.0
+        if cash_codes:
+            cash = float(
+                base_gl.filter(GLEntry.account.in_(cash_codes))
+                .with_entities(func.sum(GLEntry.debit - GLEntry.credit)).scalar() or 0
+            )
+
+        ar_account = GL_ACCOUNTS.get("AR", "1200_AR")
+        ar = float(
+            base_gl.filter(GLEntry.account == ar_account)
+            .with_entities(func.sum(GLEntry.debit - GLEntry.credit)).scalar() or 0
+        )
+
+        ap_account = GL_ACCOUNTS.get("AP", "2100_AP")
+        ap = float(
+            base_gl.filter(GLEntry.account == ap_account)
+            .with_entities(func.sum(GLEntry.credit - GLEntry.debit)).scalar() or 0
+        )
+
+        total_revenue = float(
+            base_gl.join(Account, Account.code == GLEntry.account)
+            .filter(Account.type == "REVENUE")
+            .with_entities(func.sum(GLEntry.credit - GLEntry.debit)).scalar() or 0
+        )
+        total_expenses = float(
+            base_gl.join(Account, Account.code == GLEntry.account)
+            .filter(Account.type == "EXPENSE")
+            .with_entities(func.sum(GLEntry.debit - GLEntry.credit)).scalar() or 0
+        )
+        profit = total_revenue - total_expenses
+
+        return jsonify({"cash": cash, "ar": ar, "ap": ap, "profit": profit})
+    except Exception as e:
+        current_app.logger.error(f"Error in get_dashboard_stats: {str(e)}")
+        return jsonify({"cash": 0, "ar": 0, "ap": 0, "profit": 0, "error": "حدث خطأ داخلي"}), 500
+
+
 @ledger_bp.route('/api/inventory_breakdown', methods=['GET'])
 @login_required
 def get_inventory_breakdown():

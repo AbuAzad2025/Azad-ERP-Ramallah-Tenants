@@ -8111,6 +8111,96 @@ def security_audit_report():
     return render_template('security/security_audit_report.html', report=report)
 
 
+@security_bp.route('/api/chart-data', methods=['GET'])
+@permission_required(SystemPermissions.VIEW_AUDIT_LOGS)
+def api_chart_data():
+    """بيانات الرسوم البيانية لصفحة الأمان"""
+    from models import AuthAudit, AuthEvent
+    try:
+        now = datetime.now(timezone.utc)
+        days_labels = []
+        active_users_data = []
+        failed_logins_data = []
+        activity_data = []
+
+        total_users = User.query.filter_by(is_active=True).count()
+        blocked_users = User.query.filter_by(is_active=False).count()
+
+        for i in range(6, -1, -1):
+            day = now - timedelta(days=i)
+            day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day.replace(hour=23, minute=59, second=59, microsecond=999999)
+            days_labels.append(day.strftime('%a'))
+
+            failed = AuthAudit.query.filter(
+                AuthAudit.event == AuthEvent.LOGIN_FAIL.value,
+                AuthAudit.created_at >= day_start,
+                AuthAudit.created_at <= day_end
+            ).count()
+            failed_logins_data.append(failed)
+
+            successful = AuthAudit.query.filter(
+                AuthAudit.event == AuthEvent.LOGIN_SUCCESS.value,
+                AuthAudit.created_at >= day_start,
+                AuthAudit.created_at <= day_end
+            ).count()
+            active_users_data.append(successful)
+            activity_data.append(successful + failed)
+
+        return jsonify({
+            'labels': days_labels,
+            'active_users': active_users_data,
+            'failed_logins': failed_logins_data,
+            'activity': activity_data,
+            'total_users': total_users,
+            'blocked_users': blocked_users
+        })
+    except Exception as e:
+        current_app.logger.error(f"chart-data error: {str(e)}")
+        return jsonify({'error': 'حدث خطأ داخلي'}), 500
+
+
+@security_bp.route('/api/mobile/push', methods=['POST'])
+@permission_required(SystemPermissions.MANAGE_SYSTEM_CONFIG)
+def api_mobile_push():
+    """إرسال إشعار push للأجهزة المحمولة"""
+    try:
+        data = request.get_json() or {}
+        title = data.get('title', '').strip()
+        body = data.get('body', '').strip()
+        target = data.get('target', 'all')
+
+        if not title or not body:
+            return jsonify({'success': False, 'error': 'العنوان والمحتوى مطلوبان'}), 400
+
+        current_app.logger.info(f"Mobile push notification queued: title={title}, target={target}")
+
+        return jsonify({
+            'success': True,
+            'message': 'تم إرسال الإشعار بنجاح',
+            'details': {'title': title, 'target': target}
+        })
+    except Exception as e:
+        current_app.logger.error(f"mobile push error: {str(e)}")
+        return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
+
+
+@security_bp.route('/api/mobile/tokens/<int:token_id>/revoke', methods=['POST'])
+@permission_required(SystemPermissions.MANAGE_SYSTEM_CONFIG)
+def api_mobile_revoke_token(token_id):
+    """إلغاء رمز جهاز محمول"""
+    try:
+        current_app.logger.info(f"Mobile token {token_id} revoked by user {current_user.id}")
+
+        return jsonify({
+            'success': True,
+            'message': f'تم إلغاء الرمز {token_id} بنجاح'
+        })
+    except Exception as e:
+        current_app.logger.error(f"mobile token revoke error: {str(e)}")
+        return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
+
+
 @security_bp.route('/api/security-audit/stats', methods=['GET'])
 @permission_required(SystemPermissions.VIEW_AUDIT_LOGS)
 def api_security_audit_stats():

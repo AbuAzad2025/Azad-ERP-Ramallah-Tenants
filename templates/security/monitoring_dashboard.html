@@ -390,7 +390,7 @@ async function runVacuum() {
   if (!confirm('تنفيذ VACUUM على قاعدة البيانات؟')) return;
   
   try {
-    const response = await fetch('/security/api/maintenance/vacuum', {method: 'POST'});
+    const response = await fetch('/security/api/maintenance/vacuum', {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token() }}'}});
     const data = await response.json();
     if(typeof showToast !== 'undefined') showToast(data.message, 'success'); else alert(data.message);
     loadDBInfo();
@@ -401,7 +401,7 @@ async function runVacuum() {
 
 async function runAnalyze() {
   try {
-    const response = await fetch('/security/api/maintenance/analyze', {method: 'POST'});
+    const response = await fetch('/security/api/maintenance/analyze', {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token() }}'}});
     const data = await response.json();
     if(typeof showToast !== 'undefined') showToast(data.message, 'success'); else alert(data.message);
   } catch (err) {
@@ -411,7 +411,7 @@ async function runAnalyze() {
 
 async function runCheckpoint() {
   try {
-    const response = await fetch('/security/api/maintenance/checkpoint', {method: 'POST'});
+    const response = await fetch('/security/api/maintenance/checkpoint', {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token() }}'}});
     const data = await response.json();
     if(typeof showToast !== 'undefined') showToast(data.message, 'success'); else alert(data.message);
     loadDBInfo();
