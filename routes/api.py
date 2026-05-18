@@ -1376,12 +1376,12 @@ def api_update_warehouse(id):
         if share_percent not in (None, "", "None"):
             w.share_percent = float(share_percent)
     except Exception:
-        pass
+        current_app.logger.debug('numeric conversion failed in api.py', exc_info=True)
     try:
         if str(capacity or "").strip() != "":
             w.capacity = int(capacity)
     except Exception:
-        pass
+        current_app.logger.debug('numeric conversion failed in api.py', exc_info=True)
     if is_active is not None:
         w.is_active = bool(is_active)
     wt_effective = getattr(w.warehouse_type, "value", w.warehouse_type)

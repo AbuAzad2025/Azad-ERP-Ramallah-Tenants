@@ -340,13 +340,18 @@ def restore_sale(id):
     try:
         restore_record(id, Sale)
         return jsonify({"status": "success", "message": "تم استعادة عملية البيع بنجاح"})
-    except Exception as e:
+    except Exception:
         db.session.rollback()
         sale = db.session.get(Sale, id)
         if sale:
-            sale.is_archived = False
-            db.session.commit()
-            return jsonify({"status": "success", "message": "تم استعادة عملية البيع بنجاح (يدوي)"})
+            try:
+                sale.is_archived = False
+                db.session.commit()
+                return jsonify({"status": "success", "message": "تم استعادة عملية البيع بنجاح (يدوي)"})
+            except Exception:
+                db.session.rollback()
+                current_app.logger.exception('fallback restore_sale commit failed')
+                return jsonify({"error": "حدث خطأ داخلي"}), 500
         current_app.logger.exception('API error')
         return jsonify({"error": "حدث خطأ داخلي"}), 500
 
@@ -368,7 +373,7 @@ def dashboard():
             try:
                 total_revenue += convert_amount(amt, s.currency, "ILS", s.sale_date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     total_revenue = float(total_revenue)
     
     pending_sales = db.session.query(func.count(Sale.id)).filter(Sale.status == SaleStatus.DRAFT.value).scalar() or 0
@@ -386,7 +391,7 @@ def dashboard():
                 try:
                     spent += convert_amount(amt, s.currency, "ILS", s.sale_date)
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         if spent > 0:
             top_customers_data.append((cust.name, float(spent)))
     top_customers_data.sort(key=lambda x: x[1], reverse=True)
@@ -410,7 +415,7 @@ def dashboard():
                 try:
                     revenue_prod += convert_amount(line_amt, sale.currency, "ILS", sale.sale_date)
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         if sold > 0:
             top_products_data.append((prod.name, sold, float(revenue_prod)))
     top_products_data.sort(key=lambda x: x[1], reverse=True)
@@ -434,7 +439,7 @@ def dashboard():
             try:
                 monthly_revenue[ym] += convert_amount(amt, s.currency, "ILS", s.sale_date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     months, counts, revenue = [], [], []
     for yy, mm, cnt in monthly_raw:
@@ -474,7 +479,7 @@ def list_sales():
         if dt:
             q = q.filter(Sale.sale_date <= datetime.fromisoformat(dt))
     except ValueError:
-        pass
+        current_app.logger.debug('date parsing failed in sales.py', exc_info=True)
     inv = (f.get("invoice_no") or "").strip()
     if inv:
         q = q.filter(Sale.sale_number.ilike(f"%{inv}%"))
@@ -620,7 +625,7 @@ def list_sales():
         if dt:
             summary_q = summary_q.filter(Sale.sale_date <= datetime.fromisoformat(dt))
     except Exception:
-        pass
+        current_app.logger.debug('date parsing failed in sales.py', exc_info=True)
 
     fx_mult = case(
         (func.upper(func.coalesce(Sale.currency, "ILS")) == "ILS", 1),
@@ -1067,10 +1072,12 @@ def create_sale():
             return redirect(url_for("sales_bp.sale_detail", id=sale.id))
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f"❌ خطأ قاعدة بيانات أثناء الحفظ: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ خطأ قاعدة بيانات أثناء الحفظ', 'danger')
         except Exception as e:
             db.session.rollback()
-            flash(f"❌ خطأ أثناء الحفظ: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ خطأ أثناء الحفظ', 'danger')
     return render_template("sales/form.html", form=form, title="إنشاء فاتورة جديدة",
                            products=Product.query.order_by(Product.name).all(),
                            warehouses=Warehouse.query.order_by(Warehouse.name).all(),
@@ -1135,7 +1142,7 @@ def sale_detail(id: int):
                         try:
                             paid_ils += Decimal(str(convert_amount(amt, cur, 'ILS', getattr(p, 'payment_date', None))))
                         except Exception:
-                            pass
+                            current_app.logger.debug('Currency conversion skipped')
             if (sale.currency or 'ILS').upper() == 'ILS':
                 grand_total_ils = grand_total
             else:
@@ -1285,10 +1292,12 @@ def edit_sale(id):
             return redirect(url_for("sales_bp.sale_detail", id=sale.id))
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f"❌ خطأ قاعدة بيانات أثناء التعديل: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ خطأ قاعدة بيانات أثناء التعديل', 'danger')
         except Exception as e:
             db.session.rollback()
-            flash(f"❌ خطأ أثناء التعديل: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ خطأ أثناء التعديل', 'danger')
     return render_template("sales/form.html", form=form, sale=sale, title="تعديل الفاتورة",
                            products=Product.query.order_by(Product.name).all(),
                            warehouses=Warehouse.query.order_by(Warehouse.name).all(),
@@ -1346,7 +1355,7 @@ def quick_sell():
         try:
             run_sale_gl_sync_after_commit(sale.id)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to sync sale GL entries: {sale.id}')
         # تحديث رصيد العميل
         try:
             from utils.customer_balance_updater import update_customer_balance_components
@@ -1358,11 +1367,13 @@ def quick_sell():
         return redirect(url_for("sales_bp.sale_detail", id=sale.id))
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash(f"❌ فشل البيع السريع (قاعدة البيانات): {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('❌ فشل البيع السريع (قاعدة البيانات)', 'danger')
         return redirect(url_for("sales_bp.list_sales"))
     except Exception as e:
         db.session.rollback()
-        flash(f"❌ فشل البيع السريع: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('❌ فشل البيع السريع', 'danger')
         return redirect(url_for("sales_bp.list_sales"))
 
  
@@ -1418,7 +1429,8 @@ def change_status(id: int, status: str):
         flash("✅ تم تحديث الحالة.", "success")
     except (SQLAlchemyError, ValueError) as e:
         db.session.rollback()
-        flash(f"❌ خطأ أثناء تحديث الحالة: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('❌ خطأ أثناء تحديث الحالة', 'danger')
     return redirect(url_for("sales_bp.sale_detail", id=sale.id))
 
 @sales_bp.route("/<int:id>/invoice", methods=["GET"], endpoint="generate_invoice")
@@ -1481,7 +1493,7 @@ def generate_invoice(id: int):
                             try:
                                 amt = D(str(_convert_amount(amt, cur, sale_curr, getattr(p, "payment_date", None))))
                             except Exception:
-                                pass
+                                current_app.logger.debug('Currency conversion skipped')
                         paid_display += amt
                 else:
                     amt = D(str(getattr(p, "total_amount", 0) or 0))
@@ -1490,7 +1502,7 @@ def generate_invoice(id: int):
                         try:
                             amt = D(str(_convert_amount(amt, cur, sale_curr, getattr(p, "payment_date", None))))
                         except Exception:
-                            pass
+                            current_app.logger.debug('Currency conversion skipped')
                     paid_display += amt
         sale.total_paid = float(paid_display.quantize(TWOPLACES, rounding=ROUND_HALF_UP))
         sale.balance_due = float((grand_total - paid_display).quantize(TWOPLACES, rounding=ROUND_HALF_UP))

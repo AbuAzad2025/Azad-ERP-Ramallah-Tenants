@@ -331,7 +331,7 @@ def _get_ai_suggestions():
         if failed:
             suggestions.append({"type": "warning", "title": "مراجعة مطلوبة", "action": f"يوجد {failed} مهمة تدريب فاشلة في السجل."})
     except Exception:
-        pass
+        current_app.logger.debug('numeric conversion failed in ai_routes.py', exc_info=True)
     return suggestions
 
 

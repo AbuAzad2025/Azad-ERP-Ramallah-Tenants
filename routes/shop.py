@@ -123,7 +123,7 @@ def _online_scope_ids():
             g._online_ids = ids
             return g._online_ids
     except Exception:
-        pass
+        current_app.logger.debug('database query failed in shop.py', exc_info=True)
     try:
         online_val = getattr(WarehouseType, "ONLINE").value if hasattr(WarehouseType, "ONLINE") else "ONLINE"
         q = Warehouse.query.filter(Warehouse.is_active.is_(True))
@@ -134,7 +134,7 @@ def _online_scope_ids():
             g._online_ids = ids
             return g._online_ids
     except Exception:
-        pass
+        current_app.logger.debug('attribute access failed in shop.py', exc_info=True)
     ids = current_app.config.get("SHOP_WAREHOUSE_IDS")
     g._online_ids = ids or None
     return g._online_ids
@@ -478,7 +478,7 @@ def _apply_online_scope(q):
         try:
             q = q.filter(Product.is_published.is_(True))
         except Exception:
-            pass
+            current_app.logger.debug('database query failed in shop.py', exc_info=True)
     if hasattr(Product, "deleted_at"):
         q = q.filter(Product.deleted_at.is_(None))
     company_ids = current_app.config.get("SHOP_WAREHOUSE_COMPANY_IDS")
@@ -498,7 +498,7 @@ def catalog():
                 try:
                     pre = pre.filter(Product.is_published.is_(True))
                 except Exception:
-                    pass
+                    current_app.logger.debug('database query failed in shop.py', exc_info=True)
             if qparam:
                 like = f"%{qparam}%"
                 pre = pre.filter((Product.name.ilike(like)) | (Product.sku.ilike(like)) | (Product.part_number.ilike(like)))
@@ -584,7 +584,7 @@ def products():
             try:
                 pre = pre.filter(Product.is_published.is_(True))
             except Exception:
-                pass
+                current_app.logger.debug('database query failed in shop.py', exc_info=True)
         if qparam:
             like = f"%{qparam}%"
             pre = pre.filter(
@@ -635,7 +635,7 @@ def api_products():
                 try:
                     pre = pre.filter(Product.is_published.is_(True))
                 except Exception:
-                    pass
+                    current_app.logger.debug('database query failed in shop.py', exc_info=True)
             if qparam:
                 like = f"%{qparam}%"
                 pre = pre.filter(
@@ -786,11 +786,12 @@ def add_to_cart(product_id):
                 **nums
             })
         return _resp("تمت إضافة المنتج إلى السلة.", "success", code=200)
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         db.session.rollback()
+        current_app.logger.exception('internal error')
         if _json_requested():
-            return jsonify({"ok": False, "message": f"خطأ أثناء الإضافة: {e}"}), 500
-        return _resp(f"خطأ أثناء الإضافة: {e}", "danger")
+            return jsonify({"ok": False, "message": "خطأ أثناء الإضافة"}), 500
+        return _resp("خطأ أثناء الإضافة", "danger")
 
 @shop_bp.route("/cart", endpoint="cart")
 @online_customer_required
@@ -1043,7 +1044,7 @@ def checkout():
                             f"✅ تم تأكيد طلبك {preorder.order_number} وإتمام الدفع بنجاح. تم دفع عربون {prepaid} {getattr(g.online_customer,'currency','ILS')}"
                         )
             except Exception:
-                pass
+                current_app.logger.warning('currency conversion failed silently in shop.py', exc_info=True)
             if request.is_json or request.args.get("format") == "json":
                 return _resp(
                     "تم إتمام الطلب والدفع بنجاح!",
@@ -1053,9 +1054,10 @@ def checkout():
                     data={"preorder_id": preorder.id},
                 )
             return redirect(url_for("shop.preorder_receipt", preorder_id=preorder.id))
-        except SQLAlchemyError as e:
+        except SQLAlchemyError:
             db.session.rollback()
-            return _resp(f"خطأ أثناء الدفع: {e}", "danger")
+            current_app.logger.exception('internal error')
+            return _resp("خطأ أثناء الدفع", "danger")
     return render_template("shop/pay_online.html", 
                           cart=cart, 
                           subtotal=subtotal, 
@@ -1136,9 +1138,10 @@ def cancel_preorder(preorder_id):
         with db.session.begin_nested():
             po.status = "CANCELLED"
         return _resp("تم إلغاء الطلب.", "success", code=200, to="shop.preorder_list")
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         db.session.rollback()
-        return _resp(f"خطأ أثناء الإلغاء: {e}", "danger", to="shop.preorder_list")
+        current_app.logger.exception('internal error')
+        return _resp("خطأ أثناء الإلغاء", "danger", to="shop.preorder_list")
 
 @shop_bp.route("/admin/preorders", endpoint="admin_preorders")
 @super_admin_required
@@ -1181,13 +1184,14 @@ def admin_categories_quick_create():
                 if parent:
                     cat.parent = parent
             except Exception:
-                pass
+                current_app.logger.debug('numeric conversion failed in shop.py', exc_info=True)
         db.session.add(cat)
         db.session.commit()
         return jsonify({"ok": True, "id": cat.id, "name": cat.name}), 201
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         db.session.rollback()
-        return jsonify({"ok": False, "error": f"{e}"}), 400
+        current_app.logger.exception('internal error')
+        return jsonify({"ok": False, "error": "خطأ في قاعدة البيانات"}), 400
 
 @shop_bp.route("/admin/products/new", methods=["GET", "POST"], endpoint="admin_product_new")
 @super_admin_required
@@ -1288,7 +1292,8 @@ def admin_product_new():
             return redirect(url_for("shop.admin_products"))
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f"خطأ: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('خطأ', 'danger')
     return render_template("shop/admin_product_form.html", form=form, product=None)
 
 @shop_bp.route("/admin/products/<int:pid>/edit", methods=["GET", "POST"], endpoint="admin_product_edit")
@@ -1366,7 +1371,8 @@ def admin_product_edit(pid):
             return redirect(url_for("shop.admin_products"))
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f"خطأ: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('خطأ', 'danger')
     return render_template("shop/admin_product_form.html", form=form, product=product)
 
 @shop_bp.route("/admin/products/<int:pid>/update_fields", methods=["POST"], endpoint="admin_product_update_fields")
@@ -1439,9 +1445,10 @@ def admin_product_update_fields(pid):
             },
             to="shop.admin_products",
         )
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         db.session.rollback()
-        return _resp(f"خطأ أثناء التحديث: {e}", "danger", code=400, to="shop.admin_products")
+        current_app.logger.exception('internal error')
+        return _resp("خطأ أثناء التحديث", "danger", code=400, to="shop.admin_products")
 
 @shop_bp.route("/admin/products/<int:pid>/toggle_active", methods=["POST"], endpoint="admin_product_toggle_active")
 @super_admin_required
@@ -1451,9 +1458,10 @@ def admin_product_toggle_active(pid):
     try:
         db.session.commit()
         return _resp("تم تحديث حالة المنتج.", "success", code=200, to="shop.admin_products")
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         db.session.rollback()
-        return _resp(f"خطأ أثناء التحديث: {e}", "danger", code=400, to="shop.admin_products")
+        current_app.logger.exception('internal error')
+        return _resp("خطأ أثناء التحديث", "danger", code=400, to="shop.admin_products")
 
 @shop_bp.route("/admin/products/<int:pid>/delete", methods=["POST"], endpoint="admin_product_delete")
 @super_admin_required
@@ -1480,7 +1488,8 @@ def admin_product_delete(pid):
         flash("تم حذف المنتج", "info")
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash(f"خطأ: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('خطأ', 'danger')
     return redirect(url_for("shop.admin_products"))
 
 @shop_bp.route("/payments/<int:op_id>/refund", methods=["POST"], endpoint="refund_payment")
@@ -1498,9 +1507,10 @@ def refund_payment(op_id: int):
             op.status = "REFUNDED"
             db.session.add(op)
         return _resp("✅ تم استرجاع الدفعة.", "success", to="shop.admin_preorders")
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         db.session.rollback()
-        return _resp(f"خطأ أثناء الاسترجاع: {e}", "danger", to="shop.admin_preorders")
+        current_app.logger.exception('internal error')
+        return _resp("خطأ أثناء الاسترجاع", "danger", to="shop.admin_preorders")
 
 @shop_bp.route("/archive-preorder/<int:preorder_id>", methods=["POST"])
 @login_required

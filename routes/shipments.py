@@ -29,7 +29,7 @@ def _safe_get_id(obj):
         if isinstance(obj, int):
             return obj
     except Exception:
-        pass
+        current_app.logger.debug('operation failed in shipments.py', exc_info=True)
     return None
 
 shipments_bp = Blueprint("shipments_bp", __name__, url_prefix="/shipments")
@@ -726,10 +726,12 @@ def create_shipment():
             return redirect(url_for("warehouse_bp.detail", warehouse_id=dest_id)) if dest_id else redirect(url_for("shipments_bp.list_shipments"))
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f"❌ خطأ أثناء إنشاء الشحنة: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ خطأ أثناء إنشاء الشحنة', 'danger')
         except Exception as e:
             db.session.rollback()
-            flash(f"❌ تعذر إتمام العملية: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ تعذر إتمام العملية', 'danger')
 
     return render_template("warehouses/shipment_form.html", form=form, shipment=None)
 @shipments_bp.route("/<int:id>/edit", methods=["GET", "POST"], endpoint="edit_shipment")
@@ -959,13 +961,15 @@ def edit_shipment(id: int):
             if _wants_json():
                 current_app.logger.exception('API error')
                 return jsonify({"error": "حدث خطأ داخلي"}), 500
-            flash(f"❌ خطأ أثناء التحديث: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ خطأ أثناء التحديث', 'danger')
         except Exception as e:
             db.session.rollback()
             if _wants_json():
                 current_app.logger.exception('API error')
                 return jsonify({"error": "حدث خطأ داخلي"}), 400
-            flash(f"❌ خطأ أثناء ضبط المخزون: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ خطأ أثناء ضبط المخزون', 'danger')
 
     return render_template("warehouses/shipment_form.html", form=form, shipment=sh)
 
@@ -1002,13 +1006,15 @@ def delete_shipment(id: int):
         if _wants_json():
             current_app.logger.exception('API error')
             return jsonify({"error": "حدث خطأ داخلي"}), 500
-        flash(f"❌ خطأ من قاعدة البيانات أثناء الحذف: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('❌ خطأ من قاعدة البيانات أثناء الحذف', 'danger')
     except Exception as e:
         db.session.rollback()
         if _wants_json():
             current_app.logger.exception('API error')
             return jsonify({"error": "حدث خطأ داخلي"}), 400
-        flash(f"❌ خطأ غير متوقع أثناء الحذف: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('❌ خطأ غير متوقع أثناء الحذف', 'danger')
 
     return redirect(url_for("warehouse_bp.detail", warehouse_id=dest_id)) if dest_id else redirect(url_for("shipments_bp.list_shipments"))
 
@@ -1043,7 +1049,7 @@ def shipment_detail(id: int):
                 try:
                     total_paid += convert_amount(amt, p.currency, sh.currency or "ILS", p.payment_date)
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         total_paid = float(total_paid)
     except Exception:
         total_paid = 0.0
@@ -1155,7 +1161,8 @@ def mark_arrived(id: int):
         if _wants_json():
             current_app.logger.exception('API error')
             return jsonify({"error": "حدث خطأ داخلي"}), 500
-        flash(f"❌ تعذّر اعتماد الوصول: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('❌ تعذّر اعتماد الوصول', 'danger')
     return redirect(url_for("shipments_bp.shipment_detail", id=sh.id))
 
 
@@ -1191,7 +1198,8 @@ def cancel_shipment(id: int):
         if _wants_json():
             current_app.logger.exception('API error')
             return jsonify({"error": "حدث خطأ داخلي"}), 500
-        flash(f"❌ تعذّر الإلغاء: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('❌ تعذّر الإلغاء', 'danger')
     return redirect(url_for("shipments_bp.shipment_detail", id=sh.id))
 
 
@@ -1226,7 +1234,8 @@ def mark_in_transit(id):
             if _wants_json():
                 current_app.logger.exception('API error')
                 return jsonify({"error": "حدث خطأ داخلي"}), 500
-            flash(f"❌ تعذّر التحديث: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ تعذّر التحديث', 'danger')
     return redirect(url_for("shipments_bp.shipment_detail", id=sh.id))
 
 
@@ -1261,7 +1270,8 @@ def mark_in_customs(id):
             if _wants_json():
                 current_app.logger.exception('API error')
                 return jsonify({"error": "حدث خطأ داخلي"}), 500
-            flash(f"❌ تعذّر التحديث: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ تعذّر التحديث', 'danger')
     return redirect(url_for("shipments_bp.shipment_detail", id=sh.id))
 
 
@@ -1391,13 +1401,15 @@ def mark_delivered(id):
             if _wants_json():
                 current_app.logger.exception('API error')
                 return jsonify({"error": "حدث خطأ داخلي"}), 400
-            flash(f"{e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ', 'danger')
         except Exception as e:
             db.session.rollback()
             if _wants_json():
                 current_app.logger.exception('API error')
                 return jsonify({"error": "حدث خطأ داخلي"}), 500
-            flash(f"❌ تعذّر التحديث: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ تعذّر التحديث', 'danger')
     
     return redirect(url_for("shipments_bp.shipment_detail", id=sh.id))
 
@@ -1435,7 +1447,8 @@ def mark_returned(id):
             if _wants_json():
                 current_app.logger.exception('API error')
                 return jsonify({"error": "حدث خطأ داخلي"}), 500
-            flash(f"❌ تعذّر التحديث: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ تعذّر التحديث', 'danger')
     return redirect(url_for("shipments_bp.shipment_detail", id=sh.id))
 
 
@@ -1465,5 +1478,6 @@ def update_delivery_attempt(id):
         if _wants_json():
             current_app.logger.exception('API error')
             return jsonify({"error": "حدث خطأ داخلي"}), 500
-        flash(f"❌ تعذّر التحديث: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('❌ تعذّر التحديث', 'danger')
     return redirect(url_for("shipments_bp.shipment_detail", id=sh.id))

@@ -78,7 +78,7 @@ def dashboard():
             if utils.is_super():
                 return True
         except Exception:
-            pass
+            current_app.logger.debug('operation failed in main.py', exc_info=True)
         try:
             targets = utils._expand_perms(code)
         except Exception:
@@ -149,7 +149,7 @@ def dashboard():
             try:
                 return value * Decimal(str(fx_used))
             except Exception:
-                pass
+                current_app.logger.debug('numeric conversion failed in main.py', exc_info=True)
         try:
             key = (code, at_dt.date() if isinstance(at_dt, datetime) else None)
             rate = fx_cache.get(key)
@@ -162,7 +162,7 @@ def dashboard():
             if rate and rate > 0:
                 return value * Decimal(str(rate))
         except Exception:
-            pass
+            current_app.logger.warning('cache operation failed silently in main.py', exc_info=True)
         try:
             return convert_amount(value, code, "ILS", at_dt)
         except Exception:
@@ -247,7 +247,7 @@ def dashboard():
                     cache.set(cache_key, float(result), timeout=300)
                     return float(result)
                 except Exception:
-                    pass
+                    current_app.logger.warning('cache operation failed silently in main.py', exc_info=True)
             
             if model.__name__ == 'Supplier':
                 try:
@@ -255,7 +255,7 @@ def dashboard():
                     cache.set(cache_key, float(result), timeout=300)
                     return float(result)
                 except Exception:
-                    pass
+                    current_app.logger.warning('cache operation failed silently in main.py', exc_info=True)
             
             try:
                 balance_attr = getattr(model, 'balance', None)
@@ -264,7 +264,7 @@ def dashboard():
                     cache.set(cache_key, float(result), timeout=300)
                     return float(result)
             except Exception:
-                pass
+                current_app.logger.warning('cache operation failed silently in main.py', exc_info=True)
             
             entities = model.query.options(load_only(model.id)).limit(10000).all()
             for entity in entities:
@@ -919,7 +919,7 @@ def cleanup_old_backups(db_dir, sql_dir, keep_days=7, keep_weekly=4, keep_monthl
                     try:
                         filepath.unlink()
                     except Exception:
-                        pass
+                        current_app.logger.debug('file operation failed in main.py', exc_info=True)
             elif age_days <= keep_days + (keep_weekly * 7) + (keep_monthly * 30):
                 if len(monthly_backups) < keep_monthly:
                     monthly_backups.append(filepath)
@@ -927,9 +927,9 @@ def cleanup_old_backups(db_dir, sql_dir, keep_days=7, keep_weekly=4, keep_monthl
                     try:
                         filepath.unlink()
                     except Exception:
-                        pass
+                        current_app.logger.debug('file operation failed in main.py', exc_info=True)
             else:
                 try:
                     filepath.unlink()
                 except Exception:
-                    pass
+                    current_app.logger.debug('file operation failed in main.py', exc_info=True)

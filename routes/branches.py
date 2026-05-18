@@ -88,7 +88,7 @@ def create_branch():
                     b.geo_lat = float(geo_lat)
                     b.geo_lng = float(geo_lng)
                 except (ValueError, TypeError):
-                    pass
+                    current_app.logger.debug('numeric conversion failed in branches.py', exc_info=True)
             
             manager_employee_id = request.form.get('manager_employee_id')
             if manager_employee_id and manager_employee_id != '0':
@@ -103,7 +103,8 @@ def create_branch():
             flash("❌ رمز الفرع مستخدم مسبقاً", "danger")
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f"❌ خطأ في إنشاء الفرع: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ خطأ في إنشاء الفرع', 'danger')
     
     employees = Employee.query.order_by(Employee.name).all()
     return render_template('branches/form.html', branch=None, employees=employees)
@@ -157,7 +158,8 @@ def edit_branch(branch_id):
             flash("❌ رمز الفرع مستخدم مسبقاً", "danger")
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f"❌ خطأ في تحديث الفرع: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ خطأ في تحديث الفرع', 'danger')
     
     employees = Employee.query.order_by(Employee.name).all()
     return render_template('branches/form.html', branch=b, employees=employees)
@@ -185,7 +187,8 @@ def archive_branch(branch_id):
         flash(f"✅ تم أرشفة الفرع: {b.name}", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash(f"❌ خطأ في الأرشفة: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('❌ خطأ في الأرشفة', 'danger')
     
     return redirect(url_for('branches_bp.list_branches'))
 
@@ -207,7 +210,8 @@ def restore_branch(branch_id):
         flash(f"✅ تم استعادة الفرع: {b.name}", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash(f"❌ خطأ في الاستعادة: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('❌ خطأ في الاستعادة', 'danger')
     
     return redirect(url_for('branches_bp.list_branches'))
 
@@ -247,7 +251,7 @@ def branch_dashboard(branch_id):
             try:
                 monthly_expenses += convert_amount(amt, exp.currency, "ILS", exp.date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     stats['monthly_expenses'] = float(monthly_expenses)
     
@@ -307,7 +311,7 @@ def create_site(branch_id):
                     s.geo_lat = float(geo_lat)
                     s.geo_lng = float(geo_lng)
                 except (ValueError, TypeError):
-                    pass
+                    current_app.logger.debug('numeric conversion failed in branches.py', exc_info=True)
             
             manager_employee_id = request.form.get('manager_employee_id')
             if manager_employee_id and manager_employee_id != '0':
@@ -322,7 +326,8 @@ def create_site(branch_id):
             flash("❌ رمز الموقع مستخدم مسبقاً في هذا الفرع", "danger")
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f"❌ خطأ في إنشاء الموقع: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ خطأ في إنشاء الموقع', 'danger')
     
     employees = Employee.query.filter_by(branch_id=branch_id).order_by(Employee.name).all()
     return render_template('branches/site_form.html', branch=branch, site=None, employees=employees)
@@ -371,7 +376,8 @@ def edit_site(site_id):
             flash("❌ رمز الموقع مستخدم مسبقاً", "danger")
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f"❌ خطأ في تحديث الموقع: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('❌ خطأ في تحديث الموقع', 'danger')
     
     employees = Employee.query.filter_by(branch_id=s.branch_id).order_by(Employee.name).all()
     return render_template('branches/site_form.html', branch=s.branch, site=s, employees=employees)
@@ -394,7 +400,8 @@ def archive_site(site_id):
         flash(f"✅ تم أرشفة الموقع: {s.name}", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash(f"❌ خطأ في الأرشفة: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('❌ خطأ في الأرشفة', 'danger')
     
     return redirect(url_for('branches_bp.list_sites', branch_id=s.branch_id))
 
@@ -427,7 +434,7 @@ def branch_report(branch_id):
             try:
                 expenses_total_ils += convert_amount(amt, exp.currency, "ILS", exp.date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     stats = {
         'employees_count': Employee.query.filter_by(branch_id=branch_id).count(),

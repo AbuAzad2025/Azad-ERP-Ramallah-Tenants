@@ -337,7 +337,7 @@ def db_merger():
             tables = inspector.get_table_names()
             stats['total_tables'] = len(tables)
         except Exception:
-            pass
+            current_app.logger.warning('financial operation failed silently in advanced_control.py', exc_info=True)
         
     except Exception as e:
         current_app.logger.exception("Error in db_merger stats")
@@ -1055,7 +1055,7 @@ def delete_backup(filename):
                 try:
                     os.remove(info_file)
                 except Exception:
-                    pass
+                    current_app.logger.debug('file operation failed in advanced_control.py', exc_info=True)
             flash(f'✅ تم حذف النسخة: {filename}', 'success')
             _log_owner_action('backup.delete', filename)
         else:
@@ -1295,7 +1295,7 @@ def _count_all_records():
                 cache.set(cache_key, approx_val, timeout=3600)
                 return approx_val
             except Exception:
-                pass
+                current_app.logger.warning('cache operation failed silently in advanced_control.py', exc_info=True)
 
         total = 0
         preparer = db.engine.dialect.identifier_preparer
@@ -3450,7 +3450,7 @@ class MainActivity : AppCompatActivity() {{
                     with open(os.path.join(res_dir, d, "ic_launcher.png"), "wb") as f:
                         f.write(icon_bytes)
         except Exception:
-            pass
+            current_app.logger.debug('file operation failed in advanced_control.py', exc_info=True)
 
 
 def _create_ios_project(output_dir, app_name, package_name, modules, icon):
@@ -3764,12 +3764,12 @@ def financial_control():
         if action == 'save_budget_settings':
             settings_data = {
                 'enable_budget_module': request.form.get('enable_budget_module') == 'on',
-                'fiscal_year_start_month': int(request.form.get('fiscal_year_start_month', 1)),
+                'fiscal_year_start_month': _to_float(request.form.get('fiscal_year_start_month', 1), 1),
                 'budget_level': request.form.get('budget_level', 'ACCOUNT_BRANCH'),
                 'commitment_mode': request.form.get('commitment_mode', 'ALL'),
                 'enable_budget_alerts': request.form.get('enable_budget_alerts') == 'on',
-                'budget_threshold_warning': float(request.form.get('budget_threshold_warning', 80)),
-                'budget_threshold_critical': float(request.form.get('budget_threshold_critical', 95)),
+                'budget_threshold_warning': _to_float(request.form.get('budget_threshold_warning', 80), 80),
+                'budget_threshold_critical': _to_float(request.form.get('budget_threshold_critical', 95), 95),
                 'enable_budget_blocking': request.form.get('enable_budget_blocking') == 'on',
             }
             
@@ -3797,9 +3797,9 @@ def financial_control():
                 'enable_fixed_assets': request.form.get('enable_fixed_assets') == 'on',
                 'enable_auto_depreciation': request.form.get('enable_auto_depreciation') == 'on',
                 'depreciation_frequency': request.form.get('depreciation_frequency', 'YEARLY'),
-                'depreciation_day_of_month': int(request.form.get('depreciation_day_of_month', 1)),
+                'depreciation_day_of_month': _to_float(request.form.get('depreciation_day_of_month', 1), 1),
                 'auto_create_asset_from_expense': request.form.get('auto_create_asset_from_expense') == 'on',
-                'asset_capitalization_threshold': float(request.form.get('asset_capitalization_threshold', 1000)),
+                'asset_capitalization_threshold': _to_float(request.form.get('asset_capitalization_threshold', 1000), 1000),
             }
             
             for key, value in settings_data.items():
@@ -4113,7 +4113,7 @@ def database_optimizer():
                 try:
                     db.session.rollback()
                 except Exception:
-                    pass
+                    current_app.logger.warning('rollback after error failed silently in advanced_control.py', exc_info=True)
                 with db.engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
                     conn.execute(text("VACUUM (ANALYZE)"))
                 flash('✅ تم تحسين قاعدة البيانات بنجاح', 'success')

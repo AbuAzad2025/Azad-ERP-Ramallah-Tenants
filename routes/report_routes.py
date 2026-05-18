@@ -436,7 +436,7 @@ def _to_ils_with_fx(amount, currency, fx_used, ref_date):
         try:
             return value * Decimal(str(fx_used))
         except Exception:
-            pass
+            current_app.logger.debug('numeric conversion failed in report_routes.py', exc_info=True)
     try:
         return convert_amount(value, code, "ILS", ref_date)
     except Exception:
@@ -1276,7 +1276,7 @@ def payments_advanced_report():
             try:
                 return value * Decimal(str(fx_used))
             except Exception:
-                pass
+                current_app.logger.debug('numeric conversion failed in report_routes.py', exc_info=True)
         return _to_ils(value, code, ref_date)
 
     for p in payments:
@@ -2054,7 +2054,7 @@ def sales_advanced_report():
         try:
             base_q = base_q.filter(Sale.customer_id == int(customer_id))
         except Exception:
-            pass
+            current_app.logger.debug('numeric conversion failed in report_routes.py', exc_info=True)
     
     employee_id = request.args.get("employee_id")
 
@@ -2067,7 +2067,7 @@ def sales_advanced_report():
         try:
             base_q = base_q.filter(Sale.seller_employee_id == int(employee_id))
         except Exception:
-            pass
+            current_app.logger.debug('numeric conversion failed in report_routes.py', exc_info=True)
     
     fx_mult = case(
         (func.upper(func.coalesce(Sale.currency, "ILS")) == "ILS", 1),
@@ -2098,7 +2098,7 @@ def sales_advanced_report():
         try:
             items_q = items_q.filter(Sale.customer_id == int(customer_id))
         except Exception:
-            pass
+            current_app.logger.debug('numeric conversion failed in report_routes.py', exc_info=True)
     if status_filter:
         items_q = items_q.filter(Sale.status == status_filter)
     else:
@@ -2107,7 +2107,7 @@ def sales_advanced_report():
         try:
             items_q = items_q.filter(Sale.seller_employee_id == int(employee_id))
         except Exception:
-            pass
+            current_app.logger.debug('numeric conversion failed in report_routes.py', exc_info=True)
 
     items_row = items_q.first()
     total_items = int(getattr(items_row, "total_items", 0) or 0)
@@ -2133,7 +2133,7 @@ def sales_advanced_report():
         try:
             setattr(s, "line_count", int(line_counts.get(s.id, 0)))
         except Exception:
-            pass
+            current_app.logger.debug('numeric conversion failed in report_routes.py', exc_info=True)
         try:
             if (getattr(s, "currency", "ILS") or "ILS").upper() == "ILS":
                 s.total_amount_ils = float(s.total_amount or 0)
@@ -2212,7 +2212,7 @@ def sales_advanced_report():
         try:
             top_rows = top_rows.filter(Sale.customer_id == int(customer_id))
         except Exception:
-            pass
+            current_app.logger.debug('numeric conversion failed in report_routes.py', exc_info=True)
     if status_filter:
         top_rows = top_rows.filter(Sale.status == status_filter)
     else:
@@ -2221,7 +2221,7 @@ def sales_advanced_report():
         try:
             top_rows = top_rows.filter(Sale.seller_employee_id == int(employee_id))
         except Exception:
-            pass
+            current_app.logger.debug('numeric conversion failed in report_routes.py', exc_info=True)
     top_rows = (
         top_rows.group_by(Product.id, Product.name)
         .order_by(func.coalesce(func.sum(line_total_expr * fx_mult), 0).desc())
@@ -2292,12 +2292,12 @@ def expenses_report():
         try:
             q = q.filter(Expense.warehouse_id == int(warehouse_id))
         except Exception:
-            pass
+            current_app.logger.debug('numeric conversion failed in report_routes.py', exc_info=True)
     if partner_id:
         try:
             q = q.filter(Expense.partner_id == int(partner_id))
         except Exception:
-            pass
+            current_app.logger.debug('numeric conversion failed in report_routes.py', exc_info=True)
     if is_paid in ["true", "1"]:
         q = q.filter(Expense.is_paid.is_(True))
     elif is_paid in ["false", "0"]:
@@ -2340,7 +2340,7 @@ def expenses_report():
             try:
                 return value * Decimal(str(fx_used))
             except Exception:
-                pass
+                current_app.logger.debug('numeric conversion failed in report_routes.py', exc_info=True)
         try:
             return convert_amount(value, code, "ILS", ref_date)
         except Exception:
@@ -3454,7 +3454,7 @@ def partner_detail_report(partner_id):
         try:
             total_inventory = Decimal(str(inv_total or 0))
         except Exception:
-            pass
+            current_app.logger.warning('financial operation failed silently in report_routes.py', exc_info=True)
 
     partner_breakdown = None
     try:

@@ -27,7 +27,7 @@ def _role_level_by_name(role_name: str) -> int:
         if isinstance(info, dict):
             return int(info.get("level", 999))
     except Exception:
-        pass
+        current_app.logger.debug('numeric conversion failed in users.py', exc_info=True)
     return 999
 
 def _actor_level() -> int:
@@ -439,7 +439,7 @@ def create_user():
             try:
                 utils.clear_user_permission_cache(user.id)
             except Exception:
-                pass
+                current_app.logger.warning('DB commit failed silently')
 
             if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return jsonify(id=user.id, username=user.username), 201
@@ -452,7 +452,8 @@ def create_user():
             flash("اسم المستخدم أو البريد الإلكتروني مستخدم.", "danger")
         except Exception as e:
             db.session.rollback()
-            flash(f"خطأ أثناء الإضافة: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('خطأ أثناء الإضافة', 'danger')
 
     return render_template(
         "users/form.html",
@@ -553,7 +554,7 @@ def edit_user(user_id):
             try:
                 utils.clear_user_permission_cache(user.id)
             except Exception:
-                pass
+                current_app.logger.warning('DB commit failed silently')
 
             flash("تم تحديث المستخدم.", "success")
             return redirect(url_for("users_bp.list_users"))
@@ -563,7 +564,8 @@ def edit_user(user_id):
             flash("لا يمكن استخدام هذا البريد/الاسم.", "danger")
         except Exception as e:
             db.session.rollback()
-            flash(f"خطأ أثناء التحديث: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('خطأ أثناء التحديث', 'danger')
 
     return render_template(
         "users/form.html",
@@ -638,6 +640,7 @@ def delete_user(user_id):
         flash("لا يمكن حذف المستخدم لوجود معاملات مرتبطة به.", "danger")
     except Exception as e:
         db.session.rollback()
-        flash(f"حدث خطأ أثناء الحذف: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ أثناء الحذف', 'danger')
 
     return redirect(url_for("users_bp.list_users"))

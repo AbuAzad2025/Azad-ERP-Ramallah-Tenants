@@ -782,7 +782,7 @@ def _calculate_smart_supplier_balance(supplier_id: int, date_from: datetime, dat
             try:
                 opening_balance = _convert_to_ils(opening_balance, supplier_currency, date_from)
             except Exception:
-                pass
+                current_app.logger.warning('currency conversion failed silently in supplier_settlements.py', exc_info=True)
         
         exchange_items = _get_supplier_exchange_items(supplier_id, date_from, date_to)
         
@@ -833,7 +833,7 @@ def _calculate_smart_supplier_balance(supplier_id: int, date_from: datetime, dat
                     amt_ils = _convert_to_ils(amt, exp.currency, exp.date)
                     expenses_service_total += amt_ils
                 except Exception:
-                    pass
+                    current_app.logger.warning('currency conversion failed silently in supplier_settlements.py', exc_info=True)
             
             exp_type_name = getattr(getattr(exp, 'type', None), 'name', 'توريد خدمة') if hasattr(exp, 'type') and exp.type else 'توريد خدمة'
             expenses_items.append({
@@ -857,7 +857,7 @@ def _calculate_smart_supplier_balance(supplier_id: int, date_from: datetime, dat
                     amt_ils = _convert_to_ils(amt, exp.currency, exp.date)
                     expenses_normal_total += amt_ils
                 except Exception:
-                    pass
+                    current_app.logger.warning('currency conversion failed silently in supplier_settlements.py', exc_info=True)
         
         sale_returns_from_supplier = Decimal('0.00')
         sale_returns_from_customer = Decimal('0.00')
@@ -876,7 +876,7 @@ def _calculate_smart_supplier_balance(supplier_id: int, date_from: datetime, dat
                     try:
                         amt = _convert_to_ils(amt, sr.currency, sr.created_at)
                     except Exception:
-                        pass
+                        current_app.logger.warning('currency conversion failed silently in supplier_settlements.py', exc_info=True)
                 
                 has_supplier_liability = SaleReturnLine.query.filter(
                     SaleReturnLine.sale_return_id == sr.id,

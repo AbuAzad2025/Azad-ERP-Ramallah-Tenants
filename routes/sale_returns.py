@@ -161,7 +161,7 @@ def create_return(sale_id=None):
             if returns_wh:
                 form.warehouse_id.data = int(returns_wh)
         except Exception:
-            pass
+            current_app.logger.debug('optional import failed in sale_returns.py', exc_info=True)
 
     if form.validate_on_submit():
         try:

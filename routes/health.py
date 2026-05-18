@@ -52,7 +52,7 @@ def _check_database() -> Dict[str, Any]:
                     }
                     cache.set(cache_key, stats["records"], timeout=60)
             except Exception:
-                pass
+                current_app.logger.warning('cache operation failed silently in health.py', exc_info=True)
 
             return stats
         else:

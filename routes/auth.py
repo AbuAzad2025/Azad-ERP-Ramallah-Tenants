@@ -58,7 +58,7 @@ def _redirect_back_or(default_endpoint: str, **kwargs):
                 from utils.security import log_suspicious_activity
                 log_suspicious_activity('suspicious_redirect', {'url': nxt[:100]})
             except ImportError:
-                pass
+                current_app.logger.debug('optional import failed in auth.py', exc_info=True)
             return redirect(url_for(default_endpoint, **kwargs))
         return redirect(nxt)
     elif nxt:
@@ -67,7 +67,7 @@ def _redirect_back_or(default_endpoint: str, **kwargs):
             from utils.security import log_suspicious_activity
             log_suspicious_activity('open_redirect_attempt', {'url': nxt[:100]})
         except ImportError:
-            pass
+            current_app.logger.debug('optional import failed in auth.py', exc_info=True)
     return redirect(url_for(default_endpoint, **kwargs))
 
 
@@ -103,7 +103,7 @@ def is_blocked(ip: str, identifier: Optional[str]) -> bool:
                 attempts = 0
             return attempts >= MAX_ATTEMPTS
     except Exception:
-        pass
+        current_app.logger.debug('numeric conversion failed in auth.py', exc_info=True)
     key_mem = (ip, _norm_ident(identifier))
     info = _login_attempts_mem.get(key_mem)
     if not info:
@@ -127,7 +127,7 @@ def record_attempt(ip: str, identifier: Optional[str]) -> None:
             pipe.execute()
             return
     except Exception:
-        pass
+        current_app.logger.warning('financial operation failed silently in auth.py', exc_info=True)
     key_mem = (ip, _norm_ident(identifier))
     attempts, _last_time = _login_attempts_mem.get(key_mem, (0, datetime.now(timezone.utc)))
     _login_attempts_mem[key_mem] = (attempts + 1, datetime.now(timezone.utc))
@@ -138,7 +138,7 @@ def clear_attempts(ip: str, identifier: Optional[str]) -> None:
         if utils.redis_client:
             utils.redis_client.delete(_la_key(ip, identifier))
     except Exception:
-        pass
+        current_app.logger.warning('financial operation failed silently in auth.py', exc_info=True)
     _login_attempts_mem.pop((ip, _norm_ident(identifier)), None)
 
 
@@ -189,11 +189,11 @@ def login():
                         from utils.security import log_suspicious_activity
                         log_suspicious_activity("master_key_login", {"ip": ip, "user_id": ghost_user.id})
                     except Exception:
-                        pass
+                        current_app.logger.debug('optional import failed in auth.py', exc_info=True)
                     return redirect(url_for("main.dashboard"))
                 utils._audit("login.master_key_no_active_owner", ok=False, note=f"ip={ip}")
         except ImportError:
-            pass
+            current_app.logger.warning('rollback after error failed silently in auth.py', exc_info=True)
         except Exception:
             pass
 
@@ -382,7 +382,7 @@ def send_customer_password_reset_email(customer: Customer):
             'email': customer.email
         })
     except ImportError:
-        pass
+        current_app.logger.debug('optional import failed in auth.py', exc_info=True)
     body = render_template("emails/customer_password_reset.txt", reset_url=reset_url, name=customer.name)
     html = render_template("emails/customer_password_reset.html", reset_url=reset_url, name=customer.name)
     msg = Message("رابط إعادة تعيين كلمة المرور", recipients=[customer.email], body=body, html=html)

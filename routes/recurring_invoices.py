@@ -403,7 +403,7 @@ def generate_now(template_id):
         try:
             run_invoice_gl_sync_after_commit(new_invoice.id)
         except Exception:
-            pass
+            current_app.logger.warning('DB commit failed silently')
         return jsonify({
             'success': True,
             'invoice_id': new_invoice.id,

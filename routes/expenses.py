@@ -360,26 +360,26 @@ def _expense_related_entity_pairs(expense):
         if customer_id:
             pairs.add(("CUSTOMER", int(customer_id)))
     except Exception:
-        pass
+        current_app.logger.debug('numeric conversion failed in expenses.py', exc_info=True)
     try:
         supplier_id = getattr(expense, "supplier_id", None)
         if supplier_id:
             pairs.add(("SUPPLIER", int(supplier_id)))
     except Exception:
-        pass
+        current_app.logger.debug('numeric conversion failed in expenses.py', exc_info=True)
     try:
         partner_id = getattr(expense, "partner_id", None)
         if partner_id:
             pairs.add(("PARTNER", int(partner_id)))
     except Exception:
-        pass
+        current_app.logger.debug('numeric conversion failed in expenses.py', exc_info=True)
     try:
         ptype = (getattr(expense, "payee_type", None) or "").strip().upper()
         pid = getattr(expense, "payee_entity_id", None)
         if pid and ptype in ("CUSTOMER", "SUPPLIER", "PARTNER"):
             pairs.add((ptype, int(pid)))
     except Exception:
-        pass
+        current_app.logger.debug('numeric conversion failed in expenses.py', exc_info=True)
     return pairs
 
 
@@ -1095,12 +1095,12 @@ def generate_salary(emp_id):
         try:
             run_expense_gl_sync_after_commit(salary_expense.id)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to sync expense GL entries: {salary_expense.id}')
         if salary_payment:
             try:
                 run_payment_gl_sync_after_commit(salary_payment.id)
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to sync expense GL entries: {salary_expense.id}')
         
         success_msg = f"✅ <strong>تم توليد وحفظ راتب شهر {month}/{year} بنجاح</strong><br><br>"
         success_msg += f"👤 الموظف: <strong>{employee.name}</strong><br>"
@@ -2051,7 +2051,7 @@ def add():
                     exp.payee_entity_id = sid
                     exp.payee_name = getattr(db.session.get(Supplier, sid), "name", None) or exp.payee_name
             except (TypeError, ValueError):
-                pass
+                current_app.logger.debug('numeric conversion failed in expenses.py', exc_info=True)
         raw_part = request.form.get("partner_id")
         if raw_part and (not exp.partner_id or exp.partner_id == 0):
             try:
@@ -2062,7 +2062,7 @@ def add():
                     exp.payee_entity_id = pid
                     exp.payee_name = getattr(db.session.get(Partner, pid), "name", None) or exp.payee_name
             except (TypeError, ValueError):
-                pass
+                current_app.logger.debug('numeric conversion failed in expenses.py', exc_info=True)
 
         if (
             not exp.customer_id
@@ -2777,7 +2777,7 @@ def delete(exp_id):
         try:
             run_expense_gl_reversal_after_delete(reversal_snapshot)
         except Exception:
-            pass
+            current_app.logger.warning('DB delete failed silently')
         try:
             _refresh_entity_balances(before_pairs)
         except Exception as e:
@@ -3187,7 +3187,7 @@ def generate_all_salaries():
                 try:
                     run_expense_gl_sync_after_commit(exp_id)
                 except Exception:
-                    pass
+                    current_app.logger.warning(f'Failed to sync expense GL entries: {exp_id}')
             if created_expense_ids:
                 try:
                     payment_ids = [
@@ -3201,9 +3201,9 @@ def generate_all_salaries():
                         try:
                             run_payment_gl_sync_after_commit(pid)
                         except Exception:
-                            pass
+                            current_app.logger.warning(f'Failed to sync payment GL entries: {pid}')
                 except Exception:
-                    pass
+                    current_app.logger.warning(f'Failed to sync payment GL entries: {pid}')
             flash(f'تم توليد {success_count} راتب بنجاح', 'success')
         
         if error_count > 0:

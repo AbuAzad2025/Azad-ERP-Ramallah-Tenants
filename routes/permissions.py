@@ -63,16 +63,16 @@ def _clear_affected_caches(perm: Permission):
         try:
             utils.clear_role_permission_cache(r.id)
         except Exception:
-            pass
+            current_app.logger.warning('cache operation failed silently in permissions.py', exc_info=True)
         try:
             utils.clear_users_cache_by_role(r.id)
         except Exception:
-            pass
+            current_app.logger.warning('cache operation failed silently in permissions.py', exc_info=True)
     for u in users_extra:
         try:
             utils.clear_user_permission_cache(u.id)
         except Exception:
-            pass
+            current_app.logger.warning('cache operation failed silently in permissions.py', exc_info=True)
 
 def _ensure_code_from_inputs(name: str | None, code: str | None) -> str | None:
     return _normalize_code(code) or _normalize_code(name)
@@ -142,7 +142,8 @@ def create_permission():
                 flash("اسم/كود الإذن مستخدم بالفعل.", "danger")
             except SQLAlchemyError as e:
                 db.session.rollback()
-                flash(f"خطأ أثناء الإضافة: {e}", "danger")
+                current_app.logger.exception('internal error')
+                flash('خطأ أثناء الإضافة', 'danger')
     return render_template("permissions/form.html", form=form, protected_codes=_RESERVED_CODES)
 
 @permissions_bp.route("/<int:permission_id>/edit", methods=["GET", "POST"], endpoint="edit")
@@ -194,7 +195,8 @@ def edit_permission(permission_id):
                 flash("اسم/كود الإذن مستخدم بالفعل.", "danger")
             except SQLAlchemyError as e:
                 db.session.rollback()
-                flash(f"خطأ أثناء التحديث: {e}", "danger")
+                current_app.logger.exception('internal error')
+                flash('خطأ أثناء التحديث', 'danger')
     return render_template("permissions/form.html", form=form, perm=perm, protected_codes=_RESERVED_CODES)
 
 @permissions_bp.route("/<int:permission_id>/delete", methods=["POST"], endpoint="delete")
@@ -242,20 +244,21 @@ def delete_permission(permission_id):
             try:
                 utils.clear_role_permission_cache(rid)
             except Exception:
-                pass
+                current_app.logger.warning('cache operation failed silently in permissions.py', exc_info=True)
             try:
                 utils.clear_users_cache_by_role(rid)
             except Exception:
-                pass
+                current_app.logger.warning('cache operation failed silently in permissions.py', exc_info=True)
         for uid in user_ids:
             try:
                 utils.clear_user_permission_cache(uid)
             except Exception:
-                pass
+                current_app.logger.warning('cache operation failed silently in permissions.py', exc_info=True)
         flash("تم حذف الإذن.", "warning")
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash(f"لا يمكن الحذف: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('لا يمكن الحذف', 'danger')
     return redirect(url_for("permissions.list"))
 
 @permissions_bp.route("/matrix", methods=["GET"], endpoint="matrix")

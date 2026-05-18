@@ -140,7 +140,7 @@ def _refresh_service_related_balances(service) -> None:
             from utils.customer_balance_updater import update_customer_balance_components
             update_customer_balance_components(int(customer_id))
     except Exception:
-        pass
+        current_app.logger.warning(f'Failed to update customer balance')
     try:
         partner_ids = set()
         for sp in (list(getattr(service, "parts", []) or []) + list(getattr(service, "tasks", []) or [])):
@@ -150,7 +150,7 @@ def _refresh_service_related_balances(service) -> None:
         for pid in partner_ids:
             utils.update_entity_balance("PARTNER", int(pid))
     except Exception:
-        pass
+        current_app.logger.warning('balance calculation failed silently in service.py', exc_info=True)
 
 def _flash_error(message: str) -> None:
     flash(f'❌ {message}', 'danger')
@@ -457,14 +457,14 @@ def list_requests():
                 from_date = datetime.strptime(date_from, '%Y-%m-%d')
                 query = query.filter(col >= from_date)
             except ValueError:
-                pass
+                current_app.logger.debug('date parsing failed in service.py', exc_info=True)
         if date_to:
             try:
                 to_date = datetime.strptime(date_to, '%Y-%m-%d')
                 to_date = to_date.replace(hour=23, minute=59, second=59)
                 query = query.filter(col <= to_date)
             except ValueError:
-                pass
+                current_app.logger.debug('date parsing failed in service.py', exc_info=True)
     
     # الترتيب
     sort_by = request.args.get('sort', 'balance_due')
@@ -561,14 +561,19 @@ def restore_service(id):
     try:
         restore_record(id, ServiceRequest)
         return jsonify({"status": "success", "message": "تم استعادة طلب الصيانة بنجاح"})
-    except Exception as e:
+    except Exception:
         db.session.rollback()
         service = db.session.get(ServiceRequest, id)
         if service:
-            service.is_archived = False
-            db.session.commit()
-            return jsonify({"status": "success", "message": "تم استعادة طلب الصيانة بنجاح (يدوي)"})
-        current_app.logger.exception("service.restore_service failed", extra={"service_id": id})
+            try:
+                service.is_archived = False
+                db.session.commit()
+                return jsonify({"status": "success", "message": "تم استعادة طلب الصيانة بنجاح (يدوي)"})
+            except Exception:
+                db.session.rollback()
+                current_app.logger.exception('fallback restore_service commit failed')
+                return jsonify({"status": "error", "message": "تعذر استعادة طلب الصيانة حالياً"}), 500
+        current_app.logger.exception("service.restore_service failed")
         return jsonify({"status": "error", "message": "تعذر استعادة طلب الصيانة حالياً"}), 500
 
 @service_bp.route('/export/csv', methods=['GET'])
@@ -630,7 +635,7 @@ def create_request():
             try:
                 run_service_gl_sync_after_commit(service.id)
             except Exception:
-                pass
+                current_app.logger.warning('DB add failed silently')
             log_service_action(service,"CREATE")
             _refresh_service_related_balances(service)
             if customer.phone: utils.send_whatsapp_message(customer.phone, f"تم استلام طلب الصيانة رقم {service.service_number}.")
@@ -1463,7 +1468,7 @@ def delete_request(rid):
         try:
             run_service_gl_reversal_after_delete(reversal_snapshot)
         except Exception:
-            pass
+            current_app.logger.warning('DB delete failed silently')
         flash('✅ تم حذف الطلب ومعالجة المخزون','success')
         try:
             if customer_id:
@@ -1472,7 +1477,7 @@ def delete_request(rid):
             for pid in partner_ids:
                 utils.update_entity_balance("PARTNER", int(pid))
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to update customer balance')
     except SQLAlchemyError as e:
         db.session.rollback()
         _log_and_flash("service.delete_request", e, "تعذر حذف الطلب حالياً.")

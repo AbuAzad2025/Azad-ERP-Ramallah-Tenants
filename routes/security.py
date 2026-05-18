@@ -908,7 +908,7 @@ def system_cleanup():
         # cleanup_stats['cache_items'] = len(cache.cache._cache) if hasattr(cache.cache, '_cache') else 0
         pass
     except Exception:
-        pass
+        current_app.logger.warning('cache operation failed silently in security.py', exc_info=True)
 
     if request.method == 'POST':
         action = (request.form.get('action') or "").strip()
@@ -922,7 +922,8 @@ def system_cleanup():
                     cache.clear()
                     flash('تم مسح ذاكرة التخزين المؤقت بنجاح.', 'success')
                 except Exception as e:
-                    flash(f'فشل مسح الكاش: {e}', 'danger')
+                    current_app.logger.exception('internal error')
+                    flash('فشل مسح الكاش', 'danger')
             elif action == 'cleanup_temp':
                 flash('تم تنظيف الملفات المؤقتة (محاكاة).', 'success')
             elif action == 'purge_logs':
@@ -982,12 +983,14 @@ def system_cleanup():
                             flash(f'✅ تم تنظيف {result.get("cleaned", 0)} جدول وإعادة تهيئة النظام بنجاح', 'success')
                         except Exception as e:
                             current_app.logger.error(f"Reset Error: {e}")
-                            flash(f'✅ تم التنظيف ولكن حدث خطأ في التهيئة: {e}', 'warning')
+                            current_app.logger.exception('internal error')
+                            flash('✅ تم التنظيف ولكن حدث خطأ في التهيئة', 'warning')
                     else:
                         flash(f'✅ تم تنظيف {result.get("cleaned", 0)} جدول', 'success')
 
                 except Exception as e:
-                    flash(f'❌ حدث خطأ أثناء التنظيف: {e}', 'danger')
+                    current_app.logger.exception('internal error')
+                    flash('❌ حدث خطأ أثناء التنظيف', 'danger')
 
             return redirect(url_for('security.system_cleanup', tab='reset'))
     
@@ -1235,6 +1238,9 @@ def database_manager():
     table_counts = {}
     for table in tables:
         try:
+            if not _is_safe_identifier(table):
+                table_counts[table] = 0
+                continue
             count_query = text(f"SELECT COUNT(*) as count FROM {table}")
             result = db.session.execute(count_query).fetchone()
             table_counts[table] = result[0] if result else 0
@@ -2066,7 +2072,7 @@ def theme_editor():
             with open(os.path.join(css_dir, selected_css), 'r', encoding='utf-8') as f:
                 css_content = f.read()
         except Exception:
-            pass
+            current_app.logger.debug('file operation failed in security.py', exc_info=True)
     data['css'] = {'files': css_files, 'selected': selected_css, 'content': css_content}
     
     # HTML Templates
@@ -2085,7 +2091,7 @@ def theme_editor():
                 elif item.endswith('.html'):
                     items.append({'type': 'file', 'name': item, 'path': rel_path})
         except Exception:
-            pass
+            current_app.logger.warning('cache operation failed silently in security.py', exc_info=True)
         return items
     
     templates_tree = get_templates_tree(templates_dir)
@@ -2096,7 +2102,7 @@ def theme_editor():
             with open(os.path.join(templates_dir, selected_template), 'r', encoding='utf-8') as f:
                 template_content = f.read()
         except Exception:
-            pass
+            current_app.logger.debug('file operation failed in security.py', exc_info=True)
     data['html'] = {'tree': templates_tree, 'selected': selected_template, 'content': template_content}
     
     # Text Settings
@@ -2173,7 +2179,7 @@ def logo_manager():
                             from extensions import cache
                             cache.delete(f"system_setting_{setting_key}")
                         except Exception:
-                            pass
+                            current_app.logger.warning('cache invalidation failed silently in security.py', exc_info=True)
 
                     flash(f'✅ تم رفع {target_name} بنجاح!', 'success')
                 except Exception as e:
@@ -2235,7 +2241,7 @@ def advanced_analytics():
             try:
                 revenue_by_day_dict[dt] += convert_amount(amt, p.currency, "ILS", p.payment_date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     analytics['revenue_trend'] = [{'date': str(dt), 'amount': float(rev)} for dt, rev in sorted(revenue_by_day_dict.items())]
     
@@ -2257,7 +2263,7 @@ def advanced_analytics():
             try:
                 cust_totals[p.customer_id] += convert_amount(amt, p.currency, "ILS", p.payment_date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     top_customers_data = []
     for cid, total in cust_totals.items():
@@ -2373,7 +2379,7 @@ def invoice_designer():
             for key in supported_settings:
                 cache.delete(f"system_setting_{key}")
         except Exception:
-            pass
+            current_app.logger.warning('cache invalidation failed silently in security.py', exc_info=True)
             
         flash('✅ تم حفظ تصميم الفواتير بنجاح', 'success')
         return redirect(url_for('security.invoice_designer'))
@@ -2773,7 +2779,7 @@ def get_cached_security_stats():
         blocked_ips = BlockedIP.query.count()
         blocked_countries = BlockedCountry.query.count()
     except Exception:
-        pass
+        current_app.logger.debug('optional import failed in security.py', exc_info=True)
     
     # أنشطة مشبوهة
     suspicious_activities = 0
@@ -2787,7 +2793,7 @@ def get_cached_security_stats():
             func.count(AuthAudit.ip) >= 5
         ).count()
     except Exception:
-        pass
+        current_app.logger.debug('database query failed in security.py', exc_info=True)
     
     db_size = "N/A"
     try:
@@ -2797,7 +2803,7 @@ def get_cached_security_stats():
                 text("SELECT pg_size_pretty(pg_database_size(current_database()))")
             ).scalar() or "N/A"
     except Exception:
-        pass
+        current_app.logger.debug('session operation failed in security.py', exc_info=True)
     
     # صحة النظام
     system_health = "ممتاز"
@@ -3925,7 +3931,7 @@ def impersonate_user(user_id):
         db.session.add(log)
         db.session.commit()
     except Exception:
-        pass
+        current_app.logger.warning('DB add failed silently')
     
     logout_user()
     login_user(target_user)
@@ -4018,7 +4024,7 @@ def toggle_user_status(user_id):
         )
         db.session.add(log)
     except Exception:
-        pass
+        current_app.logger.warning('DB add failed silently')
     
     try:
         db.session.commit()
@@ -4086,7 +4092,7 @@ def delete_user(user_id):
         db.session.add(log)
         db.session.commit()
     except Exception:
-        pass
+        current_app.logger.warning('DB add failed silently')
     
     # الحذف
     try:
@@ -4139,7 +4145,7 @@ def api_user_details(user_id):
                 try:
                     sales_total += convert_amount(amt, s.currency, "ILS", s.sale_date)
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         
         services_count = ServiceRequest.query.filter_by(mechanic_id=user.id).count()
         payments_count = Payment.query.filter_by(created_by=user.id).count()
@@ -4173,7 +4179,7 @@ def api_user_details(user_id):
                 extra_perms = user.extra_permissions.all() if hasattr(user.extra_permissions, 'all') else user.extra_permissions
                 extra_permissions = [p.code for p in extra_perms if hasattr(p, 'code') and p.code]
             except Exception:
-                pass
+                current_app.logger.debug('operation failed in security.py', exc_info=True)
         
         user_data = {
             'id': user.id,
@@ -4273,7 +4279,7 @@ def api_users_bulk_operation():
             )
             db.session.add(log)
         except Exception:
-            pass
+            current_app.logger.warning('DB add failed silently')
         
         db.session.commit()
         
@@ -4465,7 +4471,7 @@ def update_user_role(user_id):
         )
         db.session.add(log)
     except Exception:
-        pass
+        current_app.logger.warning('DB add failed silently')
     
     try:
         db.session.commit()
@@ -6176,7 +6182,7 @@ def _get_recent_errors(limit=100):
                             'timestamp': datetime.now(timezone.utc)
                         })
         except Exception:
-            pass
+            current_app.logger.debug('date parsing failed in security.py', exc_info=True)
     
     return errors
 
@@ -6205,7 +6211,7 @@ def _get_error_statistics():
                     elif 'WARNING' in line:
                         stats['warning_errors'] += 1
         except Exception:
-            pass
+            current_app.logger.warning('financial operation failed silently in security.py', exc_info=True)
     
     return stats
 
@@ -6536,7 +6542,7 @@ def api_clean_rebuild_indexes():
                 indexes = inspector.get_indexes(table)
             
             for idx in indexes:
-                if idx['name'] and idx['name'].startswith('ix_'):
+                if idx['name'] and idx['name'].startswith('ix_') and _is_safe_identifier(idx['name']):
                     try:
                         db.session.execute(text(f"DROP INDEX {idx['name']}"))
                         db.session.commit()
@@ -6781,7 +6787,7 @@ def api_maintenance_vacuum():
         try:
             db.session.rollback()
         except Exception:
-            pass
+            current_app.logger.warning('rollback after error failed silently in security.py', exc_info=True)
 
         with db.engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
             conn.execute(text("VACUUM"))
@@ -6832,7 +6838,7 @@ def api_maintenance_checkpoint():
         try:
             db.session.rollback()
         except Exception:
-            pass
+            current_app.logger.warning('rollback after error failed silently in security.py', exc_info=True)
 
         with db.engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
             conn.execute(text("CHECKPOINT"))
@@ -6995,7 +7001,7 @@ def data_quality_center():
                             payment_id = int(check.reference_number.replace('PMT-', ''))
                             payment = db.session.get(Payment, payment_id)
                         except Exception:
-                            pass
+                            current_app.logger.warning('payment processing failed silently in security.py', exc_info=True)
                 
                 if not payment and check.check_number:
                     payment = Payment.query.filter(
@@ -7117,7 +7123,7 @@ def advanced_check_linking():
                             payment_id = int(check.reference_number.replace('PMT-', ''))
                             payment = db.session.get(Payment, payment_id)
                         except Exception:
-                            pass
+                            current_app.logger.warning('payment processing failed silently in security.py', exc_info=True)
                     elif check.reference_number.startswith('SPLIT-'):
                         split_id = int(check.reference_number.replace('SPLIT-', ''))
                         split = db.session.get(PaymentSplit, split_id)
@@ -7805,8 +7811,9 @@ def reconcile_tax_report(period):
         try:
             db.session.rollback()
         except Exception:
-            pass
-        flash(f"❌ فشل تصحيح VAT: {e}", "danger")
+            current_app.logger.warning('rollback after error failed silently in security.py', exc_info=True)
+        current_app.logger.exception('internal error')
+        flash('❌ فشل تصحيح VAT', 'danger')
         return redirect(url_for("security.tax_reports", period=period))
 
     flash(result.get("message") or "تمت العملية.", result.get("message_level") or "success")
@@ -7947,14 +7954,14 @@ def audit_log_viewer():
             start_dt = datetime.strptime(start_date, '%Y-%m-%d')
             query = query.filter(AuditLog.created_at >= start_dt)
         except Exception:
-            pass
+            current_app.logger.debug('date parsing failed in security.py', exc_info=True)
     if end_date:
         try:
             end_dt = datetime.strptime(end_date, '%Y-%m-%d')
             end_dt = end_dt.replace(hour=23, minute=59, second=59)
             query = query.filter(AuditLog.created_at <= end_dt)
         except Exception:
-            pass
+            current_app.logger.debug('date parsing failed in security.py', exc_info=True)
     if search:
         query = query.filter(
             db.or_(
@@ -8145,7 +8152,7 @@ def security_audit_report():
                 from models import BlockedIP
                 blocked_ips_count = BlockedIP.query.count()
             except Exception:
-                pass
+                current_app.logger.debug('optional import failed in security.py', exc_info=True)
             
             suspicious_activities = AuditLog.query.filter(
                 AuditLog.action.in_(['security.blocked_ip', 'security.failed_login', 'security.unauthorized_access']),

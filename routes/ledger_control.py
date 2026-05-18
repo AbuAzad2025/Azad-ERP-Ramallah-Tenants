@@ -753,12 +753,12 @@ def get_all_batches():
             try:
                 query = query.filter(GLBatch.posted_at >= datetime.fromisoformat(str(from_date).replace('Z', '+00:00')))
             except Exception:
-                pass
+                current_app.logger.debug('date parsing failed in ledger_control.py', exc_info=True)
         if to_date:
             try:
                 query = query.filter(GLBatch.posted_at <= datetime.fromisoformat(str(to_date).replace('Z', '+00:00')))
             except Exception:
-                pass
+                current_app.logger.debug('date parsing failed in ledger_control.py', exc_info=True)
         if source_type:
             query = query.filter(GLBatch.source_type == source_type)
         if search:
@@ -1159,7 +1159,7 @@ def recalculate_all_balances():
                 update_customer_balance_components(customer.id, db.session)
                 recalculated['customers'] += 1
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to update customer balance')
         
         partners = Partner.query.limit(10000).all()
         for partner in partners:
@@ -1168,7 +1168,7 @@ def recalculate_all_balances():
                 update_partner_balance(partner.id)
                 recalculated['partners'] += 1
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to update partner balance')
         
         suppliers = Supplier.query.limit(10000).all()
         for supplier in suppliers:
@@ -1176,7 +1176,7 @@ def recalculate_all_balances():
                 update_supplier_balance_components(supplier.id)
                 recalculated['suppliers'] += 1
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to update supplier balance: {supplier.id}')
         
         db.session.commit()
         
@@ -2090,7 +2090,7 @@ def verify_customer_balances():
                         from models import convert_amount
                         opening_balance = convert_amount(opening_balance, customer.currency, "ILS")
                     except Exception:
-                        pass
+                        current_app.logger.debug('Currency conversion skipped')
                 
                 expected_balance = (
                     opening_balance +

@@ -920,7 +920,8 @@ def edit_warehouse(warehouse_id):
             return redirect(url_for("warehouse_bp.list"))
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f"حدث خطأ: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ', 'danger')
 
     return render_template("warehouses/form.html", form=form, warehouse=w)
 
@@ -1346,7 +1347,7 @@ def products(id):
             price = getattr(p, "selling_price", None) or getattr(p, "price", None) or 0
             page_total_value += float(qty) * float(price)
         except Exception:
-            pass
+            current_app.logger.warning('financial calculation failed silently in warehouses.py', exc_info=True)
 
     return render_template(
         "warehouses/products.html",
@@ -1713,7 +1714,7 @@ def add_product(id):
             try:
                 p_form.partner_id.choices = partner_choices
             except Exception:
-                pass
+                current_app.logger.debug('operation failed in warehouses.py', exc_info=True)
     if is_exchange:
         supplier_q = Supplier.query.order_by(Supplier.name.asc())
         if hasattr(Supplier, "is_archived"):
@@ -1723,7 +1724,7 @@ def add_product(id):
             try:
                 v_form.supplier_id.choices = supplier_choices
             except Exception:
-                pass
+                current_app.logger.debug('operation failed in warehouses.py', exc_info=True)
 
     if request.method == "GET":
         try:
@@ -1860,7 +1861,7 @@ SELECT setval(
                     if cid and db.session.get(ProductCategory, cid):
                         product.category_id = cid
                 except (TypeError, ValueError):
-                    pass
+                    current_app.logger.debug('numeric conversion failed in warehouses.py', exc_info=True)
             if not product.category_id and product.category_name:
                 product.category_id = _ensure_category_id(product.category_name)
             if existing_product:
@@ -2693,7 +2694,8 @@ def import_commit(id):
             )
     except Exception as e:
         db.session.rollback()
-        flash(f"فشل الترحيل: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('فشل الترحيل', 'danger')
 
     return redirect(url_for("warehouse_bp.detail", warehouse_id=w.id))
 
@@ -3078,7 +3080,7 @@ def list_transfers(id):
             dt = datetime.fromisoformat(date_to)
             q = q.filter(Transfer.transfer_date <= dt)
     except Exception:
-        pass
+        current_app.logger.debug('date parsing failed in warehouses.py', exc_info=True)
 
     q = q.order_by(Transfer.transfer_date.desc(), Transfer.id.desc())
 
@@ -3202,9 +3204,10 @@ def create_transfer(id=None):
         except IntegrityError:
             db.session.rollback()
             return respond_error("خطأ مرجعي في قاعدة البيانات (IntegrityError). تأكد من صحة اختيارك للمستودعات والصنف.")
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return respond_error(f"حدث خطأ غير متوقع أثناء إضافة التحويل: {e}")
+            current_app.logger.exception('internal error')
+            return respond_error("حدث خطأ غير متوقع أثناء إضافة التحويل")
 
     if request.method == "POST" and form.errors:
         msgs = []
@@ -3277,7 +3280,7 @@ def preorders_list():
         if dt:
             q = q.filter(PreOrder.created_at <= datetime.fromisoformat(dt))
     except ValueError:
-        pass
+        current_app.logger.debug('date parsing failed in warehouses.py', exc_info=True)
     q = q.order_by(PreOrder.created_at.desc())
     page = max(1, request.args.get("page", 1, type=int))
     per_page = min(100, max(1, request.args.get("per_page", 25, type=int)))
@@ -3362,7 +3365,7 @@ def preorder_create():
             try:
                 run_preorder_gl_sync_after_commit(preorder.id)
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to sync preorder GL entries: {preorder.id}')
         except IntegrityError as e:
             db.session.rollback()
             if "preorders.reference" in str(e).lower() and not user_ref:
@@ -3373,7 +3376,7 @@ def preorder_create():
                     try:
                         run_preorder_gl_sync_after_commit(preorder.id)
                     except Exception:
-                        pass
+                        current_app.logger.warning(f'Failed to sync preorder GL entries: {preorder.id}')
                 except SQLAlchemyError as ee:
                     db.session.rollback()
                     flash(f"تعذر حفظ الحجز: {getattr(ee, 'orig', ee)}", "danger")
@@ -3458,7 +3461,7 @@ def preorder_create():
                     from utils.customer_balance_updater import update_customer_balance_components
                     update_customer_balance_components(preorder.customer_id, db.session)
                 except Exception:
-                    pass
+                    current_app.logger.warning(f'Failed to update customer balance')
                 flash("تم إنشاء الحجز وتسجيل العربون", "success")
             except SQLAlchemyError as e:
                 db.session.rollback()
@@ -3468,7 +3471,7 @@ def preorder_create():
                 from utils.customer_balance_updater import update_customer_balance_components
                 update_customer_balance_components(preorder.customer_id, db.session)
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to update customer balance')
             flash("تم إنشاء الحجز بنجاح", "success")
 
         return redirect(url_for("warehouse_bp.preorder_detail", preorder_id=preorder.id))
@@ -3592,12 +3595,12 @@ def preorder_convert_to_sale(preorder_id):
         try:
             run_preorder_gl_sync_after_commit(preorder.id)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to sync preorder GL entries: {preorder.id}')
         try:
             from utils.customer_balance_updater import update_customer_balance_components
             update_customer_balance_components(preorder.customer_id, db.session)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to sync preorder GL entries: {preorder.id}')
         
         flash(f"✅ تم إنشاء مبيعة #{sale.id} - أكمل الدفع لإتمام التسليم!", "success")
         
@@ -3658,16 +3661,17 @@ def preorder_fulfill(preorder_id):
             try:
                 run_preorder_gl_sync_after_commit(preorder.id)
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to sync preorder GL entries: {preorder.id}')
             try:
                 from utils.customer_balance_updater import update_customer_balance_components
                 update_customer_balance_components(preorder.customer_id, db.session)
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to sync preorder GL entries: {preorder.id}')
             flash("تم تنفيذ الحجز وشحن الكمية", "success")
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f"فشل تنفيذ الحجز: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('فشل تنفيذ الحجز', 'danger')
     else:
         flash("هذا الحجز تم تنفيذه مسبقاً", "info")
     return redirect(url_for("warehouse_bp.preorder_detail", preorder_id=preorder_id))
@@ -3688,11 +3692,12 @@ def preorder_mark_fulfilled(preorder_id):
                 from utils.customer_balance_updater import update_customer_balance_components
                 update_customer_balance_components(preorder.customer_id, db.session)
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to update customer balance')
             flash("تم تحديث حالة الحجز إلى منفذ", "success")
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f"فشل تحديث حالة الحجز: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('فشل تحديث حالة الحجز', 'danger')
     return redirect(url_for("warehouse_bp.preorder_detail", preorder_id=preorder_id))
 
 
@@ -3721,7 +3726,7 @@ def preorder_cancel(preorder_id):
             from utils.customer_balance_updater import update_customer_balance_components
             update_customer_balance_components(preorder.customer_id, db.session)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to update customer balance')
         flash("تم إلغاء الحجز واسترداد العربون", "success")
     except SQLAlchemyError:
         db.session.rollback()

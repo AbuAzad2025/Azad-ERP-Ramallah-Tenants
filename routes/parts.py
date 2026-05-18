@@ -118,7 +118,8 @@ def parts_create():
             if _wants_json():
                 current_app.logger.exception('API error')
                 return jsonify({"error": "حدث خطأ داخلي"}), 500
-            flash(f"فشل تحديث القطعة: {e}", "danger")
+            current_app.logger.exception('internal error')
+            flash('فشل تحديث القطعة', 'danger')
         return redirect(url_for("parts_bp.parts_list"))
     product = Product(
         name=name,
@@ -143,7 +144,8 @@ def parts_create():
         if _wants_json():
             current_app.logger.exception('API error')
             return jsonify({"error": "حدث خطأ داخلي"}), 500
-        flash(f"فشل إنشاء القطعة: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('فشل إنشاء القطعة', 'danger')
     return redirect(url_for("parts_bp.parts_list"))
 
 @parts_bp.post("/<int:id>/edit")
@@ -193,7 +195,8 @@ def parts_edit(id):
         if _wants_json():
             current_app.logger.exception('API error')
             return jsonify({"error": "حدث خطأ داخلي"}), 500
-        flash(f"فشل التحديث: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('فشل التحديث', 'danger')
     return redirect(url_for("parts_bp.parts_list"))
 
 @parts_bp.get("/<int:id>/stock")
@@ -232,7 +235,8 @@ def parts_delete(id):
         if _wants_json():
             current_app.logger.exception('API error')
             return jsonify({"error": "حدث خطأ داخلي"}), 500
-        flash(f"فشل الحذف: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('فشل الحذف', 'danger')
     return redirect(url_for("parts_bp.parts_list"))
 
 

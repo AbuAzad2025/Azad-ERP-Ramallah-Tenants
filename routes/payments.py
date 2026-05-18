@@ -305,13 +305,13 @@ def _serialize_payment_min(p, *, full=False):
             if name_fallback:
                 d["entity_display"] = name_fallback
     except Exception:
-        pass
+        current_app.logger.debug('attribute access failed in payments.py', exc_info=True)
     if hasattr(p, 'payment_id') and hasattr(p, 'split_id'):
         try:
             d["payment_id"] = int(getattr(p, 'payment_id'))
             d["split_id"] = int(getattr(p, 'split_id'))
         except Exception:
-            pass
+            current_app.logger.warning('payment processing failed silently in payments.py', exc_info=True)
     if hasattr(p, 'is_refunded_split'):
         d["is_refunded_split"] = bool(getattr(p, 'is_refunded_split'))
     if is_manual_check:
@@ -460,7 +460,7 @@ def entity_search():
             try:
                 conds.append(SupplierLoanSettlement.id == int(qdigits))
             except Exception:
-                pass
+                current_app.logger.debug('numeric conversion failed in payments.py', exc_info=True)
         conds.append(Supplier.name.ilike(like))
         rows = qry.filter(or_(*conds)).order_by(SupplierLoanSettlement.id.desc()).limit(limit).all()
         results = [{"id": r[0].id, "label": f"Loan Settlement #{r[0].id}", "extra": r[1]} for r in rows]
@@ -692,7 +692,7 @@ def index():
         try:
             _ = s.entity_label()
         except Exception:
-            pass
+            current_app.logger.debug('operation failed in payments.py', exc_info=True)
     
     # ✅ إضافة الشيكات اليدوية إلى قائمة الدفعات المعروضة
     manual_checks_for_display = []
@@ -1111,7 +1111,7 @@ def index():
                     converted = float(convert_amount(p.total_amount, p.currency, 'ILS', p.payment_date))
                     page_sum_ils += converted
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         
         return jsonify({
             "payments": [_serialize_payment(p, full=False) for p in expanded_page_payments],
@@ -1569,7 +1569,7 @@ def create_payment():
                         if cust_obj:
                             person_name = getattr(cust_obj, 'name', person_name)
                     except Exception:
-                        pass
+                        current_app.logger.debug('attribute access failed in payments.py', exc_info=True)
             
             deliverer_val = (form.deliverer_name.data or "").strip() if hasattr(form, "deliverer_name") else ""
             receiver_val = (form.receiver_name.data or "").strip() if hasattr(form, "receiver_name") else ""
@@ -1747,7 +1747,7 @@ def create_payment():
                 try:
                     run_payment_gl_sync_after_commit(payment.id)
                 except Exception:
-                    pass
+                    current_app.logger.warning(f'Failed to sync payment GL entries: {payment.id}')
                 created_checks = False
                 payment_method_str = str(payment.method).upper()
                 if ('CHECK' in payment_method_str or 'CHEQUE' in payment_method_str) and payment.check_number and payment.check_bank:
@@ -1952,7 +1952,7 @@ def create_expense_payment(exp_id):
         try:
             run_payment_gl_sync_after_commit(payment.id)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to sync payment GL entries: {payment.id}')
         # تحديث الأرصدة بشكل فوري
         try:
             if payment.supplier_id:
@@ -2036,7 +2036,7 @@ def view_payment(payment_id: str):
             real_id = int(parts[0])
             split_id = int(parts[1])
         except (ValueError, IndexError):
-            pass
+            current_app.logger.warning('payment processing failed silently in payments.py', exc_info=True)
     
     try:
         real_id = int(real_id)
@@ -2163,7 +2163,7 @@ def update_payment_status(payment_id: int):
         try:
             run_payment_gl_sync_after_commit(payment.id)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to sync payment GL entries: {payment.id}')
         return jsonify(success=True, message="تم تحديث حالة الدفعة بنجاح", status=new_status)
         
     except Exception as e:
@@ -2185,7 +2185,7 @@ def view_receipt(payment_id: str):
             real_id = int(parts[0])
             split_id = int(parts[1])
         except (ValueError, IndexError):
-            pass
+            current_app.logger.warning('payment processing failed silently in payments.py', exc_info=True)
     
     try:
         real_id = int(real_id)
@@ -2226,7 +2226,7 @@ def download_receipt(payment_id: str):
         try:
             real_id = int(payment_id.split('_split_')[0])
         except (ValueError, IndexError):
-            pass
+            current_app.logger.warning('payment processing failed silently in payments.py', exc_info=True)
     
     try:
         real_id = int(real_id)
@@ -2993,7 +2993,7 @@ def shop_checkout():
                 "items_count": len(items)
             })
         except ImportError:
-            pass
+            current_app.logger.warning('notification dispatch failed silently in payments.py', exc_info=True)
         
         return jsonify({
             "success": True,
@@ -3076,7 +3076,7 @@ def shop_process_payment():
                 from utils.customer_balance_updater import update_customer_balance_components
                 update_customer_balance_components(payment.customer_id, db.session)
             except ImportError:
-                pass
+                current_app.logger.warning(f'Failed to update customer balance')
         
         db.session.commit()
         
@@ -3085,7 +3085,7 @@ def shop_process_payment():
             from notifications import notify_payment_received
             notify_payment_received(payment.id, float(payment.total_amount), payment.currency)
         except ImportError:
-            pass
+            current_app.logger.warning('notification dispatch failed silently in payments.py', exc_info=True)
         
         return jsonify({
             "success": True,
@@ -3177,7 +3177,7 @@ def shop_refund():
                 from utils.customer_balance_updater import update_customer_balance_components
                 update_customer_balance_components(original_payment.customer_id, db.session)
             except ImportError:
-                pass
+                current_app.logger.warning(f'Failed to update customer balance')
         
         db.session.commit()
         
@@ -3779,7 +3779,7 @@ def refund_split(split_id: int):
                     else:
                         service.run(split.id, 'RETURNED', base_note + ' [RETURN_REASON=PAYMENT_REFUND]')
                 except Exception:
-                    pass
+                    current_app.logger.warning('refund processing failed silently in payments.py', exc_info=True)
         finally:
             db.session.commit()
 
@@ -3886,7 +3886,7 @@ def refund_payment(payment_id: int):
                     sp.details = details
                     db.session.add(sp)
                 except Exception:
-                    pass
+                    current_app.logger.warning('DB add failed silently')
         else:
             db.session.add(PaymentSplit(
                 payment=refund,

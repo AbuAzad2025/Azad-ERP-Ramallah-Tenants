@@ -247,7 +247,7 @@ def list_customers():
         try:
             setattr(customer, "calculated_balance", balance_val)
         except Exception:
-            pass
+            current_app.logger.warning('balance calculation failed silently in customers.py', exc_info=True)
 
         if check_mismatch_flag:
             stored_balance = float(customer.current_balance or 0)
@@ -465,7 +465,7 @@ def customer_detail(customer_id):
     try:
         db.session.rollback()
     except Exception:
-        pass
+        current_app.logger.warning('rollback after error failed silently in customers.py', exc_info=True)
     customer = db.session.get(Customer, customer_id) or abort(404)
     balance_breakdown = None
     rights_items = []
@@ -476,7 +476,7 @@ def customer_detail(customer_id):
         try:
             db.session.rollback()
         except Exception:
-            pass
+            current_app.logger.warning('rollback after error failed silently in customers.py', exc_info=True)
         current_app.logger.warning("customer_balance_breakdown_page_failed: %s", exc)
     if balance_breakdown and balance_breakdown.get("success"):
         rights_items = (balance_breakdown.get("rights") or {}).get("items") or []
@@ -497,7 +497,7 @@ def customer_analytics(customer_id):
     try:
         db.session.rollback()
     except Exception:
-        pass
+        current_app.logger.warning('rollback after error failed silently in customers.py', exc_info=True)
     customer = db.session.get(Customer, customer_id) or abort(404)
 
     from utils import D, q0
@@ -736,7 +736,7 @@ def create_customer():
             flash("هذا الهاتف مستخدم مسبقًا", "danger")
             return render_template("customers/new.html", form=form, return_to=request.form.get("return_to"))
     except Exception:
-        pass
+        current_app.logger.debug('optional import failed in customers.py', exc_info=True)
     # Default email: AZAD@<phone> when email not provided
     default_email = f"AZAD@{(form.phone.data or '').strip()}" if (form.phone.data or '').strip() else None
     cust = Customer(
@@ -792,12 +792,12 @@ def create_customer():
         flash(f"{msg} (Unique constraint).", "danger")
         # إبقاء المستخدم على نفس الصفحة مع الحفاظ على الإدخالات
         return render_template("customers/new.html", form=form, return_to=request.form.get("return_to"))
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError while creating customer")
         if is_ajax:
-            return jsonify({"ok": False, "message": f"خطأ أثناء إضافة العميل: {e}"}), 500
-        flash(f"❌ خطأ أثناء إضافة العميل: {e}", "danger")
+            return jsonify({"ok": False, "message": "خطأ أثناء إضافة العميل"}), 500
+        flash('❌ خطأ أثناء إضافة العميل', 'danger')
         # إبقاء المستخدم على نفس الصفحة مع عرض الخطأ بشكل ودي
         return render_template("customers/new.html", form=form, return_to=request.form.get("return_to"))
     if is_ajax:
@@ -846,10 +846,10 @@ def edit_customer(customer_id):
                 flash("بريد أو هاتف مكرر (Unique constraint).", "danger")
                 current_app.logger.exception("IntegrityError while editing customer")
                 return render_template("customers/edit.html", form=form, customer=cust), 409
-            except SQLAlchemyError as e:
+            except SQLAlchemyError:
                 db.session.rollback()
-                flash(f"❌ خطأ أثناء تعديل العميل: {e}", "danger")
                 current_app.logger.exception("SQLAlchemyError while editing customer")
+                flash('❌ خطأ أثناء تعديل العميل', 'danger')
                 return render_template("customers/edit.html", form=form, customer=cust), 500
             flash("تم تعديل بيانات العميل", "success")
             return redirect(url_for("customers_bp.customer_detail", customer_id=customer_id))
@@ -884,7 +884,8 @@ def delete_customer(id):
         flash(f"✅ تم حذف العميل: {name}", "success")
     except Exception as e:
         db.session.rollback()
-        flash(f"❌ خطأ أثناء الحذف: {e}", "danger")
+        current_app.logger.exception('internal error')
+        flash('❌ خطأ أثناء الحذف', 'danger')
     
     return redirect(url_for("customers_bp.list_customers"))
 
@@ -1040,20 +1041,20 @@ def account_statement(customer_id):
                 try:
                     db.session.execute(sa_text(sql))
                 except Exception:
-                    pass
+                    current_app.logger.debug('session operation failed in customers.py', exc_info=True)
             try:
                 db.session.commit()
             except Exception:
                 try:
                     db.session.rollback()
                 except Exception:
-                    pass
+                    current_app.logger.warning('DB commit failed silently')
             current_app.config["CUSTOMER_STATEMENT_IDX_DONE"] = True
     except Exception:
         try:
             db.session.rollback()
         except Exception:
-            pass
+            current_app.logger.warning('rollback after error failed silently in customers.py', exc_info=True)
 
     from utils import D, q0
 
@@ -1855,7 +1856,7 @@ def account_statement(customer_id):
                                     from models import convert_amount
                                     check_amt = convert_amount(check_amt, check.currency, "ILS", check.check_date or p.payment_date)
                                 except Exception:
-                                    pass
+                                    current_app.logger.debug('Currency conversion skipped')
                             returned_check_amounts[split_id] = check_amt
                             returned_checks_list.append({
                                 'check': check,
@@ -1885,7 +1886,7 @@ def account_statement(customer_id):
                                             from models import convert_amount
                                             check_amt = convert_amount(check_amt, check.currency, "ILS", check.check_date or p.payment_date)
                                         except Exception:
-                                            pass
+                                            current_app.logger.debug('Currency conversion skipped')
                                     returned_check_amounts[split.id] = check_amt
                                     returned_checks_list.append({
                                         'check': check,
@@ -1997,7 +1998,7 @@ def account_statement(customer_id):
                                 from models import convert_amount
                                 split_amount_ils = convert_amount(split_amount, split_currency, "ILS", p.payment_date)
                             except Exception:
-                                pass
+                                current_app.logger.debug('Currency conversion skipped')
                     
                     # تحديد طريقة الدفع للـ split
                     split_method_arabic = method_map.get(split_method_raw, split_method_raw)
@@ -2261,7 +2262,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amount = convert_amount(amount, check.currency, "ILS", check.check_date or check.created_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         
         # حساب debit/credit للشيكات اليدوية
         # الشيك الوارد (IN) = العميل دفع لنا = credit (دائن) = تقليل ما عليه
@@ -2359,7 +2360,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, exp.currency, "ILS", exp.date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         
         exp_type_code = None
         if exp.type_id:
@@ -2485,7 +2486,7 @@ def account_statement(customer_id):
             if c_created_date and s_date_date and s_date_date > c_created_date:
                  statement_text = "رصيد مدور (سابق)"
         except Exception:
-            pass
+            current_app.logger.debug('operation failed in customers.py', exc_info=True)
 
         opening_entry = {
             "date": start_date,
@@ -2531,7 +2532,7 @@ def account_statement(customer_id):
                         item['total'] = D(convert_amount(item_total_val, curr, 'ILS', ref_date))
                 e['currency'] = 'ILS'
     except Exception:
-        pass
+        current_app.logger.debug('Currency conversion skipped')
 
     
 
@@ -2586,7 +2587,7 @@ def account_statement(customer_id):
             finally:
                 session.close()
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to update customer balance: {customer_id}')
 
         db.session.refresh(c)
         current_balance = D(c.current_balance or 0)
@@ -2606,7 +2607,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, inv.currency, "ILS", inv.invoice_date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         total_invoices_calc += amt
     
     total_sales_calc = D('0.00')
@@ -2617,7 +2618,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, s.currency, "ILS", s.sale_date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         total_sales_calc += amt
 
     total_sale_returns_calc = D('0.00')
@@ -2628,7 +2629,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, ret.currency, "ILS", ret.created_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         total_sale_returns_calc += amt
     
     total_preorders_calc = D('0.00')
@@ -2639,7 +2640,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, pre.currency, "ILS", pre.created_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         total_preorders_calc += amt
     
     total_online_preorders_calc = D('0.00')
@@ -2650,7 +2651,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, op.currency, "ILS", op.created_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         total_online_preorders_calc += amt
     
     total_payments_calc = D('0.00')
@@ -2661,7 +2662,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, p.currency, "ILS", p.payment_date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         total_payments_calc += amt
     
     # إضافة الشيكات اليدوية إلى إجمالي الدفعات
@@ -2672,7 +2673,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, check.currency, "ILS", check.check_date or check.created_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         total_payments_calc += amt
     
     from utils import money_fmt
@@ -2732,29 +2733,29 @@ def advanced_filter():
         if balance_max is not None and balance_max != "":
             q = q.filter(Customer.balance <= float(balance_max))
     except ValueError:
-        pass
+        current_app.logger.warning('balance calculation failed silently in customers.py', exc_info=True)
 
     if created_at_min := request.args.get("created_at_min"):
         try:
             q = q.filter(Customer.created_at >= datetime.fromisoformat(created_at_min))
         except ValueError:
-            pass
+            current_app.logger.debug('date parsing failed in customers.py', exc_info=True)
     if created_at_max := request.args.get("created_at_max"):
         try:
             q = q.filter(Customer.created_at <= datetime.fromisoformat(created_at_max))
         except ValueError:
-            pass
+            current_app.logger.debug('date parsing failed in customers.py', exc_info=True)
 
     if last_activity_min := request.args.get("last_activity_min"):
         try:
             q = q.filter(Customer.last_activity >= datetime.fromisoformat(last_activity_min))
         except ValueError:
-            pass
+            current_app.logger.debug('date parsing failed in customers.py', exc_info=True)
     if last_activity_max := request.args.get("last_activity_max"):
         try:
             q = q.filter(Customer.last_activity <= datetime.fromisoformat(last_activity_max))
         except ValueError:
-            pass
+            current_app.logger.debug('date parsing failed in customers.py', exc_info=True)
 
     if category := request.args.get("category"):
         q = q.filter(Customer.category == category)

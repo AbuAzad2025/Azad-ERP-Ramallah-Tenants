@@ -287,7 +287,7 @@ def daily_reports():
                     report_data = json.load(f)
                     reports.append(report_data)
             except Exception:
-                pass
+                current_app.logger.debug('JSON parsing failed in ai_admin.py', exc_info=True)
         
         return render_template('ai/daily_reports.html', daily_reports=reports[:30])  # آخر 30 تقرير
     
