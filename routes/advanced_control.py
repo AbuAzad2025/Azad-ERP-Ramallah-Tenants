@@ -397,6 +397,7 @@ def multi_tenant():
                 db.session.rollback()
                 current_app.logger.exception('commit error')
                 flash('حدث خطأ أثناء الحفظ', 'danger')
+                return redirect(url_for('advanced.multi_tenant'))
             _log_owner_action('multi_tenant.create', tenant_name, {
                 'db': tenant_db,
                 'modules': tenant_modules,
@@ -419,6 +420,7 @@ def multi_tenant():
                     db.session.rollback()
                     current_app.logger.exception('commit error')
                     flash('حدث خطأ أثناء الحفظ', 'danger')
+                    return redirect(url_for('advanced.multi_tenant'))
                 _log_owner_action('multi_tenant.toggle', tenant_name, {
                     'new_status': setting.value,
                 })
@@ -442,6 +444,7 @@ def multi_tenant():
                 db.session.rollback()
                 current_app.logger.exception('commit error')
                 flash('حدث خطأ أثناء الحفظ', 'danger')
+                return redirect(url_for('advanced.multi_tenant'))
             _log_owner_action('multi_tenant.delete', tenant_name)
             flash(f'✅ تم حذف Tenant: {tenant_name}', 'success')
             return redirect(url_for('advanced.multi_tenant'))
@@ -468,6 +471,7 @@ def multi_tenant():
                 db.session.rollback()
                 current_app.logger.exception('commit error')
                 flash('حدث خطأ أثناء الحفظ', 'danger')
+                return redirect(url_for('advanced.multi_tenant'))
             _log_owner_action('multi_tenant.update', tenant_name, {
                 'domain': tenant_domain,
                 'max_users': tenant_max_users,
@@ -533,6 +537,7 @@ def dashboard_links():
                 db.session.rollback()
                 current_app.logger.exception('commit error')
                 flash('حدث خطأ أثناء الحفظ', 'danger')
+                return redirect(url_for('advanced.dashboard_links'))
             _log_owner_action('dashboard_links.toggle', link_key, {'visible': visible})
             flash(f'✅ تم تحديث: {link_key}', 'success')
             return redirect(url_for('advanced.dashboard_links'))
@@ -590,6 +595,7 @@ def version_control():
                 db.session.rollback()
                 current_app.logger.exception('commit error')
                 flash('حدث خطأ أثناء الحفظ', 'danger')
+                return redirect(url_for('advanced.version_control'))
             _log_owner_action('version.create', version_name, summary)
             
             flash(f'✅ تم إنشاء إصدار: {version_name}', 'success')
@@ -607,6 +613,7 @@ def version_control():
                 db.session.rollback()
                 current_app.logger.exception('commit error')
                 flash('حدث خطأ أثناء الحفظ', 'danger')
+                return redirect(url_for('advanced.version_control'))
             _log_owner_action('version.delete', version_name)
             flash(f'✅ تم حذف الإصدار: {version_name}', 'success')
             return redirect(url_for('advanced.version_control'))
@@ -1173,6 +1180,7 @@ def feature_flags():
             db.session.rollback()
             current_app.logger.exception('commit error')
             flash('حدث خطأ أثناء الحفظ', 'danger')
+            return redirect(url_for('advanced.feature_flags'))
         _log_owner_action('feature_flags.toggle', flag_key, {'enabled': enabled})
         flash(f'✅ تم تحديث: {flag_key}', 'success')
         return redirect(url_for('advanced.feature_flags'))

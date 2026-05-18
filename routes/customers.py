@@ -274,12 +274,16 @@ def list_customers():
 
     summary_result = summary_query.first()
     
-    total_balance = float(summary_result.total_balance or 0)
-    total_sales = float(summary_result.total_sales or 0)
-    total_payments = float(summary_result.total_payments or 0)
-    customers_with_debt = int(summary_result.customers_with_debt or 0)
-    customers_with_credit = int(summary_result.customers_with_credit or 0)
-    total_customers_count = int(summary_result.total_customers or 0)
+    if summary_result:
+        total_balance = float(summary_result.total_balance or 0)
+        total_sales = float(summary_result.total_sales or 0)
+        total_payments = float(summary_result.total_payments or 0)
+        customers_with_debt = int(summary_result.customers_with_debt or 0)
+        customers_with_credit = int(summary_result.customers_with_credit or 0)
+        total_customers_count = int(summary_result.total_customers or 0)
+    else:
+        total_balance = total_sales = total_payments = 0.0
+        customers_with_debt = customers_with_credit = total_customers_count = 0
 
     summary = {
         'total_customers': total_customers_count,

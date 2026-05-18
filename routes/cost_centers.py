@@ -5,7 +5,7 @@ from models import (CostCenter, CostCenterAllocation, Payment, Expense, Sale, Se
                    GLEntry, Account, Branch, SystemSettings)
 from sqlalchemy import func, and_, or_, desc
 from datetime import datetime, date, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from functools import wraps
 from utils import permission_required
 from permissions_config.enums import SystemPermissions
@@ -89,7 +89,13 @@ def add():
             name = request.form.get('name')
             parent_id = request.form.get('parent_id', type=int)
             manager_id = request.form.get('manager_id', type=int)
-            budget_amount = Decimal(request.form.get('budget_amount', 0))
+            try:
+                budget_amount = Decimal(request.form.get('budget_amount', 0))
+            except (InvalidOperation, TypeError, ValueError):
+                budget_amount = Decimal(0)
+            if budget_amount < 0:
+                flash('مبلغ الميزانية لا يمكن أن يكون سالباً', 'danger')
+                return redirect(request.url)
             description = request.form.get('description', '')
             
             if CostCenter.query.filter_by(code=code).first():
@@ -139,7 +145,13 @@ def edit(id):
         try:
             center.name = request.form.get('name')
             center.manager_id = request.form.get('manager_id', type=int)
-            center.budget_amount = Decimal(request.form.get('budget_amount', 0))
+            try:
+                center.budget_amount = Decimal(request.form.get('budget_amount', 0))
+            except (InvalidOperation, TypeError, ValueError):
+                center.budget_amount = Decimal(0)
+            if center.budget_amount < 0:
+                flash('مبلغ الميزانية لا يمكن أن يكون سالباً', 'danger')
+                return redirect(request.url)
             center.description = request.form.get('description', '')
             center.is_active = request.form.get('is_active') == 'on'
             center.updated_by = current_user.id

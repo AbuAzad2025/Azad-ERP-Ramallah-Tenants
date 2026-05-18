@@ -2144,10 +2144,8 @@ def get_accounts_summary():
 
         return jsonify({"rows": accounts, "groups": grouped, "totals": accounts_totals})
 
-    except Exception as e:
-        error_msg = f"Error in get_accounts_summary: {str(e)}"
-        current_app.logger.error(error_msg)
-        current_app.logger.exception('API error')
+    except Exception:
+        current_app.logger.exception('Error in get_accounts_summary')
         return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 @ledger_bp.route("/receivables-detailed-summary", methods=["GET"], endpoint="get_receivables_detailed_summary")

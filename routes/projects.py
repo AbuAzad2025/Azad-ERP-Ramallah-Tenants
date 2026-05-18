@@ -6,7 +6,7 @@ from models import (Project, ProjectPhase, ProjectCost, ProjectRevenue, CostCent
                    GLEntry, Account, Branch, Customer, SystemSettings)
 from sqlalchemy import func, and_, or_, desc, case
 from datetime import datetime, date, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from functools import wraps
 from utils import permission_required
 
@@ -160,7 +160,13 @@ def edit_project(id):
             end_date_str = request.form.get('end_date')
             project.end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None
             
-            project.budget_amount = Decimal(request.form.get('estimated_cost', 0))
+            try:
+                project.budget_amount = Decimal(request.form.get('estimated_cost', 0))
+            except (InvalidOperation, TypeError, ValueError):
+                project.budget_amount = Decimal(0)
+            if project.budget_amount < 0:
+                flash('مبلغ الميزانية لا يمكن أن يكون سالباً', 'danger')
+                return redirect(request.url)
             project.description = request.form.get('description', '')
             project.status = request.form.get('status')
             project.updated_by = current_user.id
