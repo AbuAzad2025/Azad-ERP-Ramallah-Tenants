@@ -2416,7 +2416,7 @@ def approve_settlement(supplier_id):
                 memo = f"تسوية مورد #{settlement.code} - عليه لنا {abs(closing_balance_amount):.2f} ₪"
             
             _gl_upsert_batch_and_entries(
-                db.session,
+                db.session.connection(),
                 source_type="SUPPLIER_SETTLEMENT",
                 source_id=settlement.id,
                 purpose="SETTLEMENT",

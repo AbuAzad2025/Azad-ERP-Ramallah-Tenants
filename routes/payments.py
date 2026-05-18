@@ -2015,6 +2015,12 @@ def delete_split(split_id):
                 utils.update_entity_balance("PARTNER", partner_id)
         except Exception as e:
             current_app.logger.error(f"❌ فشل تحديث الأرصدة بعد حذف جزء دفعة {split_id}: {e}")
+        # مزامنة القيود المحاسبية بعد حذف جزء الدفعة
+        if payment_id:
+            try:
+                run_payment_gl_sync_after_commit(payment_id)
+            except Exception:
+                current_app.logger.warning(f'Failed to sync GL after split {split_id} deletion for payment {payment_id}')
         current_app.logger.info("payment.split_deleted", extra={"event": "payments.split.delete", "payment_id": payment_id, "split_id": split_id})
         return jsonify(status="success")
     except SQLAlchemyError as e:
@@ -2983,6 +2989,12 @@ def shop_checkout():
         
         db.session.commit()
         
+        # مزامنة القيود المحاسبية بعد الحفظ
+        try:
+            run_payment_gl_sync_after_commit(payment.id)
+        except Exception:
+            current_app.logger.warning(f'Failed to sync GL for shop checkout payment {payment.id}')
+        
         # إرسال إشعار
         try:
             from notifications import notify_order_created
@@ -3079,6 +3091,12 @@ def shop_process_payment():
                 current_app.logger.warning(f'Failed to update customer balance')
         
         db.session.commit()
+        
+        # مزامنة القيود المحاسبية بعد تحديث الحالة
+        try:
+            run_payment_gl_sync_after_commit(payment.id)
+        except Exception:
+            current_app.logger.warning(f'Failed to sync GL for shop payment {payment.id}')
         
         # إرسال إشعار نجاح الدفع
         try:
@@ -3180,6 +3198,12 @@ def shop_refund():
                 current_app.logger.warning(f'Failed to update customer balance')
         
         db.session.commit()
+        
+        # مزامنة القيود المحاسبية للاسترداد
+        try:
+            run_payment_gl_sync_after_commit(refund_payment.id)
+        except Exception:
+            current_app.logger.warning(f'Failed to sync GL for shop refund {refund_payment.id}')
         
         return jsonify({
             "success": True,

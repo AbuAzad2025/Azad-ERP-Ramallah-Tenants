@@ -1468,7 +1468,7 @@ def delete_request(rid):
         try:
             run_service_gl_reversal_after_delete(reversal_snapshot)
         except Exception:
-            current_app.logger.warning('DB delete failed silently')
+            current_app.logger.warning('GL reversal failed after service delete')
         flash('✅ تم حذف الطلب ومعالجة المخزون','success')
         try:
             if customer_id:
