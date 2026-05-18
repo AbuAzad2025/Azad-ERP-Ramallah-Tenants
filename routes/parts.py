@@ -22,6 +22,12 @@ def _wants_json() -> bool:
     fmt = (request.args.get("format") or "").lower()
     return ("application/json" in accept and "text/html" not in accept) or fmt == "json"
 
+def _safe_int(val, default=0):
+    try:
+        return int(val or default)
+    except (ValueError, TypeError):
+        return int(default) if default else 0
+
 def _to_optional_decimal(val):
     try:
         if val in (None, ""):
@@ -124,7 +130,7 @@ def parts_create():
         selling_price=_to_decimal(request.form.get("selling_price")),
         price=_to_decimal(request.form.get("price") or request.form.get("selling_price")),
         notes=(request.form.get("notes") or "").strip() or None,
-        min_qty=int(request.form.get("min_qty") or 0),
+        min_qty=_safe_int(request.form.get("min_qty"), 0),
     )
     try:
         db.session.add(product)
@@ -176,7 +182,7 @@ def parts_edit(id):
     p.selling_price = _to_decimal(request.form.get("selling_price"), p.selling_price)
     p.price = _to_decimal(request.form.get("price") or request.form.get("selling_price"), p.price)
     p.notes = (request.form.get("notes") or "").strip() or None
-    p.min_qty = int(request.form.get("min_qty") or (p.min_qty or 0))
+    p.min_qty = _safe_int(request.form.get("min_qty"), p.min_qty or 0)
     try:
         db.session.commit()
         if _wants_json():
