@@ -3362,7 +3362,7 @@ def preorder_create():
             try:
                 run_preorder_gl_sync_after_commit(preorder.id)
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to sync preorder GL entries: {preorder.id}')
         except IntegrityError as e:
             db.session.rollback()
             if "preorders.reference" in str(e).lower() and not user_ref:
@@ -3373,7 +3373,7 @@ def preorder_create():
                     try:
                         run_preorder_gl_sync_after_commit(preorder.id)
                     except Exception:
-                        pass
+                        current_app.logger.warning(f'Failed to sync preorder GL entries: {preorder.id}')
                 except SQLAlchemyError as ee:
                     db.session.rollback()
                     flash(f"تعذر حفظ الحجز: {getattr(ee, 'orig', ee)}", "danger")
@@ -3458,7 +3458,7 @@ def preorder_create():
                     from utils.customer_balance_updater import update_customer_balance_components
                     update_customer_balance_components(preorder.customer_id, db.session)
                 except Exception:
-                    pass
+                    current_app.logger.warning(f'Failed to update customer balance')
                 flash("تم إنشاء الحجز وتسجيل العربون", "success")
             except SQLAlchemyError as e:
                 db.session.rollback()
@@ -3468,7 +3468,7 @@ def preorder_create():
                 from utils.customer_balance_updater import update_customer_balance_components
                 update_customer_balance_components(preorder.customer_id, db.session)
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to update customer balance')
             flash("تم إنشاء الحجز بنجاح", "success")
 
         return redirect(url_for("warehouse_bp.preorder_detail", preorder_id=preorder.id))
@@ -3592,12 +3592,12 @@ def preorder_convert_to_sale(preorder_id):
         try:
             run_preorder_gl_sync_after_commit(preorder.id)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to sync preorder GL entries: {preorder.id}')
         try:
             from utils.customer_balance_updater import update_customer_balance_components
             update_customer_balance_components(preorder.customer_id, db.session)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to sync preorder GL entries: {preorder.id}')
         
         flash(f"✅ تم إنشاء مبيعة #{sale.id} - أكمل الدفع لإتمام التسليم!", "success")
         
@@ -3658,12 +3658,12 @@ def preorder_fulfill(preorder_id):
             try:
                 run_preorder_gl_sync_after_commit(preorder.id)
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to sync preorder GL entries: {preorder.id}')
             try:
                 from utils.customer_balance_updater import update_customer_balance_components
                 update_customer_balance_components(preorder.customer_id, db.session)
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to sync preorder GL entries: {preorder.id}')
             flash("تم تنفيذ الحجز وشحن الكمية", "success")
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -3688,7 +3688,7 @@ def preorder_mark_fulfilled(preorder_id):
                 from utils.customer_balance_updater import update_customer_balance_components
                 update_customer_balance_components(preorder.customer_id, db.session)
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to update customer balance')
             flash("تم تحديث حالة الحجز إلى منفذ", "success")
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -3721,7 +3721,7 @@ def preorder_cancel(preorder_id):
             from utils.customer_balance_updater import update_customer_balance_components
             update_customer_balance_components(preorder.customer_id, db.session)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to update customer balance')
         flash("تم إلغاء الحجز واسترداد العربون", "success")
     except SQLAlchemyError:
         db.session.rollback()

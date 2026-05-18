@@ -1792,7 +1792,7 @@ def suppliers_statement(supplier_id: int):
             finally:
                 session.close()
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to update supplier balance: {supplier_id}')
 
         db.session.refresh(supplier)
         current_balance = float(supplier.current_balance or 0)
@@ -3176,7 +3176,7 @@ def partners_statement(partner_id: int):
             finally:
                 session.close()
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to update partner balance: {partner_id}')
         
         db.session.refresh(partner)
         current_balance = float(partner.current_balance or 0)

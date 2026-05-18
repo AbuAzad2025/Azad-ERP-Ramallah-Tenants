@@ -2586,7 +2586,7 @@ def account_statement(customer_id):
             finally:
                 session.close()
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to update customer balance: {customer_id}')
 
         db.session.refresh(c)
         current_balance = D(c.current_balance or 0)

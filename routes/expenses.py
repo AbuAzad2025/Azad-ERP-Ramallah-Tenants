@@ -1095,12 +1095,12 @@ def generate_salary(emp_id):
         try:
             run_expense_gl_sync_after_commit(salary_expense.id)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to sync expense GL entries: {salary_expense.id}')
         if salary_payment:
             try:
                 run_payment_gl_sync_after_commit(salary_payment.id)
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to sync expense GL entries: {salary_expense.id}')
         
         success_msg = f"✅ <strong>تم توليد وحفظ راتب شهر {month}/{year} بنجاح</strong><br><br>"
         success_msg += f"👤 الموظف: <strong>{employee.name}</strong><br>"
@@ -3187,7 +3187,7 @@ def generate_all_salaries():
                 try:
                     run_expense_gl_sync_after_commit(exp_id)
                 except Exception:
-                    pass
+                    current_app.logger.warning(f'Failed to sync expense GL entries: {exp_id}')
             if created_expense_ids:
                 try:
                     payment_ids = [
@@ -3201,9 +3201,9 @@ def generate_all_salaries():
                         try:
                             run_payment_gl_sync_after_commit(pid)
                         except Exception:
-                            pass
+                            current_app.logger.warning(f'Failed to sync payment GL entries: {pid}')
                 except Exception:
-                    pass
+                    current_app.logger.warning(f'Failed to sync payment GL entries: {pid}')
             flash(f'تم توليد {success_count} راتب بنجاح', 'success')
         
         if error_count > 0:

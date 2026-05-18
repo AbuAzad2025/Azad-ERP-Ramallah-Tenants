@@ -1747,7 +1747,7 @@ def create_payment():
                 try:
                     run_payment_gl_sync_after_commit(payment.id)
                 except Exception:
-                    pass
+                    current_app.logger.warning(f'Failed to sync payment GL entries: {payment.id}')
                 created_checks = False
                 payment_method_str = str(payment.method).upper()
                 if ('CHECK' in payment_method_str or 'CHEQUE' in payment_method_str) and payment.check_number and payment.check_bank:
@@ -1952,7 +1952,7 @@ def create_expense_payment(exp_id):
         try:
             run_payment_gl_sync_after_commit(payment.id)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to sync payment GL entries: {payment.id}')
         # تحديث الأرصدة بشكل فوري
         try:
             if payment.supplier_id:
@@ -2163,7 +2163,7 @@ def update_payment_status(payment_id: int):
         try:
             run_payment_gl_sync_after_commit(payment.id)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to sync payment GL entries: {payment.id}')
         return jsonify(success=True, message="تم تحديث حالة الدفعة بنجاح", status=new_status)
         
     except Exception as e:
@@ -3076,7 +3076,7 @@ def shop_process_payment():
                 from utils.customer_balance_updater import update_customer_balance_components
                 update_customer_balance_components(payment.customer_id, db.session)
             except ImportError:
-                pass
+                current_app.logger.warning(f'Failed to update customer balance')
         
         db.session.commit()
         
@@ -3177,7 +3177,7 @@ def shop_refund():
                 from utils.customer_balance_updater import update_customer_balance_components
                 update_customer_balance_components(original_payment.customer_id, db.session)
             except ImportError:
-                pass
+                current_app.logger.warning(f'Failed to update customer balance')
         
         db.session.commit()
         

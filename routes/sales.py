@@ -1346,7 +1346,7 @@ def quick_sell():
         try:
             run_sale_gl_sync_after_commit(sale.id)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to sync sale GL entries: {sale.id}')
         # تحديث رصيد العميل
         try:
             from utils.customer_balance_updater import update_customer_balance_components

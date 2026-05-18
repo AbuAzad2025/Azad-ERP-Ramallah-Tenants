@@ -140,7 +140,7 @@ def _refresh_service_related_balances(service) -> None:
             from utils.customer_balance_updater import update_customer_balance_components
             update_customer_balance_components(int(customer_id))
     except Exception:
-        pass
+        current_app.logger.warning(f'Failed to update customer balance')
     try:
         partner_ids = set()
         for sp in (list(getattr(service, "parts", []) or []) + list(getattr(service, "tasks", []) or [])):
@@ -1472,7 +1472,7 @@ def delete_request(rid):
             for pid in partner_ids:
                 utils.update_entity_balance("PARTNER", int(pid))
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to update customer balance')
     except SQLAlchemyError as e:
         db.session.rollback()
         _log_and_flash("service.delete_request", e, "تعذر حذف الطلب حالياً.")

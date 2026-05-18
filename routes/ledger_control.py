@@ -1159,7 +1159,7 @@ def recalculate_all_balances():
                 update_customer_balance_components(customer.id, db.session)
                 recalculated['customers'] += 1
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to update customer balance')
         
         partners = Partner.query.limit(10000).all()
         for partner in partners:
@@ -1168,7 +1168,7 @@ def recalculate_all_balances():
                 update_partner_balance(partner.id)
                 recalculated['partners'] += 1
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to update partner balance')
         
         suppliers = Supplier.query.limit(10000).all()
         for supplier in suppliers:
@@ -1176,7 +1176,7 @@ def recalculate_all_balances():
                 update_supplier_balance_components(supplier.id)
                 recalculated['suppliers'] += 1
             except Exception:
-                pass
+                current_app.logger.warning(f'Failed to update supplier balance: {supplier.id}')
         
         db.session.commit()
         
