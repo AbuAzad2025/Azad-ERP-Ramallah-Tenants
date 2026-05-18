@@ -112,7 +112,6 @@ def accrue_income_tax():
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('accrue_income_tax failed')
-        current_app.logger.exception('API error')
         return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 

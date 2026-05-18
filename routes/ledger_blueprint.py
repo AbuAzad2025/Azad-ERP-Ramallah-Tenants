@@ -783,8 +783,7 @@ def get_ledger_data():
         
     except Exception as e:
         current_app.logger.error(f"Error in get_ledger_data: {str(e)}")
-        current_app.logger.exception('API error')
-        return jsonify({"error": "حدث خطأ داخلي"}), 500
+        return jsonify({"error": "حدث خطأ داخلي", "data": [], "statistics": {}}), 500
 
 @ledger_bp.route("/statistics", methods=["GET"], endpoint="get_ledger_statistics")
 @login_required
@@ -798,8 +797,7 @@ def get_ledger_statistics():
         return jsonify({"statistics": statistics})
     except Exception as e:
         current_app.logger.error(f"Error in get_ledger_statistics: {str(e)}")
-        current_app.logger.exception('API error')
-        return jsonify({"error": "حدث خطأ داخلي"}), 500
+        return jsonify({"error": "حدث خطأ داخلي", "statistics": {}}), 500
 
 @ledger_bp.route("/cogs-audit", methods=["GET"], endpoint="cogs_audit_report")
 @login_required

@@ -314,8 +314,8 @@ def suppliers_create():
             db.session.rollback()
             if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("modal") == "1":
                 current_app.logger.exception('API error')
-                return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
-            flash(f"❌ خطأ أثناء إضافة المورد: {e}", "danger")
+                return jsonify({"success": False, "errors": {"__all__": ["حدث خطأ داخلي"]}}), 400
+            flash("❌ خطأ أثناء إضافة المورد", "danger")
     else:
         if request.method == "POST":
             for field, errors in form.errors.items():
@@ -3509,8 +3509,8 @@ def partners_create():
             db.session.rollback()
             if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("modal") == "1":
                 current_app.logger.exception('API error')
-                return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
-            flash(f"❌ خطأ أثناء إضافة الشريك: {e}", "danger")
+                return jsonify({"success": False, "errors": {"__all__": ["حدث خطأ داخلي"]}}), 400
+            flash("❌ خطأ أثناء إضافة الشريك", "danger")
     else:
         if request.method == "POST":
             current_app.logger.warning(f"[WARNING] Partner Form validation errors: {form.errors}")
