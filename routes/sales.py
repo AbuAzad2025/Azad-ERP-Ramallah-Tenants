@@ -1147,7 +1147,7 @@ def sale_detail(id: int):
         except Exception:
             paid_ils = Decimal('0.00'); grand_total_ils = grand_total; balance_due_ils = (grand_total - paid_ils)
     except Exception:
-        pass
+        current_app.logger.warning(f'Failed to compute ILS totals for sale {id}')
     invoice = Invoice.query.filter_by(sale_id=id).first()
     return render_template(
         "sales/detail.html",

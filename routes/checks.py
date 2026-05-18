@@ -2334,7 +2334,7 @@ class CheckActionService:
                         details={'auto_refund': True, 'reverse_entry': True}
                     ))
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to create auto-refund payment for payment {payment.id}')
 
     def _auto_unrefund_payment(self, payment):
         try:
@@ -2348,7 +2348,7 @@ class CheckActionService:
                 r.notes = (r.notes or '') + "\n[REVERSAL_ON_RESUBMIT=true]"
                 db.session.add(r)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to auto-unrefund payment {payment.id}')
 
     def _auto_refund_split(self, payment, split):
         try:
@@ -2460,7 +2460,7 @@ class CheckActionService:
                     details={'auto_refund': True, 'reverse_entry': True}
                 ))
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to create auto-refund split for payment {payment.id}, split {split.id}')
 
     def _auto_unrefund_split(self, payment, split):
         try:
@@ -2474,7 +2474,7 @@ class CheckActionService:
                 r.notes = (r.notes or '') + "\n[REVERSAL_ON_RESUBMIT=true]"
                 db.session.add(r)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to auto-unrefund split for payment {payment.id}')
 
     # تم إزالة منطق إنشاء دفعات عكس تلقائية؛ سيتم إنشاء قيود دفتر الأستاذ مباشرة عند تغيير حالة الشيك
     
