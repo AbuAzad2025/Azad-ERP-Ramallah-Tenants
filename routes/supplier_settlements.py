@@ -217,7 +217,8 @@ def create(supplier_id):
                 "supplier_id": supplier.id, "from": dfrom.isoformat(), "to": dto.isoformat(), "total_due": str(due), "code": draft.code
             })))
     except SQLAlchemyError as e:
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
     direction = _due_direction(due)
     amount_str = f"{abs(due):.2f}"
     pay_url = url_for(
@@ -259,7 +260,8 @@ def confirm(settlement_id):
         from utils.supplier_balance_updater import update_supplier_balance_components
         update_supplier_balance_components(ss.supplier_id)
     except SQLAlchemyError as e:
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
     return jsonify({"success": True, "id": ss.id, "code": ss.code})
 
 @supplier_settlements_bp.route("/settlements/<int:settlement_id>/void", methods=["POST"])
@@ -276,7 +278,8 @@ def void(settlement_id):
             db.session.flush()
             db.session.add(AuditLog(model_name="SupplierSettlement", record_id=settlement_id, action="VOID", old_data=None, new_data=None))
     except SQLAlchemyError as e:
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
     return jsonify({"success": True})
 
 @supplier_settlements_bp.route("/settlements/<int:settlement_id>", methods=["GET"])
@@ -341,7 +344,8 @@ def update_exchange_transaction_price(tx_id):
         })
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 @supplier_settlements_bp.route("/<int:supplier_id>/settlement", methods=["GET"], endpoint="supplier_settlement")
@@ -1002,10 +1006,11 @@ def _calculate_smart_supplier_balance(supplier_id: int, date_from: datetime, dat
                 "message": "⚠️ تنبيه: لا يمكن إتمام التسوية لعدم توفر سعر صرف لإحدى العملات.\n\nيرجى:\n1. إدخال سعر الصرف يدوياً من [إعدادات العملات]\n2. أو تفعيل الاتصال بالسيرفرات العالمية\n3. ثم إعادة المحاولة",
                 "help_url": "/settings/currencies"
             }
-        return {"success": False, "error": f"خطأ في الحساب: {str(e)}"}
+        current_app.logger.exception('settlement calculation error')
+        return {"success": False, "error": "خطأ في الحساب"}
     except Exception as e:
-        
-        return {"success": False, "error": f"خطأ في حساب رصيد المورد: {str(e)}"}
+        current_app.logger.exception('settlement calculation error')
+        return {"success": False, "error": "خطأ في حساب رصيد المورد"}
 
 
 def _calculate_supplier_incoming(supplier_id: int, date_from: datetime, date_to: datetime):

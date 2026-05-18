@@ -112,7 +112,8 @@ def accrue_income_tax():
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('accrue_income_tax failed')
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 @financial_reports_bp.route('/income-statement')
@@ -299,8 +300,9 @@ def income_statement():
     except Exception as e:
         current_app.logger.error(f"خطأ في قائمة الدخل: {str(e)}")
         if request.args.get('format') == 'json':
-            return jsonify({'success': False, 'error': str(e)}), 500
-        return render_template('errors/500.html', error=str(e)), 500
+            current_app.logger.exception('API error')
+            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return render_template('errors/500.html', error="حدث خطأ داخلي"), 500
 
 @financial_reports_bp.route('/balance-sheet')
 @permission_required(SystemPermissions.VIEW_REPORTS)
@@ -457,8 +459,9 @@ def balance_sheet():
     except Exception as e:
         current_app.logger.error(f"خطأ في الميزانية العمومية: {str(e)}")
         if request.args.get('format') == 'json':
-            return jsonify({'success': False, 'error': str(e)}), 500
-        return render_template('errors/500.html', error=str(e)), 500
+            current_app.logger.exception('API error')
+            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return render_template('errors/500.html', error="حدث خطأ داخلي"), 500
 
 @financial_reports_bp.route('/cash-flow')
 @permission_required(SystemPermissions.VIEW_REPORTS)
@@ -626,7 +629,8 @@ def cash_flow():
         
     except Exception as e:
         current_app.logger.error(f"خطأ في التدفق النقدي: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @financial_reports_bp.route('/balances-summary')
 @permission_required(SystemPermissions.VIEW_REPORTS)
@@ -696,7 +700,8 @@ def balances_summary():
         
     except Exception as e:
         current_app.logger.error(f"خطأ في تقرير الأرصدة: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @financial_reports_bp.route('/validation')
 @permission_required(SystemPermissions.VIEW_REPORTS)
@@ -761,7 +766,8 @@ def validation_report():
         
     except Exception as e:
         current_app.logger.error(f"خطأ في تقرير التحقق: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 # ========== تبويبات جديدة ==========
@@ -956,8 +962,9 @@ def trial_balance():
     except Exception as e:
         current_app.logger.error(f"خطأ في ميزان المراجعة: {str(e)}")
         if request.args.get('format') == 'json':
-            return jsonify({'success': False, 'error': str(e)}), 500
-        return render_template('errors/500.html', error=str(e)), 500
+            current_app.logger.exception('API error')
+            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return render_template('errors/500.html', error="حدث خطأ داخلي"), 500
 
 
 @financial_reports_bp.route('/aging-report')
@@ -1163,7 +1170,8 @@ def aging_report():
         
     except Exception as e:
         current_app.logger.error(f"خطأ في تقرير الذمم المعمرة: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 @financial_reports_bp.route('/profit-trends')
@@ -1227,7 +1235,8 @@ def profit_trends():
         
     except Exception as e:
         current_app.logger.error(f"خطأ في اتجاهات الربحية: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 @financial_reports_bp.route('/expense-breakdown')
@@ -1286,7 +1295,8 @@ def expense_breakdown():
         
     except Exception as e:
         current_app.logger.error(f"خطأ في تحليل المصروفات: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 @financial_reports_bp.route('/receivables-payables')
@@ -1434,7 +1444,8 @@ def receivables_payables():
         
     except Exception as e:
         current_app.logger.error(f"خطأ في تقرير الذمم: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 @financial_reports_bp.route('/revenue-by-source')
@@ -1515,4 +1526,5 @@ def revenue_by_source():
         
     except Exception as e:
         current_app.logger.error(f"خطأ في تحليل مصادر الإيرادات: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500

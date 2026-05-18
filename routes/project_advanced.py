@@ -1,5 +1,5 @@
 from permissions_config.enums import SystemPermissions
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from models import (Project, ProjectTask, ProjectResource, ProjectMilestone, ProjectRisk,
@@ -183,7 +183,8 @@ def add_task(project_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(request.referrer or url_for('project_advanced.tasks', project_id=project_id))
 
 
@@ -262,7 +263,8 @@ def add_resource(project_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(request.referrer)
 
 
@@ -338,7 +340,8 @@ def add_milestone(project_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(request.referrer)
 
 
@@ -364,7 +367,8 @@ def complete_milestone(project_id, milestone_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(request.referrer)
 
 
@@ -439,7 +443,8 @@ def add_risk(project_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(request.referrer)
 
 
@@ -503,7 +508,8 @@ def add_change_order(project_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(request.referrer)
 
 
@@ -531,7 +537,8 @@ def approve_change_order(project_id, co_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(request.referrer)
 
 

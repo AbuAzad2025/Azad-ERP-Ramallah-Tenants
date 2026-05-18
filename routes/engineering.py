@@ -1,5 +1,5 @@
 from permissions_config.enums import SystemPermissions
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from models import (EngineeringTeam, EngineeringTeamMember, EngineeringSkill, 
@@ -151,7 +151,8 @@ def add_team():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ في إضافة الفريق: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     employees = Employee.query.order_by(Employee.name).all()
     cost_centers = CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all()
@@ -256,7 +257,8 @@ def add_task():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ في إضافة المهمة: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     teams = EngineeringTeam.query.filter_by(is_active=True).order_by(EngineeringTeam.name).all()
     employees = Employee.query.order_by(Employee.name).all()
@@ -360,7 +362,8 @@ def add_timesheet():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ في التسجيل: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     employees = Employee.query.order_by(Employee.name).all()
     tasks = EngineeringTask.query.filter(

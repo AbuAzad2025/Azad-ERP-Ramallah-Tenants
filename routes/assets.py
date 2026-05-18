@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from models import FixedAsset, FixedAssetCategory, AssetDepreciation, AssetMaintenance, Branch, Site, Partner, SystemSettings, Account
@@ -106,7 +106,8 @@ def add():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'خطأ في إضافة الأصل: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     categories = FixedAssetCategory.query.filter_by(is_active=True).all()
     branches = Branch.query.filter_by(is_active=True).all()

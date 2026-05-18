@@ -144,7 +144,8 @@ def bulk_archive():
             
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f'خطأ في الأرشفة الجماعية: {str(e)}', 'error')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'error')
     
     return render_template('archive/bulk_archive.html')
 
@@ -177,7 +178,8 @@ def restore_archive(archive_id):
             return redirect(url_for('archive.index'))
             
         except Exception as e:
-            flash(f'خطأ في استعادة السجل: {str(e)}', 'error')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'error')
     
     return render_template('archive/restore.html', archive=archive)
 
@@ -194,7 +196,8 @@ def delete_archive(archive_id):
         flash('تم حذف الأرشيف نهائياً', 'success')
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash(f'خطأ في حذف الأرشيف: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
     
     return redirect(url_for('archive.index'))
 

@@ -1,5 +1,5 @@
 from permissions_config.enums import SystemPermissions
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from models import (WorkflowDefinition, WorkflowInstance, WorkflowAction, 
@@ -135,7 +135,8 @@ def add_definition():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     return render_template('workflows/definition_form.html', definition=None)
 
@@ -174,7 +175,8 @@ def edit_definition(id):
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     return render_template('workflows/definition_form.html', definition=definition)
 
@@ -197,7 +199,8 @@ def toggle_definition(id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('workflows.definitions'))
 
 
@@ -295,7 +298,8 @@ def execute_action(id):
         return redirect(url_for('workflows.view_instance', id=id))
         
     except Exception as e:
-        flash(f'❌ خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('workflows.view_instance', id=id))
 
 
@@ -320,7 +324,8 @@ def cancel_instance(id):
         return redirect(url_for('workflows.instances'))
         
     except Exception as e:
-        flash(f'❌ خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('workflows.instances'))
 
 
@@ -363,7 +368,8 @@ def api_start_workflow():
             return jsonify({'success': False, 'error': 'Failed to start workflow'}), 400
             
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 @workflows_bp.route('/reports/summary')

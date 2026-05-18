@@ -11,7 +11,7 @@ Created: 2025-11-01
 """
 
 from permissions_config.enums import SystemPermissions
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, current_app
 from flask_login import login_required, current_user
 from models import SystemSettings
 from extensions import db
@@ -103,7 +103,8 @@ def ai_settings():
         
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     def to_bool(value, default):
         if value is None:
@@ -155,7 +156,7 @@ def toggle_visibility():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -214,7 +215,7 @@ def reset_knowledge():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -236,7 +237,7 @@ def training_status():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -259,7 +260,7 @@ def training_log():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -290,7 +291,8 @@ def daily_reports():
         return render_template('ai/daily_reports.html', daily_reports=reports[:30])  # آخر 30 تقرير
     
     except Exception as e:
-        flash(f'❌ خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('ai_admin.ai_settings'))
 
 
@@ -312,7 +314,8 @@ def evolution_report():
         )
     
     except Exception as e:
-        flash(f'❌ خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('ai_admin.ai_settings'))
 
 
@@ -346,7 +349,7 @@ def run_code_scan():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -374,7 +377,8 @@ def performance_report():
         )
     
     except Exception as e:
-        flash(f'خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('ai_admin.ai_settings'))
 
 
@@ -400,7 +404,7 @@ def stats_api():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         })
 
 
@@ -433,7 +437,7 @@ def execute_command(command_name):
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -482,7 +486,7 @@ def upload_book():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -504,7 +508,7 @@ def memory_stats():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -526,7 +530,7 @@ def system_status():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -555,7 +559,7 @@ def train_package():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -574,7 +578,7 @@ def train_all_packages():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -626,7 +630,7 @@ def marathon_training():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 

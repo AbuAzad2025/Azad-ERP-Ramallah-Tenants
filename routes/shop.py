@@ -670,7 +670,8 @@ def api_products():
             })
         return jsonify({"data": data})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @shop_bp.get("/api/product/<int:pid>")
 def api_product_detail(pid: int):
@@ -692,7 +693,8 @@ def api_product_detail(pid: int):
             "category_name": getattr(p, "category_name", None),
         })
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @shop_bp.route("/order", methods=["POST"], endpoint="place_order")
 @online_customer_required
@@ -1521,5 +1523,6 @@ def archive_preorder(preorder_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ في أرشفة الحجز المسبق: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('shop.admin_preorders'))

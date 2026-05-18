@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for, current_app
 from flask_login import current_user, login_required
 from sqlalchemy import desc, func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -69,7 +69,8 @@ def new_currency():
             
         except Exception as e:
             db.session.rollback()
-            flash(f"خطأ في إضافة العملة: {str(e)}", "error")
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'error')
             return render_template("currencies/currency_form.html")
     
     return render_template("currencies/currency_form.html")
@@ -110,7 +111,7 @@ def list_exchange_rates():
             else:
                 market_rates[rate.id] = {'success': False, 'rate': 0, 'source': 'failed'}
         except Exception as e:
-            market_rates[rate.id] = {'success': False, 'rate': 0, 'source': 'error', 'error': str(e)}
+            market_rates[rate.id] = {'success': False, 'rate': 0, 'source': 'error', 'error': 'حدث خطأ داخلي'}
     
     # دالة للحصول على اسم العملة بالعربي
     def get_currency_name(code):
@@ -161,10 +162,12 @@ def new_exchange_rate():
             flash("سعر الصرف موجود مسبقاً لهذا التاريخ", "error")
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f"خطأ في قاعدة البيانات: {str(e)}", "error")
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'error')
         except Exception as e:
             db.session.rollback()
-            flash(f"خطأ غير متوقع: {str(e)}", "error")
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'error')
     
     return render_template("currencies/exchange_rate_form.html", form=form)
 
@@ -194,10 +197,12 @@ def edit_exchange_rate(rate_id):
             flash("سعر الصرف موجود مسبقاً لهذا التاريخ", "error")
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash(f"خطأ في قاعدة البيانات: {str(e)}", "error")
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'error')
         except Exception as e:
             db.session.rollback()
-            flash(f"خطأ غير متوقع: {str(e)}", "error")
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'error')
     
     return render_template("currencies/exchange_rate_form.html", form=form, exchange_rate=exchange_rate)
 
@@ -214,7 +219,8 @@ def delete_exchange_rate(rate_id):
         flash(f"تم حذف سعر الصرف {exchange_rate.base_code}/{exchange_rate.quote_code} بنجاح", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash(f"خطأ في حذف سعر الصرف: {str(e)}", "error")
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
     
     return redirect(url_for("currencies.exchange_rates"))
 
@@ -233,7 +239,8 @@ def toggle_exchange_rate(rate_id):
         flash(f"{status} سعر الصرف {exchange_rate.base_code}/{exchange_rate.quote_code}", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash(f"خطأ في تحديث سعر الصرف: {str(e)}", "error")
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
     
     return redirect(url_for("currencies.exchange_rates"))
 
@@ -290,7 +297,8 @@ def update_exchange_rates():
         return redirect(url_for("currencies.exchange_rates"))
         
     except Exception as e:
-        flash(f"خطأ في التحديث: {str(e)}", "error")
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for("currencies.exchange_rates"))
 
 @currencies_bp.route("/test-rate", methods=["POST"], endpoint="test_rate")
@@ -315,10 +323,11 @@ def test_exchange_rate():
         })
         
     except Exception as e:
+        current_app.logger.exception('API error')
         return jsonify({
             'success': False,
-            'error': str(e),
-            'message': f"خطأ في الاختبار: {str(e)}"
+            'error': 'حدث خطأ داخلي',
+            'message': 'حدث خطأ داخلي'
         })
 
 @currencies_bp.route("/settings", endpoint="settings")
@@ -351,7 +360,8 @@ def toggle_online_fx():
         flash(f"تم {'تشغيل' if new_value else 'إيقاف'} جلب أسعار الصرف الأونلاين", 'success')
         return redirect(url_for('currencies.settings'))
     except Exception as e:
-        flash(f"خطأ في تحديث الإعدادات: {str(e)}", 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('currencies.settings'))
 
 @currencies_bp.route("/settings/update-interval", methods=['POST'], endpoint="update_interval")
@@ -375,7 +385,8 @@ def update_fx_interval():
         flash('تم تحديث فترة التحديث بنجاح', 'success')
         return redirect(url_for('currencies.settings'))
     except Exception as e:
-        flash(f'خطأ في تحديث الفترة: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('currencies.settings'))
 
 @currencies_bp.route("/settings/test-online", methods=['POST'], endpoint="test_online")
@@ -393,6 +404,7 @@ def test_online_fx():
         else:
             flash('فشل في جلب السعر من السيرفرات الأونلاين', 'error')
     except Exception as e:
-        flash(f'خطأ في اختبار السعر: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
     
     return redirect(url_for('currencies.settings'))

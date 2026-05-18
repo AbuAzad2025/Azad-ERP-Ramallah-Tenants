@@ -2708,7 +2708,7 @@ def sync_expenses_to_ledger():
             except Exception as e:
                 failed += 1
                 if first_error is None:
-                    first_error = str(e)
+                    first_error = True
                     current_app.logger.exception("مزامنة دفتر الأستاذ للمصروف %s فشلت", eid)
         expense_batches_count = db.session.query(GLBatch).filter(
             GLBatch.source_type == "EXPENSE",
@@ -2719,7 +2719,7 @@ def sync_expenses_to_ledger():
             if failed:
                 msg += f" فشل {failed}."
             if first_error:
-                msg += f" سبب أول فشل: {first_error[:200]}"
+                msg += " راجع سجلات النظام للتفاصيل."
             flash(msg, "success" if synced else "warning")
         else:
             flash("لا توجد مصاريف تحتاج مزامنة؛ كل المصاريف مسجّلة في دفتر الأستاذ.", "info")
@@ -2727,7 +2727,7 @@ def sync_expenses_to_ledger():
             flash(f"عدد قيود المصاريف في دفتر الأستاذ حالياً: {expense_batches_count}. تأكد من عدم تطبيق فلتر تاريخ يخفيها.", "info")
     except Exception as e:
         current_app.logger.exception("sync_expenses_to_ledger")
-        flash(f"خطأ أثناء مزامنة المصاريف: {e}", "danger")
+        flash("خطأ أثناء مزامنة المصاريف", "danger")
     return redirect(url_for("expenses_bp.list_expenses"))
 
 
@@ -2908,7 +2908,8 @@ def archive_expense(expense_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ في أرشفة النفقة: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('expenses_bp.list_expenses'))
 
 @expenses_bp.route('/restore/<int:expense_id>', methods=['POST'])
@@ -2939,7 +2940,8 @@ def restore_expense(expense_id):
     except Exception as e:
         
         db.session.rollback()
-        flash(f'خطأ في استعادة النفقة: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('expenses_bp.list_expenses'))
 
 

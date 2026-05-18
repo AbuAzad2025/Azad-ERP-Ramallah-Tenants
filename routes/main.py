@@ -766,7 +766,8 @@ def backup_db():
             
     except Exception as e:
         current_app.logger.error(f"Backup error: {e}")
-        flash(f"❌ حدث خطأ أثناء النسخ الاحتياطي: {str(e)}", "danger")
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for("main.dashboard"))
 
 @main_bp.route("/restore_db", methods=["GET", "POST"], endpoint="restore_db")
@@ -808,7 +809,8 @@ def restore_db():
             return redirect(url_for("main.restore_db"))
         except Exception as e:
             if request.is_json or request.headers.get('Accept') == 'application/json':
-                return jsonify({"success": False, "message": f"خطأ أثناء الاستعادة: {str(e)}"}), 500
+                current_app.logger.exception('API error')
+                return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
             flash("❌ خطأ أثناء الاستعادة.", "danger")
             return redirect(url_for("main.restore_db"))
     return render_template("restore_db.html", form=form)

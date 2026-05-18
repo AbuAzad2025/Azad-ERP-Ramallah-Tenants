@@ -773,8 +773,9 @@ def backup_manager():
                     'path': final_path.replace(current_app.root_path, '')
                 })
             except Exception as e:
-                _record_backup_failure(f'Create backup failed: {str(e)}')
-                flash(f'❌ خطأ: {str(e)}', 'danger')
+                _record_backup_failure('فشل إنشاء النسخة الاحتياطية')
+                current_app.logger.exception('internal error')
+                flash('حدث خطأ داخلي', 'danger')
             
             return redirect(url_for('advanced.backup_manager'))
         
@@ -897,7 +898,8 @@ def download_backup(filename):
             flash('❌ الملف غير موجود', 'danger')
             return redirect(url_for('advanced.backup_manager'))
     except Exception as e:
-        flash(f'❌ خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('advanced.backup_manager'))
 
 
@@ -940,7 +942,8 @@ def restore_json_backup(filename):
             _log_owner_action('backup.restore_json', filename, {'status': 'failed', 'errors': messages[:5]})
             
     except Exception as e:
-        flash(f'❌ خطأ غير متوقع: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         
     return redirect(url_for('advanced.backup_manager'))
 
@@ -980,8 +983,9 @@ def restore_backup(filename):
             flash(f'❌ {msg}', 'danger')
     
     except Exception as e:
-        _record_backup_failure(f'Restore error ({filename}): {str(e)}')
-        flash(f'❌ خطأ في الاستعادة: {str(e)}', 'danger')
+        _record_backup_failure(f'فشل استعادة النسخة ({filename})')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
     
     return redirect(url_for('advanced.backup_manager'))
 
@@ -1012,8 +1016,9 @@ def delete_backup(filename):
         else:
             flash('❌ الملف غير موجود', 'danger')
     except Exception as e:
-        _record_backup_failure(f'Delete backup error ({filename}): {str(e)}')
-        flash(f'❌ خطأ: {str(e)}', 'danger')
+        _record_backup_failure(f'فشل حذف النسخة ({filename})')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
     
     return redirect(url_for('advanced.backup_manager'))
 
@@ -1040,7 +1045,8 @@ def toggle_auto_backup():
             _log_owner_action('backup.auto_toggle', 'disabled')
             
     except Exception as e:
-        flash(f'❌ خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
     
     return redirect(url_for('advanced.backup_manager'))
 
@@ -1079,7 +1085,8 @@ def test_db_connection():
                 return jsonify({'success': False, 'message': 'فشل الاتصال'})
                 
     except Exception as e:
-        return jsonify({'success': False, 'message': f'خطأ: {str(e)}'})
+        current_app.logger.exception('internal error')
+        return jsonify({'success': False, 'message': 'حدث خطأ داخلي'})
 
 
 @advanced_bp.route('/api-generator', methods=['GET', 'POST'])
@@ -1153,7 +1160,8 @@ def system_health():
                     os.makedirs(full_path, exist_ok=True)
                 flash('✅ تم إصلاح الصلاحيات', 'success')
             except Exception as e:
-                flash(f'❌ خطأ: {str(e)}', 'danger')
+                current_app.logger.exception('internal error')
+                flash('حدث خطأ داخلي', 'danger')
         
         elif action == 'clear_cache':
             try:
@@ -1164,7 +1172,8 @@ def system_health():
                         shutil.rmtree(cache_path)
                 flash('✅ تم تنظيف الكاش', 'success')
             except Exception as e:
-                flash(f'❌ خطأ: {str(e)}', 'danger')
+                current_app.logger.exception('internal error')
+                flash('حدث خطأ داخلي', 'danger')
         
         elif action == 'optimize_db':
             try:
@@ -1172,7 +1181,8 @@ def system_health():
                 perform_vacuum_optimize(current_app)
                 flash('✅ تم تحسين قاعدة البيانات', 'success')
             except Exception as e:
-                flash(f'❌ خطأ: {str(e)}', 'danger')
+                current_app.logger.exception('internal error')
+                flash('حدث خطأ داخلي', 'danger')
         elif action == 'auto_run':
             checks, score = _collect_system_health_checks()
             SystemSettings.set_setting('system_health_last_run',
@@ -2243,7 +2253,8 @@ def download_cloned_system(clone_name):
         )
         
     except Exception as e:
-        flash(f'❌ خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('advanced.system_cloner'))
 
 
@@ -2428,7 +2439,8 @@ def system_cloner():
             return redirect(url_for('advanced.system_cloner', download=clone_name))
             
         except Exception as e:
-            flash(f'❌ خطأ: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
             return redirect(url_for('advanced.system_cloner'))
     
                            
@@ -2693,7 +2705,8 @@ def download_mobile_app(app_name):
             flash('❌ التطبيق غير موجود', 'danger')
             return redirect(url_for('advanced.mobile_app_generator'))
     except Exception as e:
-        flash(f'❌ خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('advanced.mobile_app_generator'))
 
 
@@ -2728,7 +2741,8 @@ def mobile_app_generator():
             return redirect(url_for('advanced.mobile_app_generator', download=result.get("download_name") or app_name))
             
         except Exception as e:
-            flash(f'❌ خطأ: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
             return redirect(url_for('advanced.mobile_app_generator'))
     
     available_modules = _get_mobile_modules()
@@ -3989,7 +4003,8 @@ def performance_profiler():
             
             cache.set(cache_key, profiler_data, timeout=300)
         except Exception as e:
-            profiler_data['error'] = str(e)
+            current_app.logger.exception('profiler error')
+            profiler_data['error'] = 'حدث خطأ داخلي'
     else:
         profiler_data = cached_data
     
@@ -4018,7 +4033,8 @@ def database_optimizer():
                 cache.delete("total_records_count")
             except Exception as e:
                 db.session.rollback()
-                flash(f'❌ خطأ: {str(e)}', 'danger')
+                current_app.logger.exception('internal error')
+                flash('حدث خطأ داخلي', 'danger')
             return redirect(url_for('advanced.database_optimizer'))
         
         elif action == 'analyze':
@@ -4028,7 +4044,8 @@ def database_optimizer():
                 flash('✅ تم تحليل قاعدة البيانات', 'success')
             except Exception as e:
                 db.session.rollback()
-                flash(f'❌ خطأ: {str(e)}', 'danger')
+                current_app.logger.exception('internal error')
+                flash('حدث خطأ داخلي', 'danger')
             return redirect(url_for('advanced.database_optimizer'))
         
         elif action == 'reindex':
@@ -4051,7 +4068,8 @@ def database_optimizer():
                 flash(f'✅ تم إعادة فهرسة {len(reindexed)} جدول', 'success')
             except Exception as e:
                 db.session.rollback()
-                flash(f'❌ خطأ: {str(e)}', 'danger')
+                current_app.logger.exception('internal error')
+                flash('حدث خطأ داخلي', 'danger')
             return redirect(url_for('advanced.database_optimizer'))
     
     try:
@@ -4088,7 +4106,8 @@ def database_optimizer():
             'db_path': db_location
         }
     except Exception as e:
-        stats = {'error': str(e)}
+        current_app.logger.exception('database optimizer error')
+        stats = {'error': 'حدث خطأ داخلي'}
     
     template = """
     {% extends 'base.html' %}
@@ -4217,7 +4236,8 @@ def api_performance_stats():
             }
         })
     except Exception as e:
+        current_app.logger.exception('API error')
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500

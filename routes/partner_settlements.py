@@ -239,7 +239,8 @@ def create(partner_id):
                 "partner_id": partner.id, "from": dfrom.isoformat(), "to": dto.isoformat(), "total_due": str(due), "code": draft.code
             })))
     except SQLAlchemyError as e:
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
     direction = _due_direction(due)
     amount_str = f"{abs(due):.2f}"
     pay_url = url_for(
@@ -276,7 +277,8 @@ def confirm(settlement_id):
                 "code": ps.code, "from": ps.from_date.isoformat(), "to": ps.to_date.isoformat(), "total_due": str(orig)
             })))
     except SQLAlchemyError as e:
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
     return jsonify({"success": True, "id": ps.id, "code": ps.code})
 
 @partner_settlements_bp.route("/settlements/<int:settlement_id>", methods=["GET"])
@@ -326,7 +328,8 @@ def show(settlement_id):
             partner=ps.partner
         )
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 
@@ -900,10 +903,11 @@ def _calculate_smart_partner_balance(partner_id: int, date_from: datetime, date_
                 "message": "⚠️ تنبيه: لا يمكن إتمام التسوية لعدم توفر سعر صرف لإحدى العملات.\n\nيرجى:\n1. إدخال سعر الصرف يدوياً من [إعدادات العملات]\n2. أو تفعيل الاتصال بالسيرفرات العالمية\n3. ثم إعادة المحاولة",
                 "help_url": "/settings/currencies"
             }
-        return {"success": False, "error": f"خطأ في الحساب: {str(e)}"}
+        current_app.logger.exception('settlement calculation error')
+        return {"success": False, "error": "خطأ في الحساب"}
     except Exception as e:
-        
-        return {"success": False, "error": f"خطأ في حساب رصيد الشريك: {str(e)}"}
+        current_app.logger.exception('settlement calculation error')
+        return {"success": False, "error": "خطأ في حساب رصيد الشريك"}
 
 
 def _calculate_partner_incoming(partner_id: int, date_from: datetime, date_to: datetime):
