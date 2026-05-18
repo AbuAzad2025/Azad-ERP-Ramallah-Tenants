@@ -1,7 +1,7 @@
 
 # -*- coding: utf-8 -*-
 from datetime import datetime, timezone
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for, abort
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for, abort, current_app
 from flask_login import current_user, login_required
 from sqlalchemy import and_
 from sqlalchemy.orm import joinedload
@@ -146,10 +146,10 @@ def create_note():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        msg = str(e)
+        current_app.logger.exception('internal error')
         if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify(success=False, error=msg), 500
-        flash(f'خطأ أثناء الحفظ: {msg}', 'danger')
+            return jsonify(success=False, error='حدث خطأ داخلي'), 500
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('notes_bp.list_notes'))
 
     if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -211,10 +211,10 @@ def update_note(note_id):
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        msg = str(e)
+        current_app.logger.exception('internal error')
         if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify(success=False, error=msg), 500
-        flash(f'خطأ أثناء التحديث: {msg}', 'danger')
+            return jsonify(success=False, error='حدث خطأ داخلي'), 500
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('notes_bp.list_notes'))
 
     if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -244,10 +244,10 @@ def delete_note(note_id):
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        msg = str(e)
+        current_app.logger.exception('internal error')
         if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify(success=False, error=msg), 500
-        flash(f'فشل حذف الملاحظة: {msg}', 'danger')
+            return jsonify(success=False, error='حدث خطأ داخلي'), 500
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('notes_bp.list_notes'))
 
     if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -265,6 +265,6 @@ def toggle_pin(note_id):
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        msg = str(e)
-        return jsonify(success=False, error=msg), 500
+        current_app.logger.exception('internal error')
+        return jsonify(success=False, error='حدث خطأ داخلي'), 500
     return jsonify({'success': True, 'note_id': note.id, 'is_pinned': note.is_pinned})

@@ -453,7 +453,8 @@ def balances_recalculate():
         return redirect(url_for("customers_bp.list_customers"))
     except Exception as e:
         if request.accept_mimetypes.best == "application/json":
-            return jsonify({"success": False, "message": "failed", "error": str(e)}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
         flash("حدث خطأ أثناء تحديث الأرصدة.", "danger")
         return redirect(url_for("customers_bp.list_customers"))
 
@@ -2873,9 +2874,11 @@ def archive_customer(customer_id):
     except Exception as e:
         db.session.rollback()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': False, 'message': f'خطأ في أرشفة العميل: {str(e)}'}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
             
-        flash(f'خطأ في أرشفة العميل: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('customers_bp.list_customers'))
 
 @customers_bp.route('/restore/<int:customer_id>', methods=['POST'])
@@ -2913,9 +2916,11 @@ def restore_customer(customer_id):
     except Exception as e:
         db.session.rollback()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': False, 'message': f'خطأ في استعادة العميل: {str(e)}'}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
             
-        flash(f'خطأ في استعادة العميل: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('customers_bp.list_customers'))
 
 

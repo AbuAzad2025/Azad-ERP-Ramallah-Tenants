@@ -118,7 +118,8 @@ def add_template():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'خطأ في إنشاء القالب: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
             return redirect(url_for('recurring.add_template'))
     
     customers = Customer.query.filter_by(is_active=True).order_by(Customer.name).all()
@@ -164,7 +165,8 @@ def edit_template(template_id):
             
         except Exception as e:
             db.session.rollback()
-            flash(f'خطأ في التحديث: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     customers = Customer.query.filter_by(is_active=True).order_by(Customer.name).all()
     branches = Branch.query.order_by(Branch.name).all()
@@ -206,7 +208,8 @@ def delete_template(template_id):
         return redirect(url_for('recurring.index'))
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 
 @recurring_bp.route('/schedules/<int:template_id>')
@@ -376,4 +379,5 @@ def generate_now(template_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400

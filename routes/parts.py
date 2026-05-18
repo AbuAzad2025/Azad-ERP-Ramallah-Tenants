@@ -1,6 +1,6 @@
 
 from decimal import Decimal, InvalidOperation
-from flask import Blueprint, request, jsonify, redirect, url_for, flash
+from flask import Blueprint, request, jsonify, redirect, url_for, flash, current_app
 from flask_login import login_required
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_, func
@@ -110,7 +110,8 @@ def parts_create():
         except SQLAlchemyError as e:
             db.session.rollback()
             if _wants_json():
-                return jsonify({"ok": False, "error": "db_error", "detail": str(e)}), 500
+                current_app.logger.exception('API error')
+                return jsonify({"error": "حدث خطأ داخلي"}), 500
             flash(f"فشل تحديث القطعة: {e}", "danger")
         return redirect(url_for("parts_bp.parts_list"))
     product = Product(
@@ -134,7 +135,8 @@ def parts_create():
     except SQLAlchemyError as e:
         db.session.rollback()
         if _wants_json():
-            return jsonify({"ok": False, "error": "db_error", "detail": str(e)}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"error": "حدث خطأ داخلي"}), 500
         flash(f"فشل إنشاء القطعة: {e}", "danger")
     return redirect(url_for("parts_bp.parts_list"))
 
@@ -183,7 +185,8 @@ def parts_edit(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         if _wants_json():
-            return jsonify({"ok": False, "error": "db_error", "detail": str(e)}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"error": "حدث خطأ داخلي"}), 500
         flash(f"فشل التحديث: {e}", "danger")
     return redirect(url_for("parts_bp.parts_list"))
 
@@ -221,7 +224,8 @@ def parts_delete(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         if _wants_json():
-            return jsonify({"ok": False, "error": "db_error", "detail": str(e)}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"error": "حدث خطأ داخلي"}), 500
         flash(f"فشل الحذف: {e}", "danger")
     return redirect(url_for("parts_bp.parts_list"))
 
@@ -255,10 +259,12 @@ def update_part_cost():
     
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": f"خطأ في قاعدة البيانات: {str(e)}"}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": f"خطأ: {str(e)}"}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 @parts_bp.post("/update-multiple-costs")
@@ -305,7 +311,9 @@ def update_multiple_costs():
     
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": f"خطأ في قاعدة البيانات: {str(e)}"}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": f"خطأ: {str(e)}"}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500

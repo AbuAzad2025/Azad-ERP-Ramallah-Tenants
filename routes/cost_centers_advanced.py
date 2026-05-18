@@ -1,5 +1,5 @@
 from permissions_config.enums import SystemPermissions
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from models import (CostCenter, CostCenterAlert, CostCenterAlertLog,
@@ -142,7 +142,8 @@ def add_alert():
         
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ في إضافة التنبيه: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('cost_centers_advanced.alerts_list'))
 
 @cost_centers_advanced_bp.route('/alerts/<int:alert_id>/toggle', methods=['POST'])
@@ -163,7 +164,8 @@ def toggle_alert(alert_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('cost_centers_advanced.alerts_list'))
 
 @cost_centers_advanced_bp.route('/allocation-rules')
@@ -247,7 +249,8 @@ def add_allocation_rule():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ في إضافة القاعدة: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     cost_centers = CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all()
     
@@ -321,7 +324,8 @@ def execute_allocation_rule(rule_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ في التنفيذ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('cost_centers_advanced.allocation_rules'))
 
 @cost_centers_advanced_bp.route('/reports/trends')

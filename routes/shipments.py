@@ -4,7 +4,7 @@ from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 
 from flask import (
     Blueprint, render_template, request, redirect,
-    url_for, flash, jsonify, abort
+    url_for, flash, jsonify, abort, current_app
 )
 from flask_login import login_required
 from flask_wtf.csrf import generate_csrf
@@ -945,12 +945,14 @@ def edit_shipment(id: int):
         except SQLAlchemyError as e:
             db.session.rollback()
             if _wants_json():
-                return jsonify({"ok": False, "error": str(e)}), 500
+                current_app.logger.exception('API error')
+                return jsonify({"error": "حدث خطأ داخلي"}), 500
             flash(f"❌ خطأ أثناء التحديث: {e}", "danger")
         except Exception as e:
             db.session.rollback()
             if _wants_json():
-                return jsonify({"ok": False, "error": str(e)}), 400
+                current_app.logger.exception('API error')
+                return jsonify({"error": "حدث خطأ داخلي"}), 400
             flash(f"❌ خطأ أثناء ضبط المخزون: {e}", "danger")
 
     return render_template("warehouses/shipment_form.html", form=form, shipment=sh)
@@ -986,12 +988,14 @@ def delete_shipment(id: int):
     except SQLAlchemyError as e:
         db.session.rollback()
         if _wants_json():
-            return jsonify({"ok": False, "error": str(e)}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"error": "حدث خطأ داخلي"}), 500
         flash(f"❌ خطأ من قاعدة البيانات أثناء الحذف: {e}", "danger")
     except Exception as e:
         db.session.rollback()
         if _wants_json():
-            return jsonify({"ok": False, "error": str(e)}), 400
+            current_app.logger.exception('API error')
+            return jsonify({"error": "حدث خطأ داخلي"}), 400
         flash(f"❌ خطأ غير متوقع أثناء الحذف: {e}", "danger")
 
     return redirect(url_for("warehouse_bp.detail", warehouse_id=dest_id)) if dest_id else redirect(url_for("shipments_bp.list_shipments"))
@@ -1137,7 +1141,8 @@ def mark_arrived(id: int):
     except Exception as e:
         db.session.rollback()
         if _wants_json():
-            return jsonify({"ok": False, "error": str(e)}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"error": "حدث خطأ داخلي"}), 500
         flash(f"❌ تعذّر اعتماد الوصول: {e}", "danger")
     return redirect(url_for("shipments_bp.shipment_detail", id=sh.id))
 
@@ -1172,7 +1177,8 @@ def cancel_shipment(id: int):
     except Exception as e:
         db.session.rollback()
         if _wants_json():
-            return jsonify({"ok": False, "error": str(e)}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"error": "حدث خطأ داخلي"}), 500
         flash(f"❌ تعذّر الإلغاء: {e}", "danger")
     return redirect(url_for("shipments_bp.shipment_detail", id=sh.id))
 
@@ -1206,7 +1212,8 @@ def mark_in_transit(id):
         except Exception as e:
             db.session.rollback()
             if _wants_json():
-                return jsonify({"ok": False, "error": str(e)}), 500
+                current_app.logger.exception('API error')
+                return jsonify({"error": "حدث خطأ داخلي"}), 500
             flash(f"❌ تعذّر التحديث: {e}", "danger")
     return redirect(url_for("shipments_bp.shipment_detail", id=sh.id))
 
@@ -1240,7 +1247,8 @@ def mark_in_customs(id):
         except Exception as e:
             db.session.rollback()
             if _wants_json():
-                return jsonify({"ok": False, "error": str(e)}), 500
+                current_app.logger.exception('API error')
+                return jsonify({"error": "حدث خطأ داخلي"}), 500
             flash(f"❌ تعذّر التحديث: {e}", "danger")
     return redirect(url_for("shipments_bp.shipment_detail", id=sh.id))
 
@@ -1369,12 +1377,14 @@ def mark_delivered(id):
         except ValueError as e:
             db.session.rollback()
             if _wants_json():
-                return jsonify({"ok": False, "error": str(e)}), 400
+                current_app.logger.exception('API error')
+                return jsonify({"error": "حدث خطأ داخلي"}), 400
             flash(f"{e}", "danger")
         except Exception as e:
             db.session.rollback()
             if _wants_json():
-                return jsonify({"ok": False, "error": str(e)}), 500
+                current_app.logger.exception('API error')
+                return jsonify({"error": "حدث خطأ داخلي"}), 500
             flash(f"❌ تعذّر التحديث: {e}", "danger")
     
     return redirect(url_for("shipments_bp.shipment_detail", id=sh.id))
@@ -1411,7 +1421,8 @@ def mark_returned(id):
         except Exception as e:
             db.session.rollback()
             if _wants_json():
-                return jsonify({"ok": False, "error": str(e)}), 500
+                current_app.logger.exception('API error')
+                return jsonify({"error": "حدث خطأ داخلي"}), 500
             flash(f"❌ تعذّر التحديث: {e}", "danger")
     return redirect(url_for("shipments_bp.shipment_detail", id=sh.id))
 
@@ -1440,6 +1451,7 @@ def update_delivery_attempt(id):
     except Exception as e:
         db.session.rollback()
         if _wants_json():
-            return jsonify({"ok": False, "error": str(e)}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"error": "حدث خطأ داخلي"}), 500
         flash(f"❌ تعذّر التحديث: {e}", "danger")
     return redirect(url_for("shipments_bp.shipment_detail", id=sh.id))

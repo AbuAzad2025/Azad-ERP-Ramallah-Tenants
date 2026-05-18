@@ -1,5 +1,5 @@
 from permissions_config.enums import SystemPermissions
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from models import (Project, ProjectPhase, ProjectCost, ProjectRevenue, CostCenter,
@@ -123,7 +123,8 @@ def add_project():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ في إضافة المشروع: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     customers = Customer.query.filter_by(is_active=True).order_by(Customer.name).all()
     cost_centers = CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all()
@@ -169,7 +170,8 @@ def edit_project(id):
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ في التحديث: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     customers = Customer.query.filter_by(is_active=True).order_by(Customer.name).all()
     cost_centers = CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all()
@@ -283,7 +285,8 @@ def add_phase(id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ في إضافة المرحلة: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('projects.view_project', id=id))
 
 
@@ -358,7 +361,8 @@ def add_cost(id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ في تسجيل التكلفة: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('projects.view_project', id=id))
 
 
@@ -416,7 +420,8 @@ def add_revenue(id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ في تسجيل الإيراد: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('projects.view_project', id=id))
 
 

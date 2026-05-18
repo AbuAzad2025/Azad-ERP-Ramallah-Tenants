@@ -229,7 +229,8 @@ def api_system_account_change_password():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 
 @security_bp.route('/saas-manager')
@@ -351,7 +352,8 @@ def api_saas_create_plan():
         return jsonify({'success': True, 'plan_id': plan.id})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 
 @security_bp.route('/api/saas/subscriptions', methods=['POST'])
@@ -388,7 +390,8 @@ def api_saas_create_subscription():
         return jsonify({'success': True, 'subscription_id': sub.id})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 
 @security_bp.route('/api/saas/invoices/<int:invoice_id>/mark-paid', methods=['POST'])
@@ -406,7 +409,8 @@ def api_saas_mark_paid(invoice_id):
         return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 
 @security_bp.route('/api/saas/subscriptions/<int:sub_id>/cancel', methods=['POST'])
@@ -426,7 +430,8 @@ def api_saas_cancel_subscription(sub_id):
         return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 
 @security_bp.route('/api/saas/subscriptions/<int:sub_id>/renew', methods=['POST'])
@@ -450,7 +455,8 @@ def api_saas_renew_subscription(sub_id):
         return jsonify({'success': True, 'new_end_date': sub.end_date.strftime('%Y-%m-%d')})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 
 @security_bp.route('/api/saas/plans/<int:plan_id>', methods=['PUT'])
@@ -492,7 +498,8 @@ def api_saas_update_plan(plan_id):
         return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 
 @security_bp.route('/api/saas/invoices', methods=['POST'])
@@ -538,7 +545,8 @@ def api_saas_create_invoice():
         return jsonify({'success': True, 'invoice_id': invoice.id})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 
 @security_bp.route('/api/saas/invoices/<int:invoice_id>/send-reminder', methods=['POST'])
@@ -577,7 +585,8 @@ def api_saas_send_reminder(invoice_id):
         _log_owner_action('saas_invoice_reminder', target=invoice.id, meta={'customer_email': customer.email})
         return jsonify({'success': True, 'message': f'تم إرسال التذكير إلى {customer.email}'})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 
 @security_bp.route('/api/customers', methods=['GET'])
@@ -596,7 +605,8 @@ def api_get_customers():
             'phone': c.phone
         } for c in customers])
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 400
 
 
 @security_bp.route('/api/saas/subscriptions/<int:sub_id>', methods=['GET'])
@@ -632,7 +642,8 @@ def api_saas_get_subscription(sub_id):
             }
         })
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 
 @security_bp.route('/api/saas/subscriptions/<int:sub_id>', methods=['PUT'])
@@ -657,7 +668,8 @@ def api_saas_update_subscription(sub_id):
         return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 
 @security_bp.route('/api/saas/invoices/<int:invoice_id>/pdf', methods=['GET'])
@@ -743,7 +755,8 @@ def api_saas_invoice_pdf(invoice_id):
     except HTTPException:
         raise
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 
 @security_bp.route('/')
@@ -1982,7 +1995,8 @@ def theme_editor():
                         f.write(content)
                     flash(f'✅ تم حفظ {filename} بنجاح!', 'success')
                 except Exception as e:
-                    flash(f'❌ خطأ: {str(e)}', 'danger')
+                    current_app.logger.exception('internal error')
+                    flash('حدث خطأ داخلي', 'danger')
                     
         elif editor_type == 'html':
             # حفظ HTML Template
@@ -1998,7 +2012,8 @@ def theme_editor():
                         f.write(content)
                     flash(f'✅ تم حفظ {filepath} بنجاح!', 'success')
                 except Exception as e:
-                    flash(f'❌ خطأ: {str(e)}', 'danger')
+                    current_app.logger.exception('internal error')
+                    flash('حدث خطأ داخلي', 'danger')
                     
         elif editor_type == 'text':
             # حفظ النصوص
@@ -2136,7 +2151,8 @@ def logo_manager():
 
                     flash(f'✅ تم رفع {target_name} بنجاح!', 'success')
                 except Exception as e:
-                    flash(f'❌ خطأ: {str(e)}', 'danger')
+                    current_app.logger.exception('internal error')
+                    flash('حدث خطأ داخلي', 'danger')
     
     # استرجاع القيم الحالية من الإعدادات أو القيم الافتراضية
     logos = {
@@ -2551,7 +2567,8 @@ def integrations():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     # GET - جلب الإعدادات
     integrations_data = {
@@ -2854,7 +2871,7 @@ def _test_stripe():
         account = stripe.Account.retrieve()
         return {'success': True, 'account_id': account.id, 'email': account.email}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def _test_paypal():
@@ -2871,7 +2888,7 @@ def _test_paypal():
     except paypalrestsdk.ResourceNotFound:
         return {'success': True}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def _test_sms(phone_number):
@@ -2887,7 +2904,7 @@ def _test_sms(phone_number):
         message = client.messages.create(body='اختبار من نظام الكراج ✅', from_=from_num, to=phone_number)
         return {'success': True, 'sid': message.sid}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def _test_thermal():
@@ -2917,7 +2934,7 @@ def _test_thermal():
     except ImportError:
         return {'success': False, 'error': 'pip install python-escpos'}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def _test_pos():
@@ -2940,7 +2957,7 @@ def _test_pos():
         else:
             return {'success': False, 'error': 'لا يمكن الاتصال بالجهاز'}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def _test_obd2():
@@ -2970,7 +2987,7 @@ def _test_obd2():
     except ImportError:
         return {'success': False, 'error': 'pip install obd'}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def _test_scale():
@@ -2993,7 +3010,7 @@ def _test_scale():
     except ImportError:
         return {'success': False, 'error': 'pip install pyserial'}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def _test_cctv():
@@ -3033,7 +3050,7 @@ def _test_cctv():
     except ImportError:
         return {'success': False, 'error': 'requests مثبتة مسبقاً'}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 # ==================== خدمات التكامل الفعلية ====================
@@ -3083,7 +3100,7 @@ def send_sms(to, message):
         )
         return {'success': True, 'sid': msg.sid}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def send_whatsapp(to, message):
@@ -3103,7 +3120,7 @@ def send_whatsapp(to, message):
         )
         return {'success': True, 'sid': msg.sid}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def print_thermal_invoice(sale):
@@ -3168,7 +3185,7 @@ def print_thermal_invoice(sale):
     except ImportError:
         return {'success': False, 'error': 'pip install python-escpos'}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def upload_to_s3(file, folder='uploads'):
@@ -3198,7 +3215,7 @@ def upload_to_s3(file, folder='uploads'):
     except ImportError:
         return {'success': False, 'error': 'pip install boto3'}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def trigger_webhook(event_name, data):
@@ -3289,7 +3306,7 @@ def process_card_payment(amount, currency='ILS'):
         return result
         
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def scan_vehicle_obd2():
@@ -3366,7 +3383,7 @@ def scan_vehicle_obd2():
     except ImportError:
         return {'success': False, 'error': 'pip install obd'}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def read_weight_from_scale():
@@ -3392,7 +3409,7 @@ def read_weight_from_scale():
     except ImportError:
         return {'success': False, 'error': 'pip install pyserial'}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def print_product_label(product):
@@ -3431,7 +3448,7 @@ def print_product_label(product):
     except ImportError:
         return {'success': False, 'error': 'pip install zebra'}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def open_cash_drawer():
@@ -3473,7 +3490,7 @@ def open_cash_drawer():
             return {'success': True}
             
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def update_customer_display(line1, line2=''):
@@ -3510,7 +3527,7 @@ def update_customer_display(line1, line2=''):
     except ImportError:
         return {'success': False, 'error': 'pip install pyserial'}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def verify_fingerprint(user_id):
@@ -3529,7 +3546,7 @@ def verify_fingerprint(user_id):
         return {'success': False, 'error': 'قيد التطوير - يحتاج SDK خاص بالقارئ'}
         
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def capture_cctv_snapshot(camera_id=1):
@@ -3566,7 +3583,7 @@ def capture_cctv_snapshot(camera_id=1):
         return {'success': False, 'error': 'نوع غير مدعوم'}
         
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 @security_bp.route('/save-integration', methods=['POST'])
@@ -4031,7 +4048,8 @@ def delete_user(user_id):
         flash(f'✅ تم حذف المستخدم {username} نهائياً', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ في الحذف: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
     
     return redirect(url_for('security.user_control'))
 
@@ -4141,7 +4159,8 @@ def api_user_details(user_id):
         return jsonify({'success': True, 'user': user_data})
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 @security_bp.route('/api/users/bulk-operation', methods=['POST'])
@@ -4219,7 +4238,8 @@ def api_users_bulk_operation():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 @security_bp.route('/api/users/<int:user_id>/activity-history')
@@ -4265,7 +4285,8 @@ def api_user_activity_history(user_id):
         })
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 @security_bp.route('/create-user', methods=['POST'])
@@ -4344,7 +4365,8 @@ def create_user():
         
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
     
     return redirect(url_for('security.user_control'))
 
@@ -4644,7 +4666,8 @@ def system_settings():
                 
             except Exception as e:
                 db.session.rollback()
-                flash(f'❌ خطأ: {str(e)}', 'danger')
+                current_app.logger.exception('internal error')
+                flash('حدث خطأ داخلي', 'danger')
         
         return redirect(url_for('security.system_settings', tab=tab))
     
@@ -5149,7 +5172,8 @@ def db_add_row(table_name):
     
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
     
     return redirect(url_for('security.database_manager', tab='edit', table=table_name))
 
@@ -5547,7 +5571,7 @@ def _cleanup_tables(tables):
                     
         except Exception as e:
             db.session.rollback()
-            error_msg = f"Failed to clean table {table}: {str(e)}"
+            error_msg = f"Failed to clean table {table}"
             current_app.logger.error(f"[ERROR] {error_msg}")
             errors.append(error_msg)
             continue
@@ -5666,7 +5690,7 @@ def _decrypt_data(encrypted_data, decrypt_type):
                     continue
     
     except Exception as e:
-        result['error'] = str(e)
+        result['error'] = 'حدث خطأ داخلي'
     
     return result
 
@@ -5894,11 +5918,11 @@ def _test_integration_connection(integration_type):
             return {'success': True, 'message': 'التكامل محفوظ'}
     
     except requests.exceptions.RequestException as e:
-        return {'success': False, 'error': f'خطأ في الشبكة: {str(e)}'}
+        return {'success': False, 'error': 'خطأ في الشبكة'}
     except smtplib.SMTPException as e:
-        return {'success': False, 'error': f'خطأ في البريد: {str(e)}'}
+        return {'success': False, 'error': 'خطأ في البريد'}
     except Exception as e:
-        return {'success': False, 'error': f'خطأ عام: {str(e)}'}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def _send_test_message(integration_type):
@@ -5968,7 +5992,7 @@ def _send_test_message(integration_type):
             return {'success': False, 'error': 'نوع التكامل غير مدعوم للإرسال'}
     
     except Exception as e:
-        return {'success': False, 'error': f'خطأ في الإرسال: {str(e)}'}
+        return {'success': False, 'error': 'خطأ في الإرسال'}
 
 
 def _get_integration_stats():
@@ -6269,7 +6293,7 @@ def api_create_index():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': f'❌ خطأ: {str(e)}'
+            'message': '❌ حدث خطأ داخلي'
         }), 500
 
 
@@ -6298,7 +6322,7 @@ def api_drop_index():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': f'❌ خطأ: {str(e)}'
+            'message': '❌ حدث خطأ داخلي'
         }), 500
 
 
@@ -6409,7 +6433,7 @@ def api_auto_optimize_indexes():
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'❌ خطأ: {str(e)}'
+            'message': '❌ حدث خطأ داخلي'
         }), 500
 
 
@@ -6515,7 +6539,7 @@ def api_clean_rebuild_indexes():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': f'❌ خطأ: {str(e)}'
+            'message': '❌ حدث خطأ داخلي'
         }), 500
 
 
@@ -6598,7 +6622,7 @@ def api_analyze_table():
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'❌ خطأ: {str(e)}'
+            'message': '❌ حدث خطأ داخلي'
         }), 500
 
 
@@ -6645,7 +6669,7 @@ def api_batch_create_indexes():
                 created.append(index_name)
             except Exception as e:
                 db.session.rollback()
-                failed.append({'index': index_name, 'reason': str(e)})
+                failed.append({'index': index_name, 'reason': 'حدث خطأ داخلي'})
         
         return jsonify({
             'success': True,
@@ -6657,7 +6681,7 @@ def api_batch_create_indexes():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': f'❌ خطأ: {str(e)}'
+            'message': '❌ حدث خطأ داخلي'
         }), 500
 
 
@@ -6689,7 +6713,7 @@ def api_maintenance_vacuum():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': f'❌ خطأ: {str(e)}'
+            'message': '❌ حدث خطأ داخلي'
         }), 500
 
 
@@ -6708,7 +6732,7 @@ def api_maintenance_analyze():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': f'❌ خطأ: {str(e)}'
+            'message': '❌ حدث خطأ داخلي'
         }), 500
 
 
@@ -6737,7 +6761,7 @@ def api_maintenance_checkpoint():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': f'❌ خطأ: {str(e)}'
+            'message': '❌ حدث خطأ داخلي'
         }), 500
 
 
@@ -6769,7 +6793,7 @@ def api_maintenance_db_info():
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'❌ خطأ: {str(e)}'
+            'message': '❌ حدث خطأ داخلي'
         }), 500
 
 
@@ -6954,7 +6978,8 @@ def data_quality_center():
         
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('security.data_quality_center'))
 
 
@@ -7093,7 +7118,7 @@ def advanced_check_linking():
                     errors.append(f"الشيك {check.check_number}")
                     
             except Exception as e:
-                errors.append(f"الشيك {check.check_number}: {str(e)}")
+                errors.append(f"الشيك {check.check_number}: حدث خطأ")
         
         db.session.commit()
         
@@ -7109,7 +7134,8 @@ def advanced_check_linking():
         
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('security.advanced_check_linking'))
 
 
@@ -7196,7 +7222,7 @@ def api_system_constants():
         current_app.logger.error(f"⚠️ فشل جلب الثوابت: {e}")
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -8066,7 +8092,7 @@ def security_audit_report():
             report = {
                 'summary': {},
                 'top_failed_ips': [],
-                'error': str(e),
+                'error': 'حدث خطأ داخلي',
                 'generated_at': datetime.now(timezone.utc).isoformat()
             }
     else:
@@ -8105,7 +8131,8 @@ def api_security_audit_stats():
             }
         })
     except Exception as e:
+        current_app.logger.exception('security audit stats error')
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500

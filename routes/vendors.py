@@ -291,7 +291,8 @@ def suppliers_recalculate_balances():
         return redirect(url_for("vendors_bp.suppliers_list"))
     except Exception as e:
         if request.accept_mimetypes.best == "application/json":
-            return jsonify({"success": False, "message": "failed", "error": str(e)}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
         flash("حدث خطأ أثناء تحديث أرصدة الموردين.", "danger")
         return redirect(url_for("vendors_bp.suppliers_list"))
 
@@ -312,7 +313,8 @@ def suppliers_create():
         except SQLAlchemyError as e:
             db.session.rollback()
             if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("modal") == "1":
-                return jsonify({"success": False, "errors": {"__all__": [str(e)]}}), 400
+                current_app.logger.exception('API error')
+                return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
             flash(f"❌ خطأ أثناء إضافة المورد: {e}", "danger")
     else:
         if request.method == "POST":
@@ -2256,7 +2258,8 @@ def partners_recalculate_balances():
         return redirect(url_for("vendors_bp.partners_list"))
     except Exception as e:
         if request.accept_mimetypes.best == "application/json":
-            return jsonify({"success": False, "message": "failed", "error": str(e)}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
         flash("حدث خطأ أثناء تحديث أرصدة الشركاء.", "danger")
         return redirect(url_for("vendors_bp.partners_list"))
 
@@ -3505,7 +3508,8 @@ def partners_create():
         except SQLAlchemyError as e:
             db.session.rollback()
             if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("modal") == "1":
-                return jsonify({"success": False, "errors": {"__all__": [str(e)]}}), 400
+                current_app.logger.exception('API error')
+                return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
             flash(f"❌ خطأ أثناء إضافة الشريك: {e}", "danger")
     else:
         if request.method == "POST":
@@ -3568,7 +3572,8 @@ def partners_delete(id):
     except Exception as e:
         db.session.rollback()
         if is_ajax:
-            return jsonify({"success": False, "error": "delete_failed", "detail": str(e)}), 400
+            current_app.logger.exception('API error')
+            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
         flash(f"❌ خطأ أثناء حذف الشريك: {e}", "danger")
         return redirect(url_for("vendors_bp.partners_list"))
 
@@ -3877,9 +3882,11 @@ def archive_supplier(supplier_id):
         
         db.session.rollback()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': False, 'message': f'خطأ في أرشفة المورد: {str(e)}'}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
             
-        flash(f'خطأ في أرشفة المورد: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('vendors_bp.suppliers_list'))
 
 @vendors_bp.route("/partners/archive/<int:partner_id>", methods=["POST"])
@@ -3906,9 +3913,11 @@ def archive_partner(partner_id):
         
         db.session.rollback()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': False, 'message': f'خطأ في أرشفة الشريك: {str(e)}'}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
             
-        flash(f'خطأ في أرشفة الشريك: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('vendors_bp.partners_list'))
 
 @vendors_bp.route("/suppliers/restore/<int:supplier_id>", methods=["POST"])
@@ -3950,9 +3959,11 @@ def restore_supplier(supplier_id):
         
         db.session.rollback()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': False, 'message': f'خطأ في استعادة المورد: {str(e)}'}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
             
-        flash(f'خطأ في استعادة المورد: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('vendors_bp.suppliers_list'))
 
 @vendors_bp.route("/partners/restore/<int:partner_id>", methods=["POST"])
@@ -3994,9 +4005,11 @@ def restore_partner(partner_id):
         
         db.session.rollback()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': False, 'message': f'خطأ في استعادة الشريك: {str(e)}'}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
             
-        flash(f'خطأ في استعادة الشريك: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('vendors_bp.partners_list'))
 def _utcnow_naive():
     return datetime.now(timezone.utc).replace(tzinfo=None)

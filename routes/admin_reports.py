@@ -421,9 +421,10 @@ def api_stats():
             }
         })
     except Exception as e:
+        current_app.logger.exception('API error')
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 @admin_reports_bp.route("/download-backup", methods=["GET"])
@@ -459,7 +460,8 @@ def view_logs():
                     lines = f.readlines()[-200:]
                     logs_data[log_file] = "".join(lines)
             except Exception as e:
-                logs_data[log_file] = f"Error reading log: {str(e)}"
+                current_app.logger.exception('Error reading log file')
+                logs_data[log_file] = "Error reading log file"
         else:
             logs_data[log_file] = f"File not found: {log_file}"
 

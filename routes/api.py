@@ -1098,7 +1098,8 @@ def api_update_partner(id):
         return jsonify({"success": True, "id": p.id, "name": p.name})
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": "db_error", "detail": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 @bp.delete("/partners/<int:id>")
 @login_required
@@ -1121,7 +1122,8 @@ def api_delete_partner(id):
         return jsonify({"success": True})
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": "delete_failed", "detail": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 @bp.get("/products", endpoint="products")
 @bp.get("/search_products", endpoint="search_products")
@@ -1230,7 +1232,8 @@ def create_category():
         return jsonify({"id": c.id, "text": c.name, "name": c.name}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 400
 
 @bp.get("/warehouses", endpoint="warehouses")
 @bp.get("/search_warehouses", endpoint="search_warehouses")
@@ -1388,7 +1391,8 @@ def api_update_warehouse(id):
         return jsonify({"success": True, "id": w.id, "name": w.name})
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.delete("/warehouses/<int:id>")
 @login_required
@@ -1402,7 +1406,8 @@ def api_delete_warehouse(id):
         return jsonify({"success": True})
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 
 @bp.get("/warehouses/<int:wid>/products")
@@ -1662,7 +1667,8 @@ def update_product(id: int):
         })
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 @bp.post("/warehouses/<int:warehouse_id>/stock")
 @login_required
@@ -1705,7 +1711,7 @@ def update_stock(warehouse_id: int):
         })
     except SQLAlchemyError as e:
         db.session.rollback()
-        return _err("db_error", str(e), 400)
+        return _err("db_error", "حدث خطأ داخلي", 400)
 
 @bp.post("/warehouses/<int:warehouse_id>/transfer")
 @login_required
@@ -1846,7 +1852,8 @@ def update_partner_shares(warehouse_id: int):
         return jsonify({"success": True}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 @bp.get("/invoices")
 @login_required
@@ -2122,7 +2129,8 @@ def create_shipment_api():
         return jsonify({"success": True, "id": sh.id}), 201
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 @bp.get("/shipments/<int:id>")
 @login_required
@@ -2260,7 +2268,8 @@ def update_shipment_api(id: int):
         return jsonify({"success": True, "id": sh.id})
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 @bp.post("/shipments/<int:id>/mark-arrived")
 @login_required
@@ -2289,7 +2298,8 @@ def api_mark_arrived(id: int):
         return jsonify({"success": True})
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 @bp.post("/shipments/<int:id>/cancel")
 @login_required
@@ -2310,7 +2320,8 @@ def api_cancel_shipment(id: int):
         return jsonify({"success": True})
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 @bp.delete("/shipments/<int:id>")
 @login_required
@@ -2331,7 +2342,8 @@ def delete_shipment_api(id: int):
         return jsonify({"success": True})
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 @bp.get("/transfers")
 @login_required
@@ -2532,14 +2544,14 @@ def create_sale_api():
             _reserve_stock(s)
         except ValueError as e:
             db.session.rollback()
-            return _err("insufficient_stock", str(e), 400)
+            return _err("insufficient_stock", "حدث خطأ داخلي", 400)
 
     try:
         db.session.commit()
         return _created(f"/api/sales/{s.id}", {"id": s.id, "sale_number": s.sale_number})
     except Exception as e:
         db.session.rollback()
-        return _err("db_error", str(e), 400)
+        return _err("db_error", "حدث خطأ داخلي", 400)
 
 @bp.put("/sales/<int:id>")
 @bp.patch("/sales/<int:id>")
@@ -2618,7 +2630,8 @@ def update_sale_api(id: int):
         return jsonify({"success": True, "id": s.id})
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 @bp.post("/sales/<int:id>/status")
 @login_required
@@ -2652,7 +2665,8 @@ def change_sale_status_api(id: int):
         return jsonify({"success": True})
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
  
 
@@ -2736,7 +2750,8 @@ def quick_sell_api():
         return jsonify({"success": True, "id": s.id, "sale_number": s.sale_number}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 # ---------------- Exchange Transactions ----------------
 
@@ -2905,7 +2920,8 @@ def create_exchange_transaction():
         return jsonify(resp), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 @bp.get("/exchange_transactions/<int:id>")
 @login_required
@@ -2958,7 +2974,8 @@ def delete_exchange_transaction(id: int):
         return jsonify({"success": True})
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
 
 # =============================================================================
 # Equipment Types
@@ -2991,7 +3008,8 @@ def search_equipment_types():
         return jsonify({"results": results})
     except Exception as e:
         current_app.logger.error("search_equipment_types error: %s", str(e))
-        return jsonify({"results": [], "error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"results": [], "error": "حدث خطأ داخلي"}), 500
 
 @bp.post("/equipment-types/create")
 @login_required
@@ -3014,7 +3032,8 @@ def create_equipment_type():
         return jsonify({"id": et.id, "text": et.name}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 400
 
 @bp.get("/search_supplier_loans")
 @login_required
@@ -3202,7 +3221,8 @@ def api_list_archives():
         })
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/archive/<int:archive_id>", methods=["GET"]) 
 @login_required
@@ -3227,7 +3247,8 @@ def api_get_archive(archive_id):
         })
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/archive/<int:archive_id>/restore", methods=["POST"])
 @login_required
@@ -3280,7 +3301,8 @@ def api_restore_archive(archive_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/archive/<int:archive_id>", methods=["DELETE"])
 @login_required
@@ -3301,7 +3323,8 @@ def api_delete_archive(archive_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/archive/stats", methods=["GET"])
 @login_required
@@ -3337,7 +3360,8 @@ def api_archive_stats():
         })
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 # ===== API Endpoints للأرشفة المباشرة =====
 
@@ -3379,7 +3403,8 @@ def api_archive_customer(customer_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/archive/supplier/<int:supplier_id>", methods=["POST"])
 @login_required
@@ -3419,7 +3444,8 @@ def api_archive_supplier(supplier_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/archive/partner/<int:partner_id>", methods=["POST"])
 @login_required
@@ -3459,7 +3485,8 @@ def api_archive_partner(partner_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/archive/sale/<int:sale_id>", methods=["POST"])
 @login_required
@@ -3499,7 +3526,8 @@ def api_archive_sale(sale_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/archive/expense/<int:expense_id>", methods=["POST"])
 @login_required
@@ -3539,7 +3567,8 @@ def api_archive_expense(expense_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/archive/service/<int:service_id>", methods=["POST"]) 
 @login_required
@@ -3579,7 +3608,8 @@ def api_archive_service(service_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/archive/payment/<int:payment_id>", methods=["POST"]) 
 @login_required
@@ -3619,7 +3649,8 @@ def api_archive_payment(payment_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 # ===== API Endpoints للاستعادة المباشرة =====
 
@@ -3660,7 +3691,8 @@ def api_restore_customer(customer_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/restore/supplier/<int:supplier_id>", methods=["POST"])
 @login_required
@@ -3699,7 +3731,8 @@ def api_restore_supplier(supplier_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/restore/partner/<int:partner_id>", methods=["POST"])
 @login_required
@@ -3738,7 +3771,8 @@ def api_restore_partner(partner_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/restore/sale/<int:sale_id>", methods=["POST"])
 @login_required
@@ -3777,7 +3811,8 @@ def api_restore_sale(sale_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/restore/expense/<int:expense_id>", methods=["POST"])
 @login_required
@@ -3816,7 +3851,8 @@ def api_restore_expense(expense_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/restore/service/<int:service_id>", methods=["POST"])
 @login_required
@@ -3855,7 +3891,8 @@ def api_restore_service(service_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 @bp.route("/restore/payment/<int:payment_id>", methods=["POST"])
 @login_required
@@ -3894,7 +3931,8 @@ def api_restore_payment(payment_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 # ===== Product Stock API =====

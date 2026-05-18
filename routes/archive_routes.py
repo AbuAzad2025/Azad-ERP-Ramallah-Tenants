@@ -1,6 +1,6 @@
 
 from permissions_config.enums import SystemPermissions
-from flask import Blueprint, request, redirect, url_for, flash
+from flask import Blueprint, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from models import Archive, Shipment, Check, CheckStatus
@@ -34,7 +34,8 @@ def archive_shipment(shipment_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ في أرشفة الشحنة: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('shipments_bp.list_shipments'))
 
 @archive_routes_bp.route("/checks/archive/<int:check_id>", methods=["POST"])
@@ -67,5 +68,6 @@ def archive_check(check_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ في أرشفة الشيك: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('checks.index'))

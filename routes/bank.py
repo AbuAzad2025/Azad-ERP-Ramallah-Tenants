@@ -1,5 +1,5 @@
 from permissions_config.enums import SystemPermissions
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from models import (BankAccount, BankStatement, BankTransaction, BankReconciliation, 
@@ -136,7 +136,8 @@ def add_account():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ في إضافة الحساب: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     gl_accounts = Account.query.filter_by(type='ASSET', is_active=True).filter(
         Account.code.like('101%')
@@ -174,7 +175,8 @@ def edit_account(id):
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ في التحديث: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     gl_accounts = Account.query.filter_by(type='ASSET', is_active=True).filter(
         Account.code.like('101%')
@@ -415,7 +417,8 @@ def upload_statement():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ في رفع الكشف: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     bank_accounts = BankAccount.query.filter_by(is_active=True).order_by(BankAccount.name).all()
     
@@ -517,7 +520,8 @@ def new_reconciliation():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ في إنشاء التسوية: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     bank_accounts = BankAccount.query.filter_by(is_active=True).order_by(BankAccount.name).all()
     
@@ -597,7 +601,8 @@ def complete_reconciliation(id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ في إكمال التسوية: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('bank.view_reconciliation', id=id))
 
 
@@ -806,7 +811,8 @@ def auto_match(bank_account_id):
         
     except Exception as e:
         db.session.rollback()
+        current_app.logger.exception('API error')
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500

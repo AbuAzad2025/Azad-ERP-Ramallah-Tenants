@@ -317,7 +317,8 @@ def archive_sale(id):
             db.session.commit()
             return jsonify({"status": "success", "message": "تم أرشفة عملية البيع بنجاح (يدوي)"})
         except:
-            return jsonify({"status": "error", "message": str(e)}), 500
+            current_app.logger.exception('API error')
+            return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 @sales_bp.route("/<int:id>/restore", methods=["POST"])
 @login_required
@@ -334,7 +335,8 @@ def restore_sale(id):
             sale.is_archived = False
             db.session.commit()
             return jsonify({"status": "success", "message": "تم استعادة عملية البيع بنجاح (يدوي)"})
-        return jsonify({"status": "error", "message": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 @sales_bp.route("/dashboard", methods=["GET"], endpoint="dashboard")
 @login_required

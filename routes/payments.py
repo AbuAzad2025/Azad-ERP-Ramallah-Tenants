@@ -1827,15 +1827,17 @@ def create_payment():
                 db.session.rollback()
         except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception('payment save error')
             if _wants_json():
-                return jsonify(status="error", message=str(e)), 400
-            flash(f"❌ خطأ في الحفظ: {e}", "danger")
+                return jsonify(status="error", message="حدث خطأ داخلي"), 400
+            flash("❌ حدث خطأ داخلي", "danger")
             return render_template("payments/form.html", form=form, entity_info=None)
         except Exception as e:
             db.session.rollback()
+            current_app.logger.exception('payment save error')
             if _wants_json():
-                return jsonify(status="error", message=str(e)), 400
-            flash(f"❌ خطأ في الحفظ: {e}", "danger")
+                return jsonify(status="error", message="حدث خطأ داخلي"), 400
+            flash("❌ حدث خطأ داخلي", "danger")
             return render_template("payments/form.html", form=form, entity_info=None)
         if _wants_json():
             return jsonify(status="success", payment=_serialize_payment(payment, full=True)), 201
@@ -1967,9 +1969,10 @@ def create_expense_payment(exp_id):
         return redirect(url_for(".index"))
     except Exception as e:
         db.session.rollback()
+        current_app.logger.exception('expense payment error')
         if _wants_json():
-            return jsonify(status="error", message=str(e)), 400
-        flash(f"❌ خطأ أثناء تسجيل الدفع: {e}", "danger")
+            return jsonify(status="error", message="حدث خطأ داخلي"), 400
+        flash("❌ حدث خطأ داخلي", "danger")
         return render_template("payments/form.html", form=form, entity_info=entity_info)
 
 @payments_bp.route("/split/<int:split_id>/delete", methods=["DELETE"], endpoint="delete_split")
@@ -2015,7 +2018,7 @@ def delete_split(split_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("payment.split_delete_failed", extra={"event": "payments.split.error", "split_id": split_id})
-        return jsonify(status="error", message=str(e)), 400
+        return jsonify(status="error", message="حدث خطأ داخلي"), 400
 
 @payments_bp.route("/<string:payment_id>", methods=["GET"], endpoint="view_payment")
 @login_required
@@ -2107,7 +2110,8 @@ def update_payment_status(payment_id: int):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify(error="update_failed", message=str(e)), 500
+        current_app.logger.exception('payment status update error')
+        return jsonify(error="update_failed", message="حدث خطأ داخلي"), 500
 
 
 @payments_bp.route("/<string:payment_id>/receipt", methods=["GET"], endpoint="payment_receipt")
@@ -2184,7 +2188,7 @@ def download_receipt(payment_id: str):
     except Exception as e:
         current_app.logger.exception("receipt.pdf_error", extra={"payment_id": payment_id})
         if _wants_json():
-            return jsonify(error="exception", message=str(e)), 500
+            return jsonify(error="exception", message="حدث خطأ داخلي"), 500
         return make_response("<!doctype html><meta charset='utf-8'><div style='padding:24px;font-family:system-ui,Arial,sans-serif'>حصل خطأ أثناء توليد PDF</div>", 500)
     safe_suffix = (getattr(payment, "receipt_number", "") or "").strip() or (getattr(payment, "payment_number", "") or "").strip() or f"{payment_id}_{_utc_now_naive():%Y%m%d}"
     safe_suffix = _safe_filename_component(safe_suffix)
@@ -2385,7 +2389,8 @@ def fx_rate_lookup():
     try:
         rate_info = get_fx_rate_with_fallback(base, quote)
     except Exception as e:
-        return jsonify(success=False, rate=0, base=base, quote=quote, message=str(e)), 500
+        current_app.logger.exception('fx rate lookup error')
+        return jsonify(success=False, rate=0, base=base, quote=quote, message="حدث خطأ داخلي"), 500
     rate = float(rate_info.get("rate", 0) or 0)
     success_flag = bool(rate_info.get("success"))
     source = rate_info.get("source")
@@ -2597,7 +2602,8 @@ def get_entities(entity_type):
             current_app.logger.exception("get_entities error")
         except Exception:
             pass
-        return jsonify({"success": False, "error": str(e), "results": []}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"results": [], "error": "حدث خطأ داخلي"}), 500
 
 
 @payments_bp.route("/api/related-party", methods=["GET"], endpoint="get_related_party")
@@ -2673,7 +2679,8 @@ def get_related_party():
         return jsonify(result)
     
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 @payments_bp.route("/search-entities", methods=["GET"], endpoint="search_entities")
@@ -2826,7 +2833,8 @@ def search_entities():
             return jsonify([])
             
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 # ===== نظام الدفع المتكامل للمتجر =====
@@ -2940,7 +2948,8 @@ def shop_checkout():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 @payments_bp.route("/shop/payment-methods", methods=["GET"], endpoint="shop_payment_methods")
@@ -3029,7 +3038,8 @@ def shop_process_payment():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 @payments_bp.route("/shop/refund", methods=["POST"], endpoint="shop_refund")
@@ -3101,7 +3111,8 @@ def shop_refund():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 @payments_bp.route("/shop/payment-status/<int:payment_id>", methods=["GET"], endpoint="shop_payment_status")
@@ -3124,7 +3135,8 @@ def shop_payment_status(payment_id):
         })
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 @payments_bp.route("/archive/<payment_id>", methods=["POST"])
 @login_required
@@ -3152,7 +3164,8 @@ def archive_payment(payment_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ في أرشفة الدفعة: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('payments.index'))
 
 @payments_bp.route("/restore/<payment_id>", methods=["POST"])
@@ -3192,7 +3205,8 @@ def restore_payment(payment_id):
     except Exception as e:
         
         db.session.rollback()
-        flash(f'خطأ في استعادة الدفعة: {str(e)}', 'error')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'error')
         return redirect(url_for('payments.index'))
 
 
@@ -3703,7 +3717,8 @@ def refund_split(split_id: int):
         return jsonify(success=True, refund_id=refund.id)
     except Exception as e:
         db.session.rollback()
-        return jsonify(error="refund_failed", message=str(e)), 500
+        current_app.logger.exception('split refund error')
+        return jsonify(error="refund_failed", message="حدث خطأ داخلي"), 500
 
 
 
@@ -3850,4 +3865,5 @@ def refund_payment(payment_id: int):
         return jsonify(success=True, refund_id=refund.id)
     except Exception as e:
         db.session.rollback()
-        return jsonify(error="refund_failed", message=str(e)), 500
+        current_app.logger.exception('payment refund error')
+        return jsonify(error="refund_failed", message="حدث خطأ داخلي"), 500

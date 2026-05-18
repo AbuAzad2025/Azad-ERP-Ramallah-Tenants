@@ -344,10 +344,11 @@ def send_whatsapp_message(to_number: str, body: str) -> Tuple[bool, str]:
         return (True, msg.sid)
     except TwilioRestException as e:
         code = getattr(e, "code", "")
-        msg = getattr(e, "msg", str(e))
+        msg = getattr(e, "msg", "حدث خطأ داخلي")
         return (False, f"{code} {msg}")
     except Exception as e:
-        return (False, str(e))
+        logging.exception('WhatsApp send error')
+        return (False, "حدث خطأ داخلي")
 
 
 def format_currency(value: Any) -> str:
@@ -449,9 +450,10 @@ def validate_currency_consistency(entity_type: str, entity_id: int) -> dict:
             'validation_date': datetime.now(timezone.utc)
         }
     except Exception as e:
+        logging.exception('currency consistency validation error')
         return {
             'is_consistent': False,
-            'error': str(e),
+            'error': 'حدث خطأ داخلي',
             'validation_date': datetime.now(timezone.utc)
         }
 
@@ -956,7 +958,8 @@ def get_performance_metrics():
             'cache_hit_ratio': getattr(cache, 'hit_ratio', 0)
         }
     except Exception as e:
-        return {'error': str(e)}
+        logging.exception('performance metrics error')
+        return {'error': 'حدث خطأ داخلي'}
 
 def optimize_system():
     """تحسين النظام العام"""
@@ -2293,7 +2296,7 @@ def send_notification_sms(to: str, message: str, metadata: dict = None) -> dict:
         db.session.add(log)
         db.session.commit()
         
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def send_notification_email(
@@ -2375,7 +2378,7 @@ def send_notification_email(
         db.session.add(log)
         db.session.commit()
         
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def notify_service_completed(service_id: int) -> dict:
@@ -2450,7 +2453,7 @@ def notify_service_completed(service_id: int) -> dict:
         
     except Exception as e:
         current_app.logger.error(f'❌ notify_service_completed failed: {e}')
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def notify_payment_reminder(days_before: int = None) -> dict:
@@ -2526,7 +2529,7 @@ def notify_payment_reminder(days_before: int = None) -> dict:
         
     except Exception as e:
         current_app.logger.error(f'❌ notify_payment_reminder failed: {e}')
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 # ========================================================================
@@ -2608,7 +2611,7 @@ def create_tax_entry(
     except Exception as e:
         current_app.logger.error(f'❌ create_tax_entry failed: {e}')
         db.session.rollback()
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def get_tax_summary(period: str = None) -> dict:
@@ -2675,7 +2678,7 @@ def get_tax_summary(period: str = None) -> dict:
         
     except Exception as e:
         current_app.logger.error(f'❌ get_tax_summary failed: {e}')
-        return {'success': False, 'error': str(e)}
+        return {'success': False, 'error': 'حدث خطأ داخلي'}
 
 
 def check_ip_allowed(ip: str) -> Dict[str, Any]:

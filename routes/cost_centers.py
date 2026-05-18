@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from models import (CostCenter, CostCenterAllocation, Payment, Expense, Sale, ServiceRequest,
@@ -116,7 +116,8 @@ def add():
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ في إضافة مركز التكلفة: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     from models import User
     parent_centers = CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all()
@@ -151,7 +152,8 @@ def edit(id):
             
         except Exception as e:
             db.session.rollback()
-            flash(f'❌ خطأ في التحديث: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     from models import User
     parent_centers = CostCenter.query.filter(
@@ -247,7 +249,8 @@ def allocate(id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطأ في التوزيع: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('cost_centers.view', id=id))
 
 

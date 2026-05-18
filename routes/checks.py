@@ -1474,7 +1474,7 @@ def create_gl_entry_for_check(check_id, check_type, amount, currency, direction,
                     connection.close()
                 except:
                     pass
-            raise CheckAccountingError(f"خطأ في إنشاء GL batch: {str(e)}", code='GL_BATCH_ERROR')
+            raise CheckAccountingError("خطأ في إنشاء GL batch", code='GL_BATCH_ERROR')
         
         entries_data = []
         
@@ -1505,7 +1505,7 @@ def create_gl_entry_for_check(check_id, check_type, amount, currency, direction,
                 )
         except Exception as e:
             current_app.logger.error(f"خطأ في إنشاء GL entries: {e}")
-            raise CheckAccountingError(f"فشل إنشاء GL entries: {str(e)}", code='GL_ENTRIES_CREATION_FAILED')
+            raise CheckAccountingError("فشل إنشاء GL entries", code='GL_ENTRIES_CREATION_FAILED')
         
         if entries_data:
             from sqlalchemy import insert
@@ -1753,7 +1753,7 @@ class CheckActionService:
             raise
         except Exception as e:
             current_app.logger.error(f"خطأ غير متوقع في CheckActionService.run: {e}")
-            raise CheckException(f"خطأ في معالجة الشيك: {str(e)}", code='UNEXPECTED_ERROR')
+            raise CheckException("خطأ في معالجة الشيك", code='UNEXPECTED_ERROR')
 
     def _validate_check_context(self, ctx):
         if not ctx:
@@ -1805,7 +1805,7 @@ class CheckActionService:
                 gl_batch = self._maybe_create_gl(ctx, status, previous, note_text)
             except Exception as e:
                 current_app.logger.error(f"خطأ في إنشاء القيد المحاسبي: {e}")
-                raise CheckAccountingError(f"فشل إنشاء القيد المحاسبي: {str(e)}", code='GL_CREATION_FAILED')
+                raise CheckAccountingError("فشل إنشاء القيد المحاسبي", code='GL_CREATION_FAILED')
             
             return {
                 'token': ctx.token,
@@ -1819,7 +1819,7 @@ class CheckActionService:
             raise
         except Exception as e:
             current_app.logger.error(f"خطأ في _apply: {e}")
-            raise CheckException(f"خطأ في تطبيق تغيير الحالة: {str(e)}", code='APPLY_FAILED')
+            raise CheckException("خطأ في تطبيق تغيير الحالة", code='APPLY_FAILED')
 
     def _link_check_to_entity(self, check, ctx, expense=None):
         if ctx.entity_type == 'CUSTOMER' and ctx.entity_id:
@@ -3742,8 +3742,8 @@ def get_checks():
         
         return jsonify({
             'success': False,
-            'message': str(e),
-            'error': str(e)
+            'message': 'حدث خطأ داخلي',
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -3859,8 +3859,8 @@ def get_statistics():
         
         return jsonify({
             'success': False,
-            'message': str(e),
-            'error': str(e)
+            'message': 'حدث خطأ داخلي',
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -3952,8 +3952,8 @@ def get_first_incomplete_check():
         
         return jsonify({
             'success': False,
-            'message': str(e),
-            'error': str(e)
+            'message': 'حدث خطأ داخلي',
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -3993,7 +3993,7 @@ def get_check_lifecycle(check_id, check_type):
         current_app.logger.error(f"Error fetching check lifecycle: {str(e)}")
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -4724,8 +4724,8 @@ def get_alerts():
         current_app.logger.error(f"Error fetching check alerts: {str(e)}")
         return jsonify({
             'success': False,
-            'message': str(e),
-            'error': str(e)
+            'message': 'حدث خطأ داخلي',
+            'error': 'حدث خطأ داخلي'
         }), 500
 
 
@@ -4808,7 +4808,8 @@ def add_check():
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error adding check: {str(e)}")
-            flash(f"حدث خطأ أثناء إضافة الشيك: {str(e)}", "danger")
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
             return redirect(url_for("checks.add_check"))
     
     customers = Customer.query.filter_by(is_active=True, is_archived=False).order_by(Customer.name).limit(1000).all()
@@ -4867,7 +4868,8 @@ def edit_check(check_id):
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error updating check: {str(e)}")
-            flash(f"حدث خطأ أثناء تعديل الشيك: {str(e)}", "danger")
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     customers = Customer.query.filter_by(is_active=True, is_archived=False).order_by(Customer.name).limit(1000).all()
     suppliers = Supplier.query.order_by(Supplier.name).limit(1000).all()
@@ -4912,7 +4914,8 @@ def delete_check(check_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error deleting check: {str(e)}")
-        flash(f"حدث خطأ أثناء حذف الشيك: {str(e)}", "danger")
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for("checks.index"))
 
 

@@ -3,7 +3,7 @@
 إدارة مرتجعات البيع بشكل كامل مع إرجاع المخزون
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from sqlalchemy import or_, func, desc
 from datetime import datetime, timezone
@@ -281,7 +281,8 @@ def create_return(sale_id=None):
             
         except Exception as e:
             db.session.rollback()
-            flash(f'خطأ في إنشاء المرتجع: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     # تحضير choices للـ template
     products = Product.query.filter_by(is_active=True).order_by(Product.name).limit(500).all()
@@ -499,7 +500,8 @@ def edit_return(return_id):
             
         except Exception as e:
             db.session.rollback()
-            flash(f'خطأ في تحديث المرتجع: {str(e)}', 'danger')
+            current_app.logger.exception('internal error')
+            flash('حدث خطأ داخلي', 'danger')
     
     # تحضير choices للـ template
     products = Product.query.filter_by(is_active=True).order_by(Product.name).limit(500).all()
@@ -558,7 +560,8 @@ def confirm_return(return_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ في تأكيد المرتجع: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
     
     return redirect(url_for('returns.view_return', return_id=return_id))
 
@@ -602,7 +605,8 @@ def cancel_return(return_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ في إلغاء المرتجع: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
     
     return redirect(url_for('returns.view_return', return_id=return_id))
 
@@ -642,7 +646,8 @@ def delete_return(return_id):
         
     except Exception as e:
         db.session.rollback()
-        flash(f'خطأ في حذف المرتجع: {str(e)}', 'danger')
+        current_app.logger.exception('internal error')
+        flash('حدث خطأ داخلي', 'danger')
         return redirect(url_for('returns.view_return', return_id=return_id))
 
 
@@ -706,7 +711,8 @@ def get_sale_items(sale_id):
         
     except Exception as e:
         
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 @returns_bp.route('/api/customer/<int:customer_id>/sales')
@@ -737,4 +743,5 @@ def get_customer_sales(customer_id: int):
         return jsonify({'success': True, 'sales': data})
     except Exception as e:
         
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500

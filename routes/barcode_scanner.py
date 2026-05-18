@@ -139,7 +139,8 @@ def scan_barcode():
         })
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 @barcode_scanner_bp.route("/generate", methods=["POST"], endpoint="generate_barcode")
@@ -241,10 +242,12 @@ def generate_barcode_for_product():
                     })
                 
             except Exception as e:
-                return jsonify({"error": f"خطأ في توليد الباركود: {str(e)}"}), 500
+                current_app.logger.exception('API error')
+                return jsonify({"error": "حدث خطأ داخلي"}), 500
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 @barcode_scanner_bp.route("/print/<int:product_id>", methods=["GET"], endpoint="print_barcode")
@@ -297,7 +300,8 @@ def print_barcode(product_id):
         )
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 @barcode_scanner_bp.route("/bulk-generate", methods=["POST"], endpoint="bulk_generate")
@@ -371,7 +375,8 @@ def bulk_generate_barcodes():
         })
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 @barcode_scanner_bp.route("/inventory/update", methods=["POST"], endpoint="inventory_update")
@@ -520,7 +525,8 @@ def inventory_update_by_barcode():
     except Exception as e:
         db.session.rollback()
         logging.error(f"❌ [Inventory Update] خطأ غير متوقع: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 @barcode_scanner_bp.route("/warehouses", methods=["GET"], endpoint="get_warehouses")
@@ -544,7 +550,8 @@ def get_warehouses():
         })
     except Exception as e:
         
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 @barcode_scanner_bp.route("/warehouse-fields", methods=["GET"], endpoint="get_warehouse_fields")
@@ -645,7 +652,8 @@ def get_warehouse_fields():
         })
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 @barcode_scanner_bp.route("/check-product", methods=["GET"], endpoint="check_product_exists")
@@ -696,7 +704,8 @@ def check_product_exists():
         })
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 @barcode_scanner_bp.route("/search", methods=["GET"], endpoint="search_products")
@@ -744,7 +753,8 @@ def search_products():
         return jsonify({"products": results})
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 @barcode_scanner_bp.route("/auto-assign", methods=["POST"], endpoint="auto_assign_barcodes")
@@ -762,7 +772,8 @@ def auto_assign_barcodes_route():
         })
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 @barcode_scanner_bp.route("/stats", methods=["GET"], endpoint="barcode_stats")
@@ -821,7 +832,8 @@ def barcode_stats():
         
     except Exception as e:
         
-        return jsonify({"success": False, "error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
 
 
 @barcode_scanner_bp.route("/bulk-import", methods=["POST"], endpoint="bulk_import_products")
@@ -1024,7 +1036,7 @@ def bulk_import_products():
                     logging.info(f"✅ [Bulk Import] إنشاء منتج جديد: {name} ({barcode})")
                     
             except Exception as e:
-                error_msg = f"خطأ في المنتج {barcode}: {str(e)}"
+                error_msg = f"خطأ في المنتج {barcode}"
                 errors.append(error_msg)
                 logging.error(f"❌ [Bulk Import] {error_msg}")
                 continue
@@ -1048,7 +1060,8 @@ def bulk_import_products():
     except Exception as e:
         db.session.rollback()
         logging.error(f"❌ [Bulk Import] خطأ غير متوقع: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"error": "حدث خطأ داخلي"}), 500
 
 
 @barcode_scanner_bp.route("/bulk-scan", methods=["GET"], endpoint="bulk_scan_page")
@@ -1115,4 +1128,5 @@ def check_product():
         
     except Exception as e:
         logging.error(f"[Check Product] خطأ: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        current_app.logger.exception('API error')
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
