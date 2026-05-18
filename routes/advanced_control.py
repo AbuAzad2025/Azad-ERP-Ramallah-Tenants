@@ -340,7 +340,7 @@ def db_merger():
             pass
         
     except Exception as e:
-        print(f"Error in db_merger stats: {e}")
+        current_app.logger.exception("Error in db_merger stats")
 
     preview = None
     if request.method == 'POST':
@@ -3974,10 +3974,12 @@ def performance_profiler():
             profiler_data['database']['table_count'] = len(tables)
             
             slow_queries = []
+            preparer = db.engine.dialect.identifier_preparer
             for table in tables[:10]:
                 try:
                     start = time.time()
-                    db.session.execute(text(f"SELECT COUNT(*) FROM {table}"))
+                    quoted = preparer.quote(table)
+                    db.session.execute(text(f"SELECT COUNT(*) FROM {quoted}"))
                     elapsed = (time.time() - start) * 1000
                     if elapsed > 100:
                         slow_queries.append({

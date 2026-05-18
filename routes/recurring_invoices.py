@@ -349,7 +349,8 @@ def _generate_recurring_invoice(template, invoice_date=None):
         if current_app:
             current_app.logger.error(f"GL Sync Failed for Recurring Invoice #{new_invoice.id}: {e}")
         else:
-            print(f"GL Sync Failed for Recurring Invoice #{new_invoice.id}: {e}")
+            import logging
+            logging.getLogger(__name__).error("GL Sync Failed for Recurring Invoice #%s: %s", new_invoice.id, e)
 
     return new_invoice
 

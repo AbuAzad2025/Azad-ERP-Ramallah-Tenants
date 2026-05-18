@@ -28,7 +28,7 @@ def _refresh_related_balances(customer_id: Optional[int], lines) -> None:
             from utils.customer_balance_updater import update_customer_balance_components
             update_customer_balance_components(int(customer_id))
     except Exception:
-        pass
+        current_app.logger.warning('Failed to refresh customer balance', exc_info=True)
     try:
         partner_ids = set()
         supplier_ids = set()
@@ -69,7 +69,7 @@ def _refresh_related_balances(customer_id: Optional[int], lines) -> None:
             for sid in supplier_ids:
                 utils.update_entity_balance("SUPPLIER", int(sid))
     except Exception:
-        pass
+        current_app.logger.warning('Failed to refresh entity balances', exc_info=True)
 
 
 @returns_bp.route('/')
@@ -261,7 +261,7 @@ def create_return(sale_id=None):
             try:
                 run_sale_return_gl_sync_after_commit(sale_return.id)
             except Exception:
-                pass
+                current_app.logger.warning('GL sync failed for sale return #%s', sale_return.id, exc_info=True)
             # Audit log
             try:
                 audit = AuditLog(
@@ -273,7 +273,7 @@ def create_return(sale_id=None):
                 db.session.add(audit)
                 db.session.commit()
             except Exception:
-                pass  # لا نريد أن يفشل الحفظ بسبب الـ audit log
+                current_app.logger.warning('Audit log failed for sale return CREATE', exc_info=True)
             
             _refresh_related_balances(sale_return.customer_id, list(sale_return.lines or []))
             flash('تم إنشاء المرتجع بنجاح', 'success')
@@ -480,7 +480,7 @@ def edit_return(return_id):
             try:
                 run_sale_return_gl_sync_after_commit(sale_return.id)
             except Exception:
-                pass
+                current_app.logger.warning('GL sync failed for sale return #%s', sale_return.id, exc_info=True)
             # Audit log
             try:
                 audit = AuditLog(
@@ -492,7 +492,7 @@ def edit_return(return_id):
                 db.session.add(audit)
                 db.session.commit()
             except Exception:
-                pass
+                current_app.logger.warning('Audit log failed for sale return UPDATE', exc_info=True)
             
             _refresh_related_balances(sale_return.customer_id, list(sale_return.lines or []))
             flash('تم تحديث المرتجع بنجاح', 'success')
@@ -541,7 +541,7 @@ def confirm_return(return_id):
         try:
             run_sale_return_gl_sync_after_commit(sale_return.id)
         except Exception:
-            pass
+            current_app.logger.warning('GL sync failed for sale return #%s', sale_return.id, exc_info=True)
         # Audit log
         try:
             audit = AuditLog(
@@ -553,7 +553,7 @@ def confirm_return(return_id):
             db.session.add(audit)
             db.session.commit()
         except Exception:
-            pass
+            current_app.logger.warning('Audit log failed for sale return CONFIRM', exc_info=True)
         
         _refresh_related_balances(sale_return.customer_id, list(sale_return.lines or []))
         flash('تم تأكيد المرتجع بنجاح. تم إرجاع المخزون.', 'success')
@@ -598,7 +598,7 @@ def cancel_return(return_id):
             db.session.add(audit)
             db.session.commit()
         except Exception:
-            pass
+            current_app.logger.warning('Audit log failed for sale return CANCEL', exc_info=True)
         
         _refresh_related_balances(sale_return.customer_id, list(sale_return.lines or []))
         flash('تم إلغاء المرتجع بنجاح', 'success')
@@ -635,7 +635,7 @@ def delete_return(return_id):
             db.session.add(audit)
             db.session.flush()
         except Exception:
-            pass
+            current_app.logger.warning('Audit log failed for sale return DELETE', exc_info=True)
         
         db.session.delete(sale_return)
         db.session.commit()

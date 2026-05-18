@@ -455,6 +455,10 @@ def upload_book():
             return jsonify({'success': False, 'error': 'No file selected'})
         
         filename = secure_filename(file.filename)
+        allowed_exts = {'.pdf', '.md', '.txt'}
+        ext = os.path.splitext(filename)[1].lower()
+        if ext not in allowed_exts:
+            return jsonify({'success': False, 'error': 'نوع الملف غير مدعوم (يسمح فقط بـ pdf, md, txt)'}), 400
         books_dir = Path('AI/data/books')
         books_dir.mkdir(parents=True, exist_ok=True)
         

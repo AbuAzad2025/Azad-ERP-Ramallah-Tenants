@@ -2107,6 +2107,11 @@ def logo_manager():
             
             if file and file.filename:
                 filename = secure_filename(file.filename)
+                allowed_exts = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
+                ext = os.path.splitext(filename)[1].lower()
+                if ext not in allowed_exts:
+                    flash('⚠️ نوع ملف غير مدعوم (استخدم: png, jpg, jpeg, gif, webp)', 'warning')
+                    return redirect(url_for('security.logo_manager'))
                 upload_path = os.path.join(current_app.root_path, 'static', 'img')
                 
                 logo_mapping = {
@@ -4549,6 +4554,11 @@ def system_settings():
                     from werkzeug.utils import secure_filename
                     import os
                     filename = secure_filename(file.filename)
+                    allowed_exts = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
+                    ext = os.path.splitext(filename)[1].lower()
+                    if ext not in allowed_exts:
+                        flash('⚠️ نوع ملف الشعار غير مدعوم (استخدم: png, jpg, jpeg, gif, webp)', 'warning')
+                        return redirect(url_for('security.settings_center', tab='branding'))
                     # حفظ في static/img/uploads
                     upload_folder = os.path.join(current_app.root_path, 'static', 'img', 'uploads')
                     os.makedirs(upload_folder, exist_ok=True)
