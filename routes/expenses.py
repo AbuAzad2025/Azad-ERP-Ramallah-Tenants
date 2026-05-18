@@ -876,7 +876,10 @@ def generate_salary(emp_id):
     if year < 1900 or year > 2100:
         year = date.today().year
     
-    base_salary = Decimal(request.form.get('base_salary', employee.salary))
+    try:
+        base_salary = Decimal(str(request.form.get('base_salary', employee.salary)))
+    except (InvalidOperation, TypeError, ValueError):
+        base_salary = Decimal(str(employee.salary))
     payment_method_raw = request.form.get('payment_method', 'BANK_TRANSFER')
     payment_date = request.form.get('payment_date', date.today().isoformat())
     notes = request.form.get('notes', '')
@@ -930,7 +933,10 @@ def generate_salary(emp_id):
     
     net_salary = net_salary_before_advances - total_installments_amount
     
-    actual_payment = Decimal(request.form.get('actual_payment', net_salary))
+    try:
+        actual_payment = Decimal(str(request.form.get('actual_payment', net_salary)))
+    except (InvalidOperation, TypeError, ValueError):
+        actual_payment = Decimal(str(net_salary))
     remaining_balance = net_salary - actual_payment
     
     if actual_payment > net_salary:
