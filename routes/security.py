@@ -907,7 +907,7 @@ def system_cleanup():
     try:
         # cleanup_stats['cache_items'] = len(cache.cache._cache) if hasattr(cache.cache, '_cache') else 0
         pass
-    except:
+    except Exception:
         pass
 
     if request.method == 'POST':
@@ -2172,7 +2172,7 @@ def logo_manager():
                         try:
                             from extensions import cache
                             cache.delete(f"system_setting_{setting_key}")
-                        except:
+                        except Exception:
                             pass
 
                     flash(f'✅ تم رفع {target_name} بنجاح!', 'success')
@@ -2372,7 +2372,7 @@ def invoice_designer():
             from extensions import cache
             for key in supported_settings:
                 cache.delete(f"system_setting_{key}")
-        except:
+        except Exception:
             pass
             
         flash('✅ تم حفظ تصميم الفواتير بنجاح', 'success')

@@ -326,7 +326,7 @@ def archive_sale(id):
             sale.is_archived = True
             db.session.commit()
             return jsonify({"status": "success", "message": "تم أرشفة عملية البيع بنجاح (يدوي)"})
-        except:
+        except Exception:
             db.session.rollback()
             current_app.logger.exception('API error')
             return jsonify({"error": "حدث خطأ داخلي"}), 500

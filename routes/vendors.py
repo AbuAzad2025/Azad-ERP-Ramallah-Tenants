@@ -1160,7 +1160,7 @@ def suppliers_statement(supplier_id: int):
                         try:
                             from models import convert_amount
                             split_amount_ils = convert_amount(split_amount, split_currency, "ILS", pmt.payment_date or df)
-                        except:
+                        except Exception:
                             pass
                 
                 # تحديد طريقة الدفع للـ split
@@ -1351,7 +1351,7 @@ def suppliers_statement(supplier_id: int):
                         try:
                             from models import convert_amount
                             check_amt = convert_amount(check_amt, check.currency, "ILS", check.check_date or d)
-                        except:
+                        except Exception:
                             pass
                     
                     returned_statement = f"إرجاع شيك"
@@ -2652,7 +2652,7 @@ def partners_statement(partner_id: int):
                             try:
                                 from models import convert_amount
                                 split_amount_ils = convert_amount(split_amount, split_currency, "ILS", p.payment_date or df)
-                            except:
+                            except Exception:
                                 pass
                     
                     # تحديد طريقة الدفع للـ split

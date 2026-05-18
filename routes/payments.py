@@ -867,7 +867,7 @@ def index():
             elif isinstance(x.payment_date, str):
                 try:
                     payment_date = datetime.strptime(x.payment_date, '%Y-%m-%d')
-                except:
+                except Exception:
                     payment_date = datetime.min
             elif isinstance(x.payment_date, date):
                 payment_date = datetime.combine(x.payment_date, datetime.min.time())
@@ -877,22 +877,22 @@ def index():
             if item_id.startswith('check_'):
                 try:
                     item_id = int(item_id.replace('check_', ''))
-                except:
+                except Exception:
                     item_id = 0
             elif '_split_' in item_id:
                 try:
                     parent_id = int(item_id.split('_split_')[0])
                     split_id = int(item_id.split('_split_')[1])
                     item_id = parent_id * 1000000 + split_id
-                except:
+                except Exception:
                     try:
                         item_id = int(item_id.replace('_split_', ''))
-                    except:
+                    except Exception:
                         item_id = 0
             else:
                 try:
                     item_id = int(item_id)
-                except:
+                except Exception:
                     item_id = 0
         
         return (payment_date, item_id)

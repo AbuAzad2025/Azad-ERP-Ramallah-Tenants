@@ -780,7 +780,7 @@ def _check_create_payment_auto(mapper, connection, target):
                     use_new_connection = True
                     connection_from_event = False
                     connection = db.engine.connect()
-            except:
+            except Exception:
                 pass
         
         try:
@@ -839,13 +839,13 @@ def _check_create_payment_auto(mapper, connection, target):
                 try:
                     connection.close()
                     current_app.logger.info(f"🔍 [CHECK_PAYMENT_AUTO] تم إغلاق connection الجديد")
-                except:
+                except Exception:
                     pass
         except Exception as conn_e:
             if use_new_connection and not connection_from_event:
                 try:
                     connection.close()
-                except:
+                except Exception:
                     pass
             raise conn_e
         
@@ -1424,7 +1424,7 @@ def create_gl_entry_for_check(check_id, check_type, amount, currency, direction,
                     if should_close_connection:
                         try:
                             connection.close()
-                        except:
+                        except Exception:
                             pass
                     connection = db.engine.connect()
                     should_close_connection = True
@@ -1433,7 +1433,7 @@ def create_gl_entry_for_check(check_id, check_type, amount, currency, direction,
                 if should_close_connection:
                     try:
                         connection.close()
-                    except:
+                    except Exception:
                         pass
                 connection = db.engine.connect()
                 should_close_connection = True
@@ -1452,7 +1452,7 @@ def create_gl_entry_for_check(check_id, check_type, amount, currency, direction,
                 if should_close_connection:
                     try:
                         connection.close()
-                    except:
+                    except Exception:
                         pass
                 connection = db.engine.connect()
                 should_close_connection = True
@@ -1465,14 +1465,14 @@ def create_gl_entry_for_check(check_id, check_type, amount, currency, direction,
                 if should_close_connection:
                     try:
                         connection.close()
-                    except:
+                    except Exception:
                         pass
                 raise CheckAccountingError(f"فشل إنشاء GL batch: {str(conn_e)}", code='GL_BATCH_CREATION_FAILED')
         except Exception as e:
             if should_close_connection:
                 try:
                     connection.close()
-                except:
+                except Exception:
                     pass
             raise CheckAccountingError("خطأ في إنشاء GL batch", code='GL_BATCH_ERROR')
         
@@ -1518,7 +1518,7 @@ def create_gl_entry_for_check(check_id, check_type, amount, currency, direction,
                     if should_close_connection:
                         try:
                             connection.close()
-                        except:
+                        except Exception:
                             pass
                     connection = db.engine.connect()
                     should_close_connection = True
@@ -1556,9 +1556,9 @@ def create_gl_entry_for_check(check_id, check_type, amount, currency, direction,
             if 'should_close_connection' in locals() and should_close_connection and connection:
                 try:
                     connection.close()
-                except:
+                except Exception:
                     pass
-        except:
+        except Exception:
             pass
         return None
 

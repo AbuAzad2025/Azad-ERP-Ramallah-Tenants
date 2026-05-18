@@ -328,7 +328,7 @@ def db_merger():
             size_bytes = db.session.execute(text("SELECT pg_database_size(current_database())")).scalar()
             size_mb = round(size_bytes / (1024 * 1024), 2)
             stats['current_db_size'] = f"{size_mb} MB"
-        except:
+        except Exception:
             stats['current_db_size'] = "Unknown"
 
         # Tables
@@ -336,7 +336,7 @@ def db_merger():
             inspector = inspect(db.engine)
             tables = inspector.get_table_names()
             stats['total_tables'] = len(tables)
-        except:
+        except Exception:
             pass
         
     except Exception as e:

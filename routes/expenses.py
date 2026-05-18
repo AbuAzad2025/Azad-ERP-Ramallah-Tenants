@@ -1813,7 +1813,7 @@ def detail(exp_id):
                     try:
                         import json
                         details = json.loads(details)
-                    except:
+                    except Exception:
                         details = {}
                 check_number = details.get("check_number") or p.check_number
                 check_bank = details.get("check_bank") or p.check_bank

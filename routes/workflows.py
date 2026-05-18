@@ -108,7 +108,7 @@ def add_definition():
             
             try:
                 steps = json.loads(steps_json)
-            except:
+            except Exception:
                 flash('خطأ في تنسيق خطوات Workflow', 'danger')
                 return redirect(request.url)
             
@@ -161,7 +161,7 @@ def edit_definition(id):
             if steps_json:
                 try:
                     definition.steps_definition = json.loads(steps_json)
-                except:
+                except Exception:
                     flash('خطأ في تنسيق خطوات Workflow', 'danger')
                     return redirect(request.url)
             

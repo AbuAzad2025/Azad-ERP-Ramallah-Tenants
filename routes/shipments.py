@@ -28,7 +28,7 @@ def _safe_get_id(obj):
             return obj.id
         if isinstance(obj, int):
             return obj
-    except:
+    except Exception:
         pass
     return None
 

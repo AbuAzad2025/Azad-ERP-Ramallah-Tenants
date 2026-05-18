@@ -49,13 +49,13 @@ def ai_config_dashboard():
     # 1. إحصائيات النظام الحية
     try:
         stats = get_live_ai_stats()
-    except:
+    except Exception:
         stats = {'status': 'unknown', 'latency': 'N/A', 'queries_today': 0}
 
     # 2. حالة النماذج
     try:
         model_status = get_model_status()
-    except:
+    except Exception:
         model_status = {'last_trained': 'N/A'}
 
     return render_template(

@@ -1854,7 +1854,7 @@ def account_statement(customer_id):
                                 try:
                                     from models import convert_amount
                                     check_amt = convert_amount(check_amt, check.currency, "ILS", check.check_date or p.payment_date)
-                                except:
+                                except Exception:
                                     pass
                             returned_check_amounts[split_id] = check_amt
                             returned_checks_list.append({
@@ -1862,7 +1862,7 @@ def account_statement(customer_id):
                                 'split_id': split_id,
                                 'amount': check_amt
                             })
-                        except:
+                        except Exception:
                             pass
                     elif check.check_number:
                         for split in splits:
@@ -1876,7 +1876,7 @@ def account_statement(customer_id):
                                     try:
                                         import json
                                         split_details = json.loads(split_details)
-                                    except:
+                                    except Exception:
                                         split_details = {}
                                 if split_details.get('check_number') == check.check_number:
                                     check_amt = D(str(check.amount or 0))
@@ -1884,7 +1884,7 @@ def account_statement(customer_id):
                                         try:
                                             from models import convert_amount
                                             check_amt = convert_amount(check_amt, check.currency, "ILS", check.check_date or p.payment_date)
-                                        except:
+                                        except Exception:
                                             pass
                                     returned_check_amounts[split.id] = check_amt
                                     returned_checks_list.append({
@@ -1996,7 +1996,7 @@ def account_statement(customer_id):
                             try:
                                 from models import convert_amount
                                 split_amount_ils = convert_amount(split_amount, split_currency, "ILS", p.payment_date)
-                            except:
+                            except Exception:
                                 pass
                     
                     # تحديد طريقة الدفع للـ split
@@ -2484,7 +2484,7 @@ def account_statement(customer_id):
                 
             if c_created_date and s_date_date and s_date_date > c_created_date:
                  statement_text = "رصيد مدور (سابق)"
-        except:
+        except Exception:
             pass
 
         opening_entry = {
