@@ -231,6 +231,8 @@ def _deduct_stock(sale: Sale) -> None:
         current_reserved = int(rec.reserved_quantity or 0)
         
         if current_reserved >= qty:
+            if current_qty < qty:
+                raise ValueError(f"الكمية الفعلية غير كافية للمنتج {pid} في المستودع {wid}: الفعلية {current_qty}، المطلوب {qty}")
             new_quantity = current_qty - qty
             new_reserved = current_reserved - qty
         else:

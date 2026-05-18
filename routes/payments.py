@@ -2132,8 +2132,9 @@ def update_payment_status(payment_id: int):
                 try:
                     from utils.customer_balance_updater import update_customer_balance_components
                     update_customer_balance_components(payment.customer_id, db.session)
-                except Exception:
-                    pass
+                except Exception as bal_err:
+                    import logging
+                    logging.getLogger(__name__).warning(f"فشل تحديث رصيد العميل {payment.customer_id}: {bal_err}")
             if payment.supplier_id:
                 utils.update_entity_balance("supplier", payment.supplier_id)
             if payment.partner_id:
@@ -2148,8 +2149,9 @@ def update_payment_status(payment_id: int):
                 try:
                     from utils.customer_balance_updater import update_customer_balance_components
                     update_customer_balance_components(payment.customer_id, db.session)
-                except Exception:
-                    pass
+                except Exception as bal_err:
+                    import logging
+                    logging.getLogger(__name__).warning(f"فشل تحديث رصيد العميل {payment.customer_id}: {bal_err}")
             if payment.supplier_id:
                 utils.update_entity_balance("supplier", payment.supplier_id)
             if payment.partner_id:
@@ -3129,7 +3131,8 @@ def shop_refund():
             Payment.refund_of_id == original_payment.id,
             Payment.status == PaymentStatus.COMPLETED.value
         ).scalar() or 0
-        max_refundable = float(original_payment.total_amount or 0) - float(previous_refunds)
+        from decimal import Decimal as D
+        max_refundable = float(D(str(original_payment.total_amount or 0)) - D(str(previous_refunds)))
         
         if refund_amount > max_refundable:
             return jsonify({"error": f"مبلغ الاسترداد ({refund_amount}) يتجاوز المبلغ القابل للاسترداد ({max_refundable:.2f})"}), 400
