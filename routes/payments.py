@@ -3765,7 +3765,7 @@ def refund_split(split_id: int):
             split.details = details
             db.session.add(split)
         except Exception:
-            pass
+            current_app.logger.warning(f'Failed to mark split {split.id} details as refunded')
         try:
             split_method_val = getattr(split.method, 'value', split.method)
             if str(split_method_val).upper() == PaymentMethod.CHEQUE.value:
@@ -3915,6 +3915,7 @@ def refund_payment(payment_id: int):
                         else:
                             service.run(sp.id, 'RETURNED', base_note + ' [RETURN_REASON=PAYMENT_REFUND]')
                     except Exception:
+                        current_app.logger.warning(f'Failed to update check status for split {sp.id} during refund')
                         continue
             else:
                 method_val = getattr(original.method, 'value', original.method)
@@ -3928,7 +3929,7 @@ def refund_payment(payment_id: int):
                         else:
                             service.run(original.id, 'RETURNED', base_note + ' [RETURN_REASON=PAYMENT_REFUND]')
                     except Exception:
-                        pass
+                        current_app.logger.warning(f'Failed to update check status for payment {original.id} during refund')
         finally:
             db.session.commit()
         
