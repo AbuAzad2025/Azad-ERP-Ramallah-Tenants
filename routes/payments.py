@@ -3157,10 +3157,17 @@ def shop_refund():
             created_by=current_user.id,
             deliverer_name=deliverer_name,
             receiver_name=receiver_name,
+            refund_of_id=original_payment.id,
         )
         
         _ensure_payment_number(refund_payment)
         db.session.add(refund_payment)
+        
+        # تمييز الدفعة الأصلية كمستردة إذا تم استرداد كامل المبلغ
+        total_refunded_after = float(D(str(previous_refunds)) + D(str(refund_amount)))
+        if total_refunded_after >= float(original_payment.total_amount or 0):
+            original_payment.is_refunded = True
+            db.session.add(original_payment)
         
         # تحديث رصيد العميل
         if original_payment.customer_id:
@@ -3784,6 +3791,11 @@ def refund_split(split_id: int):
                 utils.update_entity_balance("CUSTOMER", refund.customer_id)
         except Exception as e:
             current_app.logger.error(f"❌ فشل تحديث الأرصدة بعد استرجاع جزء دفعة {split_id}: {e}")
+
+        # تمييز الدفعة الأصلية كمستردة
+        parent.is_refunded = True
+        db.session.add(parent)
+        db.session.commit()
 
         return jsonify(success=True, refund_id=refund.id)
     except Exception as e:
