@@ -2408,7 +2408,7 @@ class Customer(db.Model, TimestampMixin, AuditMixin, UserMixin):
 @event.listens_for(Customer, "before_insert")
 @event.listens_for(Customer, "before_update")
 def _customer_normalize(_m, _c, t: Customer):
-    t.email = (t.email or "").strip().lower()
+    t.email = (t.email or "").strip().lower() or None
     for key in ("phone", "whatsapp"):
         val = getattr(t, key, None)
         if val is not None:
@@ -2417,7 +2417,7 @@ def _customer_normalize(_m, _c, t: Customer):
             s = "+" + re.sub(r"\D", "", s[1:]) if s.startswith("+") else re.sub(r"\D", "", s)
             setattr(t, key, s)
     t.category = (t.category or "عادي").strip() or "عادي"
-    t.currency = (t.currency or "ILS").upper()
+    t.currency = (t.currency or DEFAULT_CURRENCY).upper()
 
 
 def _opening_balance_expected_net(opening_balance: float) -> float:
@@ -2817,12 +2817,8 @@ def supplier_after_insert_create_customer(mapper, connection, target):
 
 
 @event.listens_for(Supplier, "before_insert")
-def _supplier_before_insert(_m, _c, t: Supplier):
-    t.email = (t.email or "").strip().lower() or None
-    t.currency = (t.currency or DEFAULT_CURRENCY).upper()
-
 @event.listens_for(Supplier, "before_update")
-def _supplier_before_update(_m, _c, t: Supplier):
+def _supplier_normalize(_m, _c, t: Supplier):
     t.email = (t.email or "").strip().lower() or None
     t.currency = (t.currency or DEFAULT_CURRENCY).upper()
 
@@ -3453,15 +3449,10 @@ def partner_after_insert_create_customer(mapper, connection, target):
 
 # ==========================================
 @event.listens_for(Partner, "before_insert")
-def _partner_before_insert(_m, _c, t: Partner):
-    t.email = (t.email or "").strip().lower() or None
-    t.currency = (t.currency or "ILS").upper()
-    t.name = (t.name or "").strip()
-
 @event.listens_for(Partner, "before_update")
-def _partner_before_update(_m, _c, t: Partner):
+def _partner_normalize(_m, _c, t: Partner):
     t.email = (t.email or "").strip().lower() or None
-    t.currency = (t.currency or "ILS").upper()
+    t.currency = (t.currency or DEFAULT_CURRENCY).upper()
     t.name = (t.name or "").strip()
 
 
@@ -3681,7 +3672,7 @@ def _ps_after_update_approved(mapper, connection, target: PartnerSettlement):
     except Exception:
         pass
 
-@event.listens_for(PartnerSettlement, "after_update")
+@event.listens_for(PartnerSettlement, "after_update", propagate=True)
 def _ps_after_update(mapper, connection, target: PartnerSettlement):
     from sqlalchemy import inspect
     try:
@@ -17141,17 +17132,19 @@ def _sale_return_update_customer_balance(mapper, connection, target):
                 from sqlalchemy import text as sa_text
                 product_ids = [line.product_id for line in target.lines if hasattr(line, 'product_id') and line.product_id]
                 if product_ids:
+                    placeholders = ", ".join(f":pid_{i}" for i in range(len(product_ids)))
+                    params = {f"pid_{i}": pid for i, pid in enumerate(product_ids)}
                     partner_results = connection.execute(
-                        sa_text("""
+                        sa_text(f"""
                             SELECT DISTINCT partner_id 
                             FROM warehouse_partner_shares 
-                            WHERE product_id = ANY(:pids)
+                            WHERE product_id IN ({placeholders})
                             UNION
                             SELECT DISTINCT partner_id 
                             FROM product_partners 
-                            WHERE product_id = ANY(:pids)
+                            WHERE product_id IN ({placeholders})
                         """),
-                        {"pids": product_ids}
+                        params
                     ).fetchall()
                     
                     for partner_row in partner_results:
