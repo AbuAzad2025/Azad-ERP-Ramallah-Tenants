@@ -6,7 +6,7 @@ from models import (Project, ProjectTask, ProjectResource, ProjectMilestone, Pro
                    ProjectChangeOrder, ResourceTimeLog, Employee, Product, User, Invoice)
 from sqlalchemy import func, and_, or_, desc, case
 from datetime import datetime, date, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from utils import permission_required
 
 project_advanced_bp = Blueprint('project_advanced', __name__, url_prefix='/projects')
@@ -158,6 +158,19 @@ def add_task(project_id):
         task_count = ProjectTask.query.filter_by(project_id=project_id).count()
         task_number = f"{project.code}-T{task_count + 1:03d}"
         
+        try:
+            start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            start_date = None
+        try:
+            due_date = datetime.strptime(request.form.get('due_date'), '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            due_date = None
+        try:
+            estimated_hours = Decimal(request.form.get('estimated_hours', 0))
+        except (InvalidOperation, TypeError, ValueError):
+            estimated_hours = Decimal(0)
+        
         task = ProjectTask(
             project_id=project_id,
             phase_id=request.form.get('phase_id', type=int),
@@ -166,9 +179,9 @@ def add_task(project_id):
             description=request.form.get('description'),
             assigned_to=request.form.get('assigned_to', type=int),
             priority=request.form.get('priority', 'MEDIUM'),
-            start_date=datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date(),
-            due_date=datetime.strptime(request.form.get('due_date'), '%Y-%m-%d').date(),
-            estimated_hours=Decimal(request.form.get('estimated_hours', 0))
+            start_date=start_date,
+            due_date=due_date,
+            estimated_hours=estimated_hours
         )
         
         depends_on = request.form.getlist('depends_on')
@@ -236,9 +249,19 @@ def resources(project_id):
 def add_resource(project_id):
     try:
         resource_type = request.form.get('resource_type')
-        quantity = Decimal(request.form.get('quantity', 1))
-        unit_cost = Decimal(request.form.get('unit_cost', 0))
+        try:
+            quantity = Decimal(request.form.get('quantity', 1))
+        except (InvalidOperation, TypeError, ValueError):
+            quantity = Decimal(1)
+        try:
+            unit_cost = Decimal(request.form.get('unit_cost', 0))
+        except (InvalidOperation, TypeError, ValueError):
+            unit_cost = Decimal(0)
         total_cost = quantity * unit_cost
+        try:
+            hours_allocated = Decimal(request.form.get('hours_allocated', 0))
+        except (InvalidOperation, TypeError, ValueError):
+            hours_allocated = Decimal(0)
         
         resource = ProjectResource(
             project_id=project_id,
@@ -250,7 +273,7 @@ def add_resource(project_id):
             quantity=quantity,
             unit_cost=unit_cost,
             total_cost=total_cost,
-            hours_allocated=Decimal(request.form.get('hours_allocated', 0)),
+            hours_allocated=hours_allocated,
             status='ALLOCATED',
             notes=request.form.get('notes')
         )
@@ -314,16 +337,33 @@ def add_milestone(project_id):
         milestone_count = ProjectMilestone.query.filter_by(project_id=project_id).count()
         milestone_number = f"{project.code}-M{milestone_count + 1:02d}"
         
+        try:
+            due_date = datetime.strptime(request.form.get('due_date'), '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            due_date = None
+        try:
+            billing_amount = Decimal(request.form.get('billing_amount', 0))
+        except (InvalidOperation, TypeError, ValueError):
+            billing_amount = Decimal(0)
+        try:
+            billing_percentage = Decimal(request.form.get('billing_percentage', 0))
+        except (InvalidOperation, TypeError, ValueError):
+            billing_percentage = Decimal(0)
+        try:
+            payment_terms_days = int(request.form.get('payment_terms_days', 30))
+        except (ValueError, TypeError):
+            payment_terms_days = 30
+        
         milestone = ProjectMilestone(
             project_id=project_id,
             phase_id=request.form.get('phase_id', type=int),
             milestone_number=milestone_number,
             name=request.form.get('name'),
             description=request.form.get('description'),
-            due_date=datetime.strptime(request.form.get('due_date'), '%Y-%m-%d').date(),
-            billing_amount=Decimal(request.form.get('billing_amount', 0)),
-            billing_percentage=Decimal(request.form.get('billing_percentage', 0)),
-            payment_terms_days=int(request.form.get('payment_terms_days', 30)),
+            due_date=due_date,
+            billing_amount=billing_amount,
+            billing_percentage=billing_percentage,
+            payment_terms_days=payment_terms_days,
             completion_criteria=request.form.get('completion_criteria'),
             approval_required=request.form.get('approval_required') == 'on'
         )
@@ -487,6 +527,15 @@ def add_change_order(project_id):
         co_count = ProjectChangeOrder.query.filter_by(project_id=project_id).count()
         change_number = f"{project.code}-CH{co_count + 1:03d}"
         
+        try:
+            cost_impact = Decimal(request.form.get('cost_impact', 0))
+        except (InvalidOperation, TypeError, ValueError):
+            cost_impact = Decimal(0)
+        try:
+            schedule_impact_days = int(request.form.get('schedule_impact_days', 0))
+        except (ValueError, TypeError):
+            schedule_impact_days = 0
+        
         change_order = ProjectChangeOrder(
             project_id=project_id,
             change_number=change_number,
@@ -495,8 +544,8 @@ def add_change_order(project_id):
             requested_by=current_user.id,
             reason=request.form.get('reason'),
             scope_change=request.form.get('scope_change'),
-            cost_impact=Decimal(request.form.get('cost_impact', 0)),
-            schedule_impact_days=int(request.form.get('schedule_impact_days', 0)),
+            cost_impact=cost_impact,
+            schedule_impact_days=schedule_impact_days,
             status='SUBMITTED'
         )
         
