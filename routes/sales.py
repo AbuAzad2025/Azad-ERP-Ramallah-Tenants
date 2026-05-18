@@ -368,7 +368,7 @@ def dashboard():
             try:
                 total_revenue += convert_amount(amt, s.currency, "ILS", s.sale_date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     total_revenue = float(total_revenue)
     
     pending_sales = db.session.query(func.count(Sale.id)).filter(Sale.status == SaleStatus.DRAFT.value).scalar() or 0
@@ -386,7 +386,7 @@ def dashboard():
                 try:
                     spent += convert_amount(amt, s.currency, "ILS", s.sale_date)
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         if spent > 0:
             top_customers_data.append((cust.name, float(spent)))
     top_customers_data.sort(key=lambda x: x[1], reverse=True)
@@ -410,7 +410,7 @@ def dashboard():
                 try:
                     revenue_prod += convert_amount(line_amt, sale.currency, "ILS", sale.sale_date)
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         if sold > 0:
             top_products_data.append((prod.name, sold, float(revenue_prod)))
     top_products_data.sort(key=lambda x: x[1], reverse=True)
@@ -434,7 +434,7 @@ def dashboard():
             try:
                 monthly_revenue[ym] += convert_amount(amt, s.currency, "ILS", s.sale_date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     months, counts, revenue = [], [], []
     for yy, mm, cnt in monthly_raw:
@@ -1135,7 +1135,7 @@ def sale_detail(id: int):
                         try:
                             paid_ils += Decimal(str(convert_amount(amt, cur, 'ILS', getattr(p, 'payment_date', None))))
                         except Exception:
-                            pass
+                            current_app.logger.debug('Currency conversion skipped')
             if (sale.currency or 'ILS').upper() == 'ILS':
                 grand_total_ils = grand_total
             else:
@@ -1481,7 +1481,7 @@ def generate_invoice(id: int):
                             try:
                                 amt = D(str(_convert_amount(amt, cur, sale_curr, getattr(p, "payment_date", None))))
                             except Exception:
-                                pass
+                                current_app.logger.debug('Currency conversion skipped')
                         paid_display += amt
                 else:
                     amt = D(str(getattr(p, "total_amount", 0) or 0))
@@ -1490,7 +1490,7 @@ def generate_invoice(id: int):
                         try:
                             amt = D(str(_convert_amount(amt, cur, sale_curr, getattr(p, "payment_date", None))))
                         except Exception:
-                            pass
+                            current_app.logger.debug('Currency conversion skipped')
                     paid_display += amt
         sale.total_paid = float(paid_display.quantize(TWOPLACES, rounding=ROUND_HALF_UP))
         sale.balance_due = float((grand_total - paid_display).quantize(TWOPLACES, rounding=ROUND_HALF_UP))

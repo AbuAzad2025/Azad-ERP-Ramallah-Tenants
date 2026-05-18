@@ -247,7 +247,7 @@ def branch_dashboard(branch_id):
             try:
                 monthly_expenses += convert_amount(amt, exp.currency, "ILS", exp.date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     stats['monthly_expenses'] = float(monthly_expenses)
     
@@ -427,7 +427,7 @@ def branch_report(branch_id):
             try:
                 expenses_total_ils += convert_amount(amt, exp.currency, "ILS", exp.date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     stats = {
         'employees_count': Employee.query.filter_by(branch_id=branch_id).count(),

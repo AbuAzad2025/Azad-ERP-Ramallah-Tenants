@@ -1043,7 +1043,7 @@ def shipment_detail(id: int):
                 try:
                     total_paid += convert_amount(amt, p.currency, sh.currency or "ILS", p.payment_date)
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         total_paid = float(total_paid)
     except Exception:
         total_paid = 0.0

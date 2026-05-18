@@ -463,7 +463,7 @@ def suppliers_statement(supplier_id: int):
                     from flask import current_app
                     current_app.logger.error(f"Error converting exchange transaction #{tx.id} amount: {e}")
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         
         if used_fallback:
             row["notes"].add("تم التسعير من سعر شراء المنتج")
@@ -580,7 +580,7 @@ def suppliers_statement(supplier_id: int):
                         from flask import current_app
                         current_app.logger.error(f"Error converting sale #{sale.id} amount: {e}")
                     except Exception:
-                        pass
+                        current_app.logger.debug('Currency conversion skipped')
             ref = sale.sale_number or f"فاتورة #{sale.id}"
             
             # جمع بنود الفاتورة
@@ -640,7 +640,7 @@ def suppliers_statement(supplier_id: int):
                         from flask import current_app
                         current_app.logger.error(f"Error converting service #{service.id} amount: {e}")
                     except Exception:
-                        pass
+                        current_app.logger.debug('Currency conversion skipped')
             ref = service.service_number or f"صيانة #{service.id}"
             
             # جمع قطع الغيار والخدمات
@@ -707,7 +707,7 @@ def suppliers_statement(supplier_id: int):
                         from flask import current_app
                         current_app.logger.error(f"Error converting preorder #{preorder.id} amount: {e}")
                     except Exception:
-                        pass
+                        current_app.logger.debug('Currency conversion skipped')
             ref = f"حجز #{preorder.id}"
             prod_name = preorder.product.name if preorder.product else "منتج"
             
@@ -757,7 +757,7 @@ def suppliers_statement(supplier_id: int):
                         from flask import current_app
                         current_app.logger.error(f"Error converting preorder prepaid #{preorder.id} amount: {e}")
                     except Exception:
-                        pass
+                        current_app.logger.debug('Currency conversion skipped')
             ref_prepaid = f"عربون حجز #{preorder.id}"
             prod_name = preorder.product.name if preorder.product else "منتج"
             
@@ -806,7 +806,7 @@ def suppliers_statement(supplier_id: int):
                         from flask import current_app
                         current_app.logger.error(f"Error converting sale return #{sale_return.id} amount: {e}")
                     except Exception:
-                        pass
+                        current_app.logger.debug('Currency conversion skipped')
             
             items_return = []
             for return_line in (sale_return.lines or []):
@@ -923,7 +923,7 @@ def suppliers_statement(supplier_id: int):
                     from flask import current_app
                     current_app.logger.error(f"Error converting payment #{pmt.id} amount: {e}")
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         ref = pmt.reference or f"دفعة #{pmt.id}"
         
         payment_status_val = getattr(pmt, 'status', 'COMPLETED')
@@ -1161,7 +1161,7 @@ def suppliers_statement(supplier_id: int):
                             from models import convert_amount
                             split_amount_ils = convert_amount(split_amount, split_currency, "ILS", pmt.payment_date or df)
                         except Exception:
-                            pass
+                            current_app.logger.debug('Currency conversion skipped')
                 
                 # تحديد طريقة الدفع للـ split
                 split_method_arabic = method_map.get(split_method_raw, split_method_raw)
@@ -1352,7 +1352,7 @@ def suppliers_statement(supplier_id: int):
                             from models import convert_amount
                             check_amt = convert_amount(check_amt, check.currency, "ILS", check.check_date or d)
                         except Exception:
-                            pass
+                            current_app.logger.debug('Currency conversion skipped')
                     
                     returned_statement = f"إرجاع شيك"
                     if check.check_number:
@@ -1413,7 +1413,7 @@ def suppliers_statement(supplier_id: int):
                     from flask import current_app
                     current_app.logger.error(f"Error converting loan settlement #{s.id} amount: {e}")
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         
         ref = f"تسوية قرض #{s.loan_id or s.id}"
         loan = getattr(s, "loan", None)
@@ -1463,7 +1463,7 @@ def suppliers_statement(supplier_id: int):
                     from flask import current_app
                     current_app.logger.error(f"Error converting expense #{exp.id} amount: {e}")
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         
         exp_type_code = ""
         if exp.type_id:
@@ -1530,7 +1530,7 @@ def suppliers_statement(supplier_id: int):
                     from flask import current_app
                     current_app.logger.error(f"Error converting check #{check.id} amount: {e}")
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         
         direction_value = check.direction.value if hasattr(check.direction, 'value') else str(check.direction)
         is_out = direction_value == 'OUT'
@@ -1619,7 +1619,7 @@ def suppliers_statement(supplier_id: int):
                 from flask import current_app
                 current_app.logger.error(f"Error converting supplier #{supplier.id} opening balance: {e}")
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     opening_balance_for_period = Decimal("0.00")
     if df:
@@ -1643,7 +1643,7 @@ def suppliers_statement(supplier_id: int):
                         convert_date = df if df else supplier.created_at
                         opening_balance_for_period = convert_amount(opening_balance_for_period, supplier.currency, "ILS", convert_date)
                     except Exception:
-                        pass
+                        current_app.logger.debug('Currency conversion skipped')
     else:
         opening_balance_for_period = Decimal(str(supplier.opening_balance or 0))
         if supplier.currency and supplier.currency != "ILS":
@@ -1651,7 +1651,7 @@ def suppliers_statement(supplier_id: int):
                 from models import convert_amount
                 opening_balance_for_period = convert_amount(opening_balance_for_period, supplier.currency, "ILS", supplier.created_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     balance_to_use = opening_balance_for_period if df else opening_balance
     
@@ -2653,7 +2653,7 @@ def partners_statement(partner_id: int):
                                 from models import convert_amount
                                 split_amount_ils = convert_amount(split_amount, split_currency, "ILS", p.payment_date or df)
                             except Exception:
-                                pass
+                                current_app.logger.debug('Currency conversion skipped')
                     
                     # تحديد طريقة الدفع للـ split
                     split_method_arabic = method_map.get(split_method_raw, split_method_raw)
@@ -2831,7 +2831,7 @@ def partners_statement(partner_id: int):
                     from flask import current_app
                     current_app.logger.error(f"Error converting expense #{exp.id} amount: {e}")
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         
         exp_type_name = getattr(getattr(exp, 'type', None), 'name', 'مصروف')
         ref = f"مصروف #{exp.id}"
@@ -3078,7 +3078,7 @@ def partners_statement(partner_id: int):
                         from flask import current_app
                         current_app.logger.error(f"Error converting service expense #{exp.id} amount: {e}")
                     except Exception:
-                        pass
+                        current_app.logger.debug('Currency conversion skipped')
             
             exp_type_name = getattr(getattr(exp, 'type', None), 'name', 'توريد خدمة')
             ref = f"توريد خدمة #{exp.id}"
@@ -3108,7 +3108,7 @@ def partners_statement(partner_id: int):
                 from flask import current_app
                 current_app.logger.error(f"Error converting partner #{partner.id} opening balance: {e}")
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     if opening_balance != 0:
         opening_date = partner.created_at
@@ -3667,7 +3667,7 @@ def _calculate_supplier_incoming(supplier_id: int, date_from: datetime, date_to:
             try:
                 purchases += convert_amount(amt, exp.currency, "ILS", exp.date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     # القطع المعطاة للمورد (ExchangeTransaction مع اتجاه OUT)
     exchanges = ExchangeTransaction.query.filter(
@@ -3687,7 +3687,7 @@ def _calculate_supplier_incoming(supplier_id: int, date_from: datetime, date_to:
             try:
                 products_given += convert_amount(amt, ex_currency, "ILS", ex.created_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     return {
         "purchases": float(purchases),
@@ -3725,7 +3725,7 @@ def _calculate_partner_incoming(partner_id: int, date_from: datetime, date_to: d
             try:
                 sales_share += convert_amount(amt, sr_currency, "ILS", sr.received_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     # القطع المعطاة للشريك
     exchanges = ExchangeTransaction.query.filter(
@@ -3745,7 +3745,7 @@ def _calculate_partner_incoming(partner_id: int, date_from: datetime, date_to: d
             try:
                 products_given += convert_amount(amt, ex_currency, "ILS", ex.created_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     return {
         "sales_share": float(sales_share),
@@ -3778,7 +3778,7 @@ def _calculate_partner_outgoing(partner_id: int, date_from: datetime, date_to: d
             try:
                 purchases_share += convert_amount(amt, exp.currency, "ILS", exp.date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     # القطع المأخوذة من الشريك
     exchanges = ExchangeTransaction.query.filter(
@@ -3798,7 +3798,7 @@ def _calculate_partner_outgoing(partner_id: int, date_from: datetime, date_to: d
             try:
                 products_taken += convert_amount(amt, ex_currency, "ILS", ex.created_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     return {
         "purchases_share": float(purchases_share),

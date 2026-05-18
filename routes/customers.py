@@ -1855,7 +1855,7 @@ def account_statement(customer_id):
                                     from models import convert_amount
                                     check_amt = convert_amount(check_amt, check.currency, "ILS", check.check_date or p.payment_date)
                                 except Exception:
-                                    pass
+                                    current_app.logger.debug('Currency conversion skipped')
                             returned_check_amounts[split_id] = check_amt
                             returned_checks_list.append({
                                 'check': check,
@@ -1885,7 +1885,7 @@ def account_statement(customer_id):
                                             from models import convert_amount
                                             check_amt = convert_amount(check_amt, check.currency, "ILS", check.check_date or p.payment_date)
                                         except Exception:
-                                            pass
+                                            current_app.logger.debug('Currency conversion skipped')
                                     returned_check_amounts[split.id] = check_amt
                                     returned_checks_list.append({
                                         'check': check,
@@ -1997,7 +1997,7 @@ def account_statement(customer_id):
                                 from models import convert_amount
                                 split_amount_ils = convert_amount(split_amount, split_currency, "ILS", p.payment_date)
                             except Exception:
-                                pass
+                                current_app.logger.debug('Currency conversion skipped')
                     
                     # تحديد طريقة الدفع للـ split
                     split_method_arabic = method_map.get(split_method_raw, split_method_raw)
@@ -2261,7 +2261,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amount = convert_amount(amount, check.currency, "ILS", check.check_date or check.created_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         
         # حساب debit/credit للشيكات اليدوية
         # الشيك الوارد (IN) = العميل دفع لنا = credit (دائن) = تقليل ما عليه
@@ -2359,7 +2359,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, exp.currency, "ILS", exp.date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         
         exp_type_code = None
         if exp.type_id:
@@ -2531,7 +2531,7 @@ def account_statement(customer_id):
                         item['total'] = D(convert_amount(item_total_val, curr, 'ILS', ref_date))
                 e['currency'] = 'ILS'
     except Exception:
-        pass
+        current_app.logger.debug('Currency conversion skipped')
 
     
 
@@ -2606,7 +2606,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, inv.currency, "ILS", inv.invoice_date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         total_invoices_calc += amt
     
     total_sales_calc = D('0.00')
@@ -2617,7 +2617,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, s.currency, "ILS", s.sale_date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         total_sales_calc += amt
 
     total_sale_returns_calc = D('0.00')
@@ -2628,7 +2628,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, ret.currency, "ILS", ret.created_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         total_sale_returns_calc += amt
     
     total_preorders_calc = D('0.00')
@@ -2639,7 +2639,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, pre.currency, "ILS", pre.created_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         total_preorders_calc += amt
     
     total_online_preorders_calc = D('0.00')
@@ -2650,7 +2650,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, op.currency, "ILS", op.created_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         total_online_preorders_calc += amt
     
     total_payments_calc = D('0.00')
@@ -2661,7 +2661,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, p.currency, "ILS", p.payment_date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         total_payments_calc += amt
     
     # إضافة الشيكات اليدوية إلى إجمالي الدفعات
@@ -2672,7 +2672,7 @@ def account_statement(customer_id):
                 from models import convert_amount
                 amt = convert_amount(amt, check.currency, "ILS", check.check_date or check.created_at)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         total_payments_calc += amt
     
     from utils import money_fmt

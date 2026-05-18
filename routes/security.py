@@ -2238,7 +2238,7 @@ def advanced_analytics():
             try:
                 revenue_by_day_dict[dt] += convert_amount(amt, p.currency, "ILS", p.payment_date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     analytics['revenue_trend'] = [{'date': str(dt), 'amount': float(rev)} for dt, rev in sorted(revenue_by_day_dict.items())]
     
@@ -2260,7 +2260,7 @@ def advanced_analytics():
             try:
                 cust_totals[p.customer_id] += convert_amount(amt, p.currency, "ILS", p.payment_date)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
     
     top_customers_data = []
     for cid, total in cust_totals.items():
@@ -4142,7 +4142,7 @@ def api_user_details(user_id):
                 try:
                     sales_total += convert_amount(amt, s.currency, "ILS", s.sale_date)
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         
         services_count = ServiceRequest.query.filter_by(mechanic_id=user.id).count()
         payments_count = Payment.query.filter_by(created_by=user.id).count()

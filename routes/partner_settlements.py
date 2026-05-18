@@ -754,7 +754,7 @@ def _calculate_smart_partner_balance(partner_id: int, date_from: datetime, date_
             try:
                 opening_balance = convert_amount(opening_balance, partner_currency, 'ILS', date_from)
             except Exception:
-                pass
+                current_app.logger.debug('Currency conversion skipped')
         
         inventory = _get_partner_inventory(partner_id, date_from, date_to)
         sales_share = _get_partner_sales_share(partner_id, date_from, date_to)
@@ -793,7 +793,7 @@ def _calculate_smart_partner_balance(partner_id: int, date_from: datetime, date_
                     amt_ils = convert_amount(amt, exp.currency, "ILS", exp.date)
                     partner_service_total += amt_ils
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
             
             exp_type_name = getattr(getattr(exp, 'type', None), 'name', 'توريد خدمة') if hasattr(exp, 'type') and exp.type else 'توريد خدمة'
             expenses_items.append({

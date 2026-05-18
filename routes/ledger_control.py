@@ -2090,7 +2090,7 @@ def verify_customer_balances():
                         from models import convert_amount
                         opening_balance = convert_amount(opening_balance, customer.currency, "ILS")
                     except Exception:
-                        pass
+                        current_app.logger.debug('Currency conversion skipped')
                 
                 expected_balance = (
                     opening_balance +

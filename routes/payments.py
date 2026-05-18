@@ -1111,7 +1111,7 @@ def index():
                     converted = float(convert_amount(p.total_amount, p.currency, 'ILS', p.payment_date))
                     page_sum_ils += converted
                 except Exception:
-                    pass
+                    current_app.logger.debug('Currency conversion skipped')
         
         return jsonify({
             "payments": [_serialize_payment(p, full=False) for p in expanded_page_payments],
