@@ -1211,52 +1211,10 @@ def _create_gl_entries_for_resubmitted(amount_decimal, currency, batch_id, check
 def _create_gl_entries_for_cancelled(amount_decimal, currency, batch_id, check_type_label, entity_name, is_incoming, old_status):
     entries = []
     if old_status in ['RETURNED', 'BOUNCED']:
-        if is_incoming:
-            entries.extend([
-                {
-                    "batch_id": batch_id,
-                    "account": GL_ACCOUNTS_CHECKS['AR'],
-                    "debit": 0.0,
-                    "credit": float(amount_decimal),
-                    "currency": currency or 'ILS',
-                    "ref": f"✅ تسوية {check_type_label} وارد من {entity_name} (كان مرتد)",
-                    "created_at": _utcnow(),
-                    "updated_at": _utcnow()
-                },
-                {
-                    "batch_id": batch_id,
-                    "account": GL_ACCOUNTS_CHECKS['CHEQUES_RECEIVABLE'],
-                    "debit": float(amount_decimal),
-                    "credit": 0.0,
-                    "currency": currency or 'ILS',
-                    "ref": f"✅ تسوية {check_type_label} وارد من {entity_name} (كان مرتد)",
-                    "created_at": _utcnow(),
-                    "updated_at": _utcnow()
-                }
-            ])
-        else:
-            entries.extend([
-                {
-                    "batch_id": batch_id,
-                    "account": GL_ACCOUNTS_CHECKS['CHEQUES_PAYABLE'],
-                    "debit": 0.0,
-                    "credit": float(amount_decimal),
-                    "currency": currency or 'ILS',
-                    "ref": f"✅ تسوية {check_type_label} صادر إلى {entity_name} (كان مرتد)",
-                    "created_at": _utcnow(),
-                    "updated_at": _utcnow()
-                },
-                {
-                    "batch_id": batch_id,
-                    "account": GL_ACCOUNTS_CHECKS['AP'],
-                    "debit": float(amount_decimal),
-                    "credit": 0.0,
-                    "currency": currency or 'ILS',
-                    "ref": f"✅ تسوية {check_type_label} صادر إلى {entity_name} (كان مرتد)",
-                    "created_at": _utcnow(),
-                    "updated_at": _utcnow()
-                }
-            ])
+        # RETURNED/BOUNCED already reversed the PENDING entries (net GL is zero).
+        # Cancelling from this state requires no additional GL entries —
+        # adding entries here would create phantom balances.
+        pass
     else:
         if is_incoming:
             entries.extend([
