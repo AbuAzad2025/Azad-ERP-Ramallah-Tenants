@@ -1421,6 +1421,7 @@ def database_manager():
                     meta={'statement': statements[0][:200], 'rows': len(rows)}
                 )
             except Exception:
+                db.session.rollback()
                 db.session.commit()
                 sql_result = {'message': 'تم تنفيذ الاستعلام بنجاح'}
                 _log_owner_action(
@@ -2176,6 +2177,7 @@ def logo_manager():
 
                     flash(f'✅ تم رفع {target_name} بنجاح!', 'success')
                 except Exception as e:
+                    db.session.rollback()
                     current_app.logger.exception('internal error')
                     flash('حدث خطأ داخلي', 'danger')
     
@@ -4996,6 +4998,7 @@ def system_branding():
                 db.session.commit()
             except Exception as e:
                 # Log error but don't stop the process
+                db.session.rollback()
                 current_app.logger.error(f"Audit log failed: {e}")
                 pass
         else:
@@ -6151,6 +6154,7 @@ def _log_integration_activity(integration_type, action, success):
         db.session.add(activity)
         db.session.commit()
     except Exception as e:
+        db.session.rollback()
         current_app.logger.error(f"Error logging integration activity: {e}")
 
 
@@ -6506,6 +6510,7 @@ def api_auto_optimize_indexes():
             'total': len(created_indexes) + len(skipped_indexes)
         })
     except Exception as e:
+        db.session.rollback()
         return jsonify({
             'success': False,
             'message': '❌ حدث خطأ داخلي'

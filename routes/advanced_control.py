@@ -1090,6 +1090,7 @@ def toggle_auto_backup():
             _log_owner_action('backup.auto_toggle', 'disabled')
             
     except Exception as e:
+        db.session.rollback()
         current_app.logger.exception('internal error')
         flash('حدث خطأ داخلي', 'danger')
     

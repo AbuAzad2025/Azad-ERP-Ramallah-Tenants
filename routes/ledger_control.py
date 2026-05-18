@@ -1188,6 +1188,7 @@ def recalculate_all_balances():
             'message': f"تم: {recalculated['customers']} عميل، {recalculated['partners']} شريك، {recalculated['suppliers']} مورد"
         })
     except Exception as e:
+        db.session.rollback()
         current_app.logger.error(f"❌ خطأ في إعادة حساب الأرصدة: {str(e)}")
         current_app.logger.exception('API error')
         return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
@@ -1298,6 +1299,7 @@ def fix_cashed_checks_balance():
             })
             
     except Exception as e:
+        db.session.rollback()
         current_app.logger.error(f"❌ خطأ في تصحيح أرصدة الشيكات: {str(e)}")
         
         current_app.logger.exception('API error')

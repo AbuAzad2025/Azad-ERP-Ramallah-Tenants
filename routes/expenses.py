@@ -2174,6 +2174,7 @@ def add():
                         db.session.commit()
                         current_app.logger.info(f"✅ أقساط السلفة {exp.id}: {installments_count} قسط")
             except Exception as e:
+                db.session.rollback()
                 current_app.logger.error(f"❌ فشل إنشاء أقساط السلفة: {e}")
             
             try:
@@ -2195,6 +2196,7 @@ def add():
                     db.session.commit()
                     current_app.logger.info(f"✅ خصم شهري لموظف {exp.employee_id} من مصروف {exp.id}")
             except Exception as e:
+                db.session.rollback()
                 current_app.logger.error(f"❌ فشل إنشاء خصم شهري: {e}")
             
             try:
@@ -2226,6 +2228,7 @@ def add():
                             db.session.commit()
                             current_app.logger.info(f"✅ تم إنشاء سجل شيك من مصروف رقم {exp.id}")
             except Exception as e:
+                db.session.rollback()
                 current_app.logger.error(f"❌ فشل إنشاء سجل شيك من مصروف {exp.id}: {str(e)}")
                 db.session.commit()
             

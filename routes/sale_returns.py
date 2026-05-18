@@ -273,6 +273,7 @@ def create_return(sale_id=None):
                 db.session.add(audit)
                 db.session.commit()
             except Exception:
+                db.session.rollback()
                 current_app.logger.warning('Audit log failed for sale return CREATE', exc_info=True)
             
             _refresh_related_balances(sale_return.customer_id, list(sale_return.lines or []))
@@ -492,6 +493,7 @@ def edit_return(return_id):
                 db.session.add(audit)
                 db.session.commit()
             except Exception:
+                db.session.rollback()
                 current_app.logger.warning('Audit log failed for sale return UPDATE', exc_info=True)
             
             _refresh_related_balances(sale_return.customer_id, list(sale_return.lines or []))
@@ -553,6 +555,7 @@ def confirm_return(return_id):
             db.session.add(audit)
             db.session.commit()
         except Exception:
+            db.session.rollback()
             current_app.logger.warning('Audit log failed for sale return CONFIRM', exc_info=True)
         
         _refresh_related_balances(sale_return.customer_id, list(sale_return.lines or []))
@@ -598,6 +601,7 @@ def cancel_return(return_id):
             db.session.add(audit)
             db.session.commit()
         except Exception:
+            db.session.rollback()
             current_app.logger.warning('Audit log failed for sale return CANCEL', exc_info=True)
         
         _refresh_related_balances(sale_return.customer_id, list(sale_return.lines or []))

@@ -1787,6 +1787,7 @@ def create_payment():
                         db.session.commit()
                         current_app.logger.info(f"✅ تم حفظ الشيكات من دفعة {payment.id}")
                     except Exception as e:
+                        db.session.rollback()
                         current_app.logger.error(f"❌ فشل إنشاء سجل شيك من دفعة {payment.id}: {str(e)}")
                 
                 utils.log_audit("Payment", payment.id, "CREATE")
@@ -1822,6 +1823,7 @@ def create_payment():
                             db.session.commit()
                             current_app.logger.info(f"✅ تم تسوية الشيك {check_token} بعد حفظ الدفعة {payment.id}")
                     except Exception as e:
+                        db.session.rollback()
                         current_app.logger.error(f"⚠️ فشل تسوية الشيك {check_token} بعد حفظ الدفعة {payment.id}: {str(e)}")
             except SQLAlchemyError:
                 db.session.rollback()

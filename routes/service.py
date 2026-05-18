@@ -551,6 +551,7 @@ def archive_service(id):
             db.session.commit()
             return jsonify({"status": "success", "message": "تم أرشفة طلب الصيانة بنجاح (يدوي)"})
         except Exception:
+            db.session.rollback()
             current_app.logger.exception("service.archive_service failed", extra={"service_id": id})
             return jsonify({"status": "error", "message": "تعذر أرشفة طلب الصيانة حالياً"}), 500
 
@@ -561,6 +562,7 @@ def restore_service(id):
         restore_record(id, ServiceRequest)
         return jsonify({"status": "success", "message": "تم استعادة طلب الصيانة بنجاح"})
     except Exception as e:
+        db.session.rollback()
         service = db.session.get(ServiceRequest, id)
         if service:
             service.is_archived = False
