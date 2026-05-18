@@ -2345,7 +2345,7 @@ def quick_supplier_service():
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        return jsonify({"success": False, "message": "حدث خطأ أثناء الحفظ"}), 500
     flash("تم إنشاء المصروف بنجاح.", "success")
 
     try:
@@ -2492,7 +2492,7 @@ def quick_partner_service():
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        return jsonify({"success": False, "message": "حدث خطأ أثناء الحفظ"}), 500
     flash("تم إنشاء المصروف بنجاح.", "success")
 
     try:

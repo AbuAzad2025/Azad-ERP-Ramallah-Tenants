@@ -3941,6 +3941,7 @@ def impersonate_user(user_id):
 
 
 @security_bp.route('/stop-impersonate', methods=['POST'])
+@login_required
 def stop_impersonate():
     """إيقاف التسجيل كمستخدم آخر"""
     from flask_login import logout_user, login_user
@@ -4032,6 +4033,7 @@ def toggle_user_status(user_id):
         db.session.rollback()
         current_app.logger.exception('commit error')
         flash('حدث خطأ أثناء الحفظ', 'danger')
+        return redirect(url_for('security.user_control'))
     
     status = 'مفعل' if user.is_active else 'معطل'
     flash(f'✅ المستخدم {user.username} الآن {status}', 'success')

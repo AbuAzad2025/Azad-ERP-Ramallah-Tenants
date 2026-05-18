@@ -205,7 +205,7 @@ def toggle_template(template_id):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        return jsonify({'success': False, 'error': 'حدث خطأ أثناء الحفظ'}), 500
     
     status_text = 'مفعّل' if template.is_active else 'معطّل'
     return jsonify({'success': True, 'is_active': template.is_active, 'message': f'القالب الآن {status_text}'})
@@ -311,8 +311,8 @@ def _generate_recurring_invoice(template, invoice_date=None):
         db.session.commit()
     except Exception:
         db.session.rollback()
-        current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        current_app.logger.exception('recurring invoice commit error')
+        raise
     
     invoice_line = InvoiceLine(
         invoice_id=new_invoice.id,
@@ -328,8 +328,8 @@ def _generate_recurring_invoice(template, invoice_date=None):
         db.session.commit()
     except Exception:
         db.session.rollback()
-        current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        current_app.logger.exception('recurring invoice line commit error')
+        raise
     
     if tax_rate > 0:
         fiscal_year = invoice_date.year
@@ -371,8 +371,8 @@ def _generate_recurring_invoice(template, invoice_date=None):
         db.session.commit()
     except Exception:
         db.session.rollback()
-        current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        current_app.logger.exception('recurring invoice final commit error')
+        raise
     try:
         run_invoice_gl_sync_after_commit(new_invoice.id)
     except Exception as e:
