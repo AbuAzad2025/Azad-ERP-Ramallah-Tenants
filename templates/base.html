@@ -181,8 +181,9 @@
 
   <script src="{{ static_url('js/csrf-utils.js') }}" defer></script>
   <script src="{{ static_url('js/event-utils.js') }}" defer></script>
+  <script>window.__SOCKETIO_ENABLED__ = {{ 'true' if config.get('SOCKETIO_ENABLED', False) else 'false' }};</script>
   {% if config.get('SOCKETIO_ENABLED', False) %}
-  <script src="/socket.io/socket.io.js" defer></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
   {% endif %}
   <script src="{{ static_url('js/balance-loading.js') }}" defer></script>
   <script src="{{ static_url('js/balance-realtime.js') }}" defer></script>

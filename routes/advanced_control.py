@@ -4015,8 +4015,6 @@ def accounting_control_manual_backup():
 @advanced_bp.route("/accounting-control/report.pdf", methods=["GET"])
 @permission_required(SystemPermissions.MANAGE_ADVANCED_ACCOUNTING)
 def accounting_control_report_pdf():
-    from weasyprint import HTML
-    
     settings_bundle = _get_accounting_settings_bundle()
     stats = _calculate_accounting_overview(settings_bundle)
     diagnostics = _run_accounting_system_check()
@@ -4027,13 +4025,20 @@ def accounting_control_report_pdf():
         diagnostics=diagnostics,
         generated_at=datetime.now(timezone.utc)
     )
-    pdf_bytes = HTML(string=html, base_url=request.url_root).write_pdf()
-    filename = f"accounting_control_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-    return Response(
-        pdf_bytes,
-        mimetype="application/pdf",
-        headers={"Content-Disposition": f"inline; filename={filename}"}
-    )
+    try:
+        from weasyprint import HTML
+
+        pdf_bytes = HTML(string=html, base_url=request.url_root).write_pdf()
+        filename = f"accounting_control_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={"Content-Disposition": f"inline; filename={filename}"},
+        )
+    except Exception as exc:
+        current_app.logger.warning("accounting_control_report_pdf: WeasyPrint unavailable: %s", exc)
+        flash("تعذر إنشاء PDF (مكتبة الطباعة غير متوفرة). يُعرض التقرير كصفحة HTML.", "warning")
+        return Response(html, mimetype="text/html; charset=utf-8")
 
 
 @advanced_bp.route('/performance-profiler', methods=['GET'])

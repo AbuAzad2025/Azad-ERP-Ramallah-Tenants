@@ -2901,11 +2901,63 @@ def export_csv():
 def print_list():
     query, filt = _base_query_with_filters()
     rows = query.limit(50000).all()
-    totals_row = query.with_entities(
+    
+    totals_query = Expense.query
+    raw_show_archived = (request.args.get("show_archived") or "").strip().lower()
+    if raw_show_archived not in ("1", "true", "yes"):
+        totals_query = totals_query.filter(Expense.is_archived == False)
+    
+    search = (request.args.get("q") or "").strip()
+    if search:
+        like = f"%{search}%"
+        from models import Customer, Employee, Partner, Supplier, Shipment, UtilityAccount
+        from models import Branch, ExpenseType
+        totals_query = totals_query.outerjoin(Employee, Expense.employee_id == Employee.id)
+        totals_query = totals_query.outerjoin(Customer, Expense.customer_id == Customer.id)
+        totals_query = totals_query.outerjoin(Partner, Expense.partner_id == Partner.id)
+        totals_query = totals_query.outerjoin(Supplier, Expense.supplier_id == Supplier.id)
+        totals_query = totals_query.outerjoin(Shipment, Expense.shipment_id == Shipment.id)
+        totals_query = totals_query.outerjoin(UtilityAccount, Expense.utility_account_id == UtilityAccount.id)
+        totals_query = totals_query.filter(
+            or_(
+                Expense.description.ilike(like),
+                Expense.paid_to.ilike(like),
+                Expense.payee_name.ilike(like),
+                Expense.tax_invoice_number.ilike(like),
+                Customer.name.ilike(like),
+                Employee.name.ilike(like),
+                Partner.name.ilike(like),
+                Shipment.number.ilike(like),
+                Supplier.name.ilike(like),
+                UtilityAccount.alias.ilike(like),
+                UtilityAccount.provider.ilike(like),
+            )
+        )
+    
+    start_d = _parse_date_arg("start")
+    end_d = _parse_date_arg("end")
+    if start_d or end_d:
+        conds = []
+        if start_d:
+            conds.append(Expense.date >= datetime.combine(start_d, datetime.min.time()))
+        if end_d:
+            conds.append(Expense.date <= datetime.combine(end_d, datetime.max.time()))
+        totals_query = totals_query.filter(and_(*conds))
+    
+    type_id = _int_arg("type_id")
+    if type_id:
+        totals_query = totals_query.filter(Expense.type_id == type_id)
+    
+    employee_id = _int_arg("employee_id")
+    if employee_id:
+        totals_query = totals_query.filter(Expense.employee_id == employee_id)
+    
+    totals_row = totals_query.with_entities(
         func.coalesce(func.sum(Expense.amount), 0),
         func.coalesce(func.sum(Expense.total_paid), 0),
         func.coalesce(func.sum(Expense.balance), 0),
     ).first()
+    
     total_amount = int(q0((totals_row[0] if totals_row else 0) or 0))
     total_paid = int(q0((totals_row[1] if totals_row else 0) or 0))
     total_balance = int(q0((totals_row[2] if totals_row else 0) or 0))
@@ -3221,9 +3273,10 @@ def generate_all_salaries():
 def payroll_summary():
     from models import ExpenseType
     from sqlalchemy import extract as sql_extract
+    import datetime as dt_module
     
     try:
-        year = int(request.args.get('year', datetime.now().year))
+        year = int(request.args.get('year', dt_module.datetime.now().year))
     except (ValueError, TypeError):
         year = 0
     

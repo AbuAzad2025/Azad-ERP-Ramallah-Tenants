@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
-from flask import Blueprint, Response, current_app, jsonify, request, render_template, abort
+from flask import Blueprint, Response, current_app, jsonify, request, render_template, abort, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import func, or_, text, case
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
@@ -29,6 +29,7 @@ from models import (
     OnlinePreOrder,
     Partner,
     Payment,
+    Check,
     Permission,
     PreOrder,
     Product,
@@ -52,6 +53,7 @@ from models import (
     UtilityAccount,
     StockAdjustment,
 )
+from markupsafe import escape
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -831,6 +833,684 @@ def _user_has_any(*codes):
             except Exception:
                 continue
     return False
+
+@bp.route("/search/<string:target>", methods=["GET"], endpoint="generic_search")
+@login_required
+@limiter.limit("120/minute")
+def generic_search(target: str):
+    q = (request.args.get("q") or "").strip()
+    if len(q) < 2:
+        return jsonify({"html": ""})
+
+    target = (target or "").strip().lower()
+    allowed_targets = {
+        "global",
+        "customers",
+        "suppliers",
+        "partners",
+        "products",
+        "sales",
+        "payments",
+        "shipments",
+        "services",
+        "warehouses",
+        "checks",
+        "expenses",
+        "invoices",
+        "users",
+        "roles",
+    }
+    if target not in allowed_targets:
+        abort(404)
+
+    q_like = f"%{q}%"
+    limit = _limit_from_request(8, 15)
+    q_int = int(q) if q.isdigit() else None
+
+    allow_customers = (
+        utils.is_super()
+        or utils.is_admin()
+        or _user_has_any("manage_customers", "add_customer", "manage_service", "view_service")
+    )
+    allow_vendors = utils.is_super() or utils.is_admin() or _user_has_any("manage_vendors")
+    allow_products = utils.is_super() or utils.is_admin() or _user_has_any("view_warehouses", "manage_warehouses", "manage_shop", "view_shop")
+    allow_sales = utils.is_super() or utils.is_admin() or _user_has_any("manage_sales", "view_sales")
+    allow_payments = utils.is_super() or utils.is_admin() or _user_has_any("manage_payments", "view_payments", "manage_sales")
+    allow_shipments = utils.is_super() or utils.is_admin() or _user_has_any("manage_shipments")
+    allow_services = utils.is_super() or utils.is_admin() or _user_has_any("manage_service", "view_service")
+    allow_warehouses = utils.is_super() or utils.is_admin() or _user_has_any("view_warehouses", "manage_warehouses", "view_inventory", "manage_inventory")
+    allow_checks = utils.is_super() or utils.is_admin() or _user_has_any("manage_payments", "view_payments")
+    allow_expenses = utils.is_super() or utils.is_admin() or _user_has_any("manage_expenses")
+    allow_invoices = (
+        utils.is_super()
+        or utils.is_admin()
+        or _user_has_any("view_reports", "manage_reports", "manage_accounting_docs", "view_ledger", "manage_ledger")
+    )
+    allow_users = utils.is_super() or utils.is_admin() or _user_has_any("manage_users")
+    allow_roles = utils.is_super() or utils.is_admin() or _user_has_any("manage_roles")
+
+    def _section(title: str, items_html: str) -> str:
+        return f'<div class="list-group-item bg-light font-weight-bold py-2">{escape(title)}</div>{items_html}'
+
+    def _item(url: str, title: str, subtitle: str | None = None, badge: str | None = None, badge_class: str = "badge-primary") -> str:
+        safe_title = escape(title)
+        safe_sub = escape(subtitle) if subtitle else ""
+        safe_badge = escape(badge) if badge else ""
+        badge_html = f'<span class="badge {badge_class} ml-2">{safe_badge}</span>' if badge else ""
+        sub_html = f'<div class="small text-muted">{safe_sub}</div>' if subtitle else ""
+        return (
+            f'<a class="list-group-item list-group-item-action" href="{escape(url)}">'
+            f'<div class="d-flex align-items-center justify-content-between">'
+            f'<div class="font-weight-bold">{safe_title}</div>'
+            f'{badge_html}'
+            f'</div>'
+            f'{sub_html}'
+            f'</a>'
+        )
+
+    html_parts: list[str] = []
+
+    def _append_customers():
+        if not allow_customers:
+            return
+        if q_int is not None:
+            c0 = db.session.get(Customer, q_int)
+            if c0:
+                items = _item(
+                    url_for("customers_bp.customer_detail", customer_id=c0.id),
+                    c0.name or f"#{c0.id}",
+                    (c0.phone or c0.email or "").strip() or None,
+                    "عميل",
+                    "badge-info",
+                )
+                html_parts.append(_section("العملاء", items))
+                return
+        qry = Customer.query.filter(Customer.is_archived == False)
+        qry = qry.filter(or_(Customer.name.ilike(q_like), Customer.phone.ilike(q_like), Customer.email.ilike(q_like)))
+        rows = qry.order_by(func.lower(Customer.name).asc()).limit(limit).all()
+        if not rows:
+            return
+        items = "".join(
+            _item(
+                url_for("customers_bp.customer_detail", customer_id=c.id),
+                c.name or f"#{c.id}",
+                (c.phone or c.email or "").strip() or None,
+                "عميل",
+                "badge-info",
+            )
+            for c in rows
+        )
+        html_parts.append(_section("العملاء", items))
+
+    def _append_suppliers():
+        if not allow_vendors:
+            return
+        if q_int is not None:
+            s0 = db.session.get(Supplier, q_int)
+            if s0:
+                items = _item(
+                    url_for("vendors_bp.suppliers_statement", supplier_id=s0.id),
+                    s0.name or f"#{s0.id}",
+                    (s0.phone or s0.identity_number or "").strip() or None,
+                    "مورد",
+                    "badge-success",
+                )
+                html_parts.append(_section("الموردون", items))
+                return
+        qry = Supplier.query
+        qry = qry.filter(or_(Supplier.name.ilike(q_like), Supplier.phone.ilike(q_like), Supplier.identity_number.ilike(q_like)))
+        rows = qry.order_by(func.lower(Supplier.name).asc()).limit(limit).all()
+        if not rows:
+            return
+        items = "".join(
+            _item(
+                url_for("vendors_bp.suppliers_statement", supplier_id=s.id),
+                s.name or f"#{s.id}",
+                (s.phone or s.identity_number or "").strip() or None,
+                "مورد",
+                "badge-success",
+            )
+            for s in rows
+        )
+        html_parts.append(_section("الموردون", items))
+
+    def _append_partners():
+        if not allow_vendors:
+            return
+        if q_int is not None:
+            p0 = db.session.get(Partner, q_int)
+            if p0:
+                items = _item(
+                    url_for("vendors_bp.partners_statement", partner_id=p0.id),
+                    p0.name or f"#{p0.id}",
+                    (p0.phone_number or p0.identity_number or "").strip() or None,
+                    "شريك",
+                    "badge-warning",
+                )
+                html_parts.append(_section("الشركاء", items))
+                return
+        qry = Partner.query
+        qry = qry.filter(or_(Partner.name.ilike(q_like), Partner.phone_number.ilike(q_like), Partner.identity_number.ilike(q_like)))
+        rows = qry.order_by(func.lower(Partner.name).asc()).limit(limit).all()
+        if not rows:
+            return
+        items = "".join(
+            _item(
+                url_for("vendors_bp.partners_statement", partner_id=p.id),
+                p.name or f"#{p.id}",
+                (p.phone_number or p.identity_number or "").strip() or None,
+                "شريك",
+                "badge-warning",
+            )
+            for p in rows
+        )
+        html_parts.append(_section("الشركاء", items))
+
+    def _append_products():
+        if not allow_products:
+            return
+        if q_int is not None:
+            p0 = db.session.get(Product, q_int)
+            if p0 and bool(getattr(p0, "is_active", True)):
+                items = _item(
+                    url_for("warehouse_bp.product_card", product_id=p0.id),
+                    p0.name or f"#{p0.id}",
+                    (p0.sku or p0.part_number or p0.barcode or p0.brand or "").strip() or None,
+                    "منتج",
+                    "badge-primary",
+                )
+                html_parts.append(_section("المنتجات", items))
+                return
+        qry = Product.query
+        qry = qry.filter(Product.is_active.is_(True))
+        qry = qry.filter(
+            or_(
+                Product.name.ilike(q_like),
+                Product.sku.ilike(q_like),
+                Product.part_number.ilike(q_like),
+                Product.brand.ilike(q_like),
+                Product.barcode.ilike(q_like),
+            )
+        )
+        rows = qry.order_by(func.lower(Product.name).asc()).limit(limit).all()
+        if not rows:
+            return
+        items = "".join(
+            _item(
+                url_for("warehouse_bp.product_card", product_id=p.id),
+                p.name or f"#{p.id}",
+                (p.sku or p.part_number or p.barcode or p.brand or "").strip() or None,
+                "منتج",
+                "badge-primary",
+            )
+            for p in rows
+        )
+        html_parts.append(_section("المنتجات", items))
+
+    def _append_sales():
+        if not allow_sales:
+            return
+        if q_int is not None:
+            s0 = db.session.get(Sale, q_int)
+            if s0:
+                title = (getattr(s0, "sale_number", None) or f"#{s0.id}") if getattr(s0, "sale_number", None) else f"#{s0.id}"
+                subtitle = None
+                try:
+                    cname = getattr(getattr(s0, "customer", None), "name", None)
+                    subtitle = cname or None
+                except Exception:
+                    subtitle = None
+                items = _item(url_for("sales_bp.sale_detail", id=s0.id), title, subtitle, "مبيعات", "badge-dark")
+                html_parts.append(_section("المبيعات", items))
+                return
+        qry = db.session.query(Sale).join(Customer, Sale.customer_id == Customer.id)
+        qry = qry.filter(Sale.is_archived.is_(False))
+        qry = qry.filter(
+            or_(
+                Sale.sale_number.ilike(q_like),
+                Customer.name.ilike(q_like),
+                Sale.receiver_name.ilike(q_like),
+            )
+        )
+        rows = qry.order_by(Sale.sale_date.desc(), Sale.id.desc()).limit(limit).all()
+        if not rows:
+            return
+        items = "".join(
+            _item(
+                url_for("sales_bp.sale_detail", id=s.id),
+                (s.sale_number or f"#{s.id}"),
+                (getattr(getattr(s, "customer", None), "name", None) or "").strip() or None,
+                "مبيعات",
+                "badge-dark",
+            )
+            for s in rows
+        )
+        html_parts.append(_section("المبيعات", items))
+
+    def _append_payments():
+        if not allow_payments:
+            return
+        if q_int is not None:
+            p0 = db.session.get(Payment, q_int)
+            if p0:
+                title = getattr(p0, "payment_number", None) or getattr(p0, "receipt_number", None) or f"#{p0.id}"
+                subtitle = (getattr(p0, "receiver_name", None) or getattr(p0, "reference", None) or "").strip() or None
+                items = _item(url_for("payments.view_payment", payment_id=p0.id), title, subtitle, "دفعات", "badge-primary")
+                html_parts.append(_section("الدفعات", items))
+                return
+        qry = Payment.query.filter(Payment.is_archived.is_(False))
+        qry = qry.filter(
+            or_(
+                Payment.payment_number.ilike(q_like),
+                Payment.receipt_number.ilike(q_like),
+                Payment.reference.ilike(q_like),
+                Payment.receiver_name.ilike(q_like),
+                Payment.check_number.ilike(q_like),
+                Payment.bank_transfer_ref.ilike(q_like),
+            )
+        )
+        rows = qry.order_by(Payment.payment_date.desc(), Payment.id.desc()).limit(limit).all()
+        if not rows:
+            return
+        items = "".join(
+            _item(
+                url_for("payments.view_payment", payment_id=p.id),
+                (p.payment_number or p.receipt_number or f"#{p.id}"),
+                (p.receiver_name or p.reference or "").strip() or None,
+                "دفعة",
+                "badge-primary",
+            )
+            for p in rows
+        )
+        html_parts.append(_section("الدفعات", items))
+
+    def _append_shipments():
+        if not allow_shipments:
+            return
+        if q_int is not None:
+            sh0 = db.session.get(Shipment, q_int)
+            if sh0:
+                title = getattr(sh0, "shipment_number", None) or getattr(sh0, "number", None) or f"#{sh0.id}"
+                subtitle = (getattr(sh0, "tracking_number", None) or getattr(sh0, "destination", None) or "").strip() or None
+                items = _item(url_for("shipments_bp.shipment_detail", id=sh0.id), title, subtitle, "شحنة", "badge-danger")
+                html_parts.append(_section("الشحنات", items))
+                return
+        qry = Shipment.query.filter(Shipment.is_archived.is_(False))
+        qry = qry.filter(
+            or_(
+                Shipment.shipment_number.ilike(q_like),
+                Shipment.number.ilike(q_like),
+                Shipment.tracking_number.ilike(q_like),
+                Shipment.origin.ilike(q_like),
+                Shipment.destination.ilike(q_like),
+                Shipment.carrier.ilike(q_like),
+            )
+        )
+        rows = qry.order_by(Shipment.shipment_date.desc(), Shipment.id.desc()).limit(limit).all()
+        if not rows:
+            return
+        items = "".join(
+            _item(
+                url_for("shipments_bp.shipment_detail", id=s.id),
+                (s.shipment_number or s.number or f"#{s.id}"),
+                (s.tracking_number or s.destination or s.carrier or "").strip() or None,
+                "شحنة",
+                "badge-danger",
+            )
+            for s in rows
+        )
+        html_parts.append(_section("الشحنات", items))
+
+    def _append_services():
+        if not allow_services:
+            return
+        if q_int is not None:
+            r0 = db.session.get(ServiceRequest, q_int)
+            if r0:
+                title = getattr(r0, "service_number", None) or f"#{r0.id}"
+                subtitle = None
+                try:
+                    cname = getattr(getattr(r0, "customer", None), "name", None)
+                    v = (getattr(r0, "vehicle_vrn", None) or "").strip()
+                    subtitle = (" - ".join([x for x in [cname, v] if x]) or None)
+                except Exception:
+                    subtitle = None
+                items = _item(url_for("service.view_request", rid=r0.id), title, subtitle, "صيانة", "badge-info")
+                html_parts.append(_section("طلبات الصيانة", items))
+                return
+        qry = db.session.query(ServiceRequest).join(Customer, ServiceRequest.customer_id == Customer.id)
+        qry = qry.filter(ServiceRequest.is_archived.is_(False))
+        qry = qry.filter(
+            or_(
+                ServiceRequest.service_number.ilike(q_like),
+                Customer.name.ilike(q_like),
+                ServiceRequest.vehicle_vrn.ilike(q_like),
+                ServiceRequest.vehicle_model.ilike(q_like),
+                ServiceRequest.chassis_number.ilike(q_like),
+            )
+        )
+        rows = qry.order_by(ServiceRequest.received_at.desc(), ServiceRequest.id.desc()).limit(limit).all()
+        if not rows:
+            return
+        items = "".join(
+            _item(
+                url_for("service.view_request", rid=r.id),
+                (r.service_number or f"#{r.id}"),
+                (" - ".join([x for x in [(getattr(getattr(r, "customer", None), "name", None) or "").strip(), (r.vehicle_vrn or "").strip()] if x]) or None),
+                "صيانة",
+                "badge-info",
+            )
+            for r in rows
+        )
+        html_parts.append(_section("طلبات الصيانة", items))
+
+    def _append_warehouses():
+        if not allow_warehouses:
+            return
+        if q_int is not None:
+            w0 = db.session.get(Warehouse, q_int)
+            if w0:
+                items = _item(
+                    url_for("warehouse_bp.detail", warehouse_id=w0.id),
+                    w0.name or f"#{w0.id}",
+                    (w0.location or "").strip() or None,
+                    "مستودع",
+                    "badge-secondary",
+                )
+                html_parts.append(_section("المستودعات", items))
+                return
+        qry = Warehouse.query.filter(Warehouse.is_active.is_(True))
+        qry = qry.filter(or_(Warehouse.name.ilike(q_like), Warehouse.location.ilike(q_like), Warehouse.online_slug.ilike(q_like)))
+        rows = qry.order_by(func.lower(Warehouse.name).asc()).limit(limit).all()
+        if not rows:
+            return
+        items = "".join(
+            _item(
+                url_for("warehouse_bp.detail", warehouse_id=w.id),
+                (w.name or f"#{w.id}"),
+                (w.location or w.warehouse_type or "").strip() or None,
+                "مستودع",
+                "badge-secondary",
+            )
+            for w in rows
+        )
+        html_parts.append(_section("المستودعات", items))
+
+    def _append_checks():
+        if not allow_checks:
+            return
+        if q_int is not None:
+            ch0 = db.session.get(Check, q_int)
+            if ch0:
+                subtitle = " - ".join([x for x in [(ch0.check_bank or "").strip(), (ch0.drawer_name or "").strip()] if x]) or None
+                items = _item(url_for("checks.check_detail", check_id=ch0.id), ch0.check_number or f"#{ch0.id}", subtitle, "شيك", "badge-warning")
+                html_parts.append(_section("الشيكات", items))
+                return
+        qry = Check.query.filter(Check.is_archived.is_(False))
+        qry = qry.filter(
+            or_(
+                Check.check_number.ilike(q_like),
+                Check.check_bank.ilike(q_like),
+                Check.drawer_name.ilike(q_like),
+                Check.payee_name.ilike(q_like),
+                Check.reference_number.ilike(q_like),
+            )
+        )
+        rows = qry.order_by(Check.check_due_date.desc(), Check.id.desc()).limit(limit).all()
+        if not rows:
+            return
+        items = "".join(
+            _item(
+                url_for("checks.check_detail", check_id=c.id),
+                (c.check_number or f"#{c.id}"),
+                (" - ".join([x for x in [(c.check_bank or "").strip(), (c.drawer_name or c.payee_name or "").strip()] if x]) or None),
+                "شيك",
+                "badge-warning",
+            )
+            for c in rows
+        )
+        html_parts.append(_section("الشيكات", items))
+
+    def _append_expenses():
+        if not allow_expenses:
+            return
+        if q_int is not None:
+            e0 = db.session.get(Expense, q_int)
+            if e0 and not bool(getattr(e0, "is_archived", False)):
+                title = (getattr(e0, "tax_invoice_number", None) or f"#{e0.id}").strip() if getattr(e0, "tax_invoice_number", None) else f"#{e0.id}"
+                subtitle = (
+                    (getattr(e0, "paid_to", None) or "").strip()
+                    or (getattr(e0, "payee_name", None) or "").strip()
+                    or (getattr(e0, "description", None) or "").strip()
+                    or None
+                )
+                items = _item(url_for("expenses_bp.detail", exp_id=e0.id), title, subtitle, "مصروف", "badge-danger")
+                html_parts.append(_section("المصاريف", items))
+                return
+        qry = Expense.query.filter(Expense.is_archived.is_(False))
+        qry = qry.filter(
+            or_(
+                Expense.tax_invoice_number.ilike(q_like),
+                Expense.description.ilike(q_like),
+                Expense.paid_to.ilike(q_like),
+                Expense.payee_name.ilike(q_like),
+                Expense.beneficiary_name.ilike(q_like),
+                Expense.check_number.ilike(q_like),
+                Expense.bank_transfer_ref.ilike(q_like),
+            )
+        )
+        rows = qry.order_by(Expense.date.desc(), Expense.id.desc()).limit(limit).all()
+        if not rows:
+            return
+        items = "".join(
+            _item(
+                url_for("expenses_bp.detail", exp_id=e.id),
+                (e.tax_invoice_number or f"#{e.id}"),
+                (
+                    (e.paid_to or "").strip()
+                    or (e.payee_name or "").strip()
+                    or (e.description or "").strip()
+                    or None
+                ),
+                "مصروف",
+                "badge-danger",
+            )
+            for e in rows
+        )
+        html_parts.append(_section("المصاريف", items))
+
+    def _append_invoices():
+        if not allow_invoices:
+            return
+        if q_int is not None:
+            i0 = db.session.get(Invoice, q_int)
+            if i0:
+                url = None
+                if getattr(i0, "sale_id", None):
+                    url = url_for("sales_bp.generate_invoice", id=i0.sale_id)
+                elif getattr(i0, "service_id", None):
+                    url = url_for("service.view_request", rid=i0.service_id)
+                elif getattr(i0, "preorder_id", None):
+                    url = url_for("warehouse_bp.preorder_detail", preorder_id=i0.preorder_id)
+                else:
+                    url = url_for("reports_bp.invoices_report", invoice_id=i0.id)
+                subtitle_parts = []
+                try:
+                    if getattr(i0, "customer", None) and getattr(i0.customer, "name", None):
+                        subtitle_parts.append(i0.customer.name)
+                    elif getattr(i0, "supplier", None) and getattr(i0.supplier, "name", None):
+                        subtitle_parts.append(i0.supplier.name)
+                    elif getattr(i0, "partner", None) and getattr(i0.partner, "name", None):
+                        subtitle_parts.append(i0.partner.name)
+                except Exception:
+                    pass
+                st = getattr(i0, "status", None)
+                if st:
+                    subtitle_parts.append(str(getattr(st, "value", st)))
+                subtitle = " - ".join([x for x in subtitle_parts if x]) or None
+                badge = "إشعار دائن" if str(getattr(i0, "kind", "") or "").upper() == "CREDIT_NOTE" else "فاتورة"
+                badge_class = "badge-info" if badge == "إشعار دائن" else "badge-primary"
+                items = _item(url, i0.invoice_number or f"#{i0.id}", subtitle, badge, badge_class)
+                html_parts.append(_section("الفواتير", items))
+                return
+        qry = (
+            db.session.query(Invoice)
+            .join(Customer, Invoice.customer_id == Customer.id, isouter=True)
+            .join(Supplier, Invoice.supplier_id == Supplier.id, isouter=True)
+            .join(Partner, Invoice.partner_id == Partner.id, isouter=True)
+            .join(Sale, Invoice.sale_id == Sale.id, isouter=True)
+        )
+        qry = qry.filter(
+            or_(
+                Invoice.invoice_number.ilike(q_like),
+                Customer.name.ilike(q_like),
+                Supplier.name.ilike(q_like),
+                Partner.name.ilike(q_like),
+                Sale.sale_number.ilike(q_like),
+            )
+        )
+        rows = qry.order_by(Invoice.invoice_date.desc(), Invoice.id.desc()).limit(limit).all()
+        if not rows:
+            return
+        def _inv_url(inv: Invoice) -> str:
+            if getattr(inv, "sale_id", None):
+                return url_for("sales_bp.generate_invoice", id=inv.sale_id)
+            if getattr(inv, "service_id", None):
+                return url_for("service.view_request", rid=inv.service_id)
+            if getattr(inv, "preorder_id", None):
+                return url_for("warehouse_bp.preorder_detail", preorder_id=inv.preorder_id)
+            return url_for("reports_bp.invoices_report", invoice_id=inv.id)
+        def _inv_sub(inv: Invoice) -> str | None:
+            parts = []
+            try:
+                if getattr(inv, "customer", None) and getattr(inv.customer, "name", None):
+                    parts.append(inv.customer.name)
+                elif getattr(inv, "supplier", None) and getattr(inv.supplier, "name", None):
+                    parts.append(inv.supplier.name)
+                elif getattr(inv, "partner", None) and getattr(inv.partner, "name", None):
+                    parts.append(inv.partner.name)
+            except Exception:
+                pass
+            st = getattr(inv, "status", None)
+            if st:
+                parts.append(str(getattr(st, "value", st)))
+            return " - ".join([x for x in parts if x]) or None
+        items = "".join(
+            _item(
+                _inv_url(inv),
+                (inv.invoice_number or f"#{inv.id}"),
+                _inv_sub(inv),
+                ("إشعار دائن" if str(getattr(inv, "kind", "") or "").upper() == "CREDIT_NOTE" else "فاتورة"),
+                ("badge-info" if str(getattr(inv, "kind", "") or "").upper() == "CREDIT_NOTE" else "badge-primary"),
+            )
+            for inv in rows
+        )
+        html_parts.append(_section("الفواتير", items))
+
+    def _append_users():
+        if not allow_users:
+            return
+        if q_int is not None:
+            u0 = db.session.get(User, q_int)
+            if u0:
+                title = (getattr(u0, "username", None) or f"#{u0.id}").strip() if getattr(u0, "username", None) else f"#{u0.id}"
+                subtitle = (getattr(u0, "email", None) or "").strip() or None
+                badge = getattr(getattr(u0, "role", None), "name", None) or "مستخدم"
+                items = _item(url_for("users_bp.user_detail", user_id=u0.id), title, subtitle, badge, "badge-secondary")
+                html_parts.append(_section("المستخدمون", items))
+                return
+        qs = User.query.join(Role, User.role_id == Role.id, isouter=True)
+        conds = [User.username.ilike(q_like), User.email.ilike(q_like), Role.name.ilike(q_like)]
+        if hasattr(User, "name"):
+            conds.append(User.name.ilike(q_like))
+        qs = qs.filter(or_(*conds))
+        rows = qs.order_by(func.lower(User.username).asc(), User.id.asc()).limit(limit).all()
+        if not rows:
+            return
+        items = "".join(
+            _item(
+                url_for("users_bp.user_detail", user_id=u.id),
+                (u.username or f"#{u.id}"),
+                (u.email or "").strip() or None,
+                (getattr(getattr(u, "role", None), "name", None) or "مستخدم"),
+                "badge-secondary",
+            )
+            for u in rows
+        )
+        html_parts.append(_section("المستخدمون", items))
+
+    def _append_roles():
+        if not allow_roles:
+            return
+        if q_int is not None:
+            r0 = db.session.get(Role, q_int)
+            if r0:
+                items = _item(url_for("roles.edit_role", role_id=r0.id), r0.name or f"#{r0.id}", (r0.description or "").strip() or None, "دور", "badge-dark")
+                html_parts.append(_section("الأدوار", items))
+                return
+        qry = Role.query.filter(Role.name.ilike(q_like))
+        rows = qry.order_by(func.lower(Role.name).asc()).limit(limit).all()
+        if not rows:
+            return
+        items = "".join(
+            _item(
+                url_for("roles.edit_role", role_id=r.id),
+                (r.name or f"#{r.id}"),
+                (r.description or "").strip() or None,
+                "دور",
+                "badge-dark",
+            )
+            for r in rows
+        )
+        html_parts.append(_section("الأدوار", items))
+
+    if target == "customers":
+        _append_customers()
+    elif target == "suppliers":
+        _append_suppliers()
+    elif target == "partners":
+        _append_partners()
+    elif target == "products":
+        _append_products()
+    elif target == "sales":
+        _append_sales()
+    elif target == "payments":
+        _append_payments()
+    elif target == "shipments":
+        _append_shipments()
+    elif target == "services":
+        _append_services()
+    elif target == "warehouses":
+        _append_warehouses()
+    elif target == "checks":
+        _append_checks()
+    elif target == "expenses":
+        _append_expenses()
+    elif target == "invoices":
+        _append_invoices()
+    elif target == "users":
+        _append_users()
+    elif target == "roles":
+        _append_roles()
+    else:
+        _append_customers()
+        _append_suppliers()
+        _append_partners()
+        _append_products()
+        _append_sales()
+        _append_payments()
+        _append_shipments()
+        _append_services()
+        _append_warehouses()
+        _append_checks()
+        _append_invoices()
+        _append_expenses()
+        _append_users()
+        _append_roles()
+
+    if not html_parts:
+        return jsonify({"html": '<div class="list-group-item text-muted text-center py-3">لا توجد نتائج</div>'})
+    return jsonify({"html": "".join(html_parts)})
 
 @bp.get("/customers", endpoint="customers")
 @bp.get("/search_customers", endpoint="search_customers")

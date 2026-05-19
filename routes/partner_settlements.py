@@ -7,7 +7,7 @@ from sqlalchemy import and_, or_, func
 from sqlalchemy.exc import SQLAlchemyError
 from extensions import db
 import utils
-from models import Partner, PaymentDirection, PaymentMethod, PartnerSettlement, PartnerSettlementStatus, build_partner_settlement_draft, AuditLog, SaleStatus, ServiceStatus, Expense, ExpenseType
+from models import Partner, PaymentDirection, PaymentMethod, PartnerSettlement, PartnerSettlementStatus, build_partner_settlement_draft, AuditLog, SaleStatus, ServiceStatus, Expense, ExpenseType, ProductPartner, Product, StockLevel, Warehouse
 import json
 
 partner_settlements_bp = Blueprint("partner_settlements_bp", __name__, url_prefix="/partners")
@@ -3070,25 +3070,34 @@ def partner_inventory(partner_id):
     # إذا كان مرتبطاً بمنتج، نضيفه.
     
     from models import WarehousePartnerShare
-    wps_items = db.session.query(
-        Product,
-        WarehousePartnerShare.share_percentage,
-        StockLevel.quantity,
-        Warehouse.name.label('warehouse_name')
-    ).join(
-        WarehousePartnerShare, 
-        and_(
-            WarehousePartnerShare.product_id == Product.id,
-            WarehousePartnerShare.warehouse_id == StockLevel.warehouse_id
+    wps_items = []
+    try:
+        wps_items = (
+            db.session.query(
+                Product,
+                WarehousePartnerShare.share_percentage,
+                StockLevel.quantity,
+                Warehouse.name.label("warehouse_name"),
+            )
+            .join(StockLevel, StockLevel.product_id == Product.id)
+            .join(Warehouse, Warehouse.id == StockLevel.warehouse_id)
+            .join(
+                WarehousePartnerShare,
+                and_(
+                    WarehousePartnerShare.product_id == Product.id,
+                    WarehousePartnerShare.warehouse_id == StockLevel.warehouse_id,
+                    WarehousePartnerShare.partner_id == partner_id,
+                ),
+            )
+            .filter(StockLevel.quantity > 0)
+            .all()
         )
-    ).join(
-        StockLevel, StockLevel.product_id == Product.id
-    ).join(
-        Warehouse, Warehouse.id == StockLevel.warehouse_id
-    ).filter(
-        WarehousePartnerShare.partner_id == partner_id,
-        StockLevel.quantity > 0
-    ).all()
+    except Exception as exc:
+        current_app.logger.warning("partner_inventory wps query failed: %s", exc)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
 
     for prod, share, qty, wh_name in wps_items:
         # Avoid duplicates if covered by ProductPartner (assuming ProductPartner overrides or adds?)

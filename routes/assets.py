@@ -66,10 +66,21 @@ def add():
     
     if request.method == 'POST':
         try:
-            category_id = int(request.form.get('category_id'))
+            category_id = request.form.get('category_id', type=int) or 0
+            if category_id <= 0:
+                flash('فئة الأصل مطلوبة', 'danger')
+                return redirect(request.url)
             name = request.form.get('name')
             purchase_date = datetime.strptime(request.form.get('purchase_date'), '%Y-%m-%d').date()
-            purchase_price = Decimal(request.form.get('purchase_price'))
+            purchase_price_raw = (request.form.get('purchase_price') or '').strip()
+            if not purchase_price_raw:
+                flash('سعر الشراء مطلوب', 'danger')
+                return redirect(request.url)
+            try:
+                purchase_price = Decimal(purchase_price_raw)
+            except Exception:
+                flash('قيمة سعر الشراء غير صالحة', 'danger')
+                return redirect(request.url)
             branch_id = request.form.get('branch_id', type=int)
             site_id = request.form.get('site_id', type=int)
             supplier_id = request.form.get('supplier_id', type=int)

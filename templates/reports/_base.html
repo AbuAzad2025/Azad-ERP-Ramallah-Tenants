@@ -28,8 +28,8 @@
           <a href="#" class="dropdown-item" onclick="window.print(); return false;">طباعة سريعة</a>
           <a href="#" class="dropdown-item" data-toggle="modal" data-target="#reportPrintModal">خيارات الطباعة</a>
           <div class="dropdown-divider"></div>
-          <a href="#" class="dropdown-item">تصدير Excel</a>
-          <a href="#" class="dropdown-item">تصدير PDF</a>
+          <a href="#" class="dropdown-item" onclick="exportReportTableToCSV(); return false;">تصدير Excel (CSV)</a>
+          <a href="#" class="dropdown-item" onclick="window.print(); return false;">تصدير PDF (طباعة)</a>
         </div>
       </div>
       {% endblock %}
@@ -81,7 +81,7 @@
   @media print {
     .d-print-none { display: none !important; }
     .d-print-block { display: block !important; }
-    .card { border: none !important; shadow: none !important; }
+    .card { border: none !important; box-shadow: none !important; }
     .card-header { display: none !important; }
     .card-footer { display: none !important; }
   }
@@ -98,6 +98,30 @@
     const el = document.getElementById('print-date');
     if(el) el.innerText = dateStr;
   });
+
+  // Export first data table in the report card to CSV
+  function exportReportTableToCSV() {
+    const table = document.querySelector('.card-body .table-responsive table, .card-body table');
+    if (!table) { alert('لم يُعثر على جدول للتصدير'); return; }
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+    rows.forEach(row => {
+      const cols = row.querySelectorAll('td, th');
+      const rowData = Array.from(cols).map(col => {
+        let text = col.innerText.replace(/\s+/g, ' ').trim();
+        text = text.replace(/"/g, '""');
+        return '"' + text + '"';
+      }).join(',');
+      csv.push(rowData);
+    });
+    const blob = new Blob(['\uFEFF' + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'report_' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 </script>
 {% endblock %}
 

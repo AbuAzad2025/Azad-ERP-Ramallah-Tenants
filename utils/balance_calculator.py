@@ -937,7 +937,24 @@ def calculate_customer_balance_components(customer_id, session=None):
 def build_customer_balance_view(customer_id, session=None):
     if not customer_id:
         return {"success": False, "error": "customer_id is required"}
-    session = session or db.session
+
+    owns_session = session is None
+    if owns_session:
+        from sqlalchemy.orm import sessionmaker
+
+        session = sessionmaker(bind=db.engine)()
+
+    try:
+        return _build_customer_balance_view_impl(customer_id, session)
+    finally:
+        if owns_session:
+            try:
+                session.close()
+            except Exception:
+                pass
+
+
+def _build_customer_balance_view_impl(customer_id, session):
     customer = session.get(Customer, customer_id)
     if not customer:
         return {"success": False, "error": "Customer not found"}

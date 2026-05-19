@@ -516,6 +516,15 @@
                 <span class="input-group-text bg-white border-0"><i class="fas fa-search text-muted"></i></span>
                 <input id="expenses-search" type="text" class="form-control form-control-modern border-0" placeholder="بحث عام في المصاريف" value="{{ search or '' }}">
               </div>
+              <div class="mt-2 position-relative" style="max-width: 340px;">
+                <div class="input-group input-group-sm">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text bg-white"><i class="fas fa-bolt"></i></span>
+                  </div>
+                  <input type="text" class="form-control" placeholder="بحث سريع (انتقال)" data-search="expenses" autocomplete="off">
+                </div>
+                <div class="list-group position-absolute w-100 shadow" data-search-target="expenses" style="z-index: 2000; top: 100%; display: none; max-height: 360px; overflow: auto;"></div>
+              </div>
             </div>
             <div class="col-lg-6 col-md-5 mt-3 mt-md-0">
               <div class="d-flex flex-wrap align-items-center justify-content-md-end gap-3">

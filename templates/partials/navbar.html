@@ -77,6 +77,17 @@
       <span id="jod-rate">--</span>
       <span>₪</span>
     </span>
+    {% if current_user.is_authenticated %}
+    <div class="position-relative" style="min-width: 240px; max-width: 340px;">
+      <div class="input-group input-group-sm">
+        <div class="input-group-prepend">
+          <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
+        </div>
+        <input type="search" class="form-control" name="gm_search_global" placeholder="بحث سريع..." data-search="global" data-search-autofill="off" autocomplete="new-password" autocapitalize="off" spellcheck="false" inputmode="search" readonly>
+      </div>
+      <div class="list-group position-absolute w-100 shadow" data-search-target="global" style="z-index: 2000; top: 100%; display: none; max-height: 360px; overflow: auto;"></div>
+    </div>
+    {% endif %}
   </div>
   
   <div class="navbar-brand ml-auto d-flex align-items-center" style="margin-left: 10px !important;">

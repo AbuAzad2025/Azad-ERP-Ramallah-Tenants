@@ -4205,7 +4205,8 @@ def api_user_details(user_id):
                 {
                     'action': a.action,
                     'created_at': a.created_at.isoformat() if a.created_at else None,
-                    'note': a.note
+                    'model_name': getattr(a, 'model_name', None),
+                    'record_id': getattr(a, 'record_id', None),
                 }
                 for a in recent_activities
             ]
@@ -4321,9 +4322,8 @@ def api_user_activity_history(user_id):
             {
                 'id': a.id,
                 'action': a.action,
-                'table_name': a.table_name,
+                'model_name': a.model_name,
                 'record_id': a.record_id,
-                'note': a.note,
                 'ip_address': a.ip_address,
                 'created_at': a.created_at.isoformat() if a.created_at else None
             }

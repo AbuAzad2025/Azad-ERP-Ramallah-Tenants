@@ -847,12 +847,22 @@ def add_part(rid):
         return redirect(url_for('service.view_request', rid=rid))
     
     try:
-        warehouse_id = int(request.form.get('warehouse_id'))
-        product_id = int(request.form.get('part_id'))
-        quantity = int(request.form.get('quantity'))
-        unit_price = Decimal(request.form.get('unit_price'))
-        discount = Decimal(request.form.get('discount', 0) or 0)
-        tax_rate = Decimal(request.form.get('tax_rate', 0) or 0)
+        warehouse_id = request.form.get('warehouse_id', type=int) or 0
+        product_id = request.form.get('part_id', type=int) or 0
+        quantity = request.form.get('quantity', type=int) or 0
+        unit_price_raw = (request.form.get('unit_price') or '').strip()
+        try:
+            unit_price = Decimal(unit_price_raw) if unit_price_raw else Decimal(0)
+        except Exception:
+            raise ValueError("invalid unit_price")
+        try:
+            discount = Decimal(request.form.get('discount', 0) or 0)
+        except Exception:
+            discount = Decimal(0)
+        try:
+            tax_rate = Decimal(request.form.get('tax_rate', 0) or 0)
+        except Exception:
+            tax_rate = Decimal(0)
         note = (request.form.get('note') or '').strip() or None
         
         # Validation
@@ -1206,10 +1216,20 @@ def add_task(rid):
     
     try:
         description = (request.form.get('description') or '').strip()
-        quantity = int(request.form.get('quantity', 1))
-        unit_price = Decimal(request.form.get('unit_price'))
-        discount = Decimal(request.form.get('discount', 0) or 0)
-        tax_rate = Decimal(request.form.get('tax_rate', 0) or 0)
+        quantity = request.form.get('quantity', type=int) or 1
+        unit_price_raw = (request.form.get('unit_price') or '').strip()
+        try:
+            unit_price = Decimal(unit_price_raw) if unit_price_raw else Decimal(0)
+        except Exception:
+            raise ValueError("invalid unit_price")
+        try:
+            discount = Decimal(request.form.get('discount', 0) or 0)
+        except Exception:
+            discount = Decimal(0)
+        try:
+            tax_rate = Decimal(request.form.get('tax_rate', 0) or 0)
+        except Exception:
+            tax_rate = Decimal(0)
         note = (request.form.get('note') or '').strip() or None
         
         # Validation
@@ -1516,15 +1536,28 @@ def analytics():
         ServiceRequest.completed_at >= datetime.now().replace(day=1)
     ).count()
     
-    # متوسط وقت الإنجاز
-    avg_completion_time = db.session.query(
-        func.avg(
-            func.julianday(ServiceRequest.completed_at) - 
-            func.julianday(ServiceRequest.received_at)
+    # متوسط وقت الإنجاز (أيام) — متوافق مع PostgreSQL و SQLite
+    try:
+        _dialect = str(db.engine.url.drivername or "").lower()
+    except Exception:
+        _dialect = ""
+    if "postgres" in _dialect:
+        _avg_days_expr = func.avg(
+            func.extract(
+                "epoch",
+                ServiceRequest.completed_at - ServiceRequest.received_at,
+            )
+            / 86400.0
         )
-    ).filter(
+    else:
+        _avg_days_expr = func.avg(
+            func.julianday(ServiceRequest.completed_at)
+            - func.julianday(ServiceRequest.received_at)
+        )
+    avg_completion_time = db.session.query(_avg_days_expr).filter(
         ServiceRequest.status == ServiceStatus.COMPLETED.value,
-        ServiceRequest.completed_at.isnot(None)
+        ServiceRequest.completed_at.isnot(None),
+        ServiceRequest.received_at.isnot(None),
     ).scalar() or 0
     
     # أكثر المشاكل شيوعاً

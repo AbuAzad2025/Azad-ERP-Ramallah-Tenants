@@ -4122,6 +4122,8 @@ def get_check_details(check_token):
             result['resubmit_allowed_count'] = getattr(ctx.manual, 'resubmit_allowed_count', 1) or 1
             result['legal_return_allowed_count'] = getattr(ctx.manual, 'legal_return_allowed_count', 1) or 1
         return jsonify(result)
+    except (CheckValidationError, CheckStateError) as err:
+        return jsonify({'success': False, 'error': str(err), 'code': getattr(err, 'code', None)}), 400
     except Exception as err:
         current_app.logger.error(f"Error getting check details {check_token}: {err}")
         return jsonify({'success': False, 'error': str(err)}), 500
@@ -4699,7 +4701,11 @@ def add_check():
             check_bank = request.form.get("check_bank")
             check_date_str = request.form.get("check_date")
             check_due_date_str = request.form.get("check_due_date")
-            amount = Decimal(request.form.get("amount", 0))
+            amount_raw = (request.form.get("amount") or "").strip()
+            try:
+                amount = Decimal(amount_raw) if amount_raw else Decimal(0)
+            except Exception:
+                amount = Decimal(0)
             currency = request.form.get("currency", "ILS")
             direction = request.form.get("direction")
             
@@ -4798,7 +4804,11 @@ def edit_check(check_id):
             check.check_bank = request.form.get("check_bank")
             check.check_date = datetime.strptime(request.form.get("check_date"), "%Y-%m-%d")
             check.check_due_date = datetime.strptime(request.form.get("check_due_date"), "%Y-%m-%d")
-            check.amount = Decimal(request.form.get("amount", 0))
+            amount_raw = (request.form.get("amount") or "").strip()
+            try:
+                check.amount = Decimal(amount_raw) if amount_raw else Decimal(0)
+            except Exception:
+                check.amount = Decimal(0)
             if check.amount < 0:
                 flash("مبلغ الشيك لا يمكن أن يكون سالباً", "danger")
                 return redirect(url_for("checks.edit_check", check_id=check_id))
@@ -4817,13 +4827,9 @@ def edit_check(check_id):
             check.internal_notes = request.form.get("internal_notes")
             check.reference_number = request.form.get("reference_number")
             
-            customer_id_raw = request.form.get("customer_id")
-            supplier_id_raw = request.form.get("supplier_id")
-            partner_id_raw = request.form.get("partner_id")
-            
-            check.customer_id = int(customer_id_raw) if customer_id_raw else None
-            check.supplier_id = int(supplier_id_raw) if supplier_id_raw else None
-            check.partner_id = int(partner_id_raw) if partner_id_raw else None
+            check.customer_id = request.form.get("customer_id", type=int) or None
+            check.supplier_id = request.form.get("supplier_id", type=int) or None
+            check.partner_id = request.form.get("partner_id", type=int) or None
             
             db.session.commit()
             

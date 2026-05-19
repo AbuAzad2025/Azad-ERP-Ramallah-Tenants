@@ -2,13 +2,14 @@
     if (window.__BALANCE_REALTIME_INIT__) return;
 
     function ensureSocketIoScript() {
+        if (window.__SOCKETIO_ENABLED__ === false) return;
         if (window.io) return;
         if (window.__SOCKET_IO_SCRIPT_LOADING__) return;
         const existing = document.querySelector('script[data-socket-io-loader="1"]');
         if (existing) return;
         window.__SOCKET_IO_SCRIPT_LOADING__ = true;
         const script = document.createElement('script');
-        script.src = '/socket.io/socket.io.js';
+        script.src = 'https://cdn.socket.io/4.7.5/socket.io.min.js';
         script.defer = true;
         script.setAttribute('data-socket-io-loader', '1');
         script.onload = function() {
@@ -23,6 +24,7 @@
     let attempts = 0;
     function init() {
         if (window.__BALANCE_REALTIME_INIT__) return;
+        if (window.__SOCKETIO_ENABLED__ === false) return;
         if (typeof io === 'undefined') {
             ensureSocketIoScript();
             attempts += 1;

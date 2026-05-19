@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from models import RecurringInvoiceTemplate, RecurringInvoiceSchedule, Invoice, InvoiceLine, Customer, Branch, Site, TaxEntry, run_invoice_gl_sync_after_commit
@@ -66,7 +66,7 @@ def add_template():
     if request.method == 'POST':
         try:
             template_name = request.form.get('template_name', '').strip()
-            customer_id = int(request.form.get('customer_id'))
+            customer_id = request.form.get('customer_id', type=int) or 0
             description = request.form.get('description', '').strip()
             amount = _dec_from_form('amount', default="0")
             currency = request.form.get('currency', 'ILS').strip()
@@ -147,7 +147,7 @@ def edit_template(template_id):
     if request.method == 'POST':
         try:
             template.template_name = request.form.get('template_name', '').strip()
-            template.customer_id = int(request.form.get('customer_id'))
+            template.customer_id = request.form.get('customer_id', type=int) or 0
             template.description = request.form.get('description', '').strip()
             template.amount = _dec_from_form('amount', default="0")
             template.currency = request.form.get('currency', 'ILS').strip()

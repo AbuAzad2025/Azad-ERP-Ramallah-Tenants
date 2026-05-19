@@ -64,11 +64,17 @@ def add():
     
     if request.method == 'POST':
         try:
-            fiscal_year = int(request.form.get('fiscal_year'))
+            fiscal_year = request.form.get('fiscal_year', type=int) or 0
+            if fiscal_year <= 0:
+                flash('السنة المالية مطلوبة', 'danger')
+                return redirect(request.url)
             account_code = request.form.get('account_code')
             branch_id = request.form.get('branch_id', type=int)
             site_id = request.form.get('site_id', type=int)
-            allocated_amount = Decimal(request.form.get('allocated_amount', 0))
+            try:
+                allocated_amount = Decimal(request.form.get('allocated_amount') or 0)
+            except Exception:
+                allocated_amount = Decimal(0)
             if allocated_amount < 0:
                 flash('مبلغ الميزانية لا يمكن أن يكون سالباً', 'danger')
                 return redirect(request.url)
@@ -116,7 +122,10 @@ def edit(id):
     
     if request.method == 'POST':
         try:
-            budget.allocated_amount = Decimal(request.form.get('allocated_amount', 0))
+            try:
+                budget.allocated_amount = Decimal(request.form.get('allocated_amount') or 0)
+            except Exception:
+                budget.allocated_amount = Decimal(0)
             if budget.allocated_amount < 0:
                 flash('مبلغ الميزانية لا يمكن أن يكون سالباً', 'danger')
                 return redirect(request.url)

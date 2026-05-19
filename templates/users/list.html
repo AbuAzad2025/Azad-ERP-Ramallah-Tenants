@@ -64,6 +64,17 @@
       <i class="fas fa-id-card"></i> العملاء المسجلون
     </a>
   </div>
+  <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap">
+    <div class="position-relative" style="min-width: 240px; max-width: 340px;">
+      <div class="input-group input-group-sm">
+        <div class="input-group-prepend">
+          <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
+        </div>
+        <input type="text" class="form-control" placeholder="بحث سريع بالمستخدمين..." data-search="users" autocomplete="off">
+      </div>
+      <div class="list-group position-absolute w-100 shadow" data-search-target="users" style="z-index: 2000; top: 100%; display: none; max-height: 360px; overflow: auto;"></div>
+    </div>
+  </div>
 
   <table id="users-table" class="table table-striped table-bordered align-middle">
     <thead class="table-light">

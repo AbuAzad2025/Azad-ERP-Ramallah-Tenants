@@ -1,6 +1,7 @@
 
+import os
 from datetime import datetime, date as _date, time as _time, timedelta, timezone
-from flask import Blueprint, render_template, request, abort, jsonify, current_app
+from flask import Blueprint, render_template, request, abort, jsonify, current_app, send_file, redirect, url_for, flash
 from flask_login import login_required, current_user
 from sqlalchemy import or_, func, case
 from sqlalchemy.orm import joinedload, selectinload
@@ -429,9 +430,37 @@ def api_stats():
 
 @admin_reports_bp.route("/download-backup", methods=["GET"])
 @login_required
+@utils.permission_required(SystemPermissions.VIEW_REPORTS)
 def download_backup():
-    # ... rest of implementation if exists
-    return jsonify({"error": "Not implemented"}), 501
+    """
+    تحميل أحدث نسخة احتياطية من قاعدة البيانات
+    """
+    try:
+        from services.backup_service import AutomatedBackupManager
+        from flask import current_app
+        
+        backup_manager = AutomatedBackupManager(current_app)
+        backup_status = backup_manager.get_backup_status()
+        latest_backup = backup_status.get('latest_backup')
+        
+        if not latest_backup or not os.path.exists(latest_backup.get('path', '')):
+            flash('لا توجد نسخ احتياطية متاحة', 'warning')
+            return redirect(url_for('admin_reports.index'))
+        
+        filepath = latest_backup['path']
+        filename = latest_backup.get('name', os.path.basename(filepath))
+        
+        return send_file(
+            filepath,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/octet-stream'
+        )
+    
+    except Exception as e:
+        current_app.logger.exception('download_backup error')
+        flash('حدث خطأ أثناء تحميل النسخة الاحتياطية', 'danger')
+        return redirect(url_for('admin_reports.index'))
 
 @admin_reports_bp.route("/logs/view", methods=["GET"])
 @login_required

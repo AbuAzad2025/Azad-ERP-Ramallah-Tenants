@@ -376,7 +376,7 @@
 
             <!-- Left Side: Actions, CMD, User -->
             <div class="d-flex align-items-center gap-3">
-                <button class="btn btn-glass btn-sm d-flex align-items-center px-3 py-1 rounded-pill" data-bs-toggle="modal" data-bs-target="#commandPaletteModal">
+                <button class="btn btn-glass btn-sm d-flex align-items-center px-3 py-1 rounded-pill" data-toggle="modal" data-target="#commandPaletteModal">
                     <i class="fas fa-terminal me-2 text-info"></i> 
                     <span class="d-none d-lg-inline font-monospace small text-white-50">_CMD</span>
                 </button>
@@ -386,7 +386,7 @@
                 {% block security_actions %}{% endblock %}
                 
                 <div class="dropdown">
-                    <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle no-caret" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle no-caret" id="userDropdown" data-toggle="dropdown" aria-expanded="false">
                         <div class="rounded-circle d-flex align-items-center justify-content-center border border-1 border-secondary bg-dark position-relative" style="width: 36px; height: 36px;">
                             <span class="text-white font-weight-bold small">{{ current_user.username[0]|upper }}</span>
                             <span class="position-absolute bottom-0 end-0 bg-success border border-dark rounded-circle" style="width: 10px; height: 10px;"></span>
@@ -416,7 +416,7 @@
                     {% for category, message in messages %}
                         <div class="alert alert-{{ category }} alert-dismissible fade show shadow-lg border-0 mb-4" style="background: rgba(20,20,20,0.9); border-left: 4px solid var(--sec-{{ 'danger' if category == 'error' else 'success' }}); color: #fff;" role="alert">
                             <i class="fas fa-terminal me-2"></i> <span class="font-monospace">{{ message }}</span>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                            <button type="button" class="close text-white" data-dismiss="alert">&times;</button>
                         </div>
                     {% endfor %}
                 {% endif %}

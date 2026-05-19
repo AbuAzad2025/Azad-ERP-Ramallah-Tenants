@@ -717,7 +717,7 @@ section.content .container-fluid .col-md-12 {
                             <tfoot>
                                 <tr class="table-light">
                                     <td colspan="6" class="text-end"><strong>الإجمالي:</strong></td>
-                                    <td class="text-end"><strong class="text-success">{{ "%.2f"|format(balance_data.rights.inventory.total_ils if balance_data.rights.inventory.get('total_ils') is not none else balance_data.rights.inventory.total) }}</strong></td>
+                                    <td class="text-end"><strong class="text-success">{{ "%.2f"|format(balance_data.rights.inventory.total_ils if balance_data.rights.inventory.get('total_ils') is not none else (balance_data.rights.inventory.total or 0)) }}</strong></td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -774,7 +774,7 @@ section.content .container-fluid .col-md-12 {
                             <tfoot>
                                 <tr class="table-light">
                                     <td colspan="8" class="text-end"><strong>الإجمالي:</strong></td>
-                                    <td class="text-end text-danger"><strong>{{ "%.2f"|format((balance_data.rights.sales_share.total_discount_ils if balance_data.rights.sales_share.get('total_discount_ils') is not none else 0)) }}</strong></td>
+                                    <td class="text-end text-danger"><strong>{{ "%.2f"|format(((balance_data.rights.sales_share.total_discount_ils or 0) if balance_data.rights.sales_share.get('total_discount_ils') is not none else 0)) }}</strong></td>
                                     <td class="text-end"><strong class="text-success">{{ "%.2f"|format(balance_data.rights.sales_share.total_share_ils) }}</strong></td>
                                 </tr>
                             </tfoot>

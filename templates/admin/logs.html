@@ -6,7 +6,7 @@
         <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-terminal me-2"></i>سجلات النظام (System Logs)</h1>
         <div>
             <button class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()"><i class="fas fa-sync-alt"></i> تحديث</button>
-            <button class="btn btn-sm btn-outline-danger" onclick="alert('سيتم مسح السجلات')"><i class="fas fa-trash-alt"></i> مسح السجلات</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="clearDisplayedLog()"><i class="fas fa-trash-alt"></i> مسح المعروض</button>
         </div>
     </div>
 
@@ -111,6 +111,15 @@
 </div>
 
 <script>
+    function clearDisplayedLog() {
+        const selector = document.getElementById('logFileSelector');
+        const filename = selector ? selector.value : '';
+        const el = document.getElementById('log-' + filename);
+        if (el && confirm('مسح محتوى السجل المعروض؟')) {
+            el.textContent = '';
+        }
+    }
+
     function switchLogFile(filename) {
         // Hide all log contents
         document.querySelectorAll('.log-content').forEach(el => el.style.display = 'none');

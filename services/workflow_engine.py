@@ -368,17 +368,34 @@ class WorkflowEngine:
             rejected = query.filter_by(status='REJECTED').count()
             timeout = query.filter_by(status='TIMEOUT').count()
             
-            avg_completion_time = db.session.query(
-                db.func.avg(
-                    db.func.julianday(WorkflowInstance.completed_at) - 
-                    db.func.julianday(WorkflowInstance.started_at)
+            try:
+                _dialect = str(db.engine.url.drivername or "").lower()
+            except Exception:
+                try:
+                    _dialect = str(db.engine.dialect.name or "").lower()
+                except Exception:
+                    _dialect = ""
+            if "postgres" in _dialect:
+                _avg_hours_expr = db.func.avg(
+                    db.func.extract(
+                        "epoch",
+                        WorkflowInstance.completed_at - WorkflowInstance.started_at,
+                    )
+                    / 3600.0
                 )
-            ).filter(
-                WorkflowInstance.status == 'APPROVED'
+            else:
+                _avg_hours_expr = db.func.avg(
+                    db.func.julianday(WorkflowInstance.completed_at)
+                    - db.func.julianday(WorkflowInstance.started_at)
+                ) * 24.0
+            avg_completion_time = db.session.query(_avg_hours_expr).filter(
+                WorkflowInstance.status == 'APPROVED',
+                WorkflowInstance.completed_at.isnot(None),
+                WorkflowInstance.started_at.isnot(None),
             ).scalar()
             
             if avg_completion_time:
-                avg_completion_time = float(avg_completion_time) * 24
+                avg_completion_time = float(avg_completion_time)
             else:
                 avg_completion_time = 0
             
@@ -394,6 +411,10 @@ class WorkflowEngine:
             
         except Exception as e:
             logger.error("Error getting workflow stats: %s", e)
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             return {
                 'total': 0,
                 'in_progress': 0,

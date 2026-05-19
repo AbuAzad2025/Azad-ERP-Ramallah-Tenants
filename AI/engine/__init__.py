@@ -48,7 +48,6 @@ from .ai_conversation import (
     get_conversation_context,
     get_local_faq_responses,
     match_local_response,
-    get_conversation_stats
 )
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -316,7 +315,6 @@ __all__ = [
     'get_conversation_context',
     'get_local_faq_responses',
     'match_local_response',
-    'get_conversation_stats',
     
     # Hybrid Engine
     'HybridAIEngine',

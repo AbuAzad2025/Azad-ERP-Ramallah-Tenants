@@ -104,9 +104,9 @@
                                     <td>{{ project.end_date }}</td>
                                     <td style="width: 20%">
                                         <div class="d-flex align-items-center">
-                                            <span class="me-2">{{ project.progress|round|int }}%</span>
+                                            <span class="me-2">{{ (project.progress or 0)|round|int }}%</span>
                                             <div class="progress flex-grow-1" style="height: 5px;">
-                                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ project.progress }}%"></div>
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ (project.progress or 0) }}%"></div>
                                             </div>
                                         </div>
                                     </td>

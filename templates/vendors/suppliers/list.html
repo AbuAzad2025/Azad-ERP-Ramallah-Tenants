@@ -122,28 +122,28 @@
                                 <div class="d-flex flex-wrap gap-1 justify-content-start">
                                     <a href="{{ url_for('supplier_settlements_bp.supplier_settlement', supplier_id=s.id) }}"
                                        class="btn btn-sm btn-success rounded-circle"
-                                       data-bs-toggle="tooltip"
+                                       data-toggle="tooltip"
                                        title="تسوية ذكية">
                                         <i class="fas fa-calculator"></i>
                                     </a>
                                     
                                     <a href="{{ url_for('expenses_bp.create_expense', supplier_id=s.id, mode='supplier_service') }}"
                                        class="btn btn-sm btn-info rounded-circle text-white"
-                                       data-bs-toggle="tooltip"
+                                       data-toggle="tooltip"
                                        title="توريد خدمات">
                                         <i class="fas fa-file-signature"></i>
                                     </a>
 
                                     <a href="{{ url_for('payments.create_payment') }}?entity_type=SUPPLIER&entity_id={{ s.id }}&entity_name={{ s.name|urlencode }}"
                                        class="btn btn-sm btn-primary rounded-circle"
-                                       data-bs-toggle="tooltip"
+                                       data-toggle="tooltip"
                                        title="دفع">
                                         <i class="fas fa-money-bill-wave"></i>
                                     </a>
 
                                     <a href="{{ url_for('vendors_bp.suppliers_statement', supplier_id=s.id) }}"
                                        class="btn btn-sm btn-warning rounded-circle text-dark"
-                                       data-bs-toggle="tooltip"
+                                       data-toggle="tooltip"
                                        title="كشف حساب">
                                         <i class="fas fa-file-invoice"></i>
                                     </a>

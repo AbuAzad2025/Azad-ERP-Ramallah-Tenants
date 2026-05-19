@@ -238,7 +238,15 @@ def allocate(id):
     try:
         center = db.get_or_404(CostCenter, id)
         
-        amount = Decimal(request.form.get('amount'))
+        amount_raw = (request.form.get('amount') or '').strip()
+        if not amount_raw:
+            flash('المبلغ مطلوب', 'danger')
+            return redirect(url_for('cost_centers.view', id=id))
+        try:
+            amount = Decimal(amount_raw)
+        except Exception:
+            flash('قيمة المبلغ غير صالحة', 'danger')
+            return redirect(url_for('cost_centers.view', id=id))
         if amount < 0:
             flash('مبلغ التوزيع لا يمكن أن يكون سالباً', 'danger')
             return redirect(url_for('cost_centers.view', id=id))

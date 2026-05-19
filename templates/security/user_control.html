@@ -510,6 +510,12 @@
 </div>
 
 <script>
+// Helper: toast or alert fallback
+function _notify(msg, type) {
+  if (typeof showToast !== 'undefined') { showToast(msg, type); }
+  else { alert(msg); }
+}
+
 // تفعيل DataTable
 $(document).ready(function() {
   function initUsersTableDT() {
@@ -553,7 +559,7 @@ function exportUsers() {
 function bulkActivate() {
   const selected = getSelectedUsers();
   if (selected.length === 0) {
-    if(typeof showToast!=='undefined'){showToast('⚠️ الرجاء اختيار مستخدم واحد على الأقل', 'warning');}else{if(typeof showToast!=='undefined'){showToast('⚠️ الرجاء اختيار مستخدم واحد على الأقل', 'warning');}else{alert('⚠️ الرجاء اختيار مستخدم واحد على الأقل');};};
+    _notify('⚠️ الرجاء اختيار مستخدم واحد على الأقل', 'warning');
     return;
   }
   if (confirm(`✅ تفعيل ${selected.length} مستخدم؟`)) {
@@ -565,7 +571,7 @@ function bulkActivate() {
 function bulkDeactivate() {
   const selected = getSelectedUsers();
   if (selected.length === 0) {
-    if(typeof showToast!=='undefined'){showToast('⚠️ الرجاء اختيار مستخدم واحد على الأقل', 'warning');}else{if(typeof showToast!=='undefined'){showToast('⚠️ الرجاء اختيار مستخدم واحد على الأقل', 'warning');}else{alert('⚠️ الرجاء اختيار مستخدم واحد على الأقل');};};
+    _notify('⚠️ الرجاء اختيار مستخدم واحد على الأقل', 'warning');
     return;
   }
   if (confirm(`❌ تعطيل ${selected.length} مستخدم؟`)) {
@@ -595,15 +601,14 @@ function bulkOperation(operation, userIds) {
   .then(res => res.json())
   .then(data => {
     if (data.success) {
-      if(typeof showToast!=='undefined'){showToast(`✅ ${data.message}`, 'success');}else{alert(`✅ ${data.message}`);};
+      _notify(`✅ ${data.message}`, 'success');
       location.reload();
     } else {
-      if(typeof showToast!=='undefined'){showToast(`❌ ${data.error}`, 'error');}else{alert(`❌ ${data.error}`);};
+      _notify(`❌ ${data.error}`, 'error');
     }
   })
   .catch(err => {
-    if (typeof showToast !== 'undefined') { showToast('❌ حدث خطأ: ' + err, 'error'); }
-    else { if(typeof showToast!=='undefined'){showToast('❌ حدث خطأ: ' + err, 'error');}else{alert('❌ حدث خطأ: ' + err);}; }
+    _notify('❌ حدث خطأ: ' + err, 'error');
   });
 }
 
@@ -883,14 +888,14 @@ function savePermissions() {
   .then(r => r.json())
   .then(data => {
     if (data.success) {
-      if(typeof showToast!=='undefined'){showToast('✅ تم حفظ الصلاحيات بنجاح!', 'success');}else{if(typeof showToast!=='undefined'){showToast('✅ تم حفظ الصلاحيات بنجاح!', 'success');}else{alert('✅ تم حفظ الصلاحيات بنجاح!');};};
+      _notify('✅ تم حفظ الصلاحيات بنجاح!', 'success');
       location.reload();
     } else {
-      if(typeof showToast!=='undefined'){showToast('❌ خطأ: ' + (data.message || 'فشل الحفظ', 'error');}else{if(typeof showToast!=='undefined'){showToast('❌ خطأ: ' + (data.message || 'فشل الحفظ');}, 'error');}else{alert('❌ خطأ: ' + (data.message || 'فشل الحفظ');});};
+      _notify('❌ خطأ: ' + (data.message || 'فشل الحفظ'), 'error');
     }
   })
   .catch(err => {
-    if(typeof showToast!=='undefined'){showToast('❌ خطأ في الاتصال', 'error');}else{alert('❌ خطأ في الاتصال');};
+    _notify('❌ خطأ في الاتصال', 'error');
   });
 }
 </script>

@@ -130,8 +130,9 @@
                         </div>
                         <div class="col-6 col-md-4 mb-3">
                             <strong class="text-primary">🎯 الرصيد</strong><br>
-                            <span class="fs-4 fw-bold {{ balance_data.get('balance', {}).get('amount', 0) > 0 and 'text-success' or balance_data.get('balance', {}).get('amount', 0) < 0 and 'text-danger' or '' }}">
-                                {{ "%.2f"|format((balance_data.get('balance', {}).get('amount', 0)|abs)) }} ₪
+                            {% set _balance_amount = balance_data.get('balance', {}).get('amount') or 0 %}
+                            <span class="fs-4 fw-bold {{ _balance_amount > 0 and 'text-success' or _balance_amount < 0 and 'text-danger' or '' }}">
+                                {{ "%.2f"|format((_balance_amount|abs)) }} ₪
                             </span><br>
                             <small class="text-muted">{{ balance_data.get('balance', {}).get('action', '') }}</small>
                         </div>

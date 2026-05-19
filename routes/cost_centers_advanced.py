@@ -119,7 +119,10 @@ def add_alert():
         cost_center_id = request.form.get('cost_center_id', type=int)
         alert_type = request.form.get('alert_type')
         threshold_type = request.form.get('threshold_type', 'PERCENTAGE')
-        threshold_value = Decimal(request.form.get('threshold_value'))
+        threshold_value = Decimal(request.form.get('threshold_value') or 0)
+        if threshold_value <= 0:
+            flash('قيمة العتبة يجب أن تكون أكبر من صفر', 'danger')
+            return redirect(url_for('cost_centers_advanced.alerts_list'))
         notify_manager = request.form.get('notify_manager') == 'on'
         
         alert = CostCenterAlert(
@@ -270,9 +273,9 @@ def execute_allocation_rule(rule_id):
             return redirect(url_for('cost_centers_advanced.allocation_rules'))
         
         execution_date = datetime.strptime(request.form.get('execution_date'), '%Y-%m-%d').date()
-        total_amount = Decimal(request.form.get('total_amount'))
-        if total_amount < 0:
-            flash('مبلغ التوزيع لا يمكن أن يكون سالباً', 'danger')
+        total_amount = Decimal(request.form.get('total_amount') or 0)
+        if total_amount <= 0:
+            flash('مبلغ التوزيع يجب أن يكون أكبر من صفر', 'danger')
             return redirect(url_for('cost_centers_advanced.allocation_rules'))
         
         execution = CostAllocationExecution(

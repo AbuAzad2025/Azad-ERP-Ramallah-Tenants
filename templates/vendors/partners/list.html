@@ -322,7 +322,7 @@
               <div class="d-flex flex-wrap gap-1 justify-content-start">
                 <a href="{{ url_for('partner_settlements_bp.partner_settlement', partner_id=p.id) }}"
                    class="btn btn-sm btn-success rounded-circle"
-                   data-bs-toggle="tooltip"
+                   data-toggle="tooltip"
                    title="تسوية ذكية شاملة">
                   <i class="fas fa-calculator"></i>
                 </a>
@@ -331,21 +331,21 @@
                    class="btn btn-sm btn-info rounded-circle text-white js-partner-service"
                    data-partner-id="{{ p.id }}"
                    data-partner-name="{{ p.name }}"
-                   data-bs-toggle="tooltip"
+                   data-toggle="tooltip"
                    title="توريد خدمات">
                   <i class="fas fa-file-signature"></i>
                 </a>
 
                 <a href="{{ url_for('payments.create_payment') }}?entity_type=PARTNER&entity_id={{ p.id }}&entity_name={{ p.name|urlencode }}"
                    class="btn btn-sm btn-primary rounded-circle"
-                   data-bs-toggle="tooltip"
+                   data-toggle="tooltip"
                    title="دفع">
                   <i class="fas fa-money-bill-wave"></i>
                 </a>
 
                 <a href="{{ url_for('payments.index') }}?entity_type=PARTNER&entity_id={{ p.id }}"
                    class="btn btn-sm btn-warning rounded-circle text-white"
-                   data-bs-toggle="tooltip"
+                   data-toggle="tooltip"
                    title="كشف حساب">
                   <i class="fas fa-file-invoice-dollar"></i>
                 </a>

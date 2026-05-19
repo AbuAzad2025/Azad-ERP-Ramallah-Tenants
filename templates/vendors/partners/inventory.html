@@ -17,7 +17,7 @@
         </div>
         <div class="card-body">
             <div class="alert alert-info d-flex justify-content-between align-items-center">
-                <span>إجمالي قيمة حصة الشريك في المخزون (بالتكلفة): <strong>{{ format_currency(total_value, 'ILS') }}</strong></span>
+                <span>إجمالي قيمة حصة الشريك في المخزون (بالتكلفة): <strong>{{ format_currency(total_value) }}</strong></span>
                 <button class="btn btn-sm btn-outline-primary" onclick="window.print()">طباعة</button>
             </div>
             <table id="datatablesSimple" class="table table-striped table-bordered">
@@ -43,8 +43,8 @@
                         <td>{{ item.total_qty }}</td>
                         <td>{{ item.share_pct }}%</td>
                         <td><strong>{{ item.owned_qty }}</strong></td>
-                        <td>{{ format_currency(item.unit_cost, 'ILS') }}</td>
-                        <td><strong>{{ format_currency(item.owned_value, 'ILS') }}</strong></td>
+                        <td>{{ format_currency(item.unit_cost) }}</td>
+                        <td><strong>{{ format_currency(item.owned_value) }}</strong></td>
                         <td><span class="badge bg-secondary">{{ item.source }}</span></td>
                     </tr>
                     {% endfor %}

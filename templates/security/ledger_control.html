@@ -349,9 +349,9 @@
                                 <button class="btn btn-primary ml-2" onclick="generateFinancialStatements()">
                                     <i class="fas fa-file-invoice-dollar"></i> القوائم المالية
                                 </button>
-                                <button class="btn btn-outline-info" onclick="if(typeof showToast !== 'undefined') showToast('Trial Balance قيد التطوير', 'success'); else alert('Trial Balance قيد التطوير');">
+                                <a href="{{ url_for('ledger.trial_balance') }}" class="btn btn-outline-info">
                                     <i class="fas fa-balance-scale"></i> ميزان المراجعة
-                                </button>
+                                </a>
                             </div>
                             
                             <div class="row">

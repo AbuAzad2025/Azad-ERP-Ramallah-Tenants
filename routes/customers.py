@@ -466,22 +466,16 @@ def balances_recalculate():
 @customers_bp.route("/<int:customer_id>", methods=["GET"], endpoint="customer_detail")
 @login_required
 def customer_detail(customer_id):
-    try:
-        db.session.rollback()
-    except Exception:
-        current_app.logger.warning('rollback after error failed silently in customers.py', exc_info=True)
     customer = db.session.get(Customer, customer_id) or abort(404)
     balance_breakdown = None
     rights_items = []
     obligations_items = []
     try:
-        balance_breakdown = build_customer_balance_view(customer_id, db.session)
+        balance_breakdown = build_customer_balance_view(customer_id)
     except Exception as exc:
-        try:
-            db.session.rollback()
-        except Exception:
-            current_app.logger.warning('rollback after error failed silently in customers.py', exc_info=True)
-        current_app.logger.warning("customer_balance_breakdown_page_failed: %s", exc)
+        current_app.logger.warning(
+            "customer_balance_breakdown_page_failed: %s", exc, exc_info=True
+        )
     if balance_breakdown and balance_breakdown.get("success"):
         rights_items = (balance_breakdown.get("rights") or {}).get("items") or []
         obligations_items = (balance_breakdown.get("obligations") or {}).get("items") or []

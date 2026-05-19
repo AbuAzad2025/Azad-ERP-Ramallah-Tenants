@@ -37,7 +37,7 @@
                     </div>
                     <h5 class="card-title">مفاتيح API</h5>
                     <p class="card-text text-muted small mb-3">إدارة مفاتيح OpenAI و Google Gemini ومزودي الخدمة الآخرين.</p>
-                    <button class="btn btn-success btn-sm w-100" data-bs-toggle="modal" data-bs-target="#apiKeysModal">إدارة المفاتيح</button>
+                    <button class="btn btn-success btn-sm w-100" data-toggle="modal" data-target="#apiKeysModal">إدارة المفاتيح</button>
                 </div>
             </div>
         </div>
@@ -94,14 +94,14 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">إدارة مفاتيح API</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="alert alert-info">يرجى الذهاب لصفحة الإعدادات الكاملة لإدارة المفاتيح بشكل آمن.</div>
             </div>
             <div class="modal-footer">
                 <a href="{{ url_for('ai_admin.ai_settings') }}" class="btn btn-primary">الذهاب للإعدادات</a>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">إغلاق</button>
             </div>
         </div>
     </div>

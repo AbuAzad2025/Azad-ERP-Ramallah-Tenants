@@ -731,6 +731,8 @@ def invoices_report():
     customer_id = request.args.get("customer_id")
     kind = request.args.get("kind")
     status_filter = request.args.get("status")
+    invoice_number = (request.args.get("invoice_number") or "").strip()
+    invoice_id = (request.args.get("invoice_id") or "").strip()
     
     if sd and ed and ed < sd:
         sd, ed = ed, sd
@@ -756,6 +758,10 @@ def invoices_report():
         query = query.filter(Invoice.kind == kind)
     if status_filter:
         query = query.filter(Invoice.status == (status_filter or '').strip().upper())
+    if invoice_id.isdigit():
+        query = query.filter(Invoice.id == int(invoice_id))
+    if invoice_number:
+        query = query.filter(Invoice.invoice_number.ilike(f"%{invoice_number}%"))
     
     invoices = query.order_by(Invoice.invoice_date.desc()).all()
     
@@ -2303,8 +2309,6 @@ def expenses_report():
     elif is_paid in ["false", "0"]:
         q = q.filter(Expense.is_paid.is_(False))
 
-    q = q.order_by(Expense.date.desc(), Expense.id.desc())
-
     fx_mult = case(
         (func.upper(func.coalesce(Expense.currency, "ILS")) == "ILS", 1),
         else_=func.coalesce(Expense.fx_rate_used, 1),
@@ -2317,6 +2321,8 @@ def expenses_report():
     ).first()
     total_count = int(getattr(agg, "cnt", 0) or 0)
     total_amount = float(getattr(agg, "total_amount", 0) or 0)
+
+    q = q.order_by(Expense.date.desc(), Expense.id.desc())
 
     pagination = None
     rows = []
@@ -2357,6 +2363,7 @@ def expenses_report():
     emp_labels = []
     emp_values = []
     if tab == "expenses":
+        q = q.order_by(None)
         type_label_expr = func.coalesce(ExpenseType.name, "غير محدد")
         by_type_rows = (
             q.join(ExpenseType, Expense.type_id == ExpenseType.id, isouter=True)
@@ -2878,7 +2885,8 @@ def customer_detail_report(customer_id):
 
     current_balance = float(customer.balance or 0)
     if balance_data and balance_data.get("success"):
-        current_balance = float(balance_data.get("balance", {}).get("amount", current_balance))
+        _amount = balance_data.get("balance", {}).get("amount", None)
+        current_balance = float(_amount) if _amount is not None else float(current_balance)
 
     return render_template(
         "reports/customer_detail.html",
@@ -3172,7 +3180,11 @@ def supplier_detail_report(supplier_id):
             )
         )
 
-    current_balance = balance_data.get('balance', {}).get('amount', 0) if balance_data.get('success') else float(supplier.balance or 0)
+    if balance_data.get('success'):
+        _amount = balance_data.get('balance', {}).get('amount', None)
+        current_balance = float(_amount) if _amount is not None else float(supplier.balance or 0)
+    else:
+        current_balance = float(supplier.balance or 0)
 
     supplier_breakdown = None
     try:
@@ -3180,7 +3192,8 @@ def supplier_detail_report(supplier_id):
     except Exception as exc:
         current_app.logger.warning("supplier_balance_breakdown_report_failed: %s", exc)
     if supplier_breakdown and supplier_breakdown.get("success"):
-        current_balance = float(supplier_breakdown.get("balance", {}).get("amount", current_balance))
+        _amount = supplier_breakdown.get("balance", {}).get("amount", None)
+        current_balance = float(_amount) if _amount is not None else float(current_balance)
 
     return render_template(
         "reports/supplier_detail.html",
@@ -3463,9 +3476,11 @@ def partner_detail_report(partner_id):
         current_app.logger.warning("partner_balance_breakdown_report_failed: %s", exc)
     current_balance = float(partner.balance or 0)
     if partner_breakdown and partner_breakdown.get("success"):
-        current_balance = float(partner_breakdown.get("balance", {}).get("amount", current_balance))
+        _amount = partner_breakdown.get("balance", {}).get("amount", None)
+        current_balance = float(_amount) if _amount is not None else float(current_balance)
     if isinstance(balance_data, dict) and balance_data.get("success"):
-        current_balance = float(balance_data.get("balance", {}).get("amount", current_balance))
+        _amount = balance_data.get("balance", {}).get("amount", None)
+        current_balance = float(_amount) if _amount is not None else float(current_balance)
 
     partner_share = (float(partner.share_percentage or 0) / 100) * (float(total_preorders) + float(total_service_parts)) if partner.share_percentage else 0
 

@@ -53,6 +53,10 @@ def login_alias():
 @main_bp.route("/", methods=["GET"], endpoint="dashboard")
 @login_required
 def dashboard():
+    try:
+        db.session.rollback()
+    except Exception:
+        pass
     today = date.today()
     start = today - timedelta(days=6)
     end = today
@@ -198,6 +202,11 @@ def dashboard():
             try:
                 srep = sales_report(start, end) or {}
             except Exception:
+                current_app.logger.warning('sales_report failed in dashboard', exc_info=True)
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
                 srep = {}
             cache.set(cache_key_srep, srep, timeout=300)
         else:

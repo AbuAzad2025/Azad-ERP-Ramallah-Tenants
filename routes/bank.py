@@ -72,7 +72,10 @@ def add_account():
             currency = request.form.get('currency', 'ILS')
             branch_id = request.form.get('branch_id', type=int)
             gl_account_code = request.form.get('gl_account_code')
-            opening_balance = Decimal(request.form.get('opening_balance', 0))
+            try:
+                opening_balance = Decimal(request.form.get('opening_balance') or 0)
+            except Exception:
+                opening_balance = Decimal(0)
             notes = request.form.get('notes', '')
             
             if BankAccount.query.filter_by(code=code).first():
@@ -493,10 +496,21 @@ def reconciliations():
 def new_reconciliation():
     if request.method == 'POST':
         try:
-            bank_account_id = int(request.form.get('bank_account_id'))
+            bank_account_id = request.form.get('bank_account_id', type=int)
+            if not bank_account_id:
+                flash('حساب البنك مطلوب', 'danger')
+                return redirect(request.url)
             period_start = datetime.strptime(request.form.get('period_start'), '%Y-%m-%d').date()
             period_end = datetime.strptime(request.form.get('period_end'), '%Y-%m-%d').date()
-            bank_balance = Decimal(request.form.get('bank_balance'))
+            bank_balance_raw = (request.form.get('bank_balance') or '').strip()
+            if not bank_balance_raw:
+                flash('رصيد البنك مطلوب', 'danger')
+                return redirect(request.url)
+            try:
+                bank_balance = Decimal(bank_balance_raw)
+            except Exception:
+                flash('قيمة رصيد البنك غير صالحة', 'danger')
+                return redirect(request.url)
             
             bank_account = db.get_or_404(BankAccount, bank_account_id)
             

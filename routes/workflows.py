@@ -27,13 +27,31 @@ def restrict_workflows_access():
 @login_required
 @permission_required(SystemPermissions.MANAGE_WORKFLOWS)
 def index():
+    try:
+        db.session.rollback()
+    except Exception:
+        pass
     stats = WorkflowEngine.get_workflow_stats()
-    
-    recent_instances = WorkflowInstance.query.order_by(
-        WorkflowInstance.started_at.desc()
-    ).limit(10).all()
-    
-    active_definitions = WorkflowDefinition.query.filter_by(is_active=True).all()
+    try:
+        recent_instances = WorkflowInstance.query.order_by(
+            WorkflowInstance.started_at.desc()
+        ).limit(10).all()
+    except Exception as exc:
+        current_app.logger.warning("workflows.index recent_instances failed: %s", exc)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        recent_instances = []
+    try:
+        active_definitions = WorkflowDefinition.query.filter_by(is_active=True).all()
+    except Exception as exc:
+        current_app.logger.warning("workflows.index definitions failed: %s", exc)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        active_definitions = []
     
     return render_template('workflows/index.html',
                          stats=stats,

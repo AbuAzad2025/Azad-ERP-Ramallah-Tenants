@@ -23,16 +23,19 @@ def advanced_dashboard():
     # 1. إحصائيات عامة
     projects = Project.query.all()
     total_projects = len(projects)
-    active_projects = sum(1 for p in projects if p.status in ['IN_PROGRESS', 'PLANNING'])
+    active_projects = sum(1 for p in projects if p.status in ('ACTIVE', 'PLANNED'))
     completed_projects = sum(1 for p in projects if p.status == 'COMPLETED')
     
     # حساب نسبة الإنجاز الكلية (متوسط نسب إنجاز المشاريع النشطة)
-    active_progress_sum = sum(float(p.completion_percentage or 0) for p in projects if p.status == 'IN_PROGRESS')
-    active_count = sum(1 for p in projects if p.status == 'IN_PROGRESS')
+    active_progress_sum = sum(float(p.completion_percentage or 0) for p in projects if p.status == 'ACTIVE')
+    active_count = sum(1 for p in projects if p.status == 'ACTIVE')
     avg_progress = (active_progress_sum / active_count) if active_count else 0
     
-    # 2. المخاطر
-    high_risks = ProjectRisk.query.filter(ProjectRisk.risk_level.in_(['CRITICAL', 'HIGH']), ProjectRisk.status != 'CLOSED').count()
+    # 2. المخاطر (risk_level hybrid — نستخدم risk_score في SQL)
+    high_risks = ProjectRisk.query.filter(
+        ProjectRisk.status != 'CLOSED',
+        ProjectRisk.risk_score >= 10,
+    ).count()
     
     # 3. الميزانية (تجاوز الميزانية)
     # مشروع يعتبر متجاوزاً إذا كانت التكلفة الفعلية > الميزانية
@@ -53,10 +56,15 @@ def advanced_dashboard():
         # تحديد حالة الخطر للمشروع (بناءً على المخاطر المفتوحة)
         project_risks = ProjectRisk.query.filter_by(project_id=p.id).all()
         risk_status = 'normal'
-        if any(r.risk_level == 'CRITICAL' and r.status != 'CLOSED' for r in project_risks):
-            risk_status = 'critical'
-        elif any(r.risk_level == 'HIGH' and r.status != 'CLOSED' for r in project_risks):
-            risk_status = 'high'
+        for r in project_risks:
+            if r.status == 'CLOSED':
+                continue
+            score = float(r.risk_score or 0)
+            if score >= 15:
+                risk_status = 'critical'
+                break
+            if score >= 10:
+                risk_status = 'high'
             
         # المدير
         manager_name = p.manager.username if p.manager else 'غير محدد'

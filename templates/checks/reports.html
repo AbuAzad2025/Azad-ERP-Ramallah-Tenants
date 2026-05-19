@@ -159,7 +159,8 @@ canvas {
                     <td class="text-success"><strong>{{ "%0.2f"|format(check.get('amount', 0)) }} ₪</strong></td>
                     <td>{{ check.get('due_date_formatted', check.get('check_due_date', '-')) }}</td>
                     <td>{{ check.get('entity_name', '-') }}</td>
-                    <td class="text-danger"><strong>{{ check.get('days_until_due', 0)|abs }} يوم</strong></td>
+                    {% set _days_until_due = check.get('days_until_due') or 0 %}
+                    <td class="text-danger"><strong>{{ _days_until_due|abs }} يوم</strong></td>
                     <td>
                       <span class="badge badge-secondary">{{ check.get('source', '-') }}</span>
                     </td>

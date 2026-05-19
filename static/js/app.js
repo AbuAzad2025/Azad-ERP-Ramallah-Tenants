@@ -528,13 +528,133 @@
       if ($el.data('search-initialized')) return;
       $el.data('search-initialized', true);
 
+      const target = $el.data('search');
+      const $container = $(`[data-search-target="${target}"]`);
+      const preventAutofill = $el.is('[data-search-autofill="off"]');
+      let armed = false;
+
+      if (preventAutofill) {
+        try { $el.prop('readonly', true); } catch (_) {}
+        setTimeout(() => {
+          try {
+            if (String($el.val() || '').trim()) {
+              $el.val('');
+              if ($container.length) {
+                $container.hide();
+                $container.empty();
+              }
+            }
+          } catch (_) {}
+        }, 50);
+      }
+
+      function unlockAndArm() {
+        if (!preventAutofill) {
+          armed = true;
+          return;
+        }
+        try {
+          if ($el.prop('readonly')) {
+            $el.prop('readonly', false);
+            if (String($el.val() || '').trim()) {
+              $el.val('');
+            }
+          }
+        } catch (_) {}
+        armed = true;
+      }
+
+      $el.on('mousedown touchstart keydown', function() {
+        unlockAndArm();
+      });
+
       $el.on('input', function() {
+        if (!armed) return;
         clearTimeout(searchTimeout);
         const $this = $(this);
         searchTimeout = setTimeout(() => {
           performSearch($this.val(), $this.data('search'));
         }, 300);
       });
+
+      $el.on('focus', function() {
+        if (preventAutofill && !armed) {
+          try {
+            if (String($el.val() || '').trim()) {
+              $el.val('');
+              if ($container.length) {
+                $container.hide();
+                $container.empty();
+              }
+            }
+          } catch (_) {}
+          return;
+        }
+        if ($container.length && $container.children().length) {
+          $container.show();
+        }
+      });
+
+      $el.on('blur', function() {
+        if (!$container.length) return;
+        setTimeout(() => $container.hide(), 200);
+      });
+
+      $el.on('keydown', function(e) {
+        if (!$container.length) return;
+        const key = e.key || '';
+        if (key === 'Escape') {
+          $container.hide();
+          return;
+        }
+        if (key === 'ArrowDown') {
+          const $first = $container.find('a.list-group-item-action').first();
+          if ($first.length) {
+            e.preventDefault();
+            $first.trigger('focus');
+          }
+          return;
+        }
+        if (key === 'ArrowUp') {
+          const $links = $container.find('a.list-group-item-action');
+          if ($links.length) {
+            e.preventDefault();
+            $links.last().trigger('focus');
+          }
+        }
+      });
+
+      if ($container.length && !$container.data('search-container-initialized')) {
+        $container.data('search-container-initialized', true);
+        $container.on('keydown', 'a.list-group-item-action', function(e) {
+          const key = e.key || '';
+          const $links = $container.find('a.list-group-item-action');
+          const idx = $links.index(this);
+          if (key === 'Escape') {
+            e.preventDefault();
+            $container.hide();
+            $el.trigger('focus');
+            return;
+          }
+          if (key === 'ArrowDown') {
+            e.preventDefault();
+            const $next = $links.eq(Math.min(idx + 1, $links.length - 1));
+            $next.trigger('focus');
+            return;
+          }
+          if (key === 'ArrowUp') {
+            e.preventDefault();
+            if (idx <= 0) {
+              $el.trigger('focus');
+              return;
+            }
+            $links.eq(idx - 1).trigger('focus');
+          }
+        });
+        $container.on('click', 'a.list-group-item-action', function() {
+          $container.hide();
+        });
+      }
     });
 
     // Auto-save forms
@@ -550,12 +670,19 @@
   }
 
   function performSearch(query, target) {
-    if (query.length < 2) return;
-    
+    const q = String(query || '');
     const $container = $(`[data-search-target="${target}"]`);
-    $container.html('<div class="text-center"><div class="spinner-border"></div></div>');
+    if (!$container.length) return;
+    if (q.length < 2) {
+      $container.hide();
+      $container.empty();
+      return;
+    }
     
-    $.get(`/api/search/${target}`, { q: query })
+    $container.show();
+    $container.html('<div class="list-group-item text-center"><div class="spinner-border spinner-border-sm" role="status"></div></div>');
+    
+    $.get(`/api/search/${target}`, { q })
       .done(data => {
         const sanitizeHtmlFragment = (raw) => {
           try {
@@ -585,11 +712,20 @@
         if (safeHtml) {
           $container.html(safeHtml);
         } else {
-          $container.text('لا توجد نتائج');
+          $container.html('<div class="list-group-item text-muted text-center py-3">لا توجد نتائج</div>');
         }
       })
-      .fail(() => {
-        $container.html('<div class="alert alert-danger">خطأ في البحث</div>');
+      .fail((xhr) => {
+        const status = xhr && typeof xhr.status === 'number' ? xhr.status : 0;
+        if (status === 401 || status === 403) {
+          $container.html('<div class="list-group-item text-muted text-center py-3">يجب تسجيل الدخول أو لا تملك صلاحية</div>');
+          return;
+        }
+        if (status === 404) {
+          $container.html('<div class="list-group-item text-danger text-center py-3">البحث غير متاح (404)</div>');
+          return;
+        }
+        $container.html('<div class="list-group-item text-danger text-center py-3">خطأ في البحث</div>');
       });
   }
 

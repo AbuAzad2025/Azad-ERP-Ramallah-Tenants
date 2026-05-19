@@ -660,7 +660,8 @@
             {% set model_name = default_model.name %}
             {% set model_data = model_statuses.get(model_name, {}) if model_statuses else {} %}
             {% set model_status = model_data.get('status', 'pending') %}
-            {% set model_accuracy = model_data.get('accuracy', 0) if model_data.get('accuracy', 0) > 0 else 85 %}
+            {% set _acc = model_data.get('accuracy') or 0 %}
+            {% set model_accuracy = _acc if _acc > 0 else 85 %}
             {% set last_trained = model_data.get('last_trained') %}
             
             {% if model_status == 'training' %}
@@ -1011,7 +1012,21 @@ const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
 // 🔄 TAB MANAGEMENT - إدارة التبويبات
 // ═══════════════════════════════════════════════════════════════════════════
 
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
+function initAiTabs() {
+  const allowedTabs = Array.from(document.querySelectorAll('.ai-tab-link'))
+    .map(el => String(el.dataset.tab || '').trim())
+    .filter(Boolean);
+
+  function normalizeTab(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (raw.startsWith('tab-')) return raw.slice(4);
+    if (raw.startsWith('#tab-')) return raw.slice(5);
+    if (raw.startsWith('#')) return raw.slice(1).replace(/^tab-/, '');
+    return raw.replace(/^tab-/, '');
+  }
+
   function switchTab(tabName) {
     document.querySelectorAll('.ai-tab-link').forEach(link => {
       link.classList.remove('active');
@@ -1036,6 +1051,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const newUrl = new URL(window.location);
     newUrl.searchParams.set('tab', tabName);
+    newUrl.hash = `#tab-${tabName}`;
     window.history.pushState({tab: tabName}, '', newUrl);
   }
   
@@ -1048,18 +1064,29 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
   const urlParams = new URLSearchParams(window.location.search);
-  let tab = urlParams.get('tab');
-  if (!tab || !['assistant', 'analytics', 'prediction', 'training', 'maps', 'config'].includes(tab)) {
-    tab = 'assistant';
+  let tab = normalizeTab(urlParams.get('tab'));
+  if (!tab) tab = normalizeTab(window.location.hash);
+  if (!tab || (allowedTabs.length && !allowedTabs.includes(tab))) {
+    tab = allowedTabs[0] || 'assistant';
   }
   switchTab(tab);
   
   window.addEventListener('popstate', function(e) {
     const urlParams = new URLSearchParams(window.location.search);
-    let tab = urlParams.get('tab') || 'assistant';
+    let tab = normalizeTab(urlParams.get('tab'));
+    if (!tab) tab = normalizeTab(window.location.hash);
+    if (!tab || (allowedTabs.length && !allowedTabs.includes(tab))) {
+      tab = allowedTabs[0] || 'assistant';
+    }
     switchTab(tab);
   });
-});
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initAiTabs);
+} else {
+  initAiTabs();
+}
+})();
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔔 AI ALERTS CONTROLS - التحكم بالتحذيرات
@@ -1234,7 +1261,7 @@ async function startBulkTraining() {
       
       updateTrainingUI(result.job_id);
     } else {
-      if(typeof showToast!=='undefined'){showToast('❌ فشل بدء التدريب: ' + (result.error || 'خطأ غير معروف', 'error');}else{alert('❌ فشل بدء التدريب: ' + (result.error || 'خطأ غير معروف');});
+      if (typeof showToast !== 'undefined') { showToast('❌ فشل بدء التدريب: ' + (result.error || 'خطأ غير معروف'), 'error'); } else { alert('❌ فشل بدء التدريب: ' + (result.error || 'خطأ غير معروف')); }
     }
   } catch (error) {
     console.error('Error starting training:', error);

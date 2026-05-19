@@ -182,17 +182,17 @@
       <div class="card-header bg-white border-bottom-0 pt-4 px-4">
           <ul class="nav nav-pills nav-fill" id="saasTabsList" role="tablist">
             <li class="nav-item" role="presentation">
-              <button class="nav-link active rounded-pill fw-bold" id="plans-tab" data-bs-toggle="tab" data-bs-target="#plans" type="button" role="tab">
+              <button class="nav-link active rounded-pill fw-bold" id="plans-tab" data-toggle="tab" data-target="#plans" type="button" role="tab">
                 <i class="fas fa-box me-2"></i> الباقات والخطط
               </button>
             </li>
             <li class="nav-item" role="presentation">
-              <button class="nav-link rounded-pill fw-bold" id="subscribers-tab" data-bs-toggle="tab" data-bs-target="#subscribers" type="button" role="tab">
+              <button class="nav-link rounded-pill fw-bold" id="subscribers-tab" data-toggle="tab" data-target="#subscribers" type="button" role="tab">
                 <i class="fas fa-users me-2"></i> المشتركين
               </button>
             </li>
             <li class="nav-item" role="presentation">
-              <button class="nav-link rounded-pill fw-bold" id="billing-tab" data-bs-toggle="tab" data-bs-target="#billing" type="button" role="tab">
+              <button class="nav-link rounded-pill fw-bold" id="billing-tab" data-toggle="tab" data-target="#billing" type="button" role="tab">
                 <i class="fas fa-file-invoice-dollar me-2"></i> الفواتير
               </button>
             </li>
@@ -206,7 +206,7 @@
             <div id="plans" class="tab-pane fade show active" role="tabpanel">
               <div class="d-flex justify-content-between align-items-center mb-4">
                 <h5 class="fw-bold text-dark mb-0">خطط الاشتراك المتاحة</h5>
-                <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#newPlanModal">
+                <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-toggle="modal" data-target="#newPlanModal">
                   <i class="fas fa-plus me-2"></i> إضافة باقة جديدة
                 </button>
               </div>
@@ -282,8 +282,8 @@
               <div class="d-flex justify-content-between align-items-center mb-4">
                 <h5 class="fw-bold text-dark mb-0">إدارة المشتركين</h5>
                 <div class="btn-group">
-                  <button class="btn btn-outline-dark rounded-pill me-2" onclick="if(typeof showToast!=='undefined') showToast('Coming Soon', 'info'); else alert('Coming Soon')"><i class="fas fa-filter me-2"></i> فلترة</button>
-                  <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#newSubscriberModal">
+                  <input type="text" id="subscriberFilter" class="form-control rounded-pill me-2" style="width:200px;display:inline-block;" placeholder="بحث في المشتركين..." onkeyup="filterSubscribersTable(this.value)">
+                  <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-toggle="modal" data-target="#newSubscriberModal">
                     <i class="fas fa-user-plus me-2"></i> مشترك جديد
                   </button>
                 </div>
@@ -1422,6 +1422,15 @@ function initCharts() {
       }
     });
   }
+}
+
+function filterSubscribersTable(query) {
+  const rows = document.querySelectorAll('#subscribers table tbody tr');
+  const q = query.trim().toLowerCase();
+  rows.forEach(row => {
+    const text = row.innerText.toLowerCase();
+    row.style.display = text.includes(q) ? '' : 'none';
+  });
 }
 </script>
 

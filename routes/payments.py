@@ -1637,6 +1637,25 @@ def create_payment():
                 created_by=getattr(current_user, "id", None),
             )
             _ensure_payment_number(payment)
+            
+            # Auto-link customer-level IN payments to open sales to keep balance_due accurate
+            if etype == "CUSTOMER" and direction_val == "IN" and final_customer_id:
+                open_sale = Sale.query.filter(
+                    Sale.customer_id == final_customer_id,
+                    Sale.balance_due > 0.01,
+                    Sale.is_archived == False,
+                ).order_by(Sale.sale_date.asc()).first()
+                
+                if open_sale:
+                    payment.sale_id = open_sale.id
+                    payment.customer_id = None
+                    payment.entity_type = 'SALE'
+                    flash(
+                        f"تم ربط الدفعة تلقائياً بمبيعة #{open_sale.sale_number} (المتبقي: {float(open_sale.balance_due):.2f} ₪). "
+                        f"سيتم تحديث المتبقي تلقائياً.",
+                        "info",
+                    )
+            
             db.session.add(payment)
             db.session.flush()
             

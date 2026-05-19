@@ -92,9 +92,18 @@ def add_project():
                 end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None
             except (ValueError, TypeError):
                 end_date = None
-            estimated_cost = Decimal(request.form.get('estimated_cost', 0))
-            estimated_revenue = Decimal(request.form.get('estimated_revenue', 0))
-            contract_value = Decimal(request.form.get('contract_value', 0))
+            try:
+                estimated_cost = Decimal(request.form.get('estimated_cost') or 0)
+            except (InvalidOperation, TypeError, ValueError):
+                estimated_cost = Decimal(0)
+            try:
+                estimated_revenue = Decimal(request.form.get('estimated_revenue') or 0)
+            except (InvalidOperation, TypeError, ValueError):
+                estimated_revenue = Decimal(0)
+            try:
+                contract_value = Decimal(request.form.get('contract_value') or 0)
+            except (InvalidOperation, TypeError, ValueError):
+                contract_value = Decimal(0)
             description = request.form.get('description', '')
             
             if Project.query.filter_by(code=code).first():
@@ -312,7 +321,15 @@ def add_cost(id):
     try:
         project = db.get_or_404(Project, id)
         
-        amount = Decimal(request.form.get('amount'))
+        amount_raw = (request.form.get('amount') or '').strip()
+        if not amount_raw:
+            flash('المبلغ مطلوب', 'danger')
+            return redirect(url_for('projects.view_project', id=id))
+        try:
+            amount = Decimal(amount_raw)
+        except (InvalidOperation, TypeError, ValueError):
+            flash('قيمة المبلغ غير صالحة', 'danger')
+            return redirect(url_for('projects.view_project', id=id))
         if amount < 0:
             flash('مبلغ التكلفة لا يمكن أن يكون سالباً', 'danger')
             return redirect(url_for('projects.view_project', id=id))
@@ -391,7 +408,15 @@ def add_revenue(id):
     try:
         project = db.get_or_404(Project, id)
         
-        amount = Decimal(request.form.get('amount'))
+        amount_raw = (request.form.get('amount') or '').strip()
+        if not amount_raw:
+            flash('المبلغ مطلوب', 'danger')
+            return redirect(url_for('projects.view_project', id=id))
+        try:
+            amount = Decimal(amount_raw)
+        except (InvalidOperation, TypeError, ValueError):
+            flash('قيمة المبلغ غير صالحة', 'danger')
+            return redirect(url_for('projects.view_project', id=id))
         if amount < 0:
             flash('مبلغ الإيراد لا يمكن أن يكون سالباً', 'danger')
             return redirect(url_for('projects.view_project', id=id))
