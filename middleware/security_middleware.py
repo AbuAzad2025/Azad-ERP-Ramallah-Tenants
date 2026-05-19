@@ -115,7 +115,10 @@ def check_ip_allowed(ip):
         enable_country_block = SystemSettings.get_setting('enable_country_blocking', False)
     except Exception as e:
         # Fallback if DB access fails
-        print(f"Middleware Security Check Failed: {e}")
+        try:
+            current_app.logger.error("Middleware Security Check Failed: %s", e)
+        except Exception:
+            logger.error("Middleware Security Check Failed: %s", e)
         return {'allowed': True, 'reason': 'Security check bypassed due to DB error'}
     
     if not any([enable_whitelist, enable_blacklist, enable_country_block]):

@@ -1682,11 +1682,9 @@ def bootstrap_database():
                 SystemSettings.set_setting(key, value, desc, data_type=dtype, is_public=False)
         
         db.session.commit()
-        print('Bootstrap & Validation completed successfully')
         current_app.logger.info('Bootstrap & Validation completed successfully')
         
     except Exception as e:
-        print(f'Bootstrap failed: {e}')
         current_app.logger.error(f'Bootstrap failed: {e}')
         db.session.rollback()
         # In production, we might want to exit here, but for resilience we log and continue

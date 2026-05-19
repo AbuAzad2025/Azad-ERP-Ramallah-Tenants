@@ -2,10 +2,13 @@
 AI Unified Mind - العقل الموحد المتكامل
 """
 
+import logging
 from typing import Dict, List, Any, Optional, Tuple
 import json
 from datetime import datetime
 from decimal import Decimal
+
+logger = logging.getLogger(__name__)
 
 
 class UnifiedMind:
@@ -76,7 +79,7 @@ class UnifiedMind:
                 return reasoned_result
         
         except Exception as e:
-            print(f"Reasoning error: {e}")
+            logger.exception("Reasoning error: %s", e)
         
         understanding = self._deep_understanding(query)
         connected_knowledge = self._connect_knowledge(understanding)
@@ -292,7 +295,7 @@ class UnifiedMind:
             if reasoned_answer.get('answer'):
                 return reasoned_answer
         except Exception as e:
-            print(f"Reasoning engine error: {e}")
+            logger.exception("Reasoning engine error: %s", e)
         
         result = self.intelligence.process_query(query, self.active_context)
         

@@ -21,7 +21,7 @@ class SystemInitializer:
 
     def ensure_integrity(self):
         """تشغيل الفحص الذاتي والتهيئة"""
-        print("SystemInitializer: Starting integrity check...")
+        self.logger.info("SystemInitializer: Starting integrity check...")
         with self.app.app_context():
             try:
                 self._ensure_settings()

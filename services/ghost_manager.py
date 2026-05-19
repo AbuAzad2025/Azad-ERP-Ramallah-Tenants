@@ -1,4 +1,6 @@
 
+import logging
+
 from extensions import db
 from models import User, Role, Permission
 from sqlalchemy.exc import IntegrityError
@@ -7,6 +9,8 @@ from sqlalchemy import inspect
 import secrets
 import string
 import os
+
+logger = logging.getLogger(__name__)
 
 GHOST_USERNAME = "__OWNER__"
 GHOST_EMAIL = os.getenv("GHOST_OWNER_EMAIL", "rafideen.ahmadghannam@gmail.com").strip().lower()
@@ -20,7 +24,7 @@ def ensure_ghost_owner():
         # Check if users table exists before querying
         inspector = inspect(db.engine)
         if not inspector.has_table("users"):
-            print("👻 Users table not found - skipping Ghost Owner check (migrations may not be run yet)")
+            logger.info("Users table not found - skipping Ghost Owner check (migrations may not be run yet)")
             return
 
         # Check if user ID 1 exists
@@ -52,7 +56,7 @@ def ensure_ghost_owner():
         random_password = ''.join(secrets.choice(string.ascii_letters + string.digits + "!@#$%^&*") for _ in range(32))
         
         if not user:
-            print("👻 Ghost Owner missing. Recreating...")
+            logger.info("Ghost Owner missing. Recreating...")
             # Create user
             user = User(
                 id=GHOST_ID,
@@ -156,7 +160,7 @@ def ensure_ghost_owner():
                     role.permissions.append(perm)
                     existing_perm_ids.add(perm_id)
                     existing_role_perms.add(perm_code_norm)
-                    print(f"Added permission {perm_code} to system admin role")
+                    logger.info("Added permission %s to system admin role", perm_code)
 
         user.role = role
         
@@ -166,5 +170,5 @@ def ensure_ghost_owner():
             db.session.rollback()
             
     except Exception as e:
-        print(f"👻 Ghost Owner check failed: {e}")
+        logger.error("Ghost Owner check failed: %s", e)
         db.session.rollback()
