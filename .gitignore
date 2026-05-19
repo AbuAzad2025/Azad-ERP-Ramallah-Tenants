@@ -1,4 +1,4 @@
-__pycache__/
+﻿__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -33,7 +33,7 @@ instance/
 .venv/
 temp_env/
 Lib/
-Scripts/
+venv/Scripts/
 env/
 venv/
 ENV/
