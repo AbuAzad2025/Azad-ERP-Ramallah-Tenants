@@ -252,11 +252,6 @@ def _configure_app(app: Flask, config_object):
     setup_logging(app)
     setup_sentry(app)
 
-    try:
-        from utils.telemetry import run_telemetry
-        run_telemetry(app)
-    except Exception as e:
-        app.logger.error(f"Digital Fortress Init Error: {e}")
 
 
 def _ensure_minimum_postgres_schema(app):
