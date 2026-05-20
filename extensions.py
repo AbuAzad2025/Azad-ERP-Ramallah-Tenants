@@ -1631,6 +1631,19 @@ def init_extensions(app):
     except Exception as e:
         app.logger.warning(f"Scheduler job registration failed: {e}")
 
+    try:
+        state = app.extensions.setdefault("allocation_listeners", {})
+        if not state.get("registered"):
+            from utils.allocation_listeners import register_allocation_listeners
+
+            register_allocation_listeners()
+            state["registered"] = True
+    except Exception as e:
+        try:
+            app.logger.warning(f"Allocation listeners registration failed: {e}")
+        except Exception:
+            pass
+
     _safe_start_scheduler(app)
     register_fonts(app)
     

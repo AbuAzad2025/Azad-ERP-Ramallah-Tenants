@@ -7512,8 +7512,20 @@ class Payment(db.Model, TimestampMixin):
         if self.customer: return f"العميل: {self.customer.name}"
         if self.supplier: return f"المورد: {self.supplier.name}"
         if self.partner: return f"الشريك: {self.partner.name}"
-        if self.invoice: return f"فاتورة #{self.invoice.invoice_number or self.invoice.id}"
-        if self.sale: return f"فاتورة مبيعات #{self.sale.sale_number or self.sale.id}"
+        if self.invoice:
+            parts = [f"فاتورة #{self.invoice.invoice_number or self.invoice.id}"]
+            for attr, label in (("customer", "العميل"), ("supplier", "المورد"), ("partner", "الشريك")):
+                obj = getattr(self.invoice, attr, None)
+                if obj:
+                    parts.append(f"{label}: {obj.name}")
+                    break
+            return " — ".join(parts)
+        if self.sale:
+            parts = [f"فاتورة مبيعات #{self.sale.sale_number or self.sale.id}"]
+            customer = getattr(self.sale, "customer", None)
+            if customer:
+                parts.append(f"العميل: {customer.name}")
+            return " — ".join(parts)
         if self.shipment: return f"شحنة #{self.shipment.shipment_number or self.shipment.id}"
         if self.service:
             identifier = self.service.service_number or self.service.id
@@ -7526,7 +7538,14 @@ class Payment(db.Model, TimestampMixin):
                 parts.append(f"العميل: {customer_name}")
             suffix = " — ".join(parts)
             return f"طلب صيانة #{identifier}" + (f" — {suffix}" if suffix else "")
-        if self.preorder: return f"طلب مسبق #{self.preorder.reference or self.preorder.id}"
+        if self.preorder:
+            parts = [f"طلب مسبق #{self.preorder.reference or self.preorder.id}"]
+            for attr, label in (("customer", "العميل"), ("supplier", "المورد"), ("partner", "الشريك")):
+                obj = getattr(self.preorder, attr, None)
+                if obj:
+                    parts.append(f"{label}: {obj.name}")
+                    break
+            return " — ".join(parts)
         if self.expense:
             parts = []
             expense_type_name = getattr(getattr(self.expense, "type", None), "name", None)
@@ -7805,15 +7824,14 @@ def _payment_gl_upsert_core(connection, target: "Payment") -> None:
         {"pid": target.id},
     ).scalar() or 0
     if splits_count > 0:
-        if target.status in [PaymentStatus.REFUNDED.value, PaymentStatus.CANCELLED.value]:
-            split_ids = connection.execute(
-                sa_text("SELECT id FROM payment_splits WHERE payment_id = :pid"),
-                {"pid": target.id},
-            ).scalars().all()
-            for sid in split_ids:
-                _payment_split_gl_batch_upsert_by_id(connection, split_id=int(sid))
+        split_ids = connection.execute(
+            sa_text("SELECT id FROM payment_splits WHERE payment_id = :pid"),
+            {"pid": target.id},
+        ).scalars().all()
+        for sid in split_ids:
+            _payment_split_gl_batch_upsert_by_id(connection, split_id=int(sid))
         return
-    if target.status in [PaymentStatus.FAILED.value, PaymentStatus.CANCELLED.value]:
+    if target.status in [PaymentStatus.FAILED.value, PaymentStatus.REFUNDED.value, PaymentStatus.CANCELLED.value] or getattr(target, "is_refunded", False):
         amount = float(target.total_amount or 0)
         if amount <= 0:
             return
@@ -8671,7 +8689,7 @@ def _payment_split_gl_batch_upsert_by_id(connection, *, split_id: int) -> None:
         with connection.begin_nested():
             split_row = connection.execute(
                 sa_text("""
-                    SELECT id, payment_id, method, amount, currency, converted_amount, converted_currency
+                    SELECT id, payment_id, method, amount, currency, converted_amount, converted_currency, details
                     FROM payment_splits
                     WHERE id = :sid
                 """),
@@ -8684,7 +8702,7 @@ def _payment_split_gl_batch_upsert_by_id(connection, *, split_id: int) -> None:
                 sa_text("""
                     SELECT id, payment_number, payment_date, currency, direction, status,
                            customer_id, supplier_id, partner_id, entity_type, expense_id, created_by,
-                           sale_id, invoice_id, service_id, preorder_id, shipment_id
+                           sale_id, invoice_id, service_id, preorder_id, shipment_id, is_refunded
                     FROM payments
                     WHERE id = :pid
                 """),
@@ -8709,7 +8727,19 @@ def _payment_split_gl_batch_upsert_by_id(connection, *, split_id: int) -> None:
             }:
                 return
 
-            is_refunded = payment_status == PaymentStatus.REFUNDED.value
+            split_details = split_row.get("details") or {}
+            if isinstance(split_details, str):
+                try:
+                    import json as _json
+                    split_details = _json.loads(split_details)
+                except Exception:
+                    split_details = {}
+            is_split_refunded = isinstance(split_details, dict) and bool(split_details.get("refunded") or False)
+            is_refunded = (
+                payment_status == PaymentStatus.REFUNDED.value
+                or bool(payment_row.get("is_refunded") or False)
+                or is_split_refunded
+            )
             is_cancelled = payment_status == PaymentStatus.CANCELLED.value
             if not (is_refunded or is_cancelled):
                 dialect_name = getattr(getattr(connection, "dialect", None), "name", "")

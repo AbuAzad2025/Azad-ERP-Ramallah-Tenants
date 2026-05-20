@@ -204,13 +204,20 @@ document.addEventListener('DOMContentLoaded', function() {
           sumILS: data.totals?.page_sum_ils || 0
         };
         _lastList = list.slice();
-        renderPaymentsTable(_lastList);
+        try {
+          renderPaymentsTable(_lastList);
+        } catch (renderErr) {
+          console.error('renderPaymentsTable error:', renderErr);
+          renderPaymentsTable([]);
+        }
         renderPagination(Number(data.total_pages || 1), Number(data.current_page || 1));
         renderTotals(data.totals || null);
         const searchSummaryEl = document.getElementById('payments-search-summary');
         if (searchSummaryEl) searchSummaryEl.textContent = 'إجمالي النتائج: ' + (data.total_items || 0);
         const totalCountEl = document.getElementById('payments-total-count');
         if (totalCountEl) totalCountEl.textContent = data.total_items || 0;
+        const card = document.getElementById('paymentsCard');
+        if (card) card.style.display = '';
       })
       .catch(function (err) {
         if (err && err.name === 'AbortError') return;
@@ -293,13 +300,13 @@ document.addEventListener('DOMContentLoaded', function() {
           viewLink = '/checks/detail/' + safePath(cid);
         }
       }
-      var actionsHtml = '<div class="btn-group btn-group-sm" role="group">' +
-        '<a href="' + viewLink + '" class="btn btn-info">عرض</a>';
+      var actionsHtml = '<div class="btn-group btn-group-xs action-btns" role="group">' +
+        '<a href="' + viewLink + '" class="btn btn-info rounded-start-pill" title="عرض"><i class="fas fa-eye"></i></a>';
       
       if (p.is_archived) {
-          actionsHtml += '<button type="button" class="btn btn-success btn-restore" data-id="' + sanitizeAttr(p.id) + '" title="استعادة الدفعة">استعادة</button>';
+          actionsHtml += '<button type="button" class="btn btn-success btn-restore" data-id="' + sanitizeAttr(p.id) + '" title="استعادة"><i class="fas fa-undo"></i></button>';
       } else {
-          actionsHtml += '<button type="button" class="btn btn-warning btn-archive" data-id="' + sanitizeAttr(p.id) + '" title="أرشفة الدفعة">أرشفة</button>';
+          actionsHtml += '<button type="button" class="btn btn-warning btn-archive" data-id="' + sanitizeAttr(p.id) + '" title="أرشفة"><i class="fas fa-archive"></i></button>';
       }
 
       var st = String(p.status || '').toUpperCase();
@@ -321,16 +328,16 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!isManualCheck) {
         var receiptPaymentId = isSplit ? paymentId : (typeof p.id === 'number' ? p.id : null);
         if (receiptPaymentId) {
-          actionsHtml += '<a href="/payments/' + receiptPaymentId + '/receipt" target="_blank" class="btn btn-secondary" title="طباعة إيصال"><i class="fas fa-receipt"></i> إيصال</a>';
+          actionsHtml += '<a href="/payments/' + receiptPaymentId + '/receipt" target="_blank" class="btn btn-secondary" title="إيصال"><i class="fas fa-receipt"></i></a>';
         }
         if (isSplit) {
           var refundedFlag = (typeof p.is_refunded_split === 'boolean') ? p.is_refunded_split : false;
           if (!refundedFlag && (st === 'COMPLETED' || st === 'CASHED')) {
-            actionsHtml += '<button type="button" class="btn btn-warning btn-refund" data-split-id="' + splitId + '" data-split-refunded="false" title="إرجاع الجزء"><i class="fas fa-undo"></i> إرجاع</button>';
+            actionsHtml += '<button type="button" class="btn btn-warning btn-refund rounded-end-pill" data-split-id="' + splitId + '" data-split-refunded="false" title="إرجاع"><i class="fas fa-undo"></i></button>';
           }
         } else {
           if (st === 'COMPLETED') {
-            actionsHtml += '<button type="button" class="btn btn-warning btn-refund" data-payment-id="' + (p.id || '') + '" data-status="COMPLETED" title="إرجاع الدفعة"><i class="fas fa-undo"></i> إرجاع</button>';
+            actionsHtml += '<button type="button" class="btn btn-warning btn-refund rounded-end-pill" data-payment-id="' + (p.id || '') + '" data-status="COMPLETED" title="إرجاع"><i class="fas fa-undo"></i></button>';
           }
         }
       }
@@ -341,10 +348,14 @@ document.addEventListener('DOMContentLoaded', function() {
       let fxRateDisplay = '-';
       
       if (p.currency && p.currency !== 'ILS') {
-        if (p.fx_rate_used && parseFloat(p.fx_rate_used) > 0) {
-          fxRateDisplay = FXUtils.formatFxRate(parseFloat(p.fx_rate_used), p.fx_rate_source);
+        if (typeof FXUtils !== 'undefined' && FXUtils.formatFxRate) {
+          if (p.fx_rate_used && parseFloat(p.fx_rate_used) > 0) {
+            fxRateDisplay = FXUtils.formatFxRate(parseFloat(p.fx_rate_used), p.fx_rate_source);
+          } else {
+            fxRateDisplay = FXUtils.formatFxRate(1, 'default');
+          }
         } else {
-          fxRateDisplay = FXUtils.formatFxRate(1, 'default');
+          fxRateDisplay = String(p.fx_rate_used || '1');
         }
       }
       const amountNumeric = Number(p.total_amount || 0);
@@ -370,25 +381,26 @@ document.addEventListener('DOMContentLoaded', function() {
       
       tr.innerHTML =
         '<td class="text-center" data-sort-value="' + sanitizeAttr(p.id || 0) + '"><strong>' + sanitize(p.id) + '</strong></td>' +
-        '<td data-sort-value="' + (p.payment_date || '') + '">' + dateOnly + '</td>' +
+        '<td class="text-center" data-sort-value="' + (p.payment_date || '') + '">' + dateOnly + '</td>' +
         '<td class="text-end" data-sort-value="' + (amountNumeric || 0) + '"><strong>' + fmtAmount(p.total_amount) + '</strong></td>' +
         '<td class="text-center"><span class="badge badge-secondary">' + sanitize(p.currency || '') + '</span></td>' +
         '<td class="text-center"><small>' + fxRateDisplay + '</small></td>' +
         '<td class="text-end" data-sort-value="' + (amountIlsNumeric || 0) + '"><strong style="color: #0056b3;">' + fmtAmount(amountInILS) + ' ₪</strong></td>' +
-        '<td>' + (p.is_manual_check ? '<span class="badge bg-warning text-dark"><i class="fas fa-file-invoice"></i> شيك يدوي</span>' : (splitsHtml || '<span class="badge badge-info">' + sanitize(p.method || '') + '</span>')) + '</td>' +
+        '<td class="text-center">' + (p.is_manual_check ? '<span class="badge bg-warning text-dark"><i class="fas fa-file-invoice"></i> شيك يدوي</span>' : (splitsHtml || '<span class="badge badge-info">' + sanitize(p.method || '') + '</span>')) + '</td>' +
         '<td class="text-center">' + badgeForDirection(p.direction) + '</td>' +
         '<td class="text-center">' + badgeForStatus(p.status) + '</td>' +
+        '<td>' + entityDetails + '</td>' +
         '<td>' + delivererText + '</td>' +
         '<td>' + receiverText + '</td>' +
-        '<td>' + entityDetails + notesHtml + '</td>' +
-        '<td>' + actionsHtml + '</td>';
+        '<td>' + notesHtml + '</td>' +
+        '<td class="text-center">' + actionsHtml + '</td>';
       tbody.appendChild(tr);
     });
     const totalsSource = _currentPageSum || { sum: sumAmount, sumILS: sumAmountIls };
     const totalsLabel = 'إجمالي الصفحة';
     const totalRow = document.createElement('tr');
     totalRow.dataset.sortFixed = 'true';
-    totalRow.innerHTML = '<td></td><td class="text-end fw-bold">' + totalsLabel + '</td><td class="fw-bold">' + fmtAmount(totalsSource.sum) + '</td><td></td><td></td><td class="fw-bold" style="color: #0056b3;">' + fmtAmount(totalsSource.sumILS) + ' ₪</td><td colspan="7"></td>';
+    totalRow.innerHTML = '<td></td><td class="text-end fw-bold">' + totalsLabel + '</td><td class="fw-bold">' + fmtAmount(totalsSource.sum) + '</td><td></td><td></td><td class="fw-bold" style="color: #0056b3;">' + fmtAmount(totalsSource.sumILS) + ' ₪</td><td colspan="8"></td>';
     tbody.appendChild(totalRow);
   }
   
@@ -422,7 +434,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadPayments();
         if(typeof showToast!=='undefined'){showToast('تم أرشفة سند الدفع بنجاح', 'success');}else{alert('تم أرشفة سند الدفع بنجاح');};
       } else {
-        if(typeof showToast!=='undefined'){showToast('تعذر الأرشفة: ' + (j.message || 'خطأ غير معروف', 'error');}else{alert('تعذر الأرشفة: ' + (j.message || 'خطأ غير معروف');});
+        if(typeof showToast!=='undefined'){showToast('تعذر الأرشفة: ' + (j.message || 'خطأ غير معروف'), 'error');}else{alert('تعذر الأرشفة: ' + (j.message || 'خطأ غير معروف'));};
       }
     } catch (err) {
       if(typeof showToast!=='undefined'){showToast('خطأ في الاتصال بالخادم.', 'error');}else{alert('خطأ في الاتصال بالخادم.');};
@@ -454,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadPayments();
         if(typeof showToast!=='undefined'){showToast('تم استعادة سند الدفع بنجاح', 'success');}else{alert('تم استعادة سند الدفع بنجاح');};
       } else {
-        if(typeof showToast!=='undefined'){showToast('تعذر الاستعادة: ' + (j.message || 'خطأ غير معروف', 'error');}else{alert('تعذر الاستعادة: ' + (j.message || 'خطأ غير معروف');});
+        if(typeof showToast!=='undefined'){showToast('تعذر الاستعادة: ' + (j.message || 'خطأ غير معروف'), 'error');}else{alert('تعذر الاستعادة: ' + (j.message || 'خطأ غير معروف'));};
       }
     } catch (err) {
       if(typeof showToast!=='undefined'){showToast('خطأ في الاتصال بالخادم.', 'error');}else{alert('خطأ في الاتصال بالخادم.');};
@@ -489,7 +501,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if(typeof showToast!=='undefined'){showToast('تم تنفيذ الإرجاع بنجاح: تم إنشاء سند عكسي وتحديث دفتر الأستاذ', 'success');}else{alert('تم تنفيذ الإرجاع بنجاح: تم إنشاء سند عكسي وتحديث دفتر الأستاذ');};
         loadPayments(1);
       } else {
-        if(typeof showToast!=='undefined'){showToast('تعذر الإرجاع محاسبياً: ' + (j.message || 'العملية غير منطقية أو غير متاحة', 'success');}else{alert('تعذر الإرجاع محاسبياً: ' + (j.message || 'العملية غير منطقية أو غير متاحة');});
+        if(typeof showToast!=='undefined'){showToast('تعذر الإرجاع محاسبياً: ' + (j.message || 'العملية غير منطقية أو غير متاحة'), 'error');}else{alert('تعذر الإرجاع محاسبياً: ' + (j.message || 'العملية غير منطقية أو غير متاحة'));};
       }
     } catch (err) {
       if(typeof showToast!=='undefined'){showToast('خطأ في الاتصال بالخادم.', 'error');}else{alert('خطأ في الاتصال بالخادم.');};

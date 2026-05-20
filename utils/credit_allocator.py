@@ -7,14 +7,22 @@ from extensions import db
 from models import (
     Customer,
     Invoice,
+    Partner,
+    PartnerSettlement,
+    PartnerSettlementStatus,
     Payment,
     PaymentDirection,
+    PaymentEntityType,
     PaymentMethod,
     PaymentSplit,
     PaymentStatus,
     PreOrder,
     Sale,
     ServiceRequest,
+    Supplier,
+    SupplierLoanSettlement,
+    SupplierSettlement,
+    SupplierSettlementStatus,
     run_payment_gl_sync_after_commit,
 )
 from utils import q0
@@ -40,7 +48,16 @@ def _has_check_like(payment: Payment) -> bool:
     try:
         rc = getattr(payment, "related_check", None)
         if rc is not None:
-            return True
+            try:
+                if hasattr(rc, "__len__") and len(rc) > 0:
+                    return True
+            except Exception:
+                try:
+                    first = rc.first()
+                    if first is not None:
+                        return True
+                except Exception:
+                    pass
     except Exception:
         pass
     try:
@@ -53,6 +70,73 @@ def _has_check_like(payment: Payment) -> bool:
     except Exception:
         pass
     return False
+
+
+def _is_check_cashed(payment: Payment) -> bool:
+    if not _has_check_like(payment):
+        return True
+    try:
+        rc = getattr(payment, "related_check", None)
+        checks = []
+        if rc is None:
+            checks = []
+        elif isinstance(rc, (list, tuple)):
+            checks = list(rc)
+        else:
+            try:
+                checks = list(rc)
+            except Exception:
+                try:
+                    checks = list(rc.all())
+                except Exception:
+                    try:
+                        first = rc.first()
+                        checks = [first] if first is not None else []
+                    except Exception:
+                        checks = []
+        if not checks:
+            return False
+        for ch in checks:
+            st = str(getattr(ch, "status", "") or "").upper()
+            if st != "CASHED":
+                return False
+        return True
+    except Exception:
+        return False
+
+
+def _convert_amount_or_none(amount, from_code: str | None, to_code: str | None, at: datetime | None) -> Decimal | None:
+    f = (from_code or "").upper()
+    t = (to_code or "").upper()
+    if not f or not t:
+        return None
+    if f == t:
+        return q0(_dec(amount))
+    try:
+        from models import convert_amount
+
+        try:
+            return q0(_dec(convert_amount(q0(_dec(amount)), f, t, at)))
+        except Exception:
+            if at is None:
+                return None
+            return q0(_dec(convert_amount(q0(_dec(amount)), f, t, datetime.now(timezone.utc))))
+    except Exception:
+        return None
+
+
+def _to_ils(amount, currency: str | None, at: datetime | None) -> Decimal | None:
+    c = (currency or "ILS").upper()
+    if c == "ILS":
+        return q0(_dec(amount))
+    return _convert_amount_or_none(amount, c, "ILS", at)
+
+
+def _from_ils(amount_ils, currency: str | None, at: datetime | None) -> Decimal | None:
+    c = (currency or "ILS").upper()
+    if c == "ILS":
+        return q0(_dec(amount_ils))
+    return _convert_amount_or_none(amount_ils, "ILS", c, at)
 
 
 def _ensure_default_split(payment: Payment) -> None:
@@ -78,10 +162,84 @@ def _split_payment_amount(payment: Payment, keep_amount: Decimal) -> Payment | N
     if _has_check_like(payment):
         return None
 
+    et_raw = getattr(payment, "entity_type", None)
+    et_val = getattr(et_raw, "value", et_raw)
+    et = str(et_val or "").upper()
+
+    rem_entity_type = et_val or "CUSTOMER"
+    rem_customer_id = getattr(payment, "customer_id", None)
+    rem_supplier_id = getattr(payment, "supplier_id", None)
+    rem_partner_id = getattr(payment, "partner_id", None)
+
+    if et in ("SALE", "INVOICE", "SERVICE", "PREORDER"):
+        cid = None
+        try:
+            if getattr(payment, "sale_id", None):
+                cid = getattr(getattr(payment, "sale", None), "customer_id", None)
+            elif getattr(payment, "invoice_id", None):
+                cid = getattr(getattr(payment, "invoice", None), "customer_id", None)
+            elif getattr(payment, "service_id", None):
+                cid = getattr(getattr(payment, "service", None), "customer_id", None)
+            elif getattr(payment, "preorder_id", None):
+                cid = getattr(getattr(payment, "preorder", None), "customer_id", None)
+        except Exception:
+            cid = None
+        rem_entity_type = PaymentEntityType.CUSTOMER.value
+        rem_customer_id = cid
+        rem_supplier_id = None
+        rem_partner_id = None
+
+    elif et == "LOAN":
+        sid = None
+        try:
+            if getattr(payment, "loan_settlement_id", None):
+                sid = getattr(getattr(payment, "loan_settlement", None), "supplier_id", None)
+        except Exception:
+            sid = None
+        rem_entity_type = PaymentEntityType.SUPPLIER.value
+        rem_supplier_id = sid
+        rem_customer_id = None
+        rem_partner_id = None
+
+    elif et == "EXPENSE":
+        cid = None
+        sid = None
+        pid = None
+        try:
+            exp = getattr(payment, "expense", None)
+            if exp is not None:
+                cid = getattr(exp, "customer_id", None)
+                sid = getattr(exp, "supplier_id", None)
+                pid = getattr(exp, "partner_id", None)
+        except Exception:
+            pass
+        if cid:
+            rem_entity_type = PaymentEntityType.CUSTOMER.value
+            rem_customer_id = cid
+            rem_supplier_id = None
+            rem_partner_id = None
+        elif sid:
+            rem_entity_type = PaymentEntityType.SUPPLIER.value
+            rem_supplier_id = sid
+            rem_customer_id = None
+            rem_partner_id = None
+        elif pid:
+            rem_entity_type = PaymentEntityType.PARTNER.value
+            rem_partner_id = pid
+            rem_customer_id = None
+            rem_supplier_id = None
+        else:
+            rem_entity_type = PaymentEntityType.OTHER.value
+            rem_customer_id = None
+            rem_supplier_id = None
+            rem_partner_id = None
+
     remainder_amount = q0(total - keep)
     remainder = Payment(
-        entity_type="CUSTOMER",
-        customer_id=payment.customer_id,
+        entity_type=rem_entity_type,
+        customer_id=rem_customer_id,
+        supplier_id=rem_supplier_id,
+        partner_id=rem_partner_id,
         direction=payment.direction,
         status=payment.status,
         payment_date=payment.payment_date,
@@ -155,7 +313,7 @@ def _open_customer_obligations(customer_id: int):
         )
         for r in rows:
             dtv = getattr(r, "received_at", None) or getattr(r, "created_at", None)
-            obligations.append(("SERVICE", dtv, r.id, q0(_dec(getattr(r, "balance_due", 0)))))
+            obligations.append(("SERVICE", dtv, r.id, q0(_dec(getattr(r, "balance_due", 0))), (getattr(r, "currency", None) or "ILS").upper()))
     except Exception:
         pass
 
@@ -171,7 +329,7 @@ def _open_customer_obligations(customer_id: int):
         )
         for r in rows:
             dtv = getattr(r, "preorder_date", None) or getattr(r, "created_at", None)
-            obligations.append(("PREORDER", dtv, r.id, q0(_dec(getattr(r, "balance_due", 0)))))
+            obligations.append(("PREORDER", dtv, r.id, q0(_dec(getattr(r, "balance_due", 0))), (getattr(r, "currency", None) or "ILS").upper()))
     except Exception:
         pass
 
@@ -188,7 +346,7 @@ def _open_customer_obligations(customer_id: int):
         )
         for r in rows:
             dtv = getattr(r, "sale_date", None)
-            obligations.append(("SALE", dtv, r.id, q0(_dec(getattr(r, "balance_due", 0)))))
+            obligations.append(("SALE", dtv, r.id, q0(_dec(getattr(r, "balance_due", 0))), (getattr(r, "currency", None) or "ILS").upper()))
     except Exception:
         pass
 
@@ -208,7 +366,7 @@ def _open_customer_obligations(customer_id: int):
         for r in rows:
             dtv = getattr(r, "invoice_date", None)
             due = q0(_dec(getattr(r, "total_amount", 0)) - _dec(getattr(r, "total_paid", 0)))
-            obligations.append(("INVOICE", dtv, r.id, due))
+            obligations.append(("INVOICE", dtv, r.id, due, (getattr(r, "currency", None) or "ILS").upper()))
     except Exception:
         pass
 
@@ -231,7 +389,9 @@ def apply_customer_credit_to_obligations(customer_id: int, *, created_by: int | 
     if not obligations:
         return []
 
-    credit_payments = (
+    credit_payments: list[Payment] = []
+
+    credit_payments.extend(
         Payment.query.filter(
             Payment.customer_id == int(customer_id),
             Payment.direction == PaymentDirection.IN.value,
@@ -251,7 +411,55 @@ def apply_customer_credit_to_obligations(customer_id: int, *, created_by: int | 
         .all()
     )
 
+    credit_payments.extend(
+        Payment.query.join(Supplier, Supplier.id == Payment.supplier_id)
+        .filter(
+            Supplier.customer_id == int(customer_id),
+            Payment.customer_id.is_(None),
+            Payment.direction == PaymentDirection.IN.value,
+            Payment.status == PaymentStatus.COMPLETED.value,
+            Payment.sale_id.is_(None),
+            Payment.invoice_id.is_(None),
+            Payment.service_id.is_(None),
+            Payment.preorder_id.is_(None),
+            Payment.expense_id.is_(None),
+            Payment.shipment_id.is_(None),
+            Payment.partner_id.is_(None),
+            Payment.loan_settlement_id.is_(None),
+            Payment.is_archived == False,
+        )
+        .order_by(Payment.payment_date.asc(), Payment.id.asc())
+        .all()
+    )
+
+    credit_payments.extend(
+        Payment.query.join(Partner, Partner.id == Payment.partner_id)
+        .filter(
+            Partner.customer_id == int(customer_id),
+            Payment.customer_id.is_(None),
+            Payment.direction == PaymentDirection.IN.value,
+            Payment.status == PaymentStatus.COMPLETED.value,
+            Payment.sale_id.is_(None),
+            Payment.invoice_id.is_(None),
+            Payment.service_id.is_(None),
+            Payment.preorder_id.is_(None),
+            Payment.expense_id.is_(None),
+            Payment.shipment_id.is_(None),
+            Payment.supplier_id.is_(None),
+            Payment.loan_settlement_id.is_(None),
+            Payment.is_archived == False,
+        )
+        .order_by(Payment.payment_date.asc(), Payment.id.asc())
+        .all()
+    )
+
+    credit_payments.sort(key=lambda p: (getattr(p, "payment_date", None) or datetime.min.replace(tzinfo=None), int(getattr(p, "id", 0) or 0)))
+    credit_payments = [p for p in credit_payments if _is_check_cashed(p)]
+
     def _assign_payment(p: Payment, kind: str, oid: int):
+        p.customer_id = None
+        p.supplier_id = None
+        p.partner_id = None
         if kind == "SALE":
             p.sale_id = oid
             p.entity_type = "SALE"
@@ -264,36 +472,45 @@ def apply_customer_credit_to_obligations(customer_id: int, *, created_by: int | 
         else:
             p.invoice_id = oid
             p.entity_type = "INVOICE"
-        p.customer_id = None
         db.session.add(p)
 
-    for kind, _dtv, oid, due in obligations:
-        remaining_due = q0(_dec(due))
-        while remaining_due > 0 and credit_payments:
+    for kind, odt, oid, due, ocur in obligations:
+        remaining_due_ils = _to_ils(due, ocur, odt) or Decimal("0")
+        while remaining_due_ils > Decimal("0.01") and credit_payments:
             p = credit_payments[0]
             amt = q0(_dec(p.total_amount))
             if amt <= 0:
                 credit_payments.pop(0)
                 continue
-            if amt <= remaining_due + Decimal("0.0001"):
+            pay_ils = _to_ils(amt, getattr(p, "currency", None), getattr(p, "payment_date", None))
+            if pay_ils is None or pay_ils <= 0:
+                credit_payments.pop(0)
+                continue
+            if pay_ils <= remaining_due_ils + Decimal("0.0001"):
                 _assign_payment(p, kind, int(oid))
                 touched_payment_ids.append(int(p.id))
                 credit_payments.pop(0)
-                remaining_due = q0(remaining_due - amt)
+                remaining_due_ils = q0(remaining_due_ils - pay_ils)
                 continue
 
-            remainder = _split_payment_amount(p, remaining_due)
+            if _has_check_like(p):
+                break
+
+            keep_amt = _from_ils(remaining_due_ils, getattr(p, "currency", None), getattr(p, "payment_date", None))
+            if keep_amt is None:
+                break
+            remainder = _split_payment_amount(p, keep_amt)
             _assign_payment(p, kind, int(oid))
             touched_payment_ids.append(int(p.id))
             if remainder is not None:
                 credit_payments[0] = remainder
             else:
                 credit_payments.pop(0)
-            remaining_due = Decimal("0")
+            remaining_due_ils = Decimal("0")
 
     opening_credit = q0(_dec(getattr(customer, "opening_balance", 0)))
     if opening_credit > 0 and (getattr(customer, "currency", "ILS") or "ILS").upper() == "ILS":
-        for kind, _dtv, oid, due in obligations:
+        for kind, _dtv, oid, due, _cur in obligations:
             if opening_credit <= 0:
                 break
             need = q0(_dec(due))
@@ -351,4 +568,403 @@ def apply_customer_credit_to_obligations(customer_id: int, *, created_by: int | 
             run_payment_gl_sync_after_commit(int(pid))
         except Exception:
             pass
+    return touched_payment_ids
+
+
+def apply_supplier_out_payments_to_obligations(supplier_id: int) -> list[int]:
+    if not supplier_id:
+        return []
+
+    touched_payment_ids: list[int] = []
+
+    payments = (
+        Payment.query.filter(
+            Payment.supplier_id == int(supplier_id),
+            Payment.direction == PaymentDirection.OUT.value,
+            Payment.status == PaymentStatus.COMPLETED.value,
+            Payment.customer_id.is_(None),
+            Payment.partner_id.is_(None),
+            Payment.shipment_id.is_(None),
+            Payment.sale_id.is_(None),
+            Payment.invoice_id.is_(None),
+            Payment.preorder_id.is_(None),
+            Payment.service_id.is_(None),
+            Payment.expense_id.is_(None),
+            Payment.loan_settlement_id.is_(None),
+            Payment.is_archived == False,
+        )
+        .order_by(Payment.payment_date.asc(), Payment.id.asc())
+        .all()
+    )
+    payments = [p for p in payments if _is_check_cashed(p)]
+
+    def _ref_is_settlement(p: Payment) -> bool:
+        r = str(getattr(p, "reference", "") or "")
+        return r.startswith("SupplierSettle:")
+
+    payments = [p for p in payments if not _ref_is_settlement(p)]
+    if not payments:
+        return []
+
+    settlements = (
+        SupplierSettlement.query.filter(
+            SupplierSettlement.supplier_id == int(supplier_id),
+            SupplierSettlement.status == SupplierSettlementStatus.CONFIRMED.value,
+        )
+        .order_by(SupplierSettlement.from_date.asc(), SupplierSettlement.id.asc())
+        .all()
+    )
+
+    def _settlement_remaining(s: SupplierSettlement) -> Decimal:
+        try:
+            due = q0(_dec(getattr(s, "total_due", 0)))
+            paid = q0(_dec(getattr(s, "total_paid", 0)))
+            return q0(due - paid)
+        except Exception:
+            return Decimal("0")
+
+    def _assign_to_settlement(p: Payment, s: SupplierSettlement) -> None:
+        p.entity_type = PaymentEntityType.SUPPLIER.value
+        p.reference = f"SupplierSettle:{getattr(s, 'code', '')}"
+        db.session.add(p)
+
+    for s in settlements:
+        remaining_due_cur = _settlement_remaining(s)
+        if remaining_due_cur <= Decimal("0.01"):
+            continue
+        settlement_currency = (getattr(s, "currency", None) or "ILS").upper()
+        remaining_due_ils = _to_ils(remaining_due_cur, settlement_currency, getattr(s, "created_at", None)) or Decimal("0")
+        if remaining_due_ils <= Decimal("0.01"):
+            continue
+
+        while remaining_due_ils > Decimal("0.01") and payments:
+            p = payments[0]
+            amt = q0(_dec(p.total_amount))
+            if amt <= 0:
+                payments.pop(0)
+                continue
+            pay_ils = _to_ils(amt, getattr(p, "currency", None), getattr(p, "payment_date", None))
+            if pay_ils is None or pay_ils <= 0:
+                payments.pop(0)
+                continue
+            if pay_ils <= remaining_due_ils + Decimal("0.0001"):
+                _assign_to_settlement(p, s)
+                touched_payment_ids.append(int(p.id))
+                payments.pop(0)
+                remaining_due_ils = q0(remaining_due_ils - pay_ils)
+                continue
+
+            if _has_check_like(p):
+                break
+            keep_amt = _from_ils(remaining_due_ils, getattr(p, "currency", None), getattr(p, "payment_date", None))
+            if keep_amt is None:
+                break
+            remainder = _split_payment_amount(p, keep_amt)
+            _assign_to_settlement(p, s)
+            touched_payment_ids.append(int(p.id))
+            if remainder is not None:
+                payments[0] = remainder
+            else:
+                payments.pop(0)
+            remaining_due_ils = Decimal("0")
+
+    loan_settlements = (
+        SupplierLoanSettlement.query.filter(
+            SupplierLoanSettlement.supplier_id == int(supplier_id),
+        )
+        .order_by(SupplierLoanSettlement.settlement_date.asc(), SupplierLoanSettlement.id.asc())
+        .all()
+    )
+    if payments and loan_settlements:
+        existing_linked_ids = {
+            int(pid)
+            for (pid,) in db.session.query(Payment.loan_settlement_id)
+            .join(SupplierLoanSettlement, SupplierLoanSettlement.id == Payment.loan_settlement_id)
+            .filter(
+                SupplierLoanSettlement.supplier_id == int(supplier_id),
+                Payment.loan_settlement_id.isnot(None),
+                Payment.is_archived == False,
+            )
+            .distinct()
+            .all()
+            if pid is not None
+        }
+
+        for ls in loan_settlements:
+            if not payments:
+                break
+            lsid = int(getattr(ls, "id", 0) or 0)
+            if not lsid or lsid in existing_linked_ids:
+                continue
+            remaining_due_cur = q0(_dec(getattr(ls, "settled_price", 0)))
+            if remaining_due_cur <= Decimal("0.01"):
+                continue
+            loan_currency = (getattr(ls, "supplier", None) and getattr(ls.supplier, "currency", None)) or "ILS"
+            loan_currency = (loan_currency or "ILS").upper()
+            remaining_due_ils = _to_ils(remaining_due_cur, loan_currency, getattr(ls, "settlement_date", None)) or Decimal("0")
+            if remaining_due_ils <= Decimal("0.01"):
+                continue
+
+            p = payments[0]
+            amt = q0(_dec(p.total_amount))
+            pay_ils = _to_ils(amt, getattr(p, "currency", None), getattr(p, "payment_date", None))
+            if pay_ils is None or pay_ils <= 0:
+                continue
+            if pay_ils + Decimal("0.0001") < remaining_due_ils:
+                continue
+            if pay_ils > remaining_due_ils + Decimal("0.0001"):
+                if _has_check_like(p):
+                    continue
+                keep_amt = _from_ils(remaining_due_ils, getattr(p, "currency", None), getattr(p, "payment_date", None))
+                if keep_amt is None:
+                    continue
+                remainder = _split_payment_amount(p, keep_amt)
+                p.loan_settlement_id = lsid
+                p.entity_type = PaymentEntityType.LOAN.value
+                p.supplier_id = None
+                db.session.add(p)
+                touched_payment_ids.append(int(p.id))
+                if remainder is not None:
+                    payments[0] = remainder
+                else:
+                    payments.pop(0)
+            else:
+                p.loan_settlement_id = lsid
+                p.entity_type = PaymentEntityType.LOAN.value
+                p.supplier_id = None
+                db.session.add(p)
+                touched_payment_ids.append(int(p.id))
+                payments.pop(0)
+
+    if payments:
+        from models import Expense
+
+        expenses = (
+            Expense.query.filter(
+                Expense.supplier_id == int(supplier_id),
+                Expense.is_paid == False,
+            )
+            .order_by(Expense.date.asc(), Expense.id.asc())
+            .all()
+        )
+        for exp in expenses:
+            if not payments:
+                break
+            exp_currency = (getattr(exp, "currency", None) or "ILS").upper()
+            remaining_due_cur = q0(_dec(getattr(exp, "amount", 0)) - _dec(getattr(exp, "total_paid", 0)))
+            if remaining_due_cur <= Decimal("0.01"):
+                continue
+            remaining_due_ils = _to_ils(remaining_due_cur, exp_currency, getattr(exp, "date", None)) or Decimal("0")
+            if remaining_due_ils <= Decimal("0.01"):
+                continue
+
+            while remaining_due_ils > Decimal("0.01") and payments:
+                p = payments[0]
+                amt = q0(_dec(p.total_amount))
+                if amt <= 0:
+                    payments.pop(0)
+                    continue
+                pay_ils = _to_ils(amt, getattr(p, "currency", None), getattr(p, "payment_date", None))
+                if pay_ils is None or pay_ils <= 0:
+                    payments.pop(0)
+                    continue
+                if pay_ils <= remaining_due_ils + Decimal("0.0001"):
+                    p.expense_id = int(exp.id)
+                    p.entity_type = PaymentEntityType.EXPENSE.value
+                    p.supplier_id = None
+                    db.session.add(p)
+                    touched_payment_ids.append(int(p.id))
+                    payments.pop(0)
+                    remaining_due_ils = q0(remaining_due_ils - pay_ils)
+                    continue
+
+                if _has_check_like(p):
+                    break
+                keep_amt = _from_ils(remaining_due_ils, getattr(p, "currency", None), getattr(p, "payment_date", None))
+                if keep_amt is None:
+                    break
+                remainder = _split_payment_amount(p, keep_amt)
+                p.expense_id = int(exp.id)
+                p.entity_type = PaymentEntityType.EXPENSE.value
+                p.supplier_id = None
+                db.session.add(p)
+                touched_payment_ids.append(int(p.id))
+                if remainder is not None:
+                    payments[0] = remainder
+                else:
+                    payments.pop(0)
+                remaining_due_ils = Decimal("0")
+
+    if touched_payment_ids:
+        db.session.commit()
+        for pid in touched_payment_ids:
+            try:
+                run_payment_gl_sync_after_commit(int(pid))
+            except Exception:
+                pass
+    return touched_payment_ids
+
+
+def apply_partner_out_payments_to_obligations(partner_id: int) -> list[int]:
+    if not partner_id:
+        return []
+
+    touched_payment_ids: list[int] = []
+
+    payments = (
+        Payment.query.filter(
+            Payment.partner_id == int(partner_id),
+            Payment.direction == PaymentDirection.OUT.value,
+            Payment.status == PaymentStatus.COMPLETED.value,
+            Payment.customer_id.is_(None),
+            Payment.supplier_id.is_(None),
+            Payment.shipment_id.is_(None),
+            Payment.sale_id.is_(None),
+            Payment.invoice_id.is_(None),
+            Payment.preorder_id.is_(None),
+            Payment.service_id.is_(None),
+            Payment.expense_id.is_(None),
+            Payment.loan_settlement_id.is_(None),
+            Payment.is_archived == False,
+        )
+        .order_by(Payment.payment_date.asc(), Payment.id.asc())
+        .all()
+    )
+    payments = [p for p in payments if _is_check_cashed(p)]
+
+    def _ref_is_settlement(p: Payment) -> bool:
+        r = str(getattr(p, "reference", "") or "")
+        return r.startswith("PartnerSettle:")
+
+    payments = [p for p in payments if not _ref_is_settlement(p)]
+    if not payments:
+        return []
+
+    settlements = (
+        PartnerSettlement.query.filter(
+            PartnerSettlement.partner_id == int(partner_id),
+            PartnerSettlement.status == PartnerSettlementStatus.CONFIRMED.value,
+        )
+        .order_by(PartnerSettlement.from_date.asc(), PartnerSettlement.id.asc())
+        .all()
+    )
+
+    def _settlement_remaining(s: PartnerSettlement) -> Decimal:
+        try:
+            due = q0(_dec(getattr(s, "total_due", 0)))
+            paid = q0(_dec(getattr(s, "total_paid", 0)))
+            return q0(due - paid)
+        except Exception:
+            return Decimal("0")
+
+    def _assign_to_settlement(p: Payment, s: PartnerSettlement) -> None:
+        p.entity_type = PaymentEntityType.PARTNER.value
+        p.reference = f"PartnerSettle:{getattr(s, 'code', '')}"
+        db.session.add(p)
+
+    for s in settlements:
+        remaining_due_cur = _settlement_remaining(s)
+        if remaining_due_cur <= Decimal("0.01"):
+            continue
+        settlement_currency = (getattr(s, "currency", None) or "ILS").upper()
+        remaining_due_ils = _to_ils(remaining_due_cur, settlement_currency, getattr(s, "created_at", None)) or Decimal("0")
+        if remaining_due_ils <= Decimal("0.01"):
+            continue
+        while remaining_due_ils > Decimal("0.01") and payments:
+            p = payments[0]
+            amt = q0(_dec(p.total_amount))
+            if amt <= 0:
+                payments.pop(0)
+                continue
+            pay_ils = _to_ils(amt, getattr(p, "currency", None), getattr(p, "payment_date", None))
+            if pay_ils is None or pay_ils <= 0:
+                payments.pop(0)
+                continue
+            if pay_ils <= remaining_due_ils + Decimal("0.0001"):
+                _assign_to_settlement(p, s)
+                touched_payment_ids.append(int(p.id))
+                payments.pop(0)
+                remaining_due_ils = q0(remaining_due_ils - pay_ils)
+                continue
+
+            if _has_check_like(p):
+                break
+            keep_amt = _from_ils(remaining_due_ils, getattr(p, "currency", None), getattr(p, "payment_date", None))
+            if keep_amt is None:
+                break
+            remainder = _split_payment_amount(p, keep_amt)
+            _assign_to_settlement(p, s)
+            touched_payment_ids.append(int(p.id))
+            if remainder is not None:
+                payments[0] = remainder
+            else:
+                payments.pop(0)
+            remaining_due_ils = Decimal("0")
+
+    if payments:
+        from models import Expense
+
+        expenses = (
+            Expense.query.filter(
+                Expense.partner_id == int(partner_id),
+                Expense.is_paid == False,
+            )
+            .order_by(Expense.date.asc(), Expense.id.asc())
+            .all()
+        )
+        for exp in expenses:
+            if not payments:
+                break
+            exp_currency = (getattr(exp, "currency", None) or "ILS").upper()
+            remaining_due_cur = q0(_dec(getattr(exp, "amount", 0)) - _dec(getattr(exp, "total_paid", 0)))
+            if remaining_due_cur <= Decimal("0.01"):
+                continue
+            remaining_due_ils = _to_ils(remaining_due_cur, exp_currency, getattr(exp, "date", None)) or Decimal("0")
+            if remaining_due_ils <= Decimal("0.01"):
+                continue
+
+            while remaining_due_ils > Decimal("0.01") and payments:
+                p = payments[0]
+                amt = q0(_dec(p.total_amount))
+                if amt <= 0:
+                    payments.pop(0)
+                    continue
+                pay_ils = _to_ils(amt, getattr(p, "currency", None), getattr(p, "payment_date", None))
+                if pay_ils is None or pay_ils <= 0:
+                    payments.pop(0)
+                    continue
+                if pay_ils <= remaining_due_ils + Decimal("0.0001"):
+                    p.expense_id = int(exp.id)
+                    p.entity_type = PaymentEntityType.EXPENSE.value
+                    p.partner_id = None
+                    db.session.add(p)
+                    touched_payment_ids.append(int(p.id))
+                    payments.pop(0)
+                    remaining_due_ils = q0(remaining_due_ils - pay_ils)
+                    continue
+
+                if _has_check_like(p):
+                    break
+                keep_amt = _from_ils(remaining_due_ils, getattr(p, "currency", None), getattr(p, "payment_date", None))
+                if keep_amt is None:
+                    break
+                remainder = _split_payment_amount(p, keep_amt)
+                p.expense_id = int(exp.id)
+                p.entity_type = PaymentEntityType.EXPENSE.value
+                p.partner_id = None
+                db.session.add(p)
+                touched_payment_ids.append(int(p.id))
+                if remainder is not None:
+                    payments[0] = remainder
+                else:
+                    payments.pop(0)
+                remaining_due_ils = Decimal("0")
+
+    if touched_payment_ids:
+        db.session.commit()
+        for pid in touched_payment_ids:
+            try:
+                run_payment_gl_sync_after_commit(int(pid))
+            except Exception:
+                pass
     return touched_payment_ids

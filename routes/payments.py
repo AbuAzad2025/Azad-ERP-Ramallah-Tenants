@@ -1039,7 +1039,7 @@ def index():
             "grand_total": int(gt),
             "total_paid": int(ti)
         }
-    page_payments = payments_list if not print_mode else payments_for_summary
+    page_payments = payments_list
     if _wants_json():
         expanded_page_payments = []
         for payment in page_payments:
@@ -4310,6 +4310,12 @@ def refund_split(split_id: int):
         finally:
             db.session.commit()
 
+        # مزامنة القيود المحاسبية للدفعة المرتجعة الجديدة
+        try:
+            run_payment_gl_sync_after_commit(refund.id)
+        except Exception:
+            current_app.logger.warning(f'Failed to sync GL for refund split {refund.id}')
+
         # تحديث الأرصدة بعد استرجاع الدفعة
         try:
             if refund.supplier_id:
@@ -4331,6 +4337,12 @@ def refund_split(split_id: int):
             parent.is_refunded = True
             db.session.add(parent)
             db.session.commit()
+
+        # مزامنة القيود المحاسبية للدفعة الأم (تعيد حساب قيود جميع الأجزاء)
+        try:
+            run_payment_gl_sync_after_commit(parent.id)
+        except Exception:
+            current_app.logger.warning(f'Failed to sync GL for parent payment {parent.id} after split refund')
 
         return jsonify(success=True, refund_id=refund.id)
     except Exception as e:
@@ -4460,6 +4472,12 @@ def refund_payment(payment_id: int):
         finally:
             db.session.commit()
         
+        # مزامنة القيود المحاسبية للدفعة المرتجعة والأصلية
+        try:
+            run_payment_gl_sync_after_commit(refund.id)
+            run_payment_gl_sync_after_commit(original.id)
+        except Exception:
+            current_app.logger.warning(f'Failed to sync GL for refund {refund.id} or original {original.id}')
         try:
             customer_id = getattr(refund, "customer_id", None)
             supplier_id = getattr(refund, "supplier_id", None)

@@ -62,6 +62,18 @@
   .btn-sort { padding: 0; border: none; background: transparent; color: rgba(255,255,255,0.6); font-size: 0.7rem; line-height: 0.8; cursor: pointer; }
   .btn-sort:hover { color: rgba(255,255,255,0.9); }
   .btn-sort.active { color: #ffc107; }
+  #paymentsTable th, #paymentsTable td { font-size: 0.82rem; vertical-align: middle; }
+  #paymentsTable td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+  #paymentsTable td:nth-child(11), #paymentsTable td:nth-child(12), #paymentsTable td:nth-child(13) { white-space: normal; }
+  @media (max-width: 1400px) {
+    #paymentsTable th, #paymentsTable td { font-size: 0.78rem; padding: 0.35rem 0.45rem; }
+  }
+  .btn-group-xs > .btn, .btn-xs { padding: 0.2rem 0.4rem; font-size: 0.75rem; line-height: 1.2; border-radius: 0.2rem; }
+  .action-btns .btn { border: none; transition: transform 0.12s ease, box-shadow 0.12s ease; }
+  .action-btns .btn:hover { transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.18); }
+  .action-btns .btn:active { transform: translateY(0); }
+  .action-btns .rounded-start-pill { border-top-left-radius: 50rem!important; border-bottom-left-radius: 50rem!important; }
+  .action-btns .rounded-end-pill { border-top-right-radius: 50rem!important; border-bottom-right-radius: 50rem!important; }
   </style>
   {% endif %}
 {% endblock %}
@@ -474,98 +486,76 @@
       <table id="paymentsTable" class="table table-hover table-bordered align-middle mb-0 table-sm printable-table">
         <thead class="table-dark">
           <tr>
-            <th style="width:60px">#</th>
-            <th style="width:110px">
+            <th style="width:50px" class="text-center">#</th>
+            <th style="width:95px" class="text-center">
               التاريخ
               <div class="sort-buttons d-inline-flex flex-column ml-1">
-                <button class="btn-sort btn btn-sm p-0" data-sort="date" data-order="asc" title="تصاعدي">
-                  <i class="fas fa-sort-up"></i>
-                </button>
-                <button class="btn-sort btn btn-sm p-0" data-sort="date" data-order="desc" title="تنازلي">
-                  <i class="fas fa-sort-down"></i>
-                </button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="date" data-order="asc" title="تصاعدي"><i class="fas fa-sort-up"></i></button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="date" data-order="desc" title="تنازلي"><i class="fas fa-sort-down"></i></button>
               </div>
             </th>
-            <th style="width:120px">
+            <th style="width:100px" class="text-center">
               المبلغ
               <div class="sort-buttons d-inline-flex flex-column ml-1">
-                <button class="btn-sort btn btn-sm p-0" data-sort="amount" data-order="asc" title="تصاعدي">
-                  <i class="fas fa-sort-up"></i>
-                </button>
-                <button class="btn-sort btn btn-sm p-0" data-sort="amount" data-order="desc" title="تنازلي">
-                  <i class="fas fa-sort-down"></i>
-                </button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="amount" data-order="asc" title="تصاعدي"><i class="fas fa-sort-up"></i></button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="amount" data-order="desc" title="تنازلي"><i class="fas fa-sort-down"></i></button>
               </div>
             </th>
-            <th style="width:70px">العملة</th>
-            <th style="width:100px">سعر الصرف</th>
-            <th style="width:130px">المبلغ بالشيكل</th>
-            <th style="width:150px">
+            <th style="width:55px" class="text-center">العملة</th>
+            <th style="width:70px" class="text-center">الصرف</th>
+            <th style="width:110px" class="text-center">بالشيكل</th>
+            <th style="width:100px" class="text-center">
               الطريقة
               <div class="sort-buttons d-inline-flex flex-column ml-1">
-                <button class="btn-sort btn btn-sm p-0" data-sort="method" data-order="asc" title="تصاعدي">
-                  <i class="fas fa-sort-up"></i>
-                </button>
-                <button class="btn-sort btn btn-sm p-0" data-sort="method" data-order="desc" title="تنازلي">
-                  <i class="fas fa-sort-down"></i>
-                </button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="method" data-order="asc" title="تصاعدي"><i class="fas fa-sort-up"></i></button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="method" data-order="desc" title="تنازلي"><i class="fas fa-sort-down"></i></button>
               </div>
             </th>
-            <th style="width:90px">
+            <th style="width:70px" class="text-center">
               الاتجاه
               <div class="sort-buttons d-inline-flex flex-column ml-1">
-                <button class="btn-sort btn btn-sm p-0" data-sort="direction" data-order="asc" title="تصاعدي">
-                  <i class="fas fa-sort-up"></i>
-                </button>
-                <button class="btn-sort btn btn-sm p-0" data-sort="direction" data-order="desc" title="تنازلي">
-                  <i class="fas fa-sort-down"></i>
-                </button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="direction" data-order="asc" title="تصاعدي"><i class="fas fa-sort-up"></i></button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="direction" data-order="desc" title="تنازلي"><i class="fas fa-sort-down"></i></button>
               </div>
             </th>
-            <th style="width:100px">الحالة</th>
-            <th style="width:150px">مسلم الدفعة</th>
-            <th style="width:150px">مستلم الدفعة</th>
-            <th style="min-width:250px">التفاصيل والمرجع</th>
-            <th style="width:200px" data-sortable="false">إجراءات</th>
+            <th style="width:75px" class="text-center">الحالة</th>
+            <th style="min-width:120px;max-width:200px" class="text-center">الجهة</th>
+            <th style="width:100px" class="text-center">مسلّم</th>
+            <th style="width:100px" class="text-center">مستلم</th>
+            <th style="min-width:100px;max-width:160px" class="text-center">التفاصيل</th>
+            <th style="width:170px" class="text-center" data-sortable="false">إجراءات</th>
           </tr>
         </thead>
         <tbody>
           {% for payment in payments %}
           <tr data-id="{{ payment.id }}">
-            <td>{{ loop.index0 + row_offset + 1 }}</td>
-            <td>{{ payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else '-' }}</td>
-            <td>{{ payment.total_amount }}</td>
-            <td>{{ payment.currency }}</td>
-            <td>{{ payment.fx_rate_used or '-' }}</td>
-            <td>
+            <td class="text-center">{{ loop.index0 + row_offset + 1 }}</td>
+            <td class="text-center">{{ payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else '-' }}</td>
+            <td class="text-end">{{ "{:.2f}".format(payment.total_amount or 0) }}</td>
+            <td class="text-center">{{ payment.currency }}</td>
+            <td class="text-center">{{ payment.fx_rate_used or '-' }}</td>
+            <td class="text-end">
               {% if payment.currency == 'ILS' %}
-                {{ payment.total_amount }}
+                {{ "{:.2f}".format(payment.total_amount or 0) }}
               {% else %}
-                {{ payment.amount_in_ils|default(payment.total_amount)|round(2) }}
+                {{ "{:.2f}".format(payment.amount_in_ils|default(payment.total_amount)|float) }}
               {% endif %}
             </td>
-            <td>{{ payment.method }}</td>
-            <td>{{ payment.direction }}</td>
-            <td>{{ payment.status }}</td>
+            <td class="text-center">{{ payment.method }}</td>
+            <td class="text-center">{{ payment.direction }}</td>
+            <td class="text-center">{{ payment.status }}</td>
+            <td>{{ payment.entity_label() or '-' }}</td>
             <td>{{ payment.deliverer_name or '-' }}</td>
             <td>{{ payment.receiver_name or '-' }}</td>
             <td>{{ payment.reference or payment.notes or '-' }}</td>
             <td class="text-center">
-              <div class="btn-group btn-group-sm">
-                <a href="{{ url_for('payments.view_payment', payment_id=payment.id) }}" class="btn btn-info" title="عرض التفاصيل">
-                  <i class="fas fa-eye"></i>
-                </a>
-                <a href="{{ url_for('payments.download_receipt', payment_id=payment.id) }}" class="btn btn-secondary" title="طباعة الإيصال" target="_blank">
-                  <i class="fas fa-print"></i>
-                </a>
+              <div class="btn-group btn-group-xs action-btns" role="group">
+                <a href="{{ url_for('payments.view_payment', payment_id=payment.id) }}" class="btn btn-info rounded-start-pill" title="عرض"><i class="fas fa-eye"></i></a>
+                <a href="{{ url_for('payments.download_receipt', payment_id=payment.id) }}" class="btn btn-secondary" title="إيصال" target="_blank"><i class="fas fa-receipt"></i></a>
                 {% if payment.is_archived %}
-                <button type="button" class="btn btn-success" title="استعادة" onclick="restorePayment('{{ payment.id }}')">
-                  <i class="fas fa-undo"></i>
-                </button>
+                <button type="button" class="btn btn-success rounded-end-pill btn-restore" data-id="{{ payment.id }}" title="استعادة"><i class="fas fa-undo"></i></button>
                 {% else %}
-                <button type="button" class="btn btn-warning" title="أرشفة" onclick="archivePayment('{{ payment.id }}')">
-                  <i class="fas fa-archive"></i>
-                </button>
+                <button type="button" class="btn btn-warning rounded-end-pill btn-archive" data-id="{{ payment.id }}" title="أرشفة"><i class="fas fa-archive"></i></button>
                 {% endif %}
               </div>
             </td>
@@ -660,6 +650,7 @@
     </script>
     {% endif %}
   {% else %}
+  <script src="{{ url_for('static', filename='js/fx_utils.js') }}"></script>
   <script src="{{ url_for('static', filename='js/payments.js') }}"></script>
   <script src="{{ url_for('static', filename='js/vendors.js') }}"></script>
   <script>
