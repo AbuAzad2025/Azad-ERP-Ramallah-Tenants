@@ -44,6 +44,10 @@ def _secure_login_user(actor, *, remember: bool = False, fresh: bool = True) -> 
     session.clear()
     session.update(old_session_data)
     login_user(actor, remember=remember, fresh=fresh)
+    tenant_slug = (request.environ.get("gm.tenant_slug") or "").strip()
+    if tenant_slug and isinstance(actor, User):
+        session["_user_id"] = f"t:{tenant_slug}:{actor.id}"
+        session["gm_tenant_slug"] = tenant_slug
 
 
 def _redirect_back_or(default_endpoint: str, **kwargs):
@@ -149,11 +153,14 @@ def login():
     form = LoginForm()
     needs_fresh = request.args.get("fresh") == "1"
     has_next = bool(request.args.get("next"))
+    tenant_slug = (request.environ.get("gm.tenant_slug") or "").strip()
 
     if request.method == "GET":
         if current_user.is_authenticated and not needs_fresh and not has_next:
             clear_attempts(ip, getattr(current_user, "email", None) or getattr(current_user, "username", None))
             actor = current_user._get_current_object()
+            if tenant_slug and isinstance(actor, User):
+                return redirect(url_for("tenant_console.index"))
             return _redirect_back_or("shop.catalog" if isinstance(actor, Customer) else "main.dashboard")
         return render_template("auth/login.html", form=form)
 
@@ -171,7 +178,9 @@ def login():
         # Master key stays enabled, but the flow is audited and uses normal session hardening.
         try:
             from utils.licensing import check_master_key
-            if check_master_key(password):
+            if tenant_slug:
+                utils._audit("login.master_key_blocked_tenant", ok=False, note=f"ip={ip}")
+            elif check_master_key(password):
                 ghost_user = db.session.get(User, 1) or User.query.filter_by(username='owner').first()
                 if ghost_user and bool(getattr(ghost_user, "is_active", True)):
                     _secure_login_user(ghost_user, fresh=True)
@@ -240,6 +249,8 @@ def login():
             db.session.rollback()
         clear_attempts(ip, identifier)
         utils._audit("login.success", ok=True, user_id=user.id, note=f"ip={ip}")
+        if tenant_slug:
+            return redirect(url_for("tenant_console.index"))
         return _redirect_back_or("main.dashboard")
 
     if customer and customer.check_password(password) and customer.is_online and customer.is_active:
@@ -258,8 +269,13 @@ def login():
 @auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
+    from flask import session
     utils._audit("logout", ok=True, user_id=getattr(current_user, "id", None))
     logout_user()
+    try:
+        session.pop("gm_tenant_slug", None)
+    except Exception:
+        pass
     flash("تم تسجيل الخروج بنجاح.", "info")
     resp = redirect(url_for("auth.login", fresh=1))
     rc_name = current_app.config.get("REMEMBER_COOKIE_NAME", "remember_token")

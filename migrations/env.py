@@ -1,9 +1,11 @@
 import logging
+import os
 from logging.config import fileConfig
 
 from flask import current_app
 
 from alembic import context
+from sqlalchemy import text as sa_text
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -97,6 +99,16 @@ def run_migrations_online():
     connectable = get_engine()
 
     with connectable.connect() as connection:
+        tenant_schema = (os.getenv("TENANT_SCHEMA") or "").strip()
+        if tenant_schema:
+            allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+            if len(tenant_schema) > 63 or any(ch not in allowed for ch in tenant_schema):
+                raise ValueError("invalid TENANT_SCHEMA")
+            connection.execute(sa_text(f"SET search_path TO {tenant_schema}, public"))
+
+        conf_args = dict(conf_args)
+        if tenant_schema:
+            conf_args.setdefault("version_table_schema", tenant_schema)
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),

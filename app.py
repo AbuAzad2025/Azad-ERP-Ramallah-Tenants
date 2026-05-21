@@ -111,6 +111,7 @@ from routes.archive_routes import archive_routes_bp
 from routes.sale_returns import returns_bp
 from routes.balances_api import balances_api_bp
 from routes.performance import performance_bp
+from routes.tenant_console import tenant_console_bp
 
 
 class MyAnonymousUser(AnonymousUserMixin):
@@ -127,19 +128,44 @@ def load_user(user_id):
     if ":" in uid_str:
         try:
             prefix, ident = uid_str.split(":", 1)
-            ident = int(ident)
             prefix = prefix.lower()
         except Exception:
             return None
+        if prefix == "t":
+            try:
+                tenant_slug, raw_id = ident.split(":", 1)
+                ident_int = int(raw_id)
+            except Exception:
+                return None
+            req_slug = str(getattr(g, "tenant_slug", "") or "").strip().lower()
+            if not req_slug or req_slug != str(tenant_slug or "").strip().lower():
+                return None
+            stmt = (
+                select(User)
+                .options(joinedload(User.role).joinedload(Role.permissions))
+                .where(User.id == ident_int)
+            )
+            return db.session.execute(stmt).unique().scalar_one_or_none()
+        try:
+            ident_int = int(ident)
+        except Exception:
+            return None
+        if prefix == "p":
+            stmt = (
+                select(User)
+                .options(joinedload(User.role).joinedload(Role.permissions))
+                .where(User.id == ident_int)
+            )
+            return db.session.execute(stmt).unique().scalar_one_or_none()
         if prefix == "u":
             stmt = (
                 select(User)
                 .options(joinedload(User.role).joinedload(Role.permissions))
-                .where(User.id == ident)
+                .where(User.id == ident_int)
             )
             return db.session.execute(stmt).unique().scalar_one_or_none()
         if prefix == "c":
-            stmt = select(Customer).options(lazyload("*")).where(Customer.id == ident)
+            stmt = select(Customer).options(lazyload("*")).where(Customer.id == ident_int)
             return db.session.execute(stmt).scalar_one_or_none()
         return None
 
@@ -740,6 +766,7 @@ def _register_blueprints(app):
     blueprints = [
         auth_bp,
         main_bp,
+        tenant_console_bp,
         users_bp,
         service_bp,
         customers_bp,
@@ -1426,10 +1453,19 @@ def create_app(config_object=Config) -> Flask:
 
     @app.before_request
     def resolve_tenant_from_path():
+        from flask import session
         tenant_slug = (request.environ.get("gm.tenant_slug") or "").strip()
         if not tenant_slug:
             g.tenant_slug = None
             g.tenant_schema = None
+            if request.path.startswith("/console"):
+                return abort(404)
+            try:
+                uid = str(session.get("_user_id") or "")
+                if uid.startswith("t:"):
+                    logout_user()
+            except Exception:
+                pass
             return None
         g.tenant_slug = tenant_slug
         try:
@@ -1441,6 +1477,48 @@ def create_app(config_object=Config) -> Flask:
         g.tenant_schema = getattr(tenant, "schema_name", None)
         if request.path.startswith(("/security", "/advanced")):
             return abort(404)
+        try:
+            if current_user.is_authenticated:
+                uid = str(session.get("_user_id") or "")
+                if uid.startswith("t:"):
+                    parts = uid.split(":", 2)
+                    if len(parts) != 3 or parts[1].lower() != tenant_slug.lower():
+                        logout_user()
+                        return redirect(url_for("auth.login", fresh=1))
+                elif uid and uid[0].isdigit():
+                    logout_user()
+                    return redirect(url_for("auth.login", fresh=1))
+        except Exception:
+            pass
+
+    @app.before_request
+    def apply_tenant_search_path():
+        schema = str(getattr(g, "tenant_schema", "") or "").strip()
+        if not schema or schema.lower() == "public":
+            return None
+        try:
+            if str(getattr(getattr(db, "engine", None), "dialect", None).name or "") != "postgresql":
+                return None
+        except Exception:
+            return None
+        allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+        if not schema or len(schema) > 63 or any(ch not in allowed for ch in schema):
+            return abort(404)
+        try:
+            from sqlalchemy import text as sa_text
+            exists = db.session.execute(
+                sa_text("SELECT 1 FROM information_schema.schemata WHERE schema_name = :s"),
+                {"s": schema},
+            ).scalar()
+            if not exists:
+                return abort(404)
+            db.session.execute(sa_text(f"SET LOCAL search_path TO {schema}, public"))
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            return abort(500)
 
     @app.before_request
     def restrict_customer_from_admin():

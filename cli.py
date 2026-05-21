@@ -30,6 +30,7 @@ from models import (
     Shipment, ShipmentItem, ShipmentStatus, StockAdjustment, StockAdjustmentItem, StockLevel, Supplier,
     SupplierSettlement, Transfer, TransferDirection, Warehouse, _ensure_customer_for_counterparty, _gl_upsert_batch_and_entries,
     build_partner_settlement_draft, build_supplier_settlement_draft, convert_amount, User,
+    TenantRegistry,
     role_permissions,
 )
 
@@ -4482,6 +4483,133 @@ def upgrade_production(force: bool, skip_fix: bool, revision: str, dry_run_fix: 
         click.echo("✅ تم تشغيل إصلاح البيانات.")
 
 
+def _validate_pg_identifier(value: str) -> str:
+    s = (value or "").strip()
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+    if not s or len(s) > 63 or any(ch not in allowed for ch in s):
+        raise click.ClickException("قيمة غير صالحة (مسموح فقط: a-z A-Z 0-9 _)")
+    return s
+
+
+def _tenant_schema_from_slug(slug: str) -> str:
+    base = (slug or "").strip().lower().replace("-", "_")
+    base = "".join(ch for ch in base if (ch.isalnum() or ch == "_"))
+    if not base:
+        raise click.ClickException("slug غير صالح")
+    if base[0].isdigit():
+        base = f"t{base}"
+    return _validate_pg_identifier(f"t_{base}")
+
+
+def _ensure_tenant_registry(slug: str, schema_name: str, display_name: str | None, *, is_active: bool = True) -> TenantRegistry:
+    row = TenantRegistry.query.filter_by(slug=slug).first()
+    if not row:
+        row = TenantRegistry(slug=slug)
+        db.session.add(row)
+    row.schema_name = schema_name
+    row.display_name = (display_name or slug).strip()
+    row.is_active = bool(is_active)
+    db.session.flush()
+    return row
+
+
+def _seed_tenant_owner(*, owner_username: str, owner_email: str, owner_password: str) -> None:
+    from permissions_config.permissions import PermissionsRegistry
+    all_codes = PermissionsRegistry.get_all_permission_codes()
+    existing = {str(p.code or "").strip().lower(): p for p in Permission.query.all()}
+    for code in sorted(all_codes):
+        c = str(code or "").strip().lower()
+        if not c:
+            continue
+        if c in existing:
+            continue
+        db.session.add(Permission(code=c, name=c))
+    db.session.flush()
+
+    perms = [p for p in Permission.query.all() if getattr(p, "id", None)]
+    role = Role.query.filter_by(name="owner").one_or_none()
+    if not role:
+        role = Role(name="owner")
+        db.session.add(role)
+        db.session.flush()
+    role.permissions = perms
+
+    email_norm = (owner_email or "").strip().lower()
+    uname = (owner_username or "owner").strip() or "owner"
+    user = User.query.filter((User.username == uname) | (func.lower(User.email) == email_norm)).one_or_none()
+    if not user:
+        user = User(username=uname, email=email_norm)
+        db.session.add(user)
+        db.session.flush()
+    user.username = uname
+    user.email = email_norm
+    user.role = role
+    user.set_password(owner_password)
+    user.is_active = True
+    db.session.flush()
+
+
+@click.group("tenants")
+@with_appcontext
+def tenants_group():
+    pass
+
+
+@tenants_group.command("provision")
+@click.option("--slug", required=True)
+@click.option("--display-name", default=None)
+@click.option("--schema", "schema_name", default=None)
+@click.option("--owner-username", default="owner")
+@click.option("--owner-email", default=None)
+@click.option("--owner-password", default=None)
+@click.option("--skip-migrate", is_flag=True, default=False)
+@click.option("--inactive", is_flag=True, default=False)
+def tenants_provision(slug: str, display_name: str | None, schema_name: str | None, owner_username: str, owner_email: str | None, owner_password: str | None, skip_migrate: bool, inactive: bool):
+    dialect = str(getattr(getattr(db.engine, "dialect", None), "name", "") or "")
+    if dialect != "postgresql":
+        raise click.ClickException("هذا الأمر يتطلب PostgreSQL")
+
+    slug = (slug or "").strip()
+    if not slug:
+        raise click.ClickException("slug مطلوب")
+
+    if schema_name is None:
+        schema_name = _tenant_schema_from_slug(slug)
+    schema_name = (schema_name or "").strip()
+    if schema_name.lower() != "public":
+        schema_name = _validate_pg_identifier(schema_name)
+
+    if not skip_migrate and schema_name.lower() != "public":
+        db.session.execute(sa_text(f"CREATE SCHEMA IF NOT EXISTS {schema_name}"))
+        db.session.commit()
+        old = os.environ.get("TENANT_SCHEMA")
+        os.environ["TENANT_SCHEMA"] = schema_name
+        try:
+            from flask_migrate import upgrade as migrate_upgrade
+            migrate_upgrade()
+        finally:
+            if old is None:
+                os.environ.pop("TENANT_SCHEMA", None)
+            else:
+                os.environ["TENANT_SCHEMA"] = old
+
+    _ensure_tenant_registry(slug=slug, schema_name=schema_name, display_name=display_name, is_active=not inactive)
+    db.session.commit()
+
+    if schema_name.lower() != "public":
+        owner_email = (owner_email or os.getenv("TENANT_OWNER_EMAIL") or "").strip()
+        owner_password = (owner_password or os.getenv("TENANT_OWNER_PASSWORD") or "").strip()
+        if not owner_email or not owner_password:
+            raise click.ClickException("owner_email/owner_password مطلوبة (أو عبر TENANT_OWNER_EMAIL/TENANT_OWNER_PASSWORD)")
+        db.session.execute(sa_text(f"SET search_path TO {schema_name}, public"))
+        _seed_tenant_owner(owner_username=owner_username, owner_email=owner_email, owner_password=owner_password)
+        db.session.commit()
+        db.session.execute(sa_text("SET search_path TO public"))
+        db.session.commit()
+
+    click.echo(f"OK: tenant '{slug}' schema='{schema_name}' active={not inactive}")
+
+
 def _guard_production_dangerous_cli(cmd):
     if not getattr(cmd, "callback", None):
         return cmd
@@ -4503,6 +4631,7 @@ def register_cli(app) -> None:
         import_sqlite_appdb,
         compare_sqlite_appdb,
         compare_sqlite_full,
+        tenants_group,
         seed_roles, sync_permissions, list_permissions, list_roles, role_add_perms, create_role, export_rbac,
         create_user, user_set_password, user_activate, user_assign_role, list_users, list_customers,
         seed_expense_types, expense_type_cmd, seed_palestine_cmd, seed_all, clear_rbac_caches,
