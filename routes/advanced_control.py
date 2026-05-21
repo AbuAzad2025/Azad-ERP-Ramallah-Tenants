@@ -6,7 +6,7 @@ from sqlalchemy import text, func, inspect, or_
 from datetime import datetime, timedelta, timezone, date
 from extensions import db, cache
 from services.backup_service import AutomatedBackupManager
-from models import User, SystemSettings
+from models import User, SystemSettings, TenantRegistry
 import utils
 from utils import permission_required
 from functools import wraps
@@ -380,8 +380,27 @@ def multi_tenant():
             if not _validate_safe_slug(tenant_name):
                 flash('❌ اسم الـ Tenant يجب أن يكون بدون مسافات أو محارف خاصة', 'danger')
                 return redirect(url_for('advanced.multi_tenant'))
-            
-                                   
+
+            existing_tenant = SystemSettings.query.filter_by(key=f'tenant_{tenant_name}_db').first()
+            if existing_tenant:
+                flash('❌ هذا الـ Tenant موجود مسبقاً', 'danger')
+                return redirect(url_for('advanced.multi_tenant'))
+
+            schema_name = _make_tenant_schema_name(tenant_name)
+            if not schema_name:
+                flash('❌ اسم الـ Tenant غير صالح لإنشاء schema', 'danger')
+                return redirect(url_for('advanced.multi_tenant'))
+
+            existing_registry = TenantRegistry.query.filter_by(slug=tenant_name).first()
+            if existing_registry:
+                flash('❌ هذا الـ Tenant مسجل مسبقاً في Registry', 'danger')
+                return redirect(url_for('advanced.multi_tenant'))
+
+            existing_schema = TenantRegistry.query.filter_by(schema_name=schema_name).first()
+            if existing_schema:
+                flash('❌ اسم الـ schema مستخدم مسبقاً', 'danger')
+                return redirect(url_for('advanced.multi_tenant'))
+
             db.session.add(SystemSettings(key=f'tenant_{tenant_name}_db', value=tenant_db))
             db.session.add(SystemSettings(key=f'tenant_{tenant_name}_active', value='True'))
             db.session.add(SystemSettings(key=f'tenant_{tenant_name}_domain', value=tenant_domain))
@@ -399,6 +418,10 @@ def multi_tenant():
 
             domain_norm = (tenant_domain or '').strip().lower()
             if domain_norm:
+                existing_domain = TenantRegistry.query.filter(func.lower(TenantRegistry.domain) == domain_norm).first()
+                if existing_domain:
+                    flash('❌ هذا الدومين مستخدم مسبقاً لTenant آخر. يجب أن يكون الدومين فريد لكل Tenant.', 'danger')
+                    return redirect(url_for('advanced.multi_tenant'))
                 existing = SystemSettings.query.filter(
                     SystemSettings.key.like('tenant_%_domain'),
                     func.lower(SystemSettings.value) == domain_norm
@@ -406,6 +429,15 @@ def multi_tenant():
                 if existing:
                     flash('❌ هذا الدومين مستخدم مسبقاً لTenant آخر. يجب أن يكون الدومين فريد لكل Tenant.', 'danger')
                     return redirect(url_for('advanced.multi_tenant'))
+
+            display_name = (tenant_company_name or tenant_system_name or tenant_name or '').strip() or tenant_name
+            db.session.add(TenantRegistry(
+                slug=tenant_name,
+                schema_name=schema_name,
+                display_name=display_name,
+                domain=domain_norm or None,
+                is_active=True,
+            ))
             
             try:
                 db.session.commit()
@@ -437,6 +469,9 @@ def multi_tenant():
             setting = SystemSettings.query.filter_by(key=f'tenant_{tenant_name}_active').first()
             if setting:
                 setting.value = 'False' if setting.value == 'True' else 'True'
+                registry = TenantRegistry.query.filter_by(slug=tenant_name).first()
+                if registry:
+                    registry.is_active = setting.value == 'True'
                 try:
                     db.session.commit()
                 except Exception:
@@ -461,6 +496,7 @@ def multi_tenant():
                 return redirect(url_for('advanced.multi_tenant'))
                                          
             SystemSettings.query.filter(SystemSettings.key.like(f'tenant_{tenant_name}_%')).delete()
+            TenantRegistry.query.filter_by(slug=tenant_name).delete()
             try:
                 db.session.commit()
             except Exception:
@@ -499,6 +535,10 @@ def multi_tenant():
                 if existing and not str(existing.key or '').startswith(f'tenant_{tenant_name}_'):
                     flash('❌ هذا الدومين مستخدم مسبقاً لTenant آخر. يجب أن يكون الدومين فريد لكل Tenant.', 'danger')
                     return redirect(url_for('advanced.multi_tenant'))
+                existing_domain = TenantRegistry.query.filter(func.lower(TenantRegistry.domain) == domain_norm).first()
+                if existing_domain and existing_domain.slug != tenant_name:
+                    flash('❌ هذا الدومين مستخدم مسبقاً لTenant آخر. يجب أن يكون الدومين فريد لكل Tenant.', 'danger')
+                    return redirect(url_for('advanced.multi_tenant'))
             
                              
             _update_tenant_setting(f'tenant_{tenant_name}_domain', tenant_domain)
@@ -508,6 +548,17 @@ def multi_tenant():
             _update_tenant_setting(f'tenant_{tenant_name}_favicon', tenant_favicon)
             _update_tenant_setting(f'tenant_{tenant_name}_max_users', tenant_max_users)
             _update_tenant_setting(f'tenant_{tenant_name}_modules', json.dumps(tenant_modules))
+
+            registry = TenantRegistry.query.filter_by(slug=tenant_name).first()
+            if not registry:
+                schema_name = _make_tenant_schema_name(tenant_name)
+                if schema_name:
+                    registry = TenantRegistry(slug=tenant_name, schema_name=schema_name, is_active=True)
+                    db.session.add(registry)
+            if registry:
+                display_name = (tenant_company_name or tenant_system_name or tenant_name or '').strip() or tenant_name
+                registry.display_name = display_name
+                registry.domain = domain_norm or None
             
             try:
                 db.session.commit()
@@ -1761,6 +1812,16 @@ def _validate_safe_slug(value):
         return False
     allowed = set(string.ascii_letters + string.digits + '_-')
     return all(ch in allowed for ch in value)
+
+def _make_tenant_schema_name(slug):
+    slug = (slug or '').strip().lower().replace('-', '_')
+    cleaned = ''.join(ch for ch in slug if (ch.isalnum() or ch == '_'))
+    if not cleaned:
+        return None
+    if cleaned[0].isdigit():
+        cleaned = f"t{cleaned}"
+    schema_name = f"t_{cleaned}"
+    return schema_name[:63]
 
 
 def _validate_time_string(value):
@@ -3638,15 +3699,21 @@ def _get_all_tenants():
     cached_list = cache.get(cache_key)
     if cached_list is not None:
         return cached_list
+
+    registry_rows = TenantRegistry.query.all()
+    registry_by_slug = {row.slug: row for row in registry_rows if row.slug}
     
     tenant_db_settings = SystemSettings.query.filter(
         SystemSettings.key.like('tenant_%_db')
     ).all()
     
-    if not tenant_db_settings:
-        return []
-    
     tenant_names = [t.key.replace('tenant_', '').replace('_db', '') for t in tenant_db_settings]
+    tenant_names = sorted(set(tenant_names) | set(registry_by_slug.keys()))
+
+    if not tenant_names:
+        return []
+
+    db_map = {t.key.replace('tenant_', '').replace('_db', ''): t.value for t in tenant_db_settings}
     
     all_settings = SystemSettings.query.filter(
         or_(
@@ -3665,8 +3732,8 @@ def _get_all_tenants():
                 break
     
     tenant_list = []
-    for t in tenant_db_settings:
-        name = t.key.replace('tenant_', '').replace('_db', '')
+    for name in tenant_names:
+        registry = registry_by_slug.get(name)
         tenant_settings = settings_dict.get(name, {})
         
         modules = []
@@ -3675,12 +3742,20 @@ def _get_all_tenants():
                 modules = json.loads(tenant_settings['modules'])
             except Exception:
                 modules = []
+
+        schema_name = (getattr(registry, 'schema_name', None) or _make_tenant_schema_name(name) or '')
+        domain = (getattr(registry, 'domain', None) or tenant_settings.get('domain', '') or '')
+        active = getattr(registry, 'is_active', None)
+        if active is None:
+            active = tenant_settings.get('active', 'False') == 'True'
         
         tenant_list.append({
             'name': name,
-            'db': t.value,
-            'active': tenant_settings.get('active', 'False') == 'True',
-            'domain': tenant_settings.get('domain', ''),
+            'slug': name,
+            'schema_name': schema_name,
+            'db': db_map.get(name, ''),
+            'active': bool(active),
+            'domain': domain,
             'logo': tenant_settings.get('logo', ''),
             'company_name': tenant_settings.get('company_name', ''),
             'system_name': tenant_settings.get('system_name', ''),
