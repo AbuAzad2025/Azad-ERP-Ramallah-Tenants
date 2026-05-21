@@ -4582,16 +4582,18 @@ def tenants_provision(slug: str, display_name: str | None, schema_name: str | No
     if not skip_migrate and schema_name.lower() != "public":
         db.session.execute(sa_text(f"CREATE SCHEMA IF NOT EXISTS {schema_name}"))
         db.session.commit()
-        old = os.environ.get("TENANT_SCHEMA")
-        os.environ["TENANT_SCHEMA"] = schema_name
-        try:
-            from flask_migrate import upgrade as migrate_upgrade
-            migrate_upgrade()
-        finally:
-            if old is None:
-                os.environ.pop("TENANT_SCHEMA", None)
-            else:
-                os.environ["TENANT_SCHEMA"] = old
+        db.session.execute(sa_text(f"SET search_path TO {schema_name}, public"))
+        db.create_all()
+        db.session.execute(sa_text(f"DROP TABLE IF EXISTS {schema_name}.tenants CASCADE"))
+        head = db.session.execute(sa_text("SELECT version_num FROM public.alembic_version")).scalar()
+        head = (head or "").strip()
+        if not head:
+            raise click.ClickException("تعذّر تحديد alembic head من public")
+        db.session.execute(sa_text(f"CREATE TABLE IF NOT EXISTS {schema_name}.alembic_version (version_num VARCHAR(32) NOT NULL PRIMARY KEY)"))
+        db.session.execute(sa_text(f"DELETE FROM {schema_name}.alembic_version"))
+        db.session.execute(sa_text(f"INSERT INTO {schema_name}.alembic_version (version_num) VALUES (:v)"), {"v": head})
+        db.session.execute(sa_text("SET search_path TO public"))
+        db.session.commit()
 
     _ensure_tenant_registry(slug=slug, schema_name=schema_name, display_name=display_name, is_active=not inactive)
     db.session.commit()

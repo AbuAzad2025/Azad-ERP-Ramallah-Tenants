@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timedelta, timezone, date
 from decimal import Decimal, ROUND_HALF_UP
 from functools import wraps, lru_cache
-from flask import current_app, has_request_context, request
+from flask import current_app, has_app_context, has_request_context, request
 from flask_login import UserMixin, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -35,7 +35,7 @@ from sqlalchemy import (
     inspect,
 )
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import Session as _SA_Session, relationship, object_session, validates, joinedload
+from sqlalchemy.orm import Session as _SA_Session, relationship, object_session, validates, joinedload, declared_attr
 
 from extensions import db
 from barcodes import normalize_barcode
