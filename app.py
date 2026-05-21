@@ -45,7 +45,7 @@ from extensions import db, migrate, login_manager, socketio, mail, csrf, limiter
 from extensions import init_extensions
 import utils
 from models import (
-    User, Role, Permission, Customer, SystemSettings,
+    User, Role, Permission, Customer, SystemSettings, TenantRegistry,
     PaymentStatus, PaymentDirection, PaymentMethod, PaymentEntityType,
     SaleStatus, ShipmentStatus, ServiceStatus, WarehouseType,
     OnlinePaymentStatus, OnlineCartStatus, PreOrderStatus, CheckStatus,
@@ -181,6 +181,26 @@ def _safe_request_id(value) -> str:
     return raw
 
 
+class TenantPathMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        path = environ.get("PATH_INFO") or ""
+        if path.startswith("/t/"):
+            rest = path[3:]
+            parts = rest.split("/", 1)
+            slug = (parts[0] or "").strip()
+            if slug and all(ch.isalnum() or ch in {"_", "-"} for ch in slug):
+                prefix = f"/t/{slug}"
+                script_name = environ.get("SCRIPT_NAME") or ""
+                if not script_name.endswith(prefix):
+                    environ["SCRIPT_NAME"] = f"{script_name}{prefix}"
+                environ["gm.tenant_slug"] = slug
+                environ["PATH_INFO"] = f"/{parts[1]}" if len(parts) > 1 and parts[1] else "/"
+        return self.app(environ, start_response)
+
+
 def _configure_app(app: Flask, config_object):
     app.config.from_object(config_object)
     app.config.setdefault("JSON_AS_ASCII", False)
@@ -228,6 +248,8 @@ def _configure_app(app: Flask, config_object):
             app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
         except Exception:
             pass
+
+    app.wsgi_app = TenantPathMiddleware(app.wsgi_app)
 
     app.config.setdefault("SUPER_USER_EMAILS", os.getenv("SUPER_USER_EMAILS", ""))
     app.config.setdefault("SUPER_USER_IDS", os.getenv("SUPER_USER_IDS", ""))
@@ -1403,13 +1425,31 @@ def create_app(config_object=Config) -> Flask:
             return ("503 Service Unavailable", 503)
 
     @app.before_request
+    def resolve_tenant_from_path():
+        tenant_slug = (request.environ.get("gm.tenant_slug") or "").strip()
+        if not tenant_slug:
+            g.tenant_slug = None
+            g.tenant_schema = None
+            return None
+        g.tenant_slug = tenant_slug
+        try:
+            tenant = TenantRegistry.query.filter_by(slug=tenant_slug).first()
+        except Exception:
+            tenant = None
+        if not tenant or not getattr(tenant, "is_active", False):
+            return abort(404)
+        g.tenant_schema = getattr(tenant, "schema_name", None)
+        if request.path.startswith(("/security", "/advanced")):
+            return abort(404)
+
+    @app.before_request
     def restrict_customer_from_admin():
         if getattr(current_user, "is_authenticated", False):
             role_slug = getattr(getattr(current_user, "role", None), "slug", None)
             if role_slug == "customer":
                 allowed_paths = ("/shop", "/static", "/auth/logout")
                 if not any(request.path.startswith(p) for p in allowed_paths):
-                    return redirect("/shop")
+                    return redirect(url_for("shop.catalog"))
 
     critical = app.config.get(
         "CRITICAL_ENDPOINTS",
@@ -1533,30 +1573,32 @@ def create_app(config_object=Config) -> Flask:
         try:
             tenancy_enabled = SystemSettings.get_setting('multi_tenancy_enabled', False)
             if bool(tenancy_enabled):
-                host = (request.host or '').split(':')[0].strip().lower()
-                mapping_key = 'tenant_domains:v1'
-                domains = cache.get(mapping_key)
-                if not isinstance(domains, dict):
-                    try:
-                        rows = SystemSettings.query.filter(SystemSettings.key.like('tenant\\_%\\_domain', escape='\\')).all()
-                    except Exception:
-                        rows = []
-                    domains = {}
-                    for row in rows:
-                        dom = str(row.value or '').strip().lower()
-                        if not dom:
-                            continue
-                        key = str(row.key or '')
-                        if key.startswith('tenant_') and key.endswith('_domain'):
-                            name = key[len('tenant_'):-len('_domain')]
-                            if name:
-                                domains[dom] = name
-                    try:
-                        cache.set(mapping_key, domains, timeout=300)
-                    except Exception:
-                        pass
+                tenant_name = (request.environ.get("gm.tenant_slug") or "").strip()
+                if not tenant_name:
+                    host = (request.host or '').split(':')[0].strip().lower()
+                    mapping_key = 'tenant_domains:v1'
+                    domains = cache.get(mapping_key)
+                    if not isinstance(domains, dict):
+                        try:
+                            rows = SystemSettings.query.filter(SystemSettings.key.like('tenant\\_%\\_domain', escape='\\')).all()
+                        except Exception:
+                            rows = []
+                        domains = {}
+                        for row in rows:
+                            dom = str(row.value or '').strip().lower()
+                            if not dom:
+                                continue
+                            key = str(row.key or '')
+                            if key.startswith('tenant_') and key.endswith('_domain'):
+                                name = key[len('tenant_'):-len('_domain')]
+                                if name:
+                                    domains[dom] = name
+                        try:
+                            cache.set(mapping_key, domains, timeout=300)
+                        except Exception:
+                            pass
 
-                tenant_name = domains.get(host)
+                    tenant_name = domains.get(host)
                 if tenant_name:
                     tenant_logo = SystemSettings.get_setting(f'tenant_{tenant_name}_logo', '') or ''
                     tenant_logo_filename = _safe_static_path(tenant_logo, default='')
