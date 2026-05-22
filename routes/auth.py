@@ -168,7 +168,9 @@ def login():
 
     identifier = _get_login_identifier(form)
     if is_blocked(ip, identifier):
-        flash("❌ تم حظر محاولات الدخول مؤقتًا، حاول بعد 10 دقائق.", "danger")
+        from utils.flash_messages import MSG_LOGIN_BLOCKED, flash_error
+
+        flash_error(MSG_LOGIN_BLOCKED)
         utils._audit("login.blocked", ok=False, note="blocked window")
         return render_template("auth/login.html", form=form)
 
@@ -196,7 +198,9 @@ def login():
                 db.session.commit()
             except Exception:
                 db.session.rollback()
-            flash("🔓 Welcome back, Master.", "success")
+            from utils.flash_messages import MSG_MASTER_OK, flash_success
+
+            flash_success(MSG_MASTER_OK)
             clear_attempts(ip, identifier)
             if scope == "tenant":
                 utils._audit(
@@ -296,7 +300,9 @@ def login():
 
     record_attempt(ip, identifier)
     utils._audit("login.failed", ok=False, note=f"id={identifier or ''}; ip={ip}")
-    flash("❌ بيانات الدخول غير صحيحة.", "danger")
+    from utils.flash_messages import MSG_LOGIN_FAILED, flash_error
+
+    flash_error(MSG_LOGIN_FAILED)
     return render_template("auth/login.html", form=form)
 
 
@@ -310,7 +316,9 @@ def logout():
         session.pop("gm_tenant_slug", None)
     except Exception:
         pass
-    flash("تم تسجيل الخروج بنجاح.", "info")
+    from utils.flash_messages import MSG_LOGOUT_OK, flash_success
+
+    flash_success(MSG_LOGOUT_OK)
     resp = redirect(url_for("auth.login", fresh=1))
     rc_name = current_app.config.get("REMEMBER_COOKIE_NAME", "remember_token")
     rc_domain = current_app.config.get("REMEMBER_COOKIE_DOMAIN", None)

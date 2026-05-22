@@ -358,9 +358,9 @@ def db_merger():
                 'file_name': 'dummy.sql',
                 'comparison': []
             }
-            flash('This is a simulation. Merge logic needs implementation.', 'info')
+            flash('معاينة الدمج: هذه العملية تجريبية ولم تُفعَّل بالكامل بعد.', 'info')
         elif action == 'execute':
-             flash('Merge executed (simulation).', 'success')
+             flash('تم تنفيذ الدمج (وضع تجريبي).', 'success')
              return redirect(url_for('advanced.db_merger'))
 
     return render_template('advanced/db_merger.html', stats=stats, preview=preview)
@@ -389,37 +389,37 @@ def multi_tenant():
             tenant_max_users = request.form.get('tenant_max_users', '10')
             tenant_modules = request.form.getlist('tenant_modules')
             if not _validate_safe_slug(tenant_name):
-                flash('❌ اسم الـ Tenant يجب أن يكون بدون مسافات أو محارف خاصة', 'danger')
+                flash('اسم الشركة (المعرّف) يجب أن يكون بالإنجليزية بدون مسافات أو رموز خاصة.', 'danger')
                 return redirect(url_for('advanced.multi_tenant'))
 
             if not owner_email or not owner_password:
-                flash('❌ بريد وكلمة مرور مالك الشركة مطلوبان', 'danger')
+                flash('بريد وكلمة مرور مالك الشركة مطلوبان.', 'danger')
                 return redirect(url_for('advanced.multi_tenant'))
 
             main_db = (current_app.config.get('SQLALCHEMY_DATABASE_URI') or '').strip()
             tenant_db = (tenant_db or main_db).strip()
             if main_db and tenant_db != main_db:
-                flash('⚠️ يُستخدم schema منفصل داخل garage_manager — تم تجاهل رابط قاعدة خارجية', 'warning')
+                flash('يُستخدم مخطط بيانات منفصل داخل النظام — تم تجاهل رابط قاعدة خارجية.', 'warning')
                 tenant_db = main_db
 
             existing_tenant = SystemSettings.query.filter_by(key=f'tenant_{tenant_name}_db').first()
             if existing_tenant:
-                flash('❌ هذا الـ Tenant موجود مسبقاً', 'danger')
+                flash('هذه الشركة مسجّلة مسبقاً في الإعدادات.', 'danger')
                 return redirect(url_for('advanced.multi_tenant'))
 
             schema_name = _make_tenant_schema_name(tenant_name)
             if not schema_name:
-                flash('❌ اسم الـ Tenant غير صالح لإنشاء schema', 'danger')
+                flash('اسم الشركة غير صالح لإنشاء مخطط البيانات.', 'danger')
                 return redirect(url_for('advanced.multi_tenant'))
 
             existing_registry = TenantRegistry.query.filter_by(slug=tenant_name).first()
             if existing_registry:
-                flash('❌ هذا الـ Tenant مسجل مسبقاً في Registry', 'danger')
+                flash('هذه الشركة مسجّلة مسبقاً في سجل التينانتات.', 'danger')
                 return redirect(url_for('advanced.multi_tenant'))
 
             existing_schema = TenantRegistry.query.filter_by(schema_name=schema_name).first()
             if existing_schema:
-                flash('❌ اسم الـ schema مستخدم مسبقاً', 'danger')
+                flash('مخطط البيانات هذا مستخدم مسبقاً لشركة أخرى.', 'danger')
                 return redirect(url_for('advanced.multi_tenant'))
 
             db.session.add(SystemSettings(key=f'tenant_{tenant_name}_db', value=tenant_db))
@@ -434,21 +434,21 @@ def multi_tenant():
             db.session.add(SystemSettings(key=f'tenant_{tenant_name}_created_at', value=datetime.now(timezone.utc).isoformat()))
             
             if not main_db or 'postgresql' not in main_db.lower():
-                flash('❌ يتطلب النظام PostgreSQL (garage_manager)', 'danger')
+                flash('يتطلب النظام قاعدة PostgreSQL باسم garage_manager.', 'danger')
                 return redirect(url_for('advanced.multi_tenant'))
 
             domain_norm = (tenant_domain or '').strip().lower()
             if domain_norm:
                 existing_domain = TenantRegistry.query.filter(func.lower(TenantRegistry.domain) == domain_norm).first()
                 if existing_domain:
-                    flash('❌ هذا الدومين مستخدم مسبقاً لTenant آخر. يجب أن يكون الدومين فريد لكل Tenant.', 'danger')
+                    flash('هذا النطاق مستخدم مسبقاً لشركة أخرى. يجب أن يكون فريداً لكل شركة.', 'danger')
                     return redirect(url_for('advanced.multi_tenant'))
                 existing = SystemSettings.query.filter(
                     SystemSettings.key.like('tenant_%_domain'),
                     func.lower(SystemSettings.value) == domain_norm
                 ).first()
                 if existing:
-                    flash('❌ هذا الدومين مستخدم مسبقاً لTenant آخر. يجب أن يكون الدومين فريد لكل Tenant.', 'danger')
+                    flash('هذا النطاق مستخدم مسبقاً لشركة أخرى. يجب أن يكون فريداً لكل شركة.', 'danger')
                     return redirect(url_for('advanced.multi_tenant'))
 
             display_name = (tenant_company_name or tenant_system_name or tenant_name or '').strip() or tenant_name
@@ -467,12 +467,14 @@ def multi_tenant():
                     copy_data=copy_seed,
                 )
             except ValueError as exc:
-                flash(f'❌ {exc}', 'danger')
+                from utils.flash_messages import user_friendly_error
+
+                flash(user_friendly_error(exc), 'danger')
                 return redirect(url_for('advanced.multi_tenant'))
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('provision_new_tenant failed')
-                flash('❌ فشل إنشاء مخطط التينانت أو مالك الشركة', 'danger')
+                flash('فشل إنشاء شركة التينانت أو حساب المالك. راجع السجل أو تواصل مع الدعم.', 'danger')
                 return redirect(url_for('advanced.multi_tenant'))
 
             registry = TenantRegistry.query.filter_by(slug=tenant_name).first()

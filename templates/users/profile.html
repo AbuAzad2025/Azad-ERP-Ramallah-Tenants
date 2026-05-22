@@ -589,7 +589,6 @@
   <div class="row">
     <div class="col-12 text-center">
       <div class="d-flex justify-content-center flex-wrap gap-3">
-        {# SECURITY MODULE - Owner only (CONFIDENTIAL) #}
         {% if current_user.is_authenticated and (current_user.is_system_account or (current_user.username|default('')|upper == '__OWNER__') or (current_user.role and current_user.role.name|default('')|upper == 'OWNER')) %}
           <a href="{{ url_for('security.index') }}" class="action-btn" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);">
             <i class="fas fa-shield-alt mr-2"></i>

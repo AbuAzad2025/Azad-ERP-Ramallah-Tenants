@@ -153,7 +153,9 @@ def _refresh_service_related_balances(service) -> None:
         current_app.logger.warning('balance calculation failed silently in service.py', exc_info=True)
 
 def _flash_error(message: str) -> None:
-    flash(f'❌ {message}', 'danger')
+    from utils.flash_messages import flash_error
+
+    flash_error(message)
 
 def _friendly_error(exc, fallback=None):
     if isinstance(exc, IntegrityError):

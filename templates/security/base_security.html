@@ -750,17 +750,8 @@
                     {% block header_actions %}{% endblock %}
                 </div>
             </div>
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        {% set tone = 'danger' if category in ['danger','error'] else ('warning' if category == 'warning' else ('success' if category == 'success' else 'primary')) %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show shadow-lg border-0 mb-4" style="background: rgba(20,20,20,0.9); border-left: 4px solid var(--sec-{{ tone }}); color: #fff;" role="alert">
-                            <i class="fas fa-terminal me-2"></i> <span class="font-monospace">{{ message }}</span>
-                            <button type="button" class="close text-white" data-dismiss="alert">&times;</button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
+            {% set flash_variant = 'security' %}
+            {% include 'partials/_flash_messages.html' %}
             {% block security_content %}{% endblock %}
         </div>
         <footer class="mt-auto py-3 px-4 border-top">

@@ -316,6 +316,12 @@
        
        NO INLINE STYLES SHOULD BE ADDED HERE FOR LAYOUT!
     */
+
+    .gm-flash-messages .gm-flash-alert { font-size: 0.95rem; }
+    .gm-flash-messages .gm-flash-success { border-right: 4px solid #28a745; }
+    .gm-flash-messages .gm-flash-danger { border-right: 4px solid #dc3545; }
+    .gm-flash-messages .gm-flash-warning { border-right: 4px solid #ffc107; }
+    .gm-flash-messages .gm-flash-info { border-right: 4px solid #17a2b8; }
     
   </style>
   
@@ -413,18 +419,7 @@
     </div>
     <section class="content">
       <div class="container-fluid">
-        {% with messages = get_unique_flashes(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert" style="position: relative; z-index: 1050;">
-                <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'danger' or category == 'error' %}exclamation-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} ml-2"></i>{{ message }}
-                <button type="button" class="close" data-dismiss="alert" aria-label="إغلاق">
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+        {% include 'partials/_flash_messages.html' %}
         {% block content %}{% endblock %}
       </div>
     </section>

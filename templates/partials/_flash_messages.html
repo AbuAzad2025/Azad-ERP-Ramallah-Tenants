@@ -1,0 +1,32 @@
+{# رسائل النظام الموحّدة — variant: default | auth | security #}
+{% set _variant = flash_variant|default('default') %}
+{% with messages = get_unique_flashes(with_categories=true) %}
+  {% if messages %}
+    <div class="gm-flash-messages mb-3" role="status" aria-live="polite">
+      {% for category, message in messages %}
+        {% set cat = 'danger' if category in ['danger', 'error'] else (category if category in ['success', 'warning', 'info'] else 'info') %}
+        {% if _variant == 'security' %}
+          {% set tone = cat %}
+          <div class="alert alert-{{ cat }} alert-dismissible fade show shadow-lg border-0 mb-3 gm-flash-alert gm-flash-{{ cat }}"
+               style="background: rgba(20,20,20,0.9); border-right: 4px solid var(--sec-{{ tone }}, #dc3545); color: #fff;" role="alert">
+            <i class="fas fa-{% if cat == 'success' %}check-circle{% elif cat == 'danger' %}exclamation-circle{% elif cat == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} ml-2"></i>
+            <span>{{ message }}</span>
+            <button type="button" class="close text-white" data-dismiss="alert" aria-label="إغلاق"><span>&times;</span></button>
+          </div>
+        {% elif _variant == 'auth' %}
+          <div class="alert alert-{{ cat }} alert-dismissible fade show gm-flash-alert gm-flash-{{ cat }}" role="alert">
+            <i class="fas fa-{% if cat == 'success' %}check-circle{% elif cat == 'danger' %}exclamation-circle{% elif cat == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} ml-2"></i>
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="إغلاق"><span>&times;</span></button>
+          </div>
+        {% else %}
+          <div class="alert alert-{{ cat }} alert-dismissible fade show shadow-sm gm-flash-alert gm-flash-{{ cat }}" role="alert" style="position: relative; z-index: 1050;">
+            <i class="fas fa-{% if cat == 'success' %}check-circle{% elif cat == 'danger' %}exclamation-circle{% elif cat == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} ml-2"></i>
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="إغلاق"><span>&times;</span></button>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}

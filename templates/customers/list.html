@@ -338,19 +338,6 @@ body.print-mode .content {
     </div>
   </div>
   {% else %}
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, message in messages %}
-        <div class="alert alert-{{ category or 'info' }} alert-dismissible fade show" role="alert">
-          {{ message }}
-          <button type="button" class="close" data-dismiss="alert" aria-label="إغلاق">
-            <span aria-hidden="true">×</span>
-          </button>
-        </div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
-
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="h4 m-0 text-dark"><i class="fas fa-users ml-2"></i> قائمة العملاء</h2>
     <div class="btn-group-actions-end no-print">

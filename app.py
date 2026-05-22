@@ -451,14 +451,18 @@ def _register_template_support(app):
 
     def get_unique_flashes(with_categories=True):
         from flask import get_flashed_messages
+        from utils.flash_messages import normalize_flash_category
+
         msgs = get_flashed_messages(with_categories=with_categories)
         seen = set()
         if with_categories:
             uniq = []
             for cat, msg in msgs:
-                if msg not in seen:
-                    uniq.append((cat or "info", msg))
-                    seen.add(msg)
+                text = (msg or "").strip()
+                if not text or text in seen:
+                    continue
+                uniq.append((normalize_flash_category(cat), text))
+                seen.add(text)
             return uniq
         uniq = []
         for msg in msgs:

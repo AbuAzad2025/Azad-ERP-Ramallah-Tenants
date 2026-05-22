@@ -787,7 +787,7 @@ def create_customer():
             if existing_id:
                 payload["existing_id"] = existing_id
             return jsonify(payload), 409
-        flash(f"{msg} (Unique constraint).", "danger")
+        flash(f"{msg} هذا السجل موجود مسبقاً.", "danger")
         # إبقاء المستخدم على نفس الصفحة مع الحفاظ على الإدخالات
         return render_template("customers/new.html", form=form, return_to=request.form.get("return_to"))
     except SQLAlchemyError:
@@ -841,7 +841,7 @@ def edit_customer(customer_id):
                 db.session.refresh(cust)
             except IntegrityError:
                 db.session.rollback()
-                flash("بريد أو هاتف مكرر (Unique constraint).", "danger")
+                flash("البريد أو رقم الهاتف مستخدم مسبقاً لعميل آخر.", "danger")
                 current_app.logger.exception("IntegrityError while editing customer")
                 return render_template("customers/edit.html", form=form, customer=cust), 409
             except SQLAlchemyError:

@@ -2784,3 +2784,15 @@ def serialize_enum(enum_cls):
         return {name: member.value for name, member in enum_cls.__members__.items()}
     except Exception:
         return {}
+
+
+from utils.flash_messages import (  # noqa: E402
+    MSG_INTERNAL_ERROR,
+    MSG_SAVED,
+    flash_error,
+    flash_info,
+    flash_success,
+    flash_user,
+    flash_warning,
+    user_friendly_error,
+)

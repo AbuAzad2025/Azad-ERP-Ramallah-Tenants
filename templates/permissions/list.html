@@ -84,20 +84,6 @@
     {% endif %}
   </div>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, msg in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-          {{ msg }}
-          <button type="button" class="close" data-dismiss="alert" aria-label="إغلاق">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
-
-  {# الأكواد المحجوزة (تشمل الإضافات الجديدة) #}
   {% set reserved = [
     'backup_database','restore_database','manage_permissions','manage_roles','manage_users',
     'manage_customers','manage_sales','manage_service','manage_reports','view_reports',

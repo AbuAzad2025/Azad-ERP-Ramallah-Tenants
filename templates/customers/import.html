@@ -27,17 +27,6 @@
     </div>
     <div class="card-body">
 
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% for cat, msg in messages %}
-            <div class="alert alert-{{ 'warning' if cat == 'warning' else cat }} alert-dismissible fade show" role="alert">
-              {{ msg }}
-              <button type="button" class="close" data-dismiss="alert" aria-label="إغلاق"></button>
-            </div>
-          {% endfor %}
-        {% endif %}
-      {% endwith %}
-
       <form method="post" enctype="multipart/form-data" id="import-form" action="{{ url_for('customers_bp.import_customers') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         {% include 'customers/_import_form.html' %}

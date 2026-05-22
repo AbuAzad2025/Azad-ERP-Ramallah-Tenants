@@ -5,19 +5,6 @@
 <div class="container mt-4" dir="rtl">
   <h2 class="mb-3">{{ 'تعديل إذن' if perm else 'إضافة إذن جديد' }}</h2>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, msg in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-          {{ msg }}
-          <button type="button" class="close" data-dismiss="alert" aria-label="إغلاق">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
-
   {% set code_norm = (perm.code if perm and perm.code else '')|lower %}
   {% set is_reserved = code_norm in (protected_codes or []) %}
   {% set is_protected = (perm and perm.is_protected) or is_reserved %}

@@ -23,17 +23,6 @@
     {% if protected %}<span class="badge badge-secondary ml-2">محمي</span>{% endif %}
   </h2>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, msg in messages %}
-      <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-        {{ msg }}
-        <button type="button" class="close" data-dismiss="alert" aria-label="إغلاق">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-    {% endfor %}
-  {% endwith %}
-
   {% if protected %}
     <div class="alert alert-info">هذا الدور محمي؛ تم تعطيل التعديل والحفظ للحفاظ على سلامة النظام.</div>
   {% endif %}

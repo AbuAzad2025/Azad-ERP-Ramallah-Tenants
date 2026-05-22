@@ -122,17 +122,7 @@
 {% include 'shop/sidebar.html' %}
 
 <main class="main-content">
-  {% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-  {% for category, message in messages %}
-  <div class="alert alert-{{ category or 'info' }} alert-dismissible fade show modern-alert" role="alert">
-    <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' if category == 'warning' else 'info-circle' }} ml-2"></i>
-    {{ message }}
-    <button type="button" class="close" data-dismiss="alert" aria-label="إغلاق"><span aria-hidden="true">&times;</span></button>
-  </div>
-  {% endfor %}
-  {% endif %}
-  {% endwith %}
+  {% include 'partials/_flash_messages.html' %}
   {% block content %}{% endblock %}
 </main>
 <footer class="modern-footer">

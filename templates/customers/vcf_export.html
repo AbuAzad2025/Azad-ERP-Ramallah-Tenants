@@ -27,17 +27,6 @@
     </div>
     <div class="card-body">
 
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% for cat, msg in messages %}
-            <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
-              {{ msg }}
-              <button type="button" class="close" data-dismiss="alert" aria-label="إغلاق"></button>
-            </div>
-          {% endfor %}
-        {% endif %}
-      {% endwith %}
-
       <form id="export-contacts-form" method="post" action="{{ url_for('customers_bp.export_contacts') }}">
         {{ form.hidden_tag() }}
 
