@@ -256,7 +256,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const tdAction = document.createElement('td');
       const a = document.createElement('a');
       a.className = 'btn btn-info btn-sm';
-      a.href = '/payments/' + encodeURIComponent(String(p.id ?? ''));
+      a.href = (window.gmPath || function(p){ return p; })('/payments/' + encodeURIComponent(String(p.id ?? '')));
       a.textContent = 'عرض';
       tdAction.appendChild(a);
       tr.appendChild(tdAction);

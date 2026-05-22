@@ -386,13 +386,13 @@
             <div class="row mb-3">
                 <div class="col-md-12 d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <div class="btn-group">
-                        <button type="button" class="btn btn-primary" onclick="window.location.href='/checks/new'">
+                        <button type="button" class="btn btn-primary" onclick="window.location.href={{ checks_new_url|tojson }}">
                             <i class="fas fa-plus"></i> إضافة شيك يدوي
                         </button>
                         <button type="button" class="btn btn-success" onclick="refreshAll()">
                             <i class="fas fa-sync-alt"></i> تحديث
                         </button>
-                        <button type="button" class="btn btn-info" onclick="window.location.href='/checks/reports'">
+                        <button type="button" class="btn btn-info" onclick="window.location.href={{ checks_reports_url|tojson }}">
                             <i class="fas fa-chart-bar"></i> التقارير
                         </button>
                         {% if is_owner %}

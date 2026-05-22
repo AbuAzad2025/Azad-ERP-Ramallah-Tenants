@@ -174,7 +174,7 @@
 <script>
 async function refreshAllBalances() {
   try {
-    const response = await fetch('/api/balances/summary?no_cache=1');
+    const response = await fetch(gmPath('/api/balances/summary?no_cache=1'));
     const data = await response.json();
     
     if (data.success) {
@@ -188,7 +188,7 @@ async function refreshAllBalances() {
 
 async function clearCache() {
   try {
-    const response = await fetch('/api/balances/clear-cache', {
+    const response = await fetch(gmPath('/api/balances/clear-cache'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

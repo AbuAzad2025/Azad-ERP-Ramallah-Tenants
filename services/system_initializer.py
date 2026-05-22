@@ -95,16 +95,17 @@ class SystemInitializer:
              self.logger.info("Default currencies initialized.")
 
     def _ensure_warehouse(self):
-        if not Warehouse.query.first():
-            wh = Warehouse(
-                name="المستودع الرئيسي",
-                location="المقر الرئيسي",
-                warehouse_type=WarehouseType.MAIN.value,
-                is_active=True
-            )
-            db.session.add(wh)
+        from utils.tenant_org_structure import ensure_tenant_org_structure
+
+        stats = ensure_tenant_org_structure(db.session)
+        if stats.get("branch_created") or stats.get("warehouses_created"):
             db.session.commit()
-            self.logger.info("🏭 Main warehouse created.")
+            self.logger.info(
+                "🏢 Org structure: branch=%s warehouses=%s linked=%s",
+                stats.get("branch_created"),
+                stats.get("warehouses_created"),
+                stats.get("warehouses_linked"),
+            )
 
     def _ensure_chart_of_accounts(self):
         # Basic COA Structure with String Codes

@@ -2154,7 +2154,7 @@ function showEstimatedProducts() {
                             title="حفظ التكلفة">
                         <i class="fas fa-save"></i> حفظ
                     </button>
-                    <a href="/warehouses/products/${p.id}/edit" 
+                    <a href="${gmPath('/warehouses/parts/' + p.id)}" 
                        class="btn btn-primary"
                        title="تعديل المنتج بالكامل"
                        target="_blank">
@@ -2223,7 +2223,7 @@ function showNoCostProducts() {
                             title="حفظ التكلفة">
                         <i class="fas fa-save"></i> حفظ
                     </button>
-                    <a href="/warehouses/products/${p.id}/edit" 
+                    <a href="${gmPath('/warehouses/parts/' + p.id)}" 
                        class="btn btn-primary"
                        title="تعديل المنتج بالكامل"
                        target="_blank">
@@ -3646,7 +3646,7 @@ function displayCogsAudit(data) {
             <tr class="${statusClass}">
                 <td><strong>${product.product_name}</strong></td>
                 <td>${product.product_sku}</td>
-                <td><a href="/sales/${product.sale_id}" target="_blank">${product.sale_number}</a></td>
+                <td><a href="${gmPath('/sales/' + product.sale_id)}" target="_blank">${product.sale_number}</a></td>
                 <td>${product.sale_date}</td>
                 <td class="text-center">${product.qty_sold}</td>
                 <td class="text-end">${formatCurrency(product.unit_price)} ₪</td>

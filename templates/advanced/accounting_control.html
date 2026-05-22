@@ -214,7 +214,7 @@
                 <ol class="breadcrumb float-sm-left">
                     <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">الرئيسية</a></li>
                     {% if current_user.is_authenticated and (current_user.is_system_account or (current_user.username|default('')|upper == '__OWNER__') or (current_user.role and current_user.role.name|default('')|upper == 'OWNER')) %}
-                    <li class="breadcrumb-item"><a href="/security/">اللوحة السرية</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('security.index') }}">اللوحة السرية</a></li>
                     {% endif %}
                     <li class="breadcrumb-item active">المحاسبة المتقدمة</li>
                 </ol>

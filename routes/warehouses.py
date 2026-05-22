@@ -825,11 +825,10 @@ def create_warehouse():
         wh_type = (form.warehouse_type.data or "").strip().upper()
         # حدد فرع المستودع: إذا لم يُحدد، نعين الفرع الرئيسي MAIN
         def _get_main_branch_id():
-            main = Branch.query.filter(Branch.code == 'MAIN').first()
-            if main:
-                return main.id
-            first_active = Branch.query.filter_by(is_active=True).order_by(Branch.id.asc()).first()
-            return first_active.id if first_active else None
+            from utils.tenant_org_structure import get_main_branch
+
+            main = get_main_branch(db.session)
+            return main.id if main else None
 
         selected_branch_id = form.branch_id.data if form.branch_id.data not in (None, 0, '0') else None
         resolved_branch_id = selected_branch_id or _get_main_branch_id()

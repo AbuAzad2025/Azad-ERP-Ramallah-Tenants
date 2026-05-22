@@ -53,6 +53,9 @@ def login_alias():
 @main_bp.route("/", methods=["GET"], endpoint="dashboard")
 @login_required
 def dashboard():
+    from flask import g
+    from utils.dashboard_routing import dashboard_widgets_for_user, preferred_dashboard_endpoint
+
     try:
         db.session.rollback()
     except Exception:
@@ -93,46 +96,72 @@ def dashboard():
             targets = {str(code).strip().lower()}
         return bool(perms_set & targets)
 
-    cache_key_inv = 'dashboard_inventory_stats'
-    inv_stats = cache.get(cache_key_inv)
-    if inv_stats is None:
-        subq = (
-            db.session.query(
-                Product.id.label("pid"),
-                func.coalesce(func.sum(StockLevel.quantity), 0).label("qty"),
-                func.coalesce(Product.min_qty, 0).label("min_qty"),
-            )
-            .outerjoin(StockLevel, StockLevel.product_id == Product.id)
-            .filter(Product.is_active.is_(True))
-            .group_by(Product.id, Product.min_qty)
-            .subquery()
-        )
-        inventory_total = int(db.session.query(func.coalesce(func.sum(subq.c.qty), 0)).scalar() or 0)
-        low_stock_count = int(
-            db.session.query(func.count())
-            .select_from(subq)
-            .filter(subq.c.qty <= subq.c.min_qty)
-            .scalar()
-            or 0
-        )
-        inv_stats = {'inventory_total': inventory_total, 'low_stock_count': low_stock_count}
-        cache.set(cache_key_inv, inv_stats, timeout=300)
+    tenant_slug = str(getattr(g, "tenant_slug", None) or "").strip()
+    if not _has_perm(SystemPermissions.ACCESS_DASHBOARD.value):
+        dest = preferred_dashboard_endpoint(current_user, tenant_slug or None)
+        if dest != "main.dashboard":
+            from flask import flash, redirect, url_for
 
-    inventory_total = int((inv_stats or {}).get("inventory_total") or 0)
-    low_stock_count = int((inv_stats or {}).get("low_stock_count") or 0)
+            flash("لوحة التشغيل غير متاحة لدورك — تم توجيهك للوحة المناسبة.", "info")
+            return redirect(url_for(dest))
+        from flask import abort
+
+        abort(403)
+
+    dash_widgets = dashboard_widgets_for_user(current_user)
+
+    inventory_total = 0
+    low_stock_count = 0
     low_stock: list = []
+    if dash_widgets.get("warehouses"):
+        cache_key_inv = 'dashboard_inventory_stats'
+        inv_stats = cache.get(cache_key_inv)
+        if inv_stats is None:
+            subq = (
+                db.session.query(
+                    Product.id.label("pid"),
+                    func.coalesce(func.sum(StockLevel.quantity), 0).label("qty"),
+                    func.coalesce(Product.min_qty, 0).label("min_qty"),
+                )
+                .outerjoin(StockLevel, StockLevel.product_id == Product.id)
+                .filter(Product.is_active.is_(True))
+                .group_by(Product.id, Product.min_qty)
+                .subquery()
+            )
+            inventory_total = int(db.session.query(func.coalesce(func.sum(subq.c.qty), 0)).scalar() or 0)
+            low_stock_count = int(
+                db.session.query(func.count())
+                .select_from(subq)
+                .filter(subq.c.qty <= subq.c.min_qty)
+                .scalar()
+                or 0
+            )
+            inv_stats = {'inventory_total': inventory_total, 'low_stock_count': low_stock_count}
+            cache.set(cache_key_inv, inv_stats, timeout=300)
+        else:
+            inventory_total = int((inv_stats or {}).get("inventory_total") or 0)
+            low_stock_count = int((inv_stats or {}).get("low_stock_count") or 0)
 
-    cache_key_exch = 'dashboard_exchanges'
-    pending_exchanges = cache.get(cache_key_exch)
-    if pending_exchanges is None:
-        pending_exchanges = ExchangeTransaction.query.filter_by(direction="OUT").count()
-        cache.set(cache_key_exch, pending_exchanges, timeout=180)
-    
-    cache_key_partner = 'dashboard_partner_stock'
-    partner_stock = cache.get(cache_key_partner)
-    if partner_stock is None:
-        partner_stock = (db.session.query(func.count(Product.id)).join(Supplier, Supplier.id == Product.supplier_local_id).scalar() or 0)
-        cache.set(cache_key_partner, partner_stock, timeout=300)
+    pending_exchanges = 0
+    if dash_widgets.get("shipments"):
+        cache_key_exch = 'dashboard_exchanges'
+        pending_exchanges = cache.get(cache_key_exch)
+        if pending_exchanges is None:
+            pending_exchanges = ExchangeTransaction.query.filter_by(direction="OUT").count()
+            cache.set(cache_key_exch, pending_exchanges, timeout=180)
+
+    partner_stock = 0
+    if dash_widgets.get("vendors"):
+        cache_key_partner = 'dashboard_partner_stock'
+        partner_stock = cache.get(cache_key_partner)
+        if partner_stock is None:
+            partner_stock = (
+                db.session.query(func.count(Product.id))
+                .join(Supplier, Supplier.id == Product.supplier_local_id)
+                .scalar()
+                or 0
+            )
+            cache.set(cache_key_partner, partner_stock, timeout=300)
 
     recent_sales = []
     today_sales_rows: List[Tuple] = []
@@ -298,9 +327,14 @@ def dashboard():
     def _sum_partner_smart_balance():
         return _sum_entity_balance(Partner)
 
-    total_customer_balance = _sum_entity_balance(Customer)
-    total_supplier_balance = _sum_entity_balance(Supplier)
-    total_partner_balance = _sum_partner_smart_balance()
+    total_customer_balance = 0.0
+    total_supplier_balance = 0.0
+    total_partner_balance = 0.0
+    if dash_widgets.get("customers"):
+        total_customer_balance = _sum_entity_balance(Customer)
+    if dash_widgets.get("vendors"):
+        total_supplier_balance = _sum_entity_balance(Supplier)
+        total_partner_balance = _sum_partner_smart_balance()
 
     def _aggregate_payments(start_dt, end_dt):
         cache_key_pay = f'dashboard_payments_{start_dt.date()}_{end_dt.date()}'
@@ -361,59 +395,72 @@ def dashboard():
         cache.set(cache_key_pay, result, timeout=300)
         return result['incoming'], result['outgoing']
 
-    today_incoming, today_outgoing = _aggregate_payments(day_start_dt, day_end_dt)
-    week_incoming, week_outgoing = _aggregate_payments(week_start_dt, week_end_dt)
+    today_incoming = today_outgoing = week_incoming = week_outgoing = 0.0
+    payments_day_labels: list = []
+    payments_in_values: list = []
+    payments_out_values: list = []
+    payments_net_values: list = []
+    if dash_widgets.get("payments") or dash_widgets.get("ledger"):
+        today_incoming, today_outgoing = _aggregate_payments(day_start_dt, day_end_dt)
+        week_incoming, week_outgoing = _aggregate_payments(week_start_dt, week_end_dt)
     today_revenue = float(today_revenue)
     today_net = today_incoming - today_outgoing
     week_net = week_incoming - week_outgoing
 
-    cache_key_daily_pay = f'dashboard_daily_payments_{week_start_dt.date()}_{week_end_dt.date()}'
-    daily_payments_data = cache.get(cache_key_daily_pay)
-    if daily_payments_data is None:
-        from collections import defaultdict
-        daily_payments = defaultdict(lambda: {'incoming': Decimal('0.00'), 'outgoing': Decimal('0.00')})
-        
-        all_week_payments = (
-            db.session.query(
-                Payment.total_amount,
-                Payment.currency,
-                Payment.fx_rate_used,
-                Payment.payment_date,
-                Payment.direction,
+    if dash_widgets.get("payments") or dash_widgets.get("ledger"):
+        cache_key_daily_pay = f'dashboard_daily_payments_{week_start_dt.date()}_{week_end_dt.date()}'
+        daily_payments_data = cache.get(cache_key_daily_pay)
+        if daily_payments_data is None:
+            from collections import defaultdict
+            daily_payments = defaultdict(lambda: {'incoming': Decimal('0.00'), 'outgoing': Decimal('0.00')})
+
+            all_week_payments = (
+                db.session.query(
+                    Payment.total_amount,
+                    Payment.currency,
+                    Payment.fx_rate_used,
+                    Payment.payment_date,
+                    Payment.direction,
+                )
+                .filter(
+                    Payment.payment_date >= week_start_dt,
+                    Payment.payment_date < week_end_dt,
+                    Payment.status == PaymentStatus.COMPLETED.value,
+                )
+                .all()
             )
-            .filter(
-            Payment.payment_date >= week_start_dt,
-            Payment.payment_date < week_end_dt,
-            Payment.status == PaymentStatus.COMPLETED.value
-            )
-            .all()
-        )
-        
-        for amount, currency, fx_used, pay_dt, direction in all_week_payments:
-            day_key = pay_dt.date() if pay_dt else today
-            amt_ils = _to_ils(amount, currency, fx_used, pay_dt)
-            
-            if direction == PaymentDirection.IN.value:
-                daily_payments[day_key]['incoming'] += amt_ils
-            else:
-                daily_payments[day_key]['outgoing'] += amt_ils
-        
-        payments_day_labels = sorted([str(d) for d in daily_payments.keys()])
-        payments_in_values = [float(daily_payments[datetime.strptime(d, '%Y-%m-%d').date()]['incoming']) for d in payments_day_labels]
-        payments_out_values = [float(daily_payments[datetime.strptime(d, '%Y-%m-%d').date()]['outgoing']) for d in payments_day_labels]
-        payments_net_values = [i - o for i, o in zip(payments_in_values, payments_out_values)]
-        daily_payments_data = {
-            'labels': payments_day_labels,
-            'in_values': payments_in_values,
-            'out_values': payments_out_values,
-            'net_values': payments_net_values
-        }
-        cache.set(cache_key_daily_pay, daily_payments_data, timeout=300)
-    
-    payments_day_labels = daily_payments_data['labels']
-    payments_in_values = daily_payments_data['in_values']
-    payments_out_values = daily_payments_data['out_values']
-    payments_net_values = daily_payments_data['net_values']
+
+            for amount, currency, fx_used, pay_dt, direction in all_week_payments:
+                day_key = pay_dt.date() if pay_dt else today
+                amt_ils = _to_ils(amount, currency, fx_used, pay_dt)
+
+                if direction == PaymentDirection.IN.value:
+                    daily_payments[day_key]['incoming'] += amt_ils
+                else:
+                    daily_payments[day_key]['outgoing'] += amt_ils
+
+            payments_day_labels = sorted([str(d) for d in daily_payments.keys()])
+            payments_in_values = [
+                float(daily_payments[datetime.strptime(d, '%Y-%m-%d').date()]['incoming'])
+                for d in payments_day_labels
+            ]
+            payments_out_values = [
+                float(daily_payments[datetime.strptime(d, '%Y-%m-%d').date()]['outgoing'])
+                for d in payments_day_labels
+            ]
+            payments_net_values = [i - o for i, o in zip(payments_in_values, payments_out_values)]
+            daily_payments_data = {
+                'labels': payments_day_labels,
+                'in_values': payments_in_values,
+                'out_values': payments_out_values,
+                'net_values': payments_net_values,
+            }
+            cache.set(cache_key_daily_pay, daily_payments_data, timeout=300)
+        else:
+            payments_day_labels = daily_payments_data['labels']
+            payments_in_values = daily_payments_data['in_values']
+            payments_out_values = daily_payments_data['out_values']
+            payments_net_values = daily_payments_data['net_values']
 
     month_start_today = today.replace(day=1)
     def _shift_month(base, offset):
@@ -421,261 +468,284 @@ def dashboard():
         month = (base.month - 1 + offset) % 12 + 1
         return date(year, month, 1)
     
-    cache_key_monthly = f'dashboard_monthly_sales_{month_start_today}'
-    monthly_data = cache.get(cache_key_monthly)
-    if monthly_data is None:
-        month_keys = []
-        monthly_labels = []
-        monthly_totals = {}
-        for offset in range(-5, 1):
-            start_month = _shift_month(month_start_today, offset)
-            key = start_month.strftime("%Y-%m")
-            month_keys.append(key)
-            monthly_labels.append(start_month.strftime("%b %Y"))
-            monthly_totals[key] = Decimal('0.00')
-        sales_period_start = _shift_month(month_start_today, -5)
-        sales_period_end = _shift_month(month_start_today, 1)
-        monthly_sales_rows = (
-            Sale.query.options(
-                load_only(
-                    Sale.sale_date,
-                    Sale.total_amount,
-                    Sale.currency,
-                    Sale.fx_rate_used,
+    monthly_sales_labels: list = []
+    monthly_sales_values: list = []
+    customer_segment_labels: list = []
+    customer_segment_values: list = []
+    if dash_widgets.get("sales") or dash_widgets.get("reports"):
+        cache_key_monthly = f'dashboard_monthly_sales_{month_start_today}'
+        monthly_data = cache.get(cache_key_monthly)
+        if monthly_data is None:
+            month_keys = []
+            monthly_labels = []
+            monthly_totals = {}
+            for offset in range(-5, 1):
+                start_month = _shift_month(month_start_today, offset)
+                key = start_month.strftime("%Y-%m")
+                month_keys.append(key)
+                monthly_labels.append(start_month.strftime("%b %Y"))
+                monthly_totals[key] = Decimal('0.00')
+            sales_period_start = _shift_month(month_start_today, -5)
+            sales_period_end = _shift_month(month_start_today, 1)
+            monthly_sales_rows = (
+                Sale.query.options(
+                    load_only(
+                        Sale.sale_date,
+                        Sale.total_amount,
+                        Sale.currency,
+                        Sale.fx_rate_used,
+                    )
                 )
+                .filter(
+                    Sale.status == SaleStatus.CONFIRMED.value,
+                    Sale.sale_date >= datetime.combine(sales_period_start, time.min),
+                    Sale.sale_date < datetime.combine(sales_period_end, time.min),
+                )
+                .all()
             )
-            .filter(
-                Sale.status == SaleStatus.CONFIRMED.value,
-                Sale.sale_date >= datetime.combine(sales_period_start, time.min),
-                Sale.sale_date < datetime.combine(sales_period_end, time.min),
+            for sale in monthly_sales_rows:
+                key = sale.sale_date.strftime("%Y-%m")
+                if key in monthly_totals:
+                    monthly_totals[key] += _to_ils(
+                        sale.total_amount, sale.currency, sale.fx_rate_used, sale.sale_date
+                    )
+            monthly_data = {
+                'labels': monthly_labels,
+                'values': [float(monthly_totals[key]) for key in month_keys],
+            }
+            cache.set(cache_key_monthly, monthly_data, timeout=3600)
+        monthly_sales_labels = monthly_data['labels']
+        monthly_sales_values = monthly_data['values']
+
+    if dash_widgets.get("customers"):
+        cache_key_customers = f'dashboard_customers_{today}'
+        customer_data = cache.get(cache_key_customers)
+        if customer_data is None:
+            thirty_days_ago = today - timedelta(days=30)
+            ninety_days_ago = today - timedelta(days=90)
+            new_count = int(
+                db.session.query(func.count(Customer.id))
+                .filter(
+                    Customer.created_at.isnot(None),
+                    Customer.created_at >= datetime.combine(thirty_days_ago, time.min),
+                )
+                .scalar()
+                or 0
             )
-            .all()
-        )
-        for sale in monthly_sales_rows:
-            key = sale.sale_date.strftime("%Y-%m")
-            if key in monthly_totals:
-                monthly_totals[key] += _to_ils(sale.total_amount, sale.currency, sale.fx_rate_used, sale.sale_date)
-        monthly_data = {
-            'labels': monthly_labels,
-            'values': [float(monthly_totals[key]) for key in month_keys]
-        }
-        cache.set(cache_key_monthly, monthly_data, timeout=3600)
-    
-    monthly_sales_labels = monthly_data['labels']
-    monthly_sales_values = monthly_data['values']
-    cache_key_customers = f'dashboard_customers_{today}'
-    customer_data = cache.get(cache_key_customers)
-    if customer_data is None:
-        thirty_days_ago = today - timedelta(days=30)
-        ninety_days_ago = today - timedelta(days=90)
-        new_count = int(
-            db.session.query(func.count(Customer.id))
-            .filter(
-                Customer.created_at.isnot(None),
-                Customer.created_at >= datetime.combine(thirty_days_ago, time.min),
+            active_count = int(
+                db.session.query(func.count(func.distinct(Sale.customer_id)))
+                .filter(
+                    Sale.customer_id.isnot(None),
+                    Sale.sale_date >= datetime.combine(ninety_days_ago, time.min),
+                    Sale.status == SaleStatus.CONFIRMED.value,
+                )
+                .scalar()
+                or 0
             )
-            .scalar()
-            or 0
-        )
-        active_count = int(
-            db.session.query(func.count(func.distinct(Sale.customer_id)))
-            .filter(
-                Sale.customer_id.isnot(None),
-                Sale.sale_date >= datetime.combine(ninety_days_ago, time.min),
-                Sale.status == SaleStatus.CONFIRMED.value,
+            active_new_count = int(
+                db.session.query(func.count(func.distinct(Sale.customer_id)))
+                .join(Customer, Customer.id == Sale.customer_id)
+                .filter(
+                    Sale.customer_id.isnot(None),
+                    Sale.sale_date >= datetime.combine(ninety_days_ago, time.min),
+                    Sale.status == SaleStatus.CONFIRMED.value,
+                    Customer.created_at.isnot(None),
+                    Customer.created_at >= datetime.combine(thirty_days_ago, time.min),
+                )
+                .scalar()
+                or 0
             )
-            .scalar()
-            or 0
-        )
-        active_new_count = int(
-            db.session.query(func.count(func.distinct(Sale.customer_id)))
-            .join(Customer, Customer.id == Sale.customer_id)
-            .filter(
-                Sale.customer_id.isnot(None),
-                Sale.sale_date >= datetime.combine(ninety_days_ago, time.min),
-                Sale.status == SaleStatus.CONFIRMED.value,
-                Customer.created_at.isnot(None),
-                Customer.created_at >= datetime.combine(thirty_days_ago, time.min),
-            )
-            .scalar()
-            or 0
-        )
-        total_customers_count = int(db.session.query(func.count(Customer.id)).scalar() or 0)
-        active_existing = max(active_count - active_new_count, 0)
-        inactive_count = max(total_customers_count - (new_count + active_existing), 0)
-        customer_data = {
-            'new_count': new_count,
-            'active_existing': active_existing,
-            'inactive_count': inactive_count
-        }
-        cache.set(cache_key_customers, customer_data, timeout=1800)
-    
-    active_existing = customer_data['active_existing']
-    inactive_count = customer_data['inactive_count']
-    customer_segment_labels = ["عملاء جدد", "عملاء نشطين", "عملاء غير نشطين"]
-    customer_segment_values = [
-        customer_data['new_count'],
-        active_existing,
-        inactive_count,
-    ]
+            total_customers_count = int(db.session.query(func.count(Customer.id)).scalar() or 0)
+            active_existing = max(active_count - active_new_count, 0)
+            inactive_count = max(total_customers_count - (new_count + active_existing), 0)
+            customer_data = {
+                'new_count': new_count,
+                'active_existing': active_existing,
+                'inactive_count': inactive_count,
+            }
+            cache.set(cache_key_customers, customer_data, timeout=1800)
+
+        active_existing = customer_data['active_existing']
+        inactive_count = customer_data['inactive_count']
+        customer_segment_labels = ["عملاء جدد", "عملاء نشطين", "عملاء غير نشطين"]
+        customer_segment_values = [
+            customer_data['new_count'],
+            active_existing,
+            inactive_count,
+        ]
     dashboard_alerts: List[dict] = []
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
-    today = now.date()
-    week_ahead = today + timedelta(days=7)
+    alert_now = datetime.now(timezone.utc).replace(tzinfo=None)
+    alert_today = alert_now.date()
+    week_ahead = alert_today + timedelta(days=7)
 
-    cache_key_checks = f'dashboard_checks_{today}'
-    checks_alerts = cache.get(cache_key_checks)
-    if checks_alerts is None:
-        checks_alerts = []
-        try:
-            overdue_filter = (
-                Check.is_archived.is_(False),
-                Check.status == CheckStatus.PENDING.value,
-                Check.check_due_date < now,
-            )
-            upcoming_filter = (
-                Check.is_archived.is_(False),
-                Check.status == CheckStatus.PENDING.value,
-                Check.check_due_date.between(now, datetime.combine(week_ahead, datetime.max.time())),
-            )
-
-            def _sum_ils_amount(base_filter):
-                rate = func.coalesce(Check.fx_rate_issue, 0)
-                amount_ils = case(
-                    (func.upper(func.coalesce(Check.currency, 'ILS')) == 'ILS', func.coalesce(Check.amount, 0)),
-                    else_=func.coalesce(Check.amount, 0) * rate,
+    checks_alerts: list = []
+    if dash_widgets.get("checks"):
+        cache_key_checks = f'dashboard_checks_{alert_today}'
+        checks_alerts = cache.get(cache_key_checks)
+        if checks_alerts is None:
+            checks_alerts = []
+            try:
+                overdue_filter = (
+                    Check.is_archived.is_(False),
+                    Check.status == CheckStatus.PENDING.value,
+                    Check.check_due_date < alert_now,
                 )
-                return float(db.session.query(func.coalesce(func.sum(amount_ils), 0)).filter(*base_filter).scalar() or 0)
+                upcoming_filter = (
+                    Check.is_archived.is_(False),
+                    Check.status == CheckStatus.PENDING.value,
+                    Check.check_due_date.between(
+                        alert_now, datetime.combine(week_ahead, datetime.max.time())
+                    ),
+                )
 
-            overdue_count = int(db.session.query(func.count(Check.id)).filter(*overdue_filter).scalar() or 0)
-            upcoming_count = int(db.session.query(func.count(Check.id)).filter(*upcoming_filter).scalar() or 0)
-            overdue_amount = _sum_ils_amount(overdue_filter)
-            upcoming_amount = _sum_ils_amount(upcoming_filter)
+                def _sum_ils_amount(base_filter):
+                    rate = func.coalesce(Check.fx_rate_issue, 0)
+                    amount_ils = case(
+                        (
+                            func.upper(func.coalesce(Check.currency, 'ILS')) == 'ILS',
+                            func.coalesce(Check.amount, 0),
+                        ),
+                        else_=func.coalesce(Check.amount, 0) * rate,
+                    )
+                    return float(
+                        db.session.query(func.coalesce(func.sum(amount_ils), 0))
+                        .filter(*base_filter)
+                        .scalar()
+                        or 0
+                    )
 
-            overdue_min_due = db.session.query(func.min(Check.check_due_date)).filter(*overdue_filter).scalar()
-            upcoming_min_due = db.session.query(func.min(Check.check_due_date)).filter(*upcoming_filter).scalar()
+                overdue_count = int(
+                    db.session.query(func.count(Check.id)).filter(*overdue_filter).scalar() or 0
+                )
+                upcoming_count = int(
+                    db.session.query(func.count(Check.id)).filter(*upcoming_filter).scalar() or 0
+                )
+                overdue_amount = _sum_ils_amount(overdue_filter)
+                upcoming_amount = _sum_ils_amount(upcoming_filter)
+                overdue_min_due = (
+                    db.session.query(func.min(Check.check_due_date)).filter(*overdue_filter).scalar()
+                )
+                upcoming_min_due = (
+                    db.session.query(func.min(Check.check_due_date)).filter(*upcoming_filter).scalar()
+                )
 
-            if overdue_count:
-                checks_alerts.append({
-                    "category": "الشيكات",
-                    "severity": "danger",
-                    "icon": "fas fa-money-check-alt",
-                    "title": "شيكات متأخرة تحتاج إجراء",
-                    "message": f"عدد الشيكات المتأخرة: {overdue_count}",
-                    "amount_display": f"{float(overdue_amount):,.2f} ₪",
-                    "link": url_for('checks.index'),
-                    "meta": overdue_min_due.strftime('%Y-%m-%d') if overdue_min_due else None,
-                })
+                if overdue_count:
+                    checks_alerts.append({
+                        "category": "الشيكات",
+                        "severity": "danger",
+                        "icon": "fas fa-money-check-alt",
+                        "title": "شيكات متأخرة تحتاج إجراء",
+                        "message": f"عدد الشيكات المتأخرة: {overdue_count}",
+                        "amount_display": f"{float(overdue_amount):,.2f} ₪",
+                        "link": url_for('checks.index'),
+                        "meta": overdue_min_due.strftime('%Y-%m-%d') if overdue_min_due else None,
+                    })
+                if upcoming_count:
+                    checks_alerts.append({
+                        "category": "الشيكات",
+                        "severity": "warning",
+                        "icon": "fas fa-calendar-check",
+                        "title": "شيكات تستحق قريباً (7 أيام)",
+                        "message": f"عدد الشيكات القريبة: {upcoming_count}",
+                        "amount_display": f"{float(upcoming_amount):,.2f} ₪",
+                        "link": url_for('checks.index'),
+                        "meta": upcoming_min_due.strftime('%Y-%m-%d') if upcoming_min_due else None,
+                    })
+            except Exception as exc:
+                current_app.logger.warning(f"Dashboard check alerts error: {exc}")
+            cache.set(cache_key_checks, checks_alerts, timeout=600)
 
-            if upcoming_count:
-                checks_alerts.append({
-                    "category": "الشيكات",
-                    "severity": "warning",
-                    "icon": "fas fa-calendar-check",
-                    "title": "شيكات تستحق قريباً (7 أيام)",
-                    "message": f"عدد الشيكات القريبة: {upcoming_count}",
-                    "amount_display": f"{float(upcoming_amount):,.2f} ₪",
-                    "link": url_for('checks.index'),
-                    "meta": upcoming_min_due.strftime('%Y-%m-%d') if upcoming_min_due else None,
-                })
-        except Exception as exc:
-            current_app.logger.warning(f"Dashboard check alerts error: {exc}")
-        
-        cache.set(cache_key_checks, checks_alerts, timeout=600)
-    
     dashboard_alerts.extend(checks_alerts)
 
-    try:
-        customer_debts = (
-            db.session.query(
-                Customer.id,
-                Customer.name,
-                Customer.balance.label("cust_balance"),
-                func.count(Sale.id).label("sale_count"),
-                func.max(Sale.sale_date).label("last_sale"),
-            )
-            .outerjoin(
-                Sale,
-                and_(
-                    Sale.customer_id == Customer.id,
-                    Sale.status == SaleStatus.CONFIRMED.value,
-                    Sale.balance_due > 0,
+    if dash_widgets.get("customers"):
+        try:
+            customer_debts = (
+                db.session.query(
+                    Customer.id,
+                    Customer.name,
+                    Customer.balance.label("cust_balance"),
+                    func.count(Sale.id).label("sale_count"),
+                    func.max(Sale.sale_date).label("last_sale"),
                 )
+                .outerjoin(
+                    Sale,
+                    and_(
+                        Sale.customer_id == Customer.id,
+                        Sale.status == SaleStatus.CONFIRMED.value,
+                        Sale.balance_due > 0,
+                    ),
+                )
+                .filter(Customer.balance < 0)
+                .group_by(Customer.id, Customer.name, Customer.balance)
+                .order_by(Customer.balance.asc())
+                .limit(5)
+                .all()
             )
-            .filter(Customer.balance < 0)
-            .group_by(Customer.id, Customer.name, Customer.balance)
-            .order_by(Customer.balance.asc())
-            .limit(5)
-            .all()
-        )
+            id_list = [row[0] for row in customer_debts]
+            customers_map = {}
+            if id_list:
+                customers_map = {
+                    c.id: c for c in Customer.query.filter(Customer.id.in_(id_list)).all()
+                }
+            for cust_id, cust_name, cust_balance, sale_count, last_sale in customer_debts:
+                balance_value = cust_balance or 0
+                cust_obj = customers_map.get(cust_id)
+                if cust_obj:
+                    try:
+                        balance_value = cust_obj.balance
+                    except Exception as exc:
+                        current_app.logger.warning(
+                            f"خطأ في حساب رصيد العميل #{cust_id}: {exc}"
+                        )
+                if balance_value and balance_value < 0:
+                    amount_due = abs(float(balance_value))
+                    dashboard_alerts.append({
+                        "category": "الذمم",
+                        "severity": "warning",
+                        "icon": "fas fa-user-clock",
+                        "title": f"دين على العميل {cust_name}",
+                        "message": f"عدد الفواتير المفتوحة: {sale_count}",
+                        "amount_display": f"{amount_due:,.2f} ₪",
+                        "link": url_for('customers_bp.list_customers', name=cust_name),
+                        "meta": last_sale.strftime('%Y-%m-%d') if last_sale else None,
+                    })
+        except Exception as exc:
+            current_app.logger.warning(f"Dashboard customer debt alerts error: {exc}")
 
-        id_list = [row[0] for row in customer_debts]
-        customers_map = {}
-        if id_list:
-            customers_map = {
-                c.id: c
-                for c in Customer.query.filter(Customer.id.in_(id_list)).all()
-            }
-
-        for cust_id, cust_name, cust_balance, sale_count, last_sale in customer_debts:
-            balance_value = cust_balance or 0
-            cust_obj = customers_map.get(cust_id)
-            if cust_obj:
-                try:
-                    balance_value = cust_obj.balance
-                except Exception as exc:
-                    current_app.logger.warning(
-                        f"⚠️ خطأ في حساب رصيد العميل #{cust_id}: {exc}"
-                    )
-            if balance_value and balance_value < 0:
-                amount_due = abs(float(balance_value))
-                dashboard_alerts.append({
-                    "category": "الذمم",
-                    "severity": "warning",
-                    "icon": "fas fa-user-clock",
-                    "title": f"دين على العميل {cust_name}",
-                    "message": f"عدد الفواتير المفتوحة: {sale_count}",
-                    "amount_display": f"{amount_due:,.2f} ₪",
-                    "link": url_for('customers_bp.list_customers', name=cust_name),
-                    "meta": last_sale.strftime('%Y-%m-%d') if last_sale else None,
-                })
-    except Exception as exc:
-        current_app.logger.warning(f"Dashboard customer debt alerts error: {exc}")
-
-    try:
-        recent_expenses = (
-            db.session.query(
-                Expense.id,
-                Expense.description,
-                Expense.amount,
-                Expense.currency,
-                Expense.date,
+    if dash_widgets.get("expenses"):
+        try:
+            recent_expenses = (
+                db.session.query(
+                    Expense.id,
+                    Expense.description,
+                    Expense.amount,
+                    Expense.currency,
+                    Expense.date,
+                )
+                .filter(
+                    Expense.date >= alert_today - timedelta(days=7),
+                    Expense.amount > 0,
+                )
+                .order_by(Expense.amount.desc(), Expense.date.desc())
+                .limit(5)
+                .all()
             )
-            .filter(
-                Expense.date >= today - timedelta(days=7),
-                Expense.amount > 0,
-            )
-            .order_by(Expense.amount.desc(), Expense.date.desc())
-            .limit(5)
-            .all()
-        )
-
-        expense_threshold = Decimal("5000")
-        for exp_id, description, amount, currency, exp_date in recent_expenses:
-            amount_ils = _to_ils(amount, currency, None, datetime.combine(exp_date, time.min))
-            if amount_ils >= expense_threshold:
-                dashboard_alerts.append({
-                    "category": "المصاريف",
-                    "severity": "info",
-                    "icon": "fas fa-wallet",
-                    "title": "مصروف مرتفع مسجل",
-                    "message": description or f"مصروف رقم {exp_id}",
-                    "amount_display": f"{float(amount_ils):,.2f} ₪",
-                    "link": url_for('expenses_bp.list_expenses'),
-                    "meta": exp_date.strftime('%Y-%m-%d'),
-                })
-    except Exception as exc:
-        current_app.logger.warning(f"Dashboard expense alerts error: {exc}")
+            expense_threshold = Decimal("5000")
+            for exp_id, description, amount, currency, exp_date in recent_expenses:
+                amount_ils = _to_ils(amount, currency, None, datetime.combine(exp_date, time.min))
+                if amount_ils >= expense_threshold:
+                    dashboard_alerts.append({
+                        "category": "المصاريف",
+                        "severity": "info",
+                        "icon": "fas fa-wallet",
+                        "title": "مصروف مرتفع مسجل",
+                        "message": description or f"مصروف رقم {exp_id}",
+                        "amount_display": f"{float(amount_ils):,.2f} ₪",
+                        "link": url_for('expenses_bp.list_expenses'),
+                        "meta": exp_date.strftime('%Y-%m-%d'),
+                    })
+        except Exception as exc:
+            current_app.logger.warning(f"Dashboard expense alerts error: {exc}")
 
     severity_order = {"danger": 0, "warning": 1, "info": 2, "primary": 3}
     dashboard_alerts.sort(key=lambda item: (
@@ -715,8 +785,11 @@ def dashboard():
         except Exception:
             customer_metrics = {}
 
+    from types import SimpleNamespace
+
     return render_template(
         "dashboard.html",
+        dash_widgets=SimpleNamespace(**dash_widgets),
         show_charts=True,
         low_stock=low_stock,
         low_stock_count=low_stock_count,

@@ -685,6 +685,9 @@ def _register_template_support(app):
     app.jinja_env.filters["format_currency_in_ils"] = utils.format_currency_in_ils
     app.jinja_env.globals["get_entity_balance_in_ils"] = utils.get_entity_balance_in_ils
     app.jinja_env.globals["url_for_any"] = url_for_any
+    from utils.tenant_scope import gm_path
+
+    app.jinja_env.globals["gm_path"] = gm_path
     app.jinja_env.globals["now"] = lambda: datetime.now(timezone.utc)
     from utils.print_branding import get_scoped_setting
 
@@ -1218,10 +1221,22 @@ def create_app(config_object=Config) -> Flask:
         "tenant_fiscal_bp": tenant_fiscal_bp,
         "accounting_validation_bp": accounting_validation_bp,
         "budgets_bp": budgets_bp,
+        "branches_bp": branches_bp,
         "currencies_bp": currencies_bp,
         "barcode_scanner_bp": barcode_scanner_bp,
         "checks_bp": checks_bp,
         "balances_api_bp": balances_api_bp,
+        "returns_bp": returns_bp,
+        "bank_bp": bank_bp,
+        "cost_centers_bp": cost_centers_bp,
+        "cost_centers_advanced_bp": cost_centers_advanced_bp,
+        "engineering_bp": engineering_bp,
+        "projects_bp": projects_bp,
+        "project_advanced_bp": project_advanced_bp,
+        "workflows_bp": workflows_bp,
+        "assets_bp": assets_bp,
+        "archive_bp": archive_bp,
+        "accounting_docs_bp": accounting_docs_bp,
     }
     for _name, _opts in get_blueprint_guard_config():
         if _name in _blueprints_for_acl:
@@ -1519,11 +1534,10 @@ def create_app(config_object=Config) -> Flask:
         if not tenant or not getattr(tenant, "is_active", False):
             return abort(404)
         g.tenant_schema = getattr(tenant, "schema_name", None)
-        # مسارات أمان المنصة محجوبة — يُستثنى دفتر الأستاذ (بيانات التينانت عبر search_path)
-        _tenant_security_allow = ("/security/ledger-control",)
-        if request.path.startswith(("/security", "/advanced")):
-            if not any(request.path.startswith(p) for p in _tenant_security_allow):
-                return abort(404)
+        from utils.tenant_scope import tenant_path_blocked
+
+        if tenant_path_blocked(request.path):
+            return abort(404)
 
         try:
             if current_user.is_authenticated:
@@ -1781,7 +1795,9 @@ def create_app(config_object=Config) -> Flask:
         in_tenant = bool(tenant_slug)
         from utils.branding_scope import branding_hub_url
 
-        return dict(
+        from utils.tenant_scope import template_context as _tenant_tpl_ctx
+
+        scope = dict(
             is_tenant_scope=in_tenant,
             is_platform_scope=not in_tenant,
             is_tenant_session=is_tenant_session_user(),
@@ -1789,6 +1805,8 @@ def create_app(config_object=Config) -> Flask:
             gm_tenant_slug=tenant_slug,
             branding_hub_url=branding_hub_url,
         )
+        scope.update(_tenant_tpl_ctx())
+        return scope
     
     @app.before_request
     def check_maintenance_mode():

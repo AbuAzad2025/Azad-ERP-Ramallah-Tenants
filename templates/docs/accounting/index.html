@@ -37,7 +37,7 @@
 </head>
 <body class="public-page">
     <nav class="navbar navbar-dark bg-dark d-md-none sticky-top">
-        <a class="navbar-brand font-weight-bold" href="/docs/accounting">
+        <a class="navbar-brand font-weight-bold" href="{{ url_for('accounting_docs.index') }}">
             <i class="fas fa-book ml-2"></i> التوثيق المحاسبي
         </a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#docsMobileNav" aria-controls="docsMobileNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -46,17 +46,17 @@
         <div class="collapse navbar-collapse" id="docsMobileNav">
             <div class="navbar-nav">
                 {% if current_user.is_authenticated and (current_user.is_system_account or (current_user.username|default('')|upper == '__OWNER__') or (current_user.role and current_user.role.name|default('')|upper == 'OWNER')) %}
-                <a class="nav-item nav-link text-white" href="/security/ledger-control">
+                <a class="nav-item nav-link text-white" href="{{ url_for('ledger_control.index') }}">
                     <i class="fas fa-tachometer-alt ml-2"></i> لوحة التحكم
                 </a>
                 {% endif %}
-                <a class="nav-item nav-link text-white" href="/reports/financial">
+                <a class="nav-item nav-link text-white" href="{{ url_for('financial_reports.index') }}">
                     <i class="fas fa-chart-line ml-2"></i> التقارير المالية
                 </a>
-                <a class="nav-item nav-link text-white" href="/validation/accounting">
+                <a class="nav-item nav-link text-white" href="{{ url_for('accounting_validation.index') }}">
                     <i class="fas fa-check-circle ml-2"></i> التحقق المحاسبي
                 </a>
-                <a class="nav-item nav-link text-white active" href="/docs/accounting">
+                <a class="nav-item nav-link text-white active" href="{{ url_for('accounting_docs.index') }}">
                     <i class="fas fa-book ml-2"></i> التوثيق المحاسبي
                 </a>
             </div>
@@ -70,26 +70,26 @@
                     <ul class="nav flex-column">
                         {% if current_user.is_authenticated and (current_user.is_system_account or (current_user.username|default('')|upper == '__OWNER__') or (current_user.role and current_user.role.name|default('')|upper == 'OWNER')) %}
                         <li class="nav-item">
-                            <a class="nav-link text-white" href="/security/ledger-control">
+                            <a class="nav-link text-white" href="{{ url_for('ledger_control.index') }}">
                                 <i class="fas fa-tachometer-alt ml-2"></i>
                                 لوحة التحكم
                             </a>
                         </li>
                         {% endif %}
                         <li class="nav-item">
-                            <a class="nav-link text-white" href="/reports/financial">
+                            <a class="nav-link text-white" href="{{ url_for('financial_reports.index') }}">
                                 <i class="fas fa-chart-line ml-2"></i>
                                 التقارير المالية
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-white" href="/validation/accounting">
+                            <a class="nav-link text-white" href="{{ url_for('accounting_validation.index') }}">
                                 <i class="fas fa-check-circle ml-2"></i>
                                 التحقق المحاسبي
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-white active" href="/docs/accounting">
+                            <a class="nav-link text-white active" href="{{ url_for('accounting_docs.index') }}">
                                 <i class="fas fa-book ml-2"></i>
                                 التوثيق المحاسبي
                             </a>

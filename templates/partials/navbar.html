@@ -314,7 +314,7 @@ function updateDateTime() {
 async function updateExchangeRates() {
     try {
         // جلب أسعار الصرف من API أو من قاعدة البيانات
-        const response = await fetch('/api/exchange-rates');
+        const response = await fetch('{{ url_for("api.get_exchange_rates") }}');
         if (response.ok) {
             const data = await response.json();
             

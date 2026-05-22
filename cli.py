@@ -4017,6 +4017,56 @@ def tenants_ensure_fiscal_tables():
         )
 
 
+@click.command("tenants-ensure-org-structure")
+@click.option("--slug", default=None, help="تينانت واحد فقط (افتراضي: الكل)")
+@with_appcontext
+def tenants_ensure_org_structure(slug: str | None):
+    """فرع MAIN + مواقع + مستودعات بكل الأنواع + ربط مالك التينانت."""
+    from utils.tenant_fiscal_schema import iter_tenant_schemas, set_local_search_path
+    from utils.tenant_org_structure import audit_tenant_org_structure, ensure_tenant_org_structure
+    from models import TenantRegistry, User
+
+    targets = []
+    if slug:
+        row = TenantRegistry.query.filter_by(slug=slug.strip().lower()).first()
+        if not row:
+            raise click.ClickException(f"تينانت غير موجود: {slug}")
+        targets.append((row.slug, row.schema_name))
+    else:
+        for s, sch in iter_tenant_schemas(db.session):
+            targets.append((s, sch))
+
+    for tslug, schema in targets:
+        if schema.lower() == "public":
+            click.echo(f"  {tslug}/public: skipped")
+            continue
+        db.session.rollback()
+        set_local_search_path(db.session, schema)
+        reg = TenantRegistry.query.filter_by(slug=tslug).first()
+        owner = User.query.filter_by(username="owner").first()
+        display = (reg.display_name if reg else None) or tslug
+        try:
+            stats = ensure_tenant_org_structure(
+                db.session,
+                company_name=display,
+                tenant_slug=tslug,
+                owner_user_id=getattr(owner, "id", None),
+            )
+            db.session.commit()
+            after = audit_tenant_org_structure(db.session)
+            click.echo(
+                f"  {tslug}/{schema}: branch={stats.get('branch_id')} "
+                f"wh_created={stats.get('warehouses_created')} "
+                f"linked={stats.get('warehouses_linked')} "
+                f"orphans={after.get('warehouses_without_branch')} "
+                f"types={after.get('warehouse_types')}"
+            )
+        except Exception as exc:
+            db.session.rollback()
+            raise click.ClickException(f"{tslug}/{schema}: {exc}") from exc
+    click.echo("OK")
+
+
 @click.command("tenants-sync-permissions")
 @with_appcontext
 def tenants_sync_permissions():
@@ -5018,7 +5068,8 @@ def register_cli(app) -> None:
         optimize_db, perf_snapshot, recompute_sale_returns, link_missing_counterparties,
         seed_employees, seed_salaries, seed_expenses_demo, seed_customer_statement_demo, seed_branches,
         workflow_check_timeouts, gl_recreate_payments, sync_balances, backfill_sale_invoices,
-        fiscal_periods_sync, fiscal_period_close, tenants_ensure_fiscal_tables, tenants_sync_permissions,
+        fiscal_periods_sync, fiscal_period_close, tenants_ensure_fiscal_tables,
+        tenants_ensure_org_structure, tenants_sync_permissions,
         accounting_audit, audit_integrity, checks_sync_due,
         seed_product_categories, restore_product_categories,
         restore_upgrade_production,

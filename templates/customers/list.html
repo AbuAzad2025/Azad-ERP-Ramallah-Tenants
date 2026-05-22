@@ -594,7 +594,7 @@ body.print-mode .content {
     function recalculateBalances() {
         if (!confirm('إعادة حساب جميع الأرصدة؟\nهذه العملية قد تستغرق وقتاً...')) return;
         
-        fetch('/security/ledger-control/recalculate-balances', { 
+        fetch((window.LEDGER_BASE || {{ ledger_api_base|tojson }}) + '/recalculate-balances', { 
             method: 'POST', 
             headers: { 
                 'X-CSRFToken': '{{ csrf_token() }}' 

@@ -50,7 +50,7 @@
     const badgeClass = badgeClassMap[priority] || 'badge-secondary';
     const noteId = note && typeof note.id !== 'undefined' ? String(note.id) : '';
     const noteIdEsc = escapeHtml(noteId);
-    const noteHref = '/notes/' + encodeURIComponent(noteId);
+    const noteHref = (window.gmPath || function(p){ return p; })('/notes/' + encodeURIComponent(noteId));
     return `
       <div class="col-md-6 col-lg-4 mb-3" id="note-card-${noteIdEsc}">
         <div class="card note-card h-100 ${note && note.is_pinned ? 'border-warning' : ''}">

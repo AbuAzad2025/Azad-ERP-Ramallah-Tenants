@@ -23,30 +23,47 @@ PLATFORM_ONLY_PERMISSIONS = frozenset(
     }
 )
 
-# لوحة مالك الشركة (تينانت) — ليست access_owner_dashboard
 TENANT_CONSOLE_PERMISSION = SP.ACCESS_TENANT_CONSOLE.value
 
-# endpoint → صلاحية مطلوبة لعرض البطاقة في لوحة التينانت
+# endpoint → صلاحية لعرض البطاقة / عنصر القائمة
 HUB_ENDPOINT_PERMISSIONS: dict[str, str] = {
+    "tenant_console.index": TENANT_CONSOLE_PERMISSION,
     "main.dashboard": SP.ACCESS_DASHBOARD.value,
     "sales_bp.list_sales": SP.MANAGE_SALES.value,
+    "returns.list_returns": SP.MANAGE_SALES.value,
     "customers_bp.list_customers": SP.MANAGE_CUSTOMERS.value,
     "payments.index": SP.MANAGE_PAYMENTS.value,
     "vendors_bp.suppliers_list": SP.MANAGE_VENDORS.value,
     "expenses_bp.list_expenses": SP.MANAGE_EXPENSES.value,
+    "branches_bp.list_branches": SP.MANAGE_BRANCHES.value,
+    "warehouse_bp.list": SP.VIEW_WAREHOUSES.value,
+    "shipments_bp.list_shipments": SP.MANAGE_SHIPMENTS.value,
+    "service.list_requests": SP.MANAGE_SERVICE.value,
+    "parts_bp.parts_list": SP.VIEW_PARTS.value,
+    "checks.index": SP.MANAGE_PAYMENTS.value,
     "ledger_control.index": SP.MANAGE_LEDGER.value,
+    "ledger.index": SP.MANAGE_LEDGER.value,
     "tenant_fiscal_bp.index": SP.MANAGE_LEDGER.value,
     "budgets.index": SP.MANAGE_LEDGER.value,
     "accounting_validation.index": SP.VALIDATE_ACCOUNTING.value,
+    "accounting_docs.index": SP.MANAGE_ACCOUNTING_DOCS.value,
     "financial_reports.index": SP.VIEW_REPORTS.value,
     "reports_bp.index": SP.VIEW_REPORTS.value,
+    "currencies.list_currencies": SP.MANAGE_CURRENCIES.value,
+    "bank.accounts": SP.MANAGE_BANK.value,
+    "cost_centers.index": SP.MANAGE_COST_CENTERS.value,
+    "engineering.dashboard": SP.MANAGE_ENGINEERING.value,
+    "projects.index": SP.MANAGE_PROJECTS.value,
+    "workflows.index": SP.MANAGE_WORKFLOWS.value,
     "tenant_console.branding": TENANT_CONSOLE_PERMISSION,
     "tenant_console.business_settings": TENANT_CONSOLE_PERMISSION,
     "users_bp.list_users": SP.MANAGE_USERS.value,
     "users_bp.create_user": SP.MANAGE_USERS.value,
+    "roles_bp.list_roles": SP.MANAGE_ROLES.value,
+    "shop.catalog": SP.VIEW_SHOP.value,
+    "notes.list_notes": SP.VIEW_NOTES.value,
 }
 
-# لوحة مالك المنصة — إنشاء تينانتات وغيرها
 PLATFORM_HUB_ENDPOINT_PERMISSIONS: dict[str, str] = {
     "security.index": SP.ACCESS_OWNER_DASHBOARD.value,
     "security.settings_center": SP.ACCESS_OWNER_DASHBOARD.value,
@@ -59,12 +76,12 @@ PLATFORM_HUB_ENDPOINT_PERMISSIONS: dict[str, str] = {
     "advanced.multi_tenant": SP.MANAGE_TENANTS.value,
 }
 
-# عناصر القائمة الجانبية في /t/<slug>/console
 TENANT_CONSOLE_NAV: tuple[dict, ...] = (
     {
         "title": "الرئيسية",
         "items": (
             {"endpoint": "tenant_console.index", "label": "لوحة المالك", "icon": "fa-home"},
+            {"endpoint": "main.dashboard", "label": "لوحة التشغيل", "icon": "fa-tachometer-alt"},
         ),
     },
     {
@@ -78,9 +95,16 @@ TENANT_CONSOLE_NAV: tuple[dict, ...] = (
     {
         "title": "التشغيل",
         "items": (
-            {"endpoint": "main.dashboard", "label": "لوحة التشغيل", "icon": "fa-tachometer-alt"},
             {"endpoint": "sales_bp.list_sales", "label": "المبيعات", "icon": "fa-shopping-cart"},
+            {"endpoint": "returns.list_returns", "label": "المرتجعات", "icon": "fa-undo"},
+            {"endpoint": "customers_bp.list_customers", "label": "العملاء", "icon": "fa-user-friends"},
             {"endpoint": "payments.index", "label": "الدفعات", "icon": "fa-money-bill-wave"},
+            {"endpoint": "vendors_bp.suppliers_list", "label": "الموردون", "icon": "fa-truck"},
+            {"endpoint": "expenses_bp.list_expenses", "label": "المصروفات", "icon": "fa-receipt"},
+            {"endpoint": "service.list_requests", "label": "الصيانة", "icon": "fa-wrench"},
+            {"endpoint": "shipments_bp.list_shipments", "label": "الشحنات", "icon": "fa-shipping-fast"},
+            {"endpoint": "branches_bp.list_branches", "label": "الفروع والمواقع", "icon": "fa-code-branch"},
+            {"endpoint": "warehouse_bp.list", "label": "المستودعات", "icon": "fa-warehouse"},
         ),
     },
     {
@@ -88,7 +112,18 @@ TENANT_CONSOLE_NAV: tuple[dict, ...] = (
         "items": (
             {"endpoint": "ledger_control.index", "label": "دفتر الأستاذ", "icon": "fa-book"},
             {"endpoint": "tenant_fiscal_bp.index", "label": "إقفال الفترات", "icon": "fa-calendar-check"},
-            {"endpoint": "financial_reports.index", "label": "التقارير المالية", "icon": "fa-chart-pie"},
+            {"endpoint": "budgets.index", "label": "الموازنات", "icon": "fa-chart-pie"},
+            {"endpoint": "accounting_validation.index", "label": "التحقق المحاسبي", "icon": "fa-check-double"},
+            {"endpoint": "financial_reports.index", "label": "التقارير المالية", "icon": "fa-file-invoice-dollar"},
+            {"endpoint": "currencies.list_currencies", "label": "العملات", "icon": "fa-coins"},
+            {"endpoint": "checks.index", "label": "الشيكات", "icon": "fa-money-check"},
+        ),
+    },
+    {
+        "title": "التقارير",
+        "items": (
+            {"endpoint": "reports_bp.index", "label": "تقارير التشغيل", "icon": "fa-chart-line"},
+            {"endpoint": "accounting_docs.index", "label": "التوثيق المحاسبي", "icon": "fa-book-open"},
         ),
     },
     {
@@ -96,6 +131,7 @@ TENANT_CONSOLE_NAV: tuple[dict, ...] = (
         "items": (
             {"endpoint": "users_bp.list_users", "label": "المستخدمون", "icon": "fa-users"},
             {"endpoint": "users_bp.create_user", "label": "إضافة مستخدم", "icon": "fa-user-plus"},
+            {"endpoint": "roles_bp.list_roles", "label": "الأدوار", "icon": "fa-user-tag"},
         ),
     },
 )
@@ -134,7 +170,6 @@ def filter_permissions_for_tenant(perms: set[str]) -> set[str]:
 
 
 def tenant_owner_has_permission(user, code: str) -> bool:
-    """دور owner/developer داخل التينانت: كل شيء ما عدا صلاحيات المنصة."""
     if is_platform_only_permission(code):
         return False
     return True
@@ -148,10 +183,19 @@ def user_has_effective_permission(user, code: str) -> bool:
     return False
 
 
+def _tenant_owner_session() -> bool:
+    try:
+        from utils.branding_assets import is_tenant_session_user
+
+        return is_tenant_session_user()
+    except Exception:
+        return False
+
+
 def _user_can_access_endpoint(user, endpoint: str, perm_map: dict[str, str]) -> bool:
     needed = perm_map.get(endpoint)
     if not needed:
-        return True
+        return False
     return user_has_effective_permission(user, needed)
 
 
@@ -164,14 +208,7 @@ def filter_platform_hub_sections(sections, user) -> tuple:
 
 
 def build_tenant_console_nav(user) -> tuple:
-    """قائمة جانبية مفلترة حسب الصلاحيات."""
-    try:
-        from utils.branding_assets import is_tenant_session_user
-
-        owner_session = is_tenant_session_user()
-    except Exception:
-        owner_session = False
-
+    owner_session = _tenant_owner_session()
     out = []
     for group in TENANT_CONSOLE_NAV:
         if group.get("owner_only") and not owner_session:
@@ -190,8 +227,11 @@ def build_tenant_console_nav(user) -> tuple:
 
 def filter_hub_sections(sections, user, *, endpoint_map: dict[str, str] | None = None) -> tuple:
     perm_map = endpoint_map or HUB_ENDPOINT_PERMISSIONS
+    owner_session = _tenant_owner_session()
     out = []
     for section in sections:
+        if section.get("owner_only") and not owner_session:
+            continue
         cards = tuple(
             c
             for c in section.get("cards", ())
@@ -205,9 +245,6 @@ def filter_hub_sections(sections, user, *, endpoint_map: dict[str, str] | None =
 
 
 def sync_tenant_owner_role_permissions(session) -> dict:
-    """
-    يزامن دور owner في schema الحالي: يزيل صلاحيات المنصة ويضيف access_tenant_console.
-    """
     from sqlalchemy import delete, insert
 
     from models import Permission, Role, role_permissions
@@ -229,7 +266,6 @@ def sync_tenant_owner_role_permissions(session) -> dict:
 
 
 def permission_codes_for_tenant_owner() -> list[str]:
-    """أكواد تُزرع لدور owner في schema التينانت (بدون صلاحيات المنصة)."""
     from permissions_config.permissions import PermissionsRegistry
 
     codes = []

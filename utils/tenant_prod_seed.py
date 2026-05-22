@@ -29,6 +29,8 @@ TABLE_PRIORITY = (
     "role_permissions",
     "users",
     "branches",
+    "sites",
+    "user_branches",
     "warehouses",
     "cost_centers",
     "product_categories",
@@ -387,6 +389,16 @@ def provision_new_tenant(
         owner_email=owner_email,
         owner_password=owner_password,
     )
+    from models import User
+    from utils.tenant_org_structure import ensure_tenant_org_structure
+
+    owner = User.query.filter_by(username=owner_username).first()
+    org_stats = ensure_tenant_org_structure(
+        session,
+        company_name=display_name,
+        tenant_slug=slug,
+        owner_user_id=getattr(owner, "id", None),
+    )
     session.execute(sa_text("SET search_path TO public"))
     session.commit()
 
@@ -397,6 +409,7 @@ def provision_new_tenant(
         "owner_username": owner_username,
         "owner_email": owner_email,
         "copy": stats,
+        "org": org_stats,
     }
 
 

@@ -4710,14 +4710,12 @@ class Warehouse(db.Model, TimestampMixin, AuditMixin):
         return iv
     @hybrid_property
     def warehouse_type_display(self):
-        m = {
-            WarehouseType.MAIN.value: "رئيسي",
-            WarehouseType.INVENTORY.value: "مخزن",
-            WarehouseType.EXCHANGE.value: "تبادل",
-            WarehouseType.PARTNER.value: "شريك",
-            WarehouseType.ONLINE.value: "أونلاين",
-            WarehouseType.SUPPLIER.value: "مورد"
-        }
+        try:
+            from utils.tenant_org_structure import warehouse_type_labels
+
+            m = warehouse_type_labels()
+        except Exception:
+            m = {t.value: t.label for t in WarehouseType}
         wt = getattr(self, 'warehouse_type', None)
         key = getattr(wt, 'value', wt)
         return m.get(key, key)
@@ -4762,24 +4760,30 @@ def _warehouse_guard(mapper, connection, target: Warehouse):
 @event.listens_for(Warehouse, "before_update")
 def _enforce_single_online_default(mapper, connection, target):
     try:
-        if getattr(target, "warehouse_type", None) == WarehouseType.ONLINE.value and getattr(target, "online_is_default", False):
-            q = """
+        wt = (
+            target.warehouse_type.value
+            if isinstance(target.warehouse_type, WarehouseType)
+            else str(target.warehouse_type or "")
+        ).upper()
+        if wt != WarehouseType.ONLINE.value or not getattr(target, "online_is_default", False):
+            return
+        q = """
             SELECT id
             FROM warehouses
             WHERE warehouse_type = :wt
-              AND online_is_default = 1
+              AND online_is_default IS TRUE
               AND (:cur_id IS NULL OR id <> :cur_id)
             LIMIT 1
             """
-            other = connection.execute(
-                sa_text(q),
-                {"wt": WarehouseType.ONLINE.value, "cur_id": getattr(target, "id", None)},
-            ).first()
-            if other:
-                connection.execute(
-                    sa_text("UPDATE warehouses SET online_is_default = 0 WHERE id = :id"),
-                    {"id": other[0]},
-                )
+        other = connection.execute(
+            sa_text(q),
+            {"wt": WarehouseType.ONLINE.value, "cur_id": getattr(target, "id", None)},
+        ).first()
+        if other:
+            connection.execute(
+                sa_text("UPDATE warehouses SET online_is_default = FALSE WHERE id = :id"),
+                {"id": other[0]},
+            )
     except Exception:
         pass
 

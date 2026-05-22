@@ -159,9 +159,11 @@ def login():
         if current_user.is_authenticated and not needs_fresh and not has_next:
             clear_attempts(ip, getattr(current_user, "email", None) or getattr(current_user, "username", None))
             actor = current_user._get_current_object()
-            if tenant_slug and isinstance(actor, User):
-                return redirect(url_for("tenant_console.index"))
-            return _redirect_back_or("shop.catalog" if isinstance(actor, Customer) else "main.dashboard")
+            if isinstance(actor, User):
+                from utils.dashboard_routing import preferred_dashboard_endpoint
+
+                return redirect(url_for(preferred_dashboard_endpoint(actor, tenant_slug or None)))
+            return _redirect_back_or("shop.catalog")
         return render_template("auth/login.html", form=form)
 
     identifier = _get_login_identifier(form)
@@ -249,9 +251,9 @@ def login():
             db.session.rollback()
         clear_attempts(ip, identifier)
         utils._audit("login.success", ok=True, user_id=user.id, note=f"ip={ip}")
-        if tenant_slug:
-            return redirect(url_for("tenant_console.index"))
-        return _redirect_back_or("main.dashboard")
+        from utils.dashboard_routing import preferred_dashboard_endpoint
+
+        return redirect(url_for(preferred_dashboard_endpoint(user, tenant_slug or None)))
 
     if customer and customer.check_password(password) and customer.is_online and customer.is_active:
         remember = bool(getattr(form, "remember_me", None) and getattr(form.remember_me, "data", False))

@@ -19,11 +19,11 @@
             <div class="row mb-4">
                 <div class="col-md-6">
                     <div class="btn-group w-100" role="group">
-                        <a href="/financial-reports/aging-report?type=ar" 
+                        <a href="{{ url_for('financial_reports.aging_report', type='ar') }}" 
                            class="btn {% if report_type == 'ar' %}btn-primary{% else %}btn-outline-primary{% endif %}">
                             📥 ذمم العملاء (AR)
                         </a>
-                        <a href="/financial-reports/aging-report?type=ap" 
+                        <a href="{{ url_for('financial_reports.aging_report', type='ap') }}" 
                            class="btn {% if report_type == 'ap' %}btn-primary{% else %}btn-outline-primary{% endif %}">
                             📤 ذمم الموردين (AP)
                         </a>
@@ -91,7 +91,7 @@
                         <td>{{ loop.index }}</td>
                         <td>
                             {% if report_type == 'ar' %}
-                            <a href="/customers/{{ item.customer_id }}/account_statement">{{ item.customer_name }}</a>
+                            <a href="{{ url_for('customers_bp.account_statement', customer_id=item.customer_id) }}">{{ item.customer_name }}</a>
                             {% else %}
                             {{ item.entity_name }}
                             {% endif %}

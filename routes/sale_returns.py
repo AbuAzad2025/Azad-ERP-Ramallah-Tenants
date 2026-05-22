@@ -18,6 +18,7 @@ from models import (
 )
 from forms import SaleReturnForm, SaleReturnLineForm
 from utils import permission_required
+from permissions_config.enums import SystemPermissions as SP
 
 # إنشاء Blueprint
 returns_bp = Blueprint('returns', __name__, url_prefix='/returns')
@@ -74,6 +75,7 @@ def _refresh_related_balances(customer_id: Optional[int], lines) -> None:
 
 @returns_bp.route('/')
 @login_required
+@permission_required(SP.MANAGE_SALES)
 def list_returns():
     """قائمة جميع المرتجعات"""
     

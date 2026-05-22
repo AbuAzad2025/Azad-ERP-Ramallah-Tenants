@@ -53,8 +53,27 @@
       var m=document.querySelector('meta[name="csrf-token"]');
       return m?m.getAttribute('content')||'':'';
     }
+    window.GM_PREFIX = {{ (gm_url_prefix or '')|tojson }};
+    window.gmPath = window.gmPath || function(p) {
+      if (!p) return window.GM_PREFIX || '/';
+      if (/^https?:\/\//i.test(p)) return p;
+      var path = (p.charAt(0) === '/') ? p : ('/' + p);
+      if (path.indexOf('/static/') === 0) return path;
+      return (window.GM_PREFIX || '') + path;
+    };
+    (function() {
+      var _fetch = window.fetch;
+      if (!_fetch || !window.GM_PREFIX) return;
+      window.fetch = function(input, init) {
+        if (typeof input === 'string' && input.charAt(0) === '/' && input.indexOf('/static/') !== 0) {
+          input = window.gmPath(input);
+        }
+        return _fetch.call(this, input, init);
+      };
+    })();
     function submitPost(action){
       try{
+        action = window.gmPath(action);
         var f=document.createElement('form');
         f.method='post';
         f.action=action;
@@ -68,7 +87,7 @@
       }catch(e){}
     }
     if(typeof window.archiveExpense!=='function'){
-      window.archiveExpense=function(id){ submitPost('/expenses/archive/'+id); };
+      window.archiveExpense=function(id){ submitPost(gmPath('/expenses/archive/'+id)); };
     }
     if(typeof window.restoreExpense!=='function'){
       window.restoreExpense=function(id){ submitPost('/expenses/restore/'+id); };
@@ -361,6 +380,9 @@
     /* RTL Sidebar Fixes are now handled in style.css */
   </style>
   {% block extra_css %}{% endblock %}
+  {% if ledger_api_base %}
+  <script>window.LEDGER_BASE={{ ledger_api_base|tojson }};</script>
+  {% endif %}
   <!-- Bootstrap shim already defined at top of <head>; no duplicate needed here. -->
 </head>
 <body class="hold-transition sidebar-mini layout-fixed text-sm layout-navbar-fixed ui-v2 electric-theme {% block body_class %}{% endblock %}">

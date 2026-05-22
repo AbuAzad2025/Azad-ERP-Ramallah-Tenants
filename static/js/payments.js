@@ -328,7 +328,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!isManualCheck) {
         var receiptPaymentId = isSplit ? paymentId : (typeof p.id === 'number' ? p.id : null);
         if (receiptPaymentId) {
-          actionsHtml += '<a href="/payments/' + receiptPaymentId + '/receipt" target="_blank" class="btn btn-secondary" title="إيصال"><i class="fas fa-receipt"></i></a>';
+          actionsHtml += '<a href="' + (window.gmPath || function(p){ return p; })('/payments/' + receiptPaymentId + '/receipt') + '" target="_blank" class="btn btn-secondary" title="إيصال"><i class="fas fa-receipt"></i></a>';
         }
         if (isSplit) {
           var refundedFlag = (typeof p.is_refunded_split === 'boolean') ? p.is_refunded_split : false;

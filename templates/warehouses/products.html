@@ -406,7 +406,7 @@
               {% set p = r.product %}
               <tr data-id="{{ p.id }}">
                 <td class="sticky-column">
-                  <a href="/warehouses/parts/{{ p.id }}" class="fw-bold text-decoration-none">{{ p.name }}</a>
+                  <a href="{{ url_for('warehouse_bp.product_card', warehouse_id=warehouse.id, product_id=p.id) }}" class="fw-bold text-decoration-none">{{ p.name }}</a>
                 </td>
                 <td class="column-sku column-hidden">
                   <input class="form-control form-control-sm inline-input" data-field="sku" 

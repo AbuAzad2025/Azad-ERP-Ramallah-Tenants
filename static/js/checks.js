@@ -860,7 +860,7 @@
                 reference: `CHK-SETTLE-${checkNumber}`,
                 check_token: token
             });
-            window.location.href = '/payments/create?' + params.toString();
+            window.location.href = (window.gmPath || function(p){ return p; })('/payments/create?' + params.toString());
         });
     };
 
