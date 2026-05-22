@@ -74,7 +74,7 @@ TENANT_CONSOLE_NAV: tuple[dict, ...] = (
             {"endpoint": "budgets.index", "label": "الموازنات", "icon": "fa-chart-pie"},
             {"endpoint": "accounting_validation.index", "label": "التحقق المحاسبي", "icon": "fa-check-double"},
             {"endpoint": "financial_reports.index", "label": "التقارير المالية", "icon": "fa-file-invoice-dollar"},
-            {"endpoint": "currencies.list_currencies", "label": "العملات", "icon": "fa-coins"},
+            {"endpoint": "currencies.list", "label": "العملات", "icon": "fa-coins"},
             {"endpoint": "checks.index", "label": "الشيكات", "icon": "fa-money-check"},
         ),
     },

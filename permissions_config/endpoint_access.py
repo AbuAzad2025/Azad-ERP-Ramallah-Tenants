@@ -29,7 +29,7 @@ TENANT_ENDPOINT_PERMISSIONS: dict[str, str] = {
     "accounting_docs.index": SP.MANAGE_ACCOUNTING_DOCS.value,
     "financial_reports.index": SP.VIEW_REPORTS.value,
     "reports_bp.index": SP.VIEW_REPORTS.value,
-    "currencies.list_currencies": SP.MANAGE_CURRENCIES.value,
+    "currencies.list": SP.MANAGE_CURRENCIES.value,
     "bank.accounts": SP.MANAGE_BANK.value,
     "cost_centers.index": SP.MANAGE_COST_CENTERS.value,
     "engineering.dashboard": SP.MANAGE_ENGINEERING.value,

@@ -134,6 +134,9 @@ def sync_platform_standard_roles(session) -> list[dict]:
         role_name = _role_key_to_name(role_key)
         if role_name in _PLATFORM_SYNC_SKIP:
             continue
+        info = PermissionsRegistry.ROLES.get(role_key) or PermissionsRegistry.ROLES.get(role_name, {})
+        if info.get("deprecated") or is_deprecated_role_name(role_name):
+            continue
         role = session.query(Role).filter_by(name=role_name).one_or_none()
         if not role:
             role = Role(name=role_name)

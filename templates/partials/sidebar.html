@@ -271,7 +271,7 @@
             {% if is_module_enabled('currencies') %}
             {% if has_perm('manage_currencies') %}
             <li class="nav-item">
-              <a href="{{ url_for('currencies.list_currencies') }}" class="nav-link {% if request.blueprint == 'currencies' %}active{% endif %}">
+              <a href="{{ url_for('currencies.list') }}" class="nav-link {% if request.blueprint == 'currencies' %}active{% endif %}">
                 <i class="far fa-circle nav-icon text-warning"></i>
                 <p>العملات</p>
               </a>

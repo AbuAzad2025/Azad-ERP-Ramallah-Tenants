@@ -215,6 +215,35 @@ def _copy_if_exists(src: Path, dst: Path) -> bool:
     return True
 
 
+def ensure_legacy_img_aliases(app=None) -> list[str]:
+    """
+    ضمان وجود الملفات القديمة في static/img (مثل azad_logo.png) من شجرة branding.
+    يُستدعى عند التشغيل لتفادي روابط مكسورة في القوالب القديمة.
+    """
+    root = static_root(app)
+    img_dir = root / "img"
+    img_dir.mkdir(parents=True, exist_ok=True)
+    linked: list[str] = []
+    pairs = (
+        ("azad_logo.png", rel_path_platform(ASSET_LOGOS, LOGO_PRIMARY)),
+        ("logo_main.png", rel_path_platform(ASSET_LOGOS, LOGO_PRIMARY)),
+        ("favicon.png", rel_path_platform(ASSET_FAVICONS, FAVICON_FILE)),
+        ("azad_favicon.png", rel_path_platform(ASSET_AUTH, AUTH_FAVICON_ALT)),
+    )
+    for legacy_name, rel in pairs:
+        src = abs_path(app, rel)
+        dst = img_dir / legacy_name
+        if not src.is_file():
+            continue
+        try:
+            needs = (not dst.is_file()) or (dst.stat().st_mtime < src.stat().st_mtime)
+        except OSError:
+            needs = True
+        if needs and _copy_if_exists(src, dst):
+            linked.append(legacy_name)
+    return linked
+
+
 def init_platform_from_legacy(app=None) -> dict[str, str]:
     root = static_root(app)
     mapping = {

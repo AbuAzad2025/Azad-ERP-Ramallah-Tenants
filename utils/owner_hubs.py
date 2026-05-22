@@ -152,7 +152,7 @@ TENANT_HUB_SECTIONS = (
 
             {"endpoint": "checks.index", "label": "الشيكات", "icon": "fa-money-check", "color": "secondary", "desc": "شيكات واردة وصادرة"},
 
-            {"endpoint": "currencies.list_currencies", "label": "العملات", "icon": "fa-coins", "color": "warning", "desc": "عملات وأسعار صرف"},
+            {"endpoint": "currencies.list", "label": "العملات", "icon": "fa-coins", "color": "warning", "desc": "عملات وأسعار صرف"},
 
         ),
 

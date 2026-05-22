@@ -1005,9 +1005,14 @@ def _register_app_handlers(app):
 
     @app.after_request
     def _log_status(resp):
-        if resp.status_code in (302, 401, 403, 404):
-            loc = resp.headers.get("Location")
-            app.logger.warning("HTTP %s %s -> %s", resp.status_code, request.path, loc or "")
+        if resp.status_code == 302:
+            loc = resp.headers.get("Location") or ""
+            if request.path.startswith("/auth/"):
+                app.logger.debug("HTTP 302 %s -> %s", request.path, loc)
+            else:
+                app.logger.info("HTTP 302 %s -> %s", request.path, loc)
+        elif resp.status_code in (401, 403, 404):
+            app.logger.warning("HTTP %s %s", resp.status_code, request.path)
         return resp
 
     @app.teardown_appcontext
@@ -1897,19 +1902,34 @@ def create_app(config_object=Config) -> Flask:
             from models import Role
             from permissions_config.permissions import PermissionsRegistry
             
-            for role_name in PermissionsRegistry.ROLES.keys():
+            from permissions_config.role_policy import is_deprecated_role_name
+
+            for role_key in PermissionsRegistry.ROLES.keys():
+                role_name = (
+                    role_key.value if hasattr(role_key, "value") else str(role_key)
+                ).strip().lower()
+                role_data = PermissionsRegistry.ROLES[role_key]
+                if role_data.get("deprecated") or is_deprecated_role_name(role_name):
+                    continue
                 existing = Role.query.filter_by(name=role_name).first()
                 if not existing:
-                    role_data = PermissionsRegistry.ROLES[role_name]
                     role = Role(
                         name=role_name,
-                        description=role_data.get('description', '')
+                        description=role_data.get("description", ""),
                     )
                     db.session.add(role)
             
             db.session.commit()
         except Exception:
             db.session.rollback()
+
+        try:
+            from utils.branding_assets import ensure_legacy_img_aliases, init_platform_from_legacy
+
+            init_platform_from_legacy(app)
+            ensure_legacy_img_aliases(app)
+        except Exception:
+            pass
 
     try:
         import notifications as _notifications_module

@@ -13481,7 +13481,7 @@ class AuditLog(db.Model, TimestampMixin):
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id', ondelete='SET NULL'), index=True, nullable=True)
     user_id     = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), index=True, nullable=True)
 
-    action      = db.Column(db.String(20), nullable=False, index=True)
+    action      = db.Column(db.String(64), nullable=False, index=True)
     old_data    = db.Column(db.Text)
     new_data    = db.Column(db.Text)
 
@@ -13492,7 +13492,9 @@ class AuditLog(db.Model, TimestampMixin):
 
     @validates('action')
     def _v_action(self, _, v):
-        return (v or '').strip().upper()
+        from utils.audit_actions import normalize_audit_action
+
+        return normalize_audit_action(v or "")
 
     def to_dict(self):
         return {
