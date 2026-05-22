@@ -4538,6 +4538,74 @@ def restore_upgrade_production(backup_path: str, force: bool, confirm_restore: b
         click.echo("✅ تم تشغيل إصلاح البيانات.")
 
 
+@click.command("db-verify")
+@click.option("--fix-stamp", is_flag=True, help="ختم مخططات التينانت برأس public إن اختلفت")
+@with_appcontext
+def db_verify(fix_stamp: bool) -> None:
+    """التحقق من رأس Alembic وتطابق ختم مخططات التينانت."""
+    from flask import current_app
+    from sqlalchemy import text as sa_text
+
+    try:
+        from alembic.script import ScriptDirectory
+    except Exception as exc:
+        raise click.ClickException(f"تعذّر تحميل Alembic: {exc}") from exc
+
+    migrate_ext = current_app.extensions.get("migrate")
+    if not migrate_ext or not getattr(migrate_ext, "migrate", None):
+        raise click.ClickException("Flask-Migrate غير مهيأ")
+    cfg = migrate_ext.migrate.get_config(directory=migrate_ext.directory)
+    script = ScriptDirectory.from_config(cfg)
+    head_revs = [str(h) for h in script.get_heads()]
+    if len(head_revs) != 1:
+        raise click.ClickException(f"أكثر من رأس Alembic: {head_revs}")
+    head = head_revs[0]
+    click.echo(f"alembic head (code): {head}")
+
+    db_rev = db.session.execute(sa_text("SELECT version_num FROM public.alembic_version")).scalar()
+    click.echo(f"alembic_version (public): {db_rev or '—'}")
+    if str(db_rev or "") != head:
+        raise click.ClickException(f"public غير محدّث: DB={db_rev} code={head}")
+
+    tenants = db.session.execute(
+        sa_text("SELECT slug, schema_name, is_active FROM public.tenants ORDER BY id")
+    ).fetchall()
+    if not tenants:
+        click.echo("تحذير: لا يوجد سجل في public.tenants")
+    for slug, schema_name, is_active in tenants:
+        schema_name = _validate_pg_identifier(str(schema_name))
+        exists = db.session.execute(
+            sa_text(
+                "SELECT 1 FROM information_schema.schemata WHERE schema_name = :s"
+            ),
+            {"s": schema_name},
+        ).scalar()
+        if not exists:
+            raise click.ClickException(f"مخطط مفقود: {schema_name} (tenant {slug})")
+        t_rev = db.session.execute(
+            sa_text(f"SELECT version_num FROM {schema_name}.alembic_version")
+        ).scalar()
+        status = "OK" if str(t_rev or "") == head else "MISMATCH"
+        click.echo(
+            f"  tenant {slug}: schema={schema_name} active={is_active} "
+            f"alembic={t_rev or '—'} [{status}]"
+        )
+        if status != "OK":
+            if fix_stamp:
+                from utils.tenant_prod_seed import _stamp_tenant_alembic_head
+
+                _stamp_tenant_alembic_head(db.session, schema_name)
+                db.session.commit()
+                click.echo(f"  → خُتم {schema_name} بـ {head}")
+            else:
+                raise click.ClickException(
+                    f"مخطط {schema_name}: {t_rev} ≠ head {head} — "
+                    f"نفّذ: flask db-verify --fix-stamp أو flask tenants setup-production"
+                )
+
+    click.echo("✅ التهجيرات مكتملة ومتسقة.")
+
+
 @click.command("upgrade-production")
 @click.option("--force", is_flag=True, default=False)
 @click.option("--skip-fix", is_flag=True, default=False)
@@ -4808,7 +4876,8 @@ def register_cli(app) -> None:
         workflow_check_timeouts, gl_recreate_payments, sync_balances, backfill_sale_invoices, accounting_audit, audit_integrity, checks_sync_due,
         seed_product_categories, restore_product_categories,
         restore_upgrade_production,
-        upgrade_production
+        upgrade_production,
+        db_verify,
     ]
     for cmd in commands:
         name = str(getattr(cmd, "name", "") or "")

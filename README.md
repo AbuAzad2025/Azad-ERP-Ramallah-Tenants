@@ -22,7 +22,10 @@ pip install --upgrade pip wheel setuptools
 pip install -r requirements.txt
 export FLASK_APP=app:create_app
 flask db upgrade
+flask db-verify
 ```
+
+تفاصيل التهجيرات: `migrations/MIGRATIONS.md`
 
 بعد ذلك يتم ربط التطبيق من إعدادات الاستضافة أو ملف WSGI الخاص بالسيرفر.
 

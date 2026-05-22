@@ -20,6 +20,7 @@ CREATE INDEX IF NOT EXISTS ix_tenants_schema_name ON public.tenants (schema_name
 CREATE INDEX IF NOT EXISTS ix_tenants_is_active ON public.tenants (is_active);
 
 -- دمج الرأسين: 94948c531c03 + b2c3d4e5f6a7 -> c4d5e6f7a8b9
+-- بعد ذلك نفّذ: flask db upgrade  (حتى g1h2i3j4k5l6)
 UPDATE public.alembic_version SET version_num = 'c4d5e6f7a8b9'
 WHERE version_num IN ('94948c531c03', 'b2c3d4e5f6a7');
 

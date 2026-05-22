@@ -1,1 +1,11 @@
-Single-database configuration for Flask.
+Flask-Migrate / Alembic — قاعدة بيانات واحدة (PostgreSQL).
+
+**التوثيق الكامل:** [MIGRATIONS.md](./MIGRATIONS.md)
+
+**الرأس الحالي:** `g1h2i3j4k5l6` (بعد دمج `c4d5e6f7a8b9`).
+
+```powershell
+$env:FLASK_APP = "app:create_app"
+flask db upgrade
+flask db-verify
+```
