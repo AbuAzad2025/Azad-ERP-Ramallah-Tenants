@@ -22,6 +22,34 @@ DEPRECATED_ROLE_ALIASES: dict[str, str] = {
 }
 CANONICAL_SUPER_ROLE = SystemRoles.SUPER_ADMIN.value
 
+# أسماء أدوار خاطئة/مكررة في DB → الاسم القياسي
+ROLE_NAME_ALIASES: dict[str, str] = {
+    **DEPRECATED_ROLE_ALIASES,
+    "owner": SystemRoles.OWNER.value,
+    "Owner": SystemRoles.OWNER.value,
+    "super admin": SystemRoles.SUPER_ADMIN.value,
+    "Super Admin": SystemRoles.SUPER_ADMIN.value,
+    "administrator": SystemRoles.ADMIN.value,
+    "Administrator": SystemRoles.ADMIN.value,
+    "mechanic": SystemRoles.MECHANIC.value,
+    "Mechanic": SystemRoles.MECHANIC.value,
+    "manager": SystemRoles.MANAGER.value,
+    "Manager": SystemRoles.MANAGER.value,
+    "staff": SystemRoles.STAFF.value,
+    "Staff": SystemRoles.STAFF.value,
+}
+
+# بادئات/أسماء تُحذف إن لم يكن عليها مستخدمون
+JUNK_ROLE_PREFIXES: tuple[str, ...] = ("systemroles.",)
+JUNK_ROLE_NAMES: frozenset[str] = frozenset(
+    {
+        SystemRoles.SUPER.value,
+        "Owner",
+        "Super Admin",
+        "Mechanic",
+    }
+)
+
 # أدوار تُزامَن في كل schema تينانت (owner له مسار خاص)
 TENANT_SYNC_STANDARD_ROLES: tuple[str, ...] = (
     "owner",
@@ -38,8 +66,17 @@ CUSTOM_ROLE_LEVEL = 999
 
 
 def canonical_role_name_str(role_name: str | None) -> str:
-    raw = (role_name or "").strip().lower()
-    return DEPRECATED_ROLE_ALIASES.get(raw, raw)
+    raw = (role_name or "").strip()
+    if not raw:
+        return ""
+    if raw in ROLE_NAME_ALIASES:
+        return ROLE_NAME_ALIASES[raw]
+    low = raw.lower()
+    if low in ROLE_NAME_ALIASES:
+        return ROLE_NAME_ALIASES[low]
+    if low.startswith("systemroles."):
+        return canonical_role_name_str(low.split(".", 1)[-1])
+    return DEPRECATED_ROLE_ALIASES.get(low, low)
 
 
 def is_custom_role(role_name: str | None) -> bool:

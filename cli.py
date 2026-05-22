@@ -4108,6 +4108,41 @@ def tenants_sync_permissions():
     click.echo("OK")
 
 
+@click.command("repair-rbac")
+@click.option("--dry-run", is_flag=True, help="عرض فقط بدون حفظ")
+@with_appcontext
+def repair_rbac(dry_run: bool) -> None:
+    """تصحيح أدوار المستخدمين وحذف الأدوار الخاطئة/اليتيمة في المنصة وكل التينانتات."""
+    from utils.rbac_repair import repair_all_schemas
+    from utils import clear_role_permission_cache, clear_users_cache_by_role
+
+    if dry_run:
+        click.echo("Would repair users and cleanup junk roles on public + all tenant schemas.")
+        return
+    try:
+        results = repair_all_schemas(db.session)
+        db.session.commit()
+        for row in results:
+            u = row.get("users", {})
+            c = row.get("cleanup", {})
+            click.echo(
+                f"  {row.get('slug')}/{row.get('schema')}: "
+                f"relinked={u.get('users_relinked', 0)} "
+                f"deleted_roles={c.get('roles_deleted', 0)} "
+                f"perms={row.get('permissions')}"
+            )
+        for r in Role.query.all():
+            try:
+                clear_role_permission_cache(r.id)
+                clear_users_cache_by_role(r.id)
+            except Exception:
+                pass
+        click.echo("OK: RBAC repaired and cleaned.")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        raise click.ClickException(f"DB error: {e}") from e
+
+
 @click.command("sync-system-roles")
 @click.option("--force", is_flag=True, help="مطلوب على الإنتاج")
 @with_appcontext
@@ -4133,7 +4168,9 @@ def sync_system_roles(force: bool) -> None:
                 clear_role_permission_cache(r.id)
             except Exception:
                 pass
-        click.echo(f"OK: platform roles synced ({len(platform_stats)}), super merge={merge_stats}")
+        click.echo(
+            f"OK: privileged={len(priv_stats)}, standard={len(platform_stats)}, super merge={merge_stats}"
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         raise click.ClickException(f"DB error: {e}") from e
@@ -5095,7 +5132,7 @@ def register_cli(app) -> None:
         compare_sqlite_full,
         branding_group,
         tenants_group,
-        seed_roles, sync_system_roles, sync_permissions, list_permissions, list_roles, role_add_perms, create_role, export_rbac,
+        seed_roles, repair_rbac, sync_system_roles, sync_permissions, list_permissions, list_roles, role_add_perms, create_role, export_rbac,
         create_user, user_set_password, user_activate, user_assign_role, list_users, list_customers,
         seed_expense_types, expense_type_cmd, seed_palestine_cmd, seed_all, clear_rbac_caches,
         wh_create, wh_list, wh_stock, product_create, product_find, product_stock, product_set_price,
