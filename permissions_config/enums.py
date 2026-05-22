@@ -12,8 +12,10 @@ class SystemPermissions(str, Enum):
     MANAGE_SYSTEM_HEALTH = 'manage_system_health'
     MANAGE_MOBILE_APP = 'manage_mobile_app'
 
-    # Owner Only
+    # Owner Only (منصة أزاد)
     ACCESS_OWNER_DASHBOARD = 'access_owner_dashboard'
+    # لوحة مالك الشركة داخل /t/<slug>/console
+    ACCESS_TENANT_CONSOLE = 'access_tenant_console'
     MANAGE_ADVANCED_ACCOUNTING = 'manage_advanced_accounting'
     MANAGE_ANY_USER_PERMISSIONS = 'manage_any_user_permissions'
 

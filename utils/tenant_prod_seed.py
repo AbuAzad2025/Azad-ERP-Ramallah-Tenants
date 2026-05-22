@@ -261,7 +261,9 @@ def _seed_tenant_owner(session, *, owner_username: str, owner_email: str, owner_
 
     from permissions_config.permissions import PermissionsRegistry
 
-    all_codes = PermissionsRegistry.get_all_permission_codes()
+    from utils.tenant_permissions import permission_codes_for_tenant_owner
+
+    all_codes = permission_codes_for_tenant_owner()
     existing = {str(p.code or "").strip().lower(): p for p in Permission.query.all()}
     for code in sorted(all_codes):
         c = str(code or "").strip().lower()

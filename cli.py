@@ -4008,13 +4008,40 @@ def fiscal_periods_sync(from_year, to_year, no_monthly, no_quarterly, no_half, n
 @with_appcontext
 def tenants_ensure_fiscal_tables():
     """إنشاء جداول إقفال الفترات في مخططات التينانت إن لم تكن موجودة."""
-    from utils.tenant_fiscal_schema import ensure_all_tenant_fiscal_tables
+    from utils.tenant_fiscal_schema import ensure_all_tenant_fiscal_tables, iter_tenant_schemas, set_local_search_path
 
     for row in ensure_all_tenant_fiscal_tables(db.session):
         click.echo(
             f"  {row.get('slug')}/{row.get('schema')}: "
             f"created={row.get('created', [])} skipped={row.get('skipped', row.get('note', ''))}"
         )
+
+
+@click.command("tenants-sync-permissions")
+@with_appcontext
+def tenants_sync_permissions():
+    """مزامنة صلاحيات دور owner في كل تينانت (بدون صلاحيات منصة أزاد)."""
+    from utils.tenant_fiscal_schema import iter_tenant_schemas, set_local_search_path
+    from utils.tenant_permissions import sync_tenant_owner_role_permissions, permission_codes_for_tenant_owner
+    from models import Permission
+
+    codes = permission_codes_for_tenant_owner()
+    for slug, schema in iter_tenant_schemas(db.session):
+        if schema.lower() == "public":
+            click.echo(f"  {slug}/public: skipped (منصة رام الله)")
+            continue
+        set_local_search_path(db.session, schema)
+        existing = {str(p.code or "").strip().lower(): p for p in Permission.query.all()}
+        for code in codes:
+            if code not in existing:
+                db.session.add(Permission(code=code, name=code))
+        db.session.flush()
+        stats = sync_tenant_owner_role_permissions(db.session)
+        stats["slug"] = slug
+        stats["schema"] = schema
+        click.echo(f"  {slug}/{schema}: owner perms={stats.get('permissions', 0)}")
+    db.session.commit()
+    click.echo("OK")
 
 
 @click.command("fiscal-period-close")
@@ -4983,7 +5010,7 @@ def register_cli(app) -> None:
         optimize_db, perf_snapshot, recompute_sale_returns, link_missing_counterparties,
         seed_employees, seed_salaries, seed_expenses_demo, seed_customer_statement_demo, seed_branches,
         workflow_check_timeouts, gl_recreate_payments, sync_balances, backfill_sale_invoices,
-        fiscal_periods_sync, fiscal_period_close, tenants_ensure_fiscal_tables,
+        fiscal_periods_sync, fiscal_period_close, tenants_ensure_fiscal_tables, tenants_sync_permissions,
         accounting_audit, audit_integrity, checks_sync_due,
         seed_product_categories, restore_product_categories,
         restore_upgrade_production,

@@ -20,6 +20,13 @@ from dataclasses import dataclass
 advanced_bp = Blueprint('advanced', __name__, url_prefix='/advanced')
 
 
+@advanced_bp.before_request
+def _platform_advanced_only():
+    from utils.branding_scope import require_platform_console
+
+    return require_platform_console()
+
+
 @dataclass(frozen=True)
 class OwnerSectionMeta:
     key: str

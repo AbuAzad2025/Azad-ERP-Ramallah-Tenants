@@ -57,6 +57,14 @@ ALLOWED_DIRECT_SETTINGS_KEYS: set[str] = {
 
 security_bp = Blueprint('security', __name__, url_prefix='/security')
 
+
+@security_bp.before_request
+def _platform_security_only():
+    """كل /security لمالك المنصة فقط — لا تسريب داخل /t/<slug>/."""
+    from utils.branding_scope import require_platform_console
+
+    return require_platform_console()
+
 @security_bp.before_request
 @login_required
 def restrict_security_access():

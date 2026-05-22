@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, g, abort, redirect, request, flash, url_for
 from flask_login import login_required, current_user
 
+from permissions_config.enums import SystemPermissions
+from utils import permission_required
 from utils.branding_scope import SCOPE_TENANT, require_tenant_owner_console
 from utils.owner_hubs import TENANT_HUB_SECTIONS, TENANT_OWNER_TAGLINE
 from utils.print_branding import (
@@ -9,6 +11,7 @@ from utils.print_branding import (
     resolve_print_settings,
     LETTERHEAD_MODE_KEY,
 )
+from utils.tenant_permissions import filter_hub_sections
 
 
 tenant_console_bp = Blueprint("tenant_console", __name__, url_prefix="/console")
@@ -23,16 +26,17 @@ def _tenant_hub_sections():
         if section.get("owner_only") and not owner:
             continue
         sections.append(section)
+    if getattr(current_user, "is_authenticated", False):
+        return filter_hub_sections(tuple(sections), current_user)
     return tuple(sections)
 
 
 @tenant_console_bp.route("/", endpoint="index")
 @login_required
+@permission_required(SystemPermissions.ACCESS_TENANT_CONSOLE)
 def index():
     if not getattr(g, "tenant_slug", None):
         abort(404)
-    if not getattr(current_user, "is_authenticated", False):
-        return redirect(url_for("auth.login"))
     return render_template(
         "tenant_console/index.html",
         hub_sections=_tenant_hub_sections(),
@@ -42,6 +46,7 @@ def index():
 
 @tenant_console_bp.route("/branding", methods=["GET", "POST"], endpoint="branding")
 @login_required
+@permission_required(SystemPermissions.ACCESS_TENANT_CONSOLE)
 def branding():
     guard = require_tenant_owner_console(expected_slug=g.tenant_slug)
     if guard is not None:
@@ -79,6 +84,7 @@ def branding():
 
 @tenant_console_bp.route("/business-settings", methods=["GET", "POST"], endpoint="business_settings")
 @login_required
+@permission_required(SystemPermissions.ACCESS_TENANT_CONSOLE)
 def business_settings():
     """ثوابت محاسبية للتينانت (سنة مالية، إلخ) — داخل schema الشركة فقط."""
     guard = require_tenant_owner_console(expected_slug=g.tenant_slug)

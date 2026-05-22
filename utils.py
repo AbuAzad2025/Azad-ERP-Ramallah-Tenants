@@ -1032,7 +1032,15 @@ def _get_user_permissions(user) -> set:
     except Exception:
         cache_map = None
         uid = None
-    key = f"user_permissions:{user.id}"
+    tenant_scope = ""
+    try:
+        from flask import g, has_request_context
+
+        if has_request_context():
+            tenant_scope = str(getattr(g, "tenant_schema", None) or getattr(g, "tenant_slug", None) or "")
+    except Exception:
+        tenant_scope = ""
+    key = f"user_permissions:{tenant_scope}:{user.id}"
     rc = redis_client
     if rc:
         try:
@@ -1051,6 +1059,13 @@ def _get_user_permissions(user) -> set:
                 return str(v)
             perms = {_to_text(x).lower() for x in cached}
             try:
+                from utils.tenant_permissions import filter_permissions_for_tenant, is_tenant_request
+
+                if is_tenant_request():
+                    perms = filter_permissions_for_tenant(perms)
+            except Exception:
+                pass
+            try:
                 if cache_map is not None and uid is not None:
                     cache_map[uid] = perms
             except Exception:
@@ -1058,6 +1073,13 @@ def _get_user_permissions(user) -> set:
             return perms
 
     perms = _fetch_permissions_from_db(user)
+    try:
+        from utils.tenant_permissions import filter_permissions_for_tenant, is_tenant_request
+
+        if is_tenant_request():
+            perms = filter_permissions_for_tenant(set(perms or set()))
+    except Exception:
+        pass
     try:
         if rc:
             rc.delete(key)

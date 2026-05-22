@@ -9,6 +9,7 @@ from permissions_config.enums import SystemPermissions
 from routes import fiscal_period_shared as shared
 from utils import permission_required
 from utils.branding_scope import require_tenant_owner_console
+from utils.branding_assets import is_tenant_session_user
 from utils.tenant_fiscal_schema import ensure_fiscal_tables_for_request
 
 tenant_fiscal_bp = Blueprint(
@@ -21,9 +22,20 @@ tenant_fiscal_bp = Blueprint(
 @tenant_fiscal_bp.before_request
 def _tenant_fiscal_guard():
     slug = (getattr(g, "tenant_slug", None) or "").strip().lower()
-    guard = require_tenant_owner_console(expected_slug=slug)
-    if guard is not None:
-        return guard
+    if not slug:
+        abort(404)
+    # جلسة مالك التينانت (t:slug:id) أو صلاحية إدارة الدفتر
+    if not is_tenant_session_user():
+        from flask_login import current_user
+
+        if not getattr(current_user, "is_authenticated", False):
+            abort(401)
+        if not current_user.has_permission(SystemPermissions.MANAGE_LEDGER.value):
+            abort(403)
+    else:
+        guard = require_tenant_owner_console(expected_slug=slug)
+        if guard is not None:
+            return guard
     ensure_fiscal_tables_for_request()
     return None
 
