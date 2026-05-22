@@ -1967,224 +1967,24 @@ def account_statement(customer_id):
                         seen_check_identifiers[check_identifier] = (p.id, has_cashed_in_this_payment)
         
         if not should_skip:
-            # ✅ إذا كانت الدفعة لديها splits، نعرض كل split كدفعة منفصلة
-            # بدلاً من عرض الدفعة ككل
-            if splits and len(splits) > 0:
-                # عرض كل split كدفعة منفصلة
-                for split in sorted(splits, key=lambda s: getattr(s, "id", 0)):
-                    split_method_val = getattr(split, "method", None)
-                    if hasattr(split_method_val, "value"):
-                        split_method_val = split_method_val.value
-                    split_method_raw = str(split_method_val or "").lower()
-                    if not split_method_raw:
-                        split_method_raw = method_raw or "cash"
-                    
-                    split_currency = (getattr(split, "currency", None) or getattr(p, "currency", "ILS") or "ILS").upper()
-                    converted_currency = (getattr(split, "converted_currency", None) or getattr(p, "currency", "ILS") or "ILS").upper()
-                    
-                    # حساب المبلغ بالـ ILS
-                    split_amount = D(getattr(split, "amount", 0) or 0)
-                    split_converted_amount = D(getattr(split, "converted_amount", 0) or 0)
-                    
-                    # استخدام المبلغ المحول إذا كان موجوداً، وإلا استخدام المبلغ الأصلي
-                    if split_converted_amount > 0 and converted_currency == "ILS":
-                        split_amount_ils = split_converted_amount
-                    else:
-                        split_amount_ils = split_amount
-                        if split_currency != "ILS":
-                            try:
-                                from models import convert_amount
-                                split_amount_ils = convert_amount(split_amount, split_currency, "ILS", p.payment_date)
-                            except Exception:
-                                current_app.logger.debug('Currency conversion skipped')
-                    
-                    # تحديد طريقة الدفع للـ split
-                    split_method_arabic = method_map.get(split_method_raw, split_method_raw)
-                    
-                    # فحص إذا كان Split لديها شيك مرتبط
-                    split_check = None
-                    split_check_for_return = None
-                    split_check_for_pending = None
-                    split_check_for_cashed = None
-                    split_checks = []
-                    if 'check' in split_method_raw or 'cheque' in split_method_raw:
-                        ref_key = f"PMT-SPLIT-{split.id}"
-                        # استخدام الخريطة المحملة مسبقاً بدلاً من الاستعلام
-                        split_checks_unsorted = split_checks_map.get(ref_key, [])
-                        
-                        # ترتيب الشيكات يدوياً كما كان في الاستعلام
-                        # order_by(Check.updated_at.desc().nullslast(), Check.check_date.desc().nullslast(), Check.id.desc())
-                        split_checks = sorted(
-                            split_checks_unsorted,
-                            key=lambda c: (
-                                getattr(c, 'updated_at', None) or datetime.min,
-                                getattr(c, 'check_date', None) or datetime.min,
-                                getattr(c, 'id', 0)
-                            ),
-                            reverse=True
-                        )
-                    
-                    if split_checks:
-                        for chk in split_checks:
-                            chk_status = str(getattr(chk, 'status', 'PENDING') or 'PENDING').upper()
-                            if chk_status in ['RETURNED', 'BOUNCED'] and not split_check_for_return:
-                                split_check_for_return = chk
-                            if chk_status in ['PENDING', 'RESUBMITTED'] and not split_check_for_pending:
-                                split_check_for_pending = chk
-                            if chk_status == 'CASHED' and not split_check_for_cashed:
-                                split_check_for_cashed = chk
-                        split_check = split_check_for_return or split_check_for_pending or split_check_for_cashed or split_checks[0]
-                    
-                    # تحديد حالة Split
-                    split_is_bounced = False
-                    split_is_pending = False
-                    split_has_cashed = False
-                    split_has_returned = False
-                    
-                    if split_check or split_checks:
-                        check_obj_for_flags = split_check_for_return or split_check or split_checks[0]
-                        check_status = str(getattr(check_obj_for_flags, 'status', 'PENDING') or 'PENDING').upper()
-                        split_has_returned = split_check_for_return is not None
-                        split_is_bounced = split_has_returned
-                        split_has_cashed = split_check_for_cashed is not None and not split_has_returned
-                        split_is_pending = (split_check_for_pending is not None) and not split_has_returned and not split_has_cashed
-                    
-                    # إنشاء البيان للـ split
-                    if split_has_returned:
-                        split_statement = f"سند قبض - {split_method_arabic}"
-                        if split_check and split_check.check_number:
-                            split_statement += f" #{split_check.check_number}"
-                        if split_check and split_check.check_bank:
-                            split_statement += f" - {split_check.check_bank}"
-                        split_statement += " (شيك مرتجع)"
-                        split_entry_type = "PAYMENT"
-                    elif split_is_pending and ('check' in split_method_raw or 'cheque' in split_method_raw):
-                        split_statement = f"⏳ شيك معلق - {split_method_arabic}"
-                        if split_check and split_check.check_number:
-                            split_statement += f" #{split_check.check_number}"
-                        split_entry_type = "CHECK_PENDING"
-                    elif split_has_cashed:
-                        split_statement = f"✅ شيك مسحوب - {split_method_arabic}"
-                        if split_check and split_check.check_number:
-                            split_statement += f" #{split_check.check_number}"
-                        split_entry_type = "CHECK_CASHED"
-                    else:
-                        split_statement = f"سند قبض - {split_method_arabic}"
-                        split_entry_type = "PAYMENT"
-                    
-                    if deliverer_name and not split_is_bounced:
-                        split_statement += f" - سلَّم ({deliverer_name})"
-                    if receiver_name and not split_is_bounced:
-                        split_statement += f" - لـيـد ({receiver_name})"
-                    
-                    # حساب debit/credit للـ split
-                    if str(getattr(payment_status, "value", payment_status) or "").upper() in ("REFUNDED", "CANCELLED"):
-                        split_debit = D(0)
-                        split_credit = D(0)
-                    elif is_in:
-                        split_debit = D(0)
-                        split_credit = split_amount_ils  # الدفعة الواردة (IN) = له (حق له) = دائن
-                    else:
-                        split_debit = split_amount_ils  # الدفعة الصادرة (OUT) = عليه (التزام عليه) = مدين
-                        split_credit = D(0)
-                    
-                    # إنشاء payment_details للـ split
-                    split_payment_details = {
-                        'method': split_method_arabic,
-                        'method_raw': split_method_raw,
-                        'check_number': split_check.check_number if split_check else None,
-                        'check_bank': split_check.check_bank if split_check else None,
-                        'check_due_date': split_check.check_due_date if split_check else None,
-                        'deliverer_name': deliverer_name,
-                        'receiver_name': receiver_name,
-                        'status': split_check.status if split_check else payment_status,
-                        'is_bounced': split_is_bounced,
-                        'is_pending': split_is_pending,
-                        'is_cashed': split_has_cashed,
-                        'is_returned': split_has_returned,
-                        'is_refunded': (str(payment_status).upper() == 'REFUNDED') or bool(getattr(split, 'details', {}) and getattr(split, 'details', {}).get('refunded')),
-                        'is_refund_payment': bool(getattr(p, 'refund_of_id', None)),
-                        'splits': [],  # لا splits داخل split
-                        'all_checks': [{
-                            'check_number': split_check.check_number,
-                            'check_bank': split_check.check_bank,
-                            'check_due_date': split_check.check_due_date,
-                            'status': split_check.status,
-                            'amount': float(split_check.amount or 0),
-                            'currency': split_check.currency or 'ILS',
-                        }] if split_check else [],
-                    }
-                    
-                    # إضافة الـ split كدفعة منفصلة
-                    entries.append({
-                        "date": getattr(p, "payment_date", None) or getattr(p, "created_at", None),
-                        "type": split_entry_type,
-                        "id": p.id,
-                        "model": "payment",
-                        "ref": f"SPLIT-{split.id}-PMT-{p.id}",
-                        "statement": split_statement,
-                        "debit": split_debit,
-                        "credit": split_credit,
-                        "payment_details": split_payment_details,
-                        "notes": notes,
-                    })
-                    
-                    if split_has_returned:
-                        returned_statement = "إرجاع شيك"
-                        if split_check and split_check.check_number:
-                            returned_statement += f" #{split_check.check_number}"
-                        if split_check and split_check.check_bank:
-                            returned_statement += f" - {split_check.check_bank}"
-                        
-                        returned_details = {
-                            'method': 'شيك',
-                            'method_raw': 'cheque',
-                            'check_number': split_check.check_number if split_check else None,
-                            'check_bank': split_check.check_bank if split_check else None,
-                            'check_due_date': split_check.check_due_date if split_check else None,
-                            'status': str(getattr(split_check, 'status', 'RETURNED') or 'RETURNED'),
-                            'is_bounced': True,
-                            'is_pending': False,
-                            'is_cashed': False,
-                            'is_returned': True,
-                            'all_checks': [{
-                                'check_number': split_check.check_number,
-                                'check_bank': split_check.check_bank,
-                                'check_due_date': split_check.check_due_date,
-                                'status': str(getattr(split_check, 'status', 'RETURNED') or 'RETURNED'),
-                                'amount': float(split_check.amount or 0),
-                                'currency': split_check.currency or 'ILS',
-                            }] if split_check else [],
-                        }
-                        
-                        entries.append({
-                            "date": (split_check.check_date if split_check else None) or getattr(p, "payment_date", None) or getattr(p, "created_at", None),
-                            "type": "CHECK_RETURNED",
-                            "ref": f"SPLIT-RETURN-{split.id}-CHK-{getattr(split_check, 'id', 'NA')}",
-                            "statement": returned_statement,
-                            "debit": split_amount_ils if is_in else D(0),
-                            "credit": split_amount_ils if not is_in else D(0),
-                            "payment_details": returned_details,
-                            "notes": notes,
-                        })
-            else:
-                # ✅ الدفعة بدون splits - نعرضها كالمعتاد
-                entries.append({
-                    "date": getattr(p, "payment_date", None) or getattr(p, "created_at", None),
-                    "type": entry_type,
-                    "id": p.id,
-                    "model": "payment",
-                    "ref": getattr(p, "payment_number", None) or getattr(p, "receipt_number", None) or f"PMT-{p.id}",
-                    "statement": payment_statement,
-                    "debit": debit_val,
-                    "credit": credit_val,
-                    "currency": "ILS",
-                    "payment_details": payment_details,
-                    "notes": notes,
-                })
-                
-                # إضافة الشيكات المرتدة كقيود منفصلة (للدفعات بدون splits)
-                for returned_check_item in returned_checks_list:
+            # ✅ دفعة واحدة في كشف الحساب (مع أو بدون splits)
+            # تفاصيل تقسيمات الدفع تبقى في payment_details['splits']
+            entries.append({
+                "date": getattr(p, "payment_date", None) or getattr(p, "created_at", None),
+                "type": entry_type,
+                "id": p.id,
+                "model": "payment",
+                "ref": getattr(p, "payment_number", None) or getattr(p, "receipt_number", None) or f"PMT-{p.id}",
+                "statement": payment_statement,
+                "debit": debit_val,
+                "credit": credit_val,
+                "currency": "ILS",
+                "payment_details": payment_details,
+                "notes": notes,
+            })
+
+            # إضافة الشيكات المرتدة كقيود منفصلة
+            for returned_check_item in returned_checks_list:
                     check = returned_check_item['check']
                     check_amt = returned_check_item['amount']
                     check_status = str(getattr(check, 'status', 'RETURNED') or 'RETURNED').upper()
