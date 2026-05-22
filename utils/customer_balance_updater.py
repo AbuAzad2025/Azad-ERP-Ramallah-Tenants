@@ -91,7 +91,7 @@ def update_customer_balance_components(customer_id, session=None):
                 #
                 # الالتزامات (Obligations): ما على العميل
                 # - sales_balance: مبيعات (يشمل المبيعات الناتجة من الحجوزات المسبقة عند التسليم)
-                # - invoices_balance: فواتير
+                # - invoices_balance: فواتير مستقلة (غير المرتبطة ببيع/خدمة/حجز)
                 # - services_balance: خدمات
                 # - preorders_balance: حجوزات مسبقة (دائماً = 0 - قيمة الحجز الكاملة لا تُقيد قبل التسليم)
                 # - online_orders_balance: طلبات أونلاين

@@ -1594,6 +1594,15 @@ def create_payment():
                     receiver_val = counterparty_name
             deliverer_val = (deliverer_val or "").strip() or None
             receiver_val = (receiver_val or "").strip() or None
+            try:
+                from utils.payment_allocation_policy import (
+                    payment_auto_allocate_enabled,
+                    normalize_customer_payment_booking,
+                )
+                _auto_allocate_payments = payment_auto_allocate_enabled()
+            except Exception:
+                _auto_allocate_payments = False
+                normalize_customer_payment_booking = None
             target_kwargs = {}
             if etype == "CUSTOMER":
                 target_kwargs["customer_id"] = target_id
@@ -1622,6 +1631,10 @@ def create_payment():
                     target_kwargs["supplier_id"] = final_supplier_id
                 elif final_partner_id:
                     target_kwargs["partner_id"] = final_partner_id
+            if normalize_customer_payment_booking and related_customer_id:
+                etype, target_kwargs = normalize_customer_payment_booking(
+                    etype, target_kwargs, customer_id=int(related_customer_id)
+                )
             base_receipt = (_fd(getattr(form, "receipt_number", None)) or None)
             base_reference = ref_text or None
             base_total = q0(actual_amount)
@@ -1702,12 +1715,6 @@ def create_payment():
 
             payments_to_create = []
             splits_by_payment = {}
-            _auto_allocate_payments = False
-            try:
-                from utils.payment_allocation_policy import payment_auto_allocate_enabled
-                _auto_allocate_payments = payment_auto_allocate_enabled()
-            except Exception:
-                _auto_allocate_payments = False
 
             def _new_payment_for_target(entity_type: str, *, receipt_number, reference_override=None, **target_link):
                 p = Payment(
