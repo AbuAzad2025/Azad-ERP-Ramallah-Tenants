@@ -54,7 +54,11 @@ def login_alias():
 @login_required
 def dashboard():
     from flask import g
-    from utils.dashboard_routing import dashboard_widgets_for_user, preferred_dashboard_endpoint
+    from utils.dashboard_routing import (
+        dashboard_label_for_user,
+        dashboard_widgets_for_user,
+        preferred_dashboard_endpoint,
+    )
 
     try:
         db.session.rollback()
@@ -97,13 +101,14 @@ def dashboard():
         return bool(perms_set & targets)
 
     tenant_slug = str(getattr(g, "tenant_slug", None) or "").strip()
-    if not _has_perm(SystemPermissions.ACCESS_DASHBOARD.value):
-        dest = preferred_dashboard_endpoint(current_user, tenant_slug or None)
-        if dest != "main.dashboard":
-            from flask import flash, redirect, url_for
+    preferred = preferred_dashboard_endpoint(current_user, tenant_slug or None)
+    if preferred != "main.dashboard":
+        from flask import flash, redirect, url_for
 
-            flash("لوحة التشغيل غير متاحة لدورك — تم توجيهك للوحة المناسبة.", "info")
-            return redirect(url_for(dest))
+        flash(f"تم توجيهك إلى {dashboard_label_for_user(current_user, tenant_slug)} حسب دورك وصلاحياتك.", "info")
+        return redirect(url_for(preferred))
+
+    if not _has_perm(SystemPermissions.ACCESS_DASHBOARD.value):
         from flask import abort
 
         abort(403)

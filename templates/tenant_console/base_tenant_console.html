@@ -52,6 +52,12 @@
       <span class="badge badge-warning text-dark mt-2">مالك التينانت</span>
     </div>
     <nav class="tenant-console-nav">
+      {% if has_perm('access_dashboard') and user_home_endpoint != 'tenant_console.index' %}
+      <div class="nav-header">التشغيل</div>
+      <a href="{{ url_for('main.dashboard') }}" class="{% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+        <i class="fas fa-tachometer-alt"></i> لوحة التشغيل
+      </a>
+      {% endif %}
       {% for group in tenant_console_nav_groups or [] %}
       <div class="nav-header">{{ group.title }}</div>
       {% for item in group.items %}

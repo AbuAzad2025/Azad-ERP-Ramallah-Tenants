@@ -1796,7 +1796,22 @@ def create_app(config_object=Config) -> Flask:
         from utils.branding_scope import branding_hub_url
 
         from utils.tenant_scope import template_context as _tenant_tpl_ctx
+        from utils.dashboard_routing import (
+            dashboard_label_for_user,
+            home_url_for_user,
+            preferred_dashboard_endpoint,
+        )
 
+        user = None
+        try:
+            from flask_login import current_user as cu
+
+            if getattr(cu, "is_authenticated", False):
+                user = cu
+        except Exception:
+            pass
+
+        home_ep = preferred_dashboard_endpoint(user, tenant_slug) if user else "auth.login"
         scope = dict(
             is_tenant_scope=in_tenant,
             is_platform_scope=not in_tenant,
@@ -1804,6 +1819,9 @@ def create_app(config_object=Config) -> Flask:
             is_platform_owner=is_platform_owner_user() and not in_tenant,
             gm_tenant_slug=tenant_slug,
             branding_hub_url=branding_hub_url,
+            user_home_endpoint=home_ep,
+            user_home_url=home_url_for_user(user, tenant_slug) if user else None,
+            user_home_label=dashboard_label_for_user(user, tenant_slug) if user else "الرئيسية",
         )
         scope.update(_tenant_tpl_ctx())
         return scope

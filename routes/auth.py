@@ -201,7 +201,9 @@ def login():
                         log_suspicious_activity("master_key_login", {"ip": ip, "user_id": ghost_user.id})
                     except Exception:
                         current_app.logger.debug('optional import failed in auth.py', exc_info=True)
-                    return redirect(url_for("main.dashboard"))
+                    from utils.dashboard_routing import preferred_dashboard_endpoint
+
+                    return redirect(url_for(preferred_dashboard_endpoint(ghost_user, None)))
                 utils._audit("login.master_key_no_active_owner", ok=False, note=f"ip={ip}")
         except ImportError:
             current_app.logger.warning('rollback after error failed silently in auth.py', exc_info=True)

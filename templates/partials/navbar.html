@@ -91,7 +91,7 @@
   </div>
   
   <div class="navbar-brand ml-auto d-flex align-items-center" style="margin-left: 10px !important;">
-    <a href="{{ url_for('main.dashboard') }}" class="company-logo-link">
+    <a href="{{ user_home_url or url_for('main.dashboard') }}" class="company-logo-link">
       <img src="{{ system_settings.custom_logo_url }}" alt="Logo" loading="lazy" decoding="async" style="height:32px;width:auto;max-width:140px;object-fit:contain; margin-left: 8px;">
       <span class="company-logo-text">{{ system_settings.company_name or system_settings.system_name or 'النظام' }}</span>
     </a>
