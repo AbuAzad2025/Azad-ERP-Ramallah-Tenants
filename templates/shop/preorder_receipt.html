@@ -36,13 +36,9 @@
 
 {% block content %}
 <div class="receipt-paper">
-  <div class="receipt-header d-flex justify-content-between align-items-center">
-    <div>
-      <h4 class="mb-0">{{ system_settings.company_name or system_settings.system_name or 'المتجر' }}</h4>
-      <small class="text-muted">وصل شراء رسمي</small>
-    </div>
-    <img class="logo" src="{{ system_settings.custom_logo_url }}" alt="Logo">
-  </div>
+  {% with doc_title='وصل حجز مسبق' %}
+  {% include 'partials/print_letterhead.html' %}
+  {% endwith %}
 
   <div class="card shadow-sm border-0 mb-4">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
@@ -134,10 +130,7 @@
     </button>
   </div>
 
-  <div class="receipt-footer">
-    <p>شكرًا لتسوقك معنا 💙</p>
-    <small>{{ system_settings.company_name or system_settings.system_name or 'المتجر' }} - جميع الحقوق محفوظة</small>
-  </div>
+  {% include 'partials/print_footer.html' %}
 </div>
 {% endblock %}
 

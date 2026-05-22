@@ -97,37 +97,20 @@ section.content .container-fluid {
 {% block content %}
 <!-- رأس الصفحة للطباعة فقط -->
 <div class="print-header-info">
-  <div class="company-logo">
-    {% if system_settings and system_settings.custom_logo %}
-      <img src="{{ url_for('static', filename=system_settings.custom_logo.replace('static/', '')) }}" alt="Logo">
-    {% else %}
-      <img class="logo" src="{{ system_settings.custom_logo_url }}" alt="Logo">
-    {% endif %}
-  </div>
-  <div class="company-info">
-    <div class="company-name">{{ system_settings.company_name or system_settings.system_name or 'النظام' }}</div>
-    <div class="company-details">
-      {% if system_settings.COMPANY_ADDRESS %}📍 {{ system_settings.COMPANY_ADDRESS }}{% endif %}
-      {% if system_settings.COMPANY_PHONE %} | 📞 {{ system_settings.COMPANY_PHONE }}{% endif %}<br>
-      {% if system_settings.COMPANY_EMAIL %}📧 {{ system_settings.COMPANY_EMAIL }}{% endif %}
-      {% if system_settings.TAX_NUMBER %} | رقم ضريبي: {{ system_settings.TAX_NUMBER }}{% endif %}
-    </div>
-  </div>
-  <div class="statement-type">
-    <h2>كشف حساب مورد</h2>
-    <div class="statement-date">📅 {{ now()|format_datetime }}</div>
-    <div class="user-info">👤 {{ current_user.username if current_user.is_authenticated else 'النظام' }}</div>
+  {% with doc_title='كشف حساب مورد' %}
+  {% include 'partials/print_letterhead.html' %}
+  {% endwith %}
+  <div class="statement-meta small text-muted" style="margin-top:6px;">
+    📅 {{ now()|format_datetime }} — 👤 {{ current_user.username if current_user.is_authenticated else 'النظام' }}
   </div>
 </div>
 
 <!-- تذييل الصفحة للطباعة فقط -->
 <div class="print-footer-info">
-  <div class="footer-line">
-    <strong>{{ system_settings.company_name or system_settings.system_name or 'النظام' }}</strong>
-  </div>
-  <div class="footer-line print-time">
-    طُبع بواسطة: {{ current_user.username if current_user.is_authenticated else 'النظام' }} | 
-    {{ now()|format_datetime }} | 
+  {% include 'partials/print_footer.html' %}
+  <div class="footer-line print-time small text-muted">
+    طُبع بواسطة: {{ current_user.username if current_user.is_authenticated else 'النظام' }} |
+    {{ now()|format_datetime }} |
     صفحة <span class="page-number"></span>
   </div>
 </div>

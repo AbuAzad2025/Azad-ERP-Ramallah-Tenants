@@ -219,9 +219,9 @@
 {% block content %}
 <!-- رأس الصفحة للطباعة فقط -->
 <div class="print-header-info">
-  <div class="statement-type">
-    <h2>كشف حساب عميل</h2>
-  </div>
+  {% with doc_title='كشف حساب عميل' %}
+  {% include 'partials/print_letterhead.html' %}
+  {% endwith %}
 </div>
 
 <!-- معلومات العميل والرصيد - للطباعة فقط -->
@@ -265,7 +265,8 @@
 
 <!-- تذييل الصفحة للطباعة فقط -->
 <div class="print-footer-info">
-  <div class="footer-line print-time">
+  {% include 'partials/print_footer.html' %}
+  <div class="footer-line print-time small text-muted">
     صفحة <span class="page-number"></span>
   </div>
 </div>

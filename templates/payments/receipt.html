@@ -86,17 +86,10 @@
 {% set amt_words = (payment.total_amount or 0)|amount_in_words(_curr) %}
 
 <div id="receipt">
-  <div class="hero">
-    <div class="hero-brand">
-      <div class="hero-logo">
-        <img src="{{ system_settings.custom_logo_url }}" alt="" onerror="this.closest('.hero-logo').style.display='none'">
-      </div>
-      <div class="hero-text">
-        <div class="hero-name">{{ system_settings.company_name or 'الشركة' }}</div>
-        <div class="hero-sub">وصل دفع</div>
-      </div>
-    </div>
-    <div class="hero-meta">
+  {% with doc_title='وصل دفع' %}
+  {% include 'partials/print_letterhead.html' %}
+  {% endwith %}
+    <div class="hero-meta" style="margin-bottom:10px;">
       <div class="meta-item">
         <span class="meta-label">رقم الوصل</span>
         <span class="meta-value">{{ _receipt_no }}</span>
@@ -110,7 +103,6 @@
         <span class="meta-value">{{ current_user.username if current_user else '—' }}</span>
       </div>
     </div>
-  </div>
 
   <div class="summary-strip">
     <div class="summary-pill">
@@ -265,6 +257,8 @@
       <div class="sign">توقيع المسؤول</div>
     </div>
   </div>
+
+  {% include 'partials/print_footer.html' %}
 
   <div class="actions no-print">
     <button class="btn btn-dark" onclick="window.print()">🖨️ طباعة</button>

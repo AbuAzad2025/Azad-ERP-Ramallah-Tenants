@@ -62,10 +62,9 @@
 {% set amt_words = (payment.total_amount or 0)|amount_in_words(_curr) %}
 
 <div id="receipt">
-  <div class="simple-header">
-    <h2>وصل دفع</h2>
-    <p class="subtitle">تفاصيل العملية</p>
-  </div>
+  {% with doc_title='وصل دفع' %}
+  {% include 'partials/print_letterhead.html' %}
+  {% endwith %}
 
   <div class="info-row">
     <div><strong>رقم الوصل:</strong> {{ _receipt_no }}</div>
@@ -171,6 +170,8 @@
   </table>
   {% endif %}
 
+
+  {% include 'partials/print_footer.html' %}
 
   <div class="sign-row">
     <div class="sign">توقيع المستلم</div>

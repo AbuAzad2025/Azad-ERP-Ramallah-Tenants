@@ -86,17 +86,10 @@ html,body{font-family:"DejaVu Sans","Amiri","Tahoma","Arial",sans-serif;directio
     <a href="{{ url_for('service.view_receipt', rid=service.id) }}" class="{{ '' if is_simple else 'active' }}">النسخة الاحترافية</a>
     <a href="{{ url_for('service.view_receipt', rid=service.id, simple=1) }}" class="{{ 'active' if is_simple else '' }}">النسخة المبسطة</a>
   </div>
-  <div class="hero">
-    <div class="hero-brand">
-      <div class="hero-logo">
-        <img src="{{ system_settings.custom_logo_url }}" alt="Logo" onerror="this.closest('.hero-logo').style.display='none'">
-      </div>
-      <div class="hero-text">
-        <div class="hero-name">{{ system_settings.company_name or 'الشركة' }}</div>
-        <div class="hero-sub">Service Receipt</div>
-      </div>
-    </div>
-    <div class="hero-meta">
+  {% with doc_title='إيصال صيانة' %}
+  {% include 'partials/print_letterhead.html' %}
+  {% endwith %}
+    <div class="hero-meta" style="margin-bottom:10px;">
       <div class="meta-item">
         <span class="meta-label">رقم الطلب</span>
         <span class="meta-value">{{ service.service_number or ('SRV-' ~ service.id) }}</span>
@@ -110,7 +103,6 @@ html,body{font-family:"DejaVu Sans","Amiri","Tahoma","Arial",sans-serif;directio
         <span class="meta-value">{{ status_label }}</span>
       </div>
     </div>
-  </div>
 
   <div class="summary-strip">
     <div class="summary-pill">
@@ -253,6 +245,8 @@ html,body{font-family:"DejaVu Sans","Amiri","Tahoma","Arial",sans-serif;directio
       <span>{{ '%.2f'|format(grand_total) }} {{ service.currency or '₪' }}</span>
     </div>
   </div>
+
+  {% include 'partials/print_footer.html' %}
 
   <div class="no-print">
     <div class="switcher" style="margin-bottom:6px;">

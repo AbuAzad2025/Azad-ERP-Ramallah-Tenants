@@ -267,22 +267,11 @@
   
   <div class="receipt-container">
   
-  <!-- الرأس -->
-  <div class="header">
-    {% if company_info.name %}
-    <h1>{{ company_info.name }}</h1>
-    {% else %}
-    <h1>إيصال راتب شهري</h1>
-    {% endif %}
-    <div class="company-info">
-      {% if company_info.address or company_info.phone or company_info.tax_number %}
-        {% if company_info.address %}{{ company_info.address }}{% endif %}
-        {% if company_info.phone %}{% if company_info.address %} | {% endif %}هاتف: {{ company_info.phone }}{% endif %}
-        {% if company_info.tax_number %}<br>الرقم الضريبي: {{ company_info.tax_number }}{% endif %}
-        <br>
-      {% endif %}
-      رقم الإيصال: {{ salary_expense.id }} | التاريخ: {{ salary_expense.date.strftime('%Y-%m-%d') if salary_expense.date else '—' }}
-    </div>
+  {% with doc_title='إيصال راتب' %}
+  {% include 'partials/print_letterhead.html' %}
+  {% endwith %}
+  <div class="company-info" style="text-align:center;font-size:8pt;margin-bottom:4mm;">
+    رقم الإيصال: {{ salary_expense.id }} | التاريخ: {{ salary_expense.date.strftime('%Y-%m-%d') if salary_expense.date else '—' }}
   </div>
   
   <!-- عنوان الإيصال -->
@@ -410,8 +399,8 @@
     </div>
   </div>
 
-  <!-- الذيل -->
-  <div class="footer">
+  {% include 'partials/print_footer.html' %}
+  <div class="footer" style="font-size:8pt;text-align:center;margin-top:3mm;">
     تم الإصدار بواسطة: {{ current_user.username if current_user else '—' }}
     {% if salary_expense.date %}
     | تاريخ الإصدار: {{ salary_expense.date.strftime('%Y-%m-%d') }}

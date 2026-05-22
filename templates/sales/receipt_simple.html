@@ -76,11 +76,12 @@
 
 {% block content %}
 <div id="receipt">
-  <!-- رأس مبسط: التاريخ فقط -->
-  <div class="simple-header" style="border-bottom:1px solid #ccc;padding-bottom:6px;margin-bottom:10px">
-    <div style="font-size:14px;font-weight:700;text-align:center">
-      التاريخ: {{ sale.sale_date and sale.sale_date.strftime('%Y-%m-%d') or '—' }}
-    </div>
+  {% with doc_title='فاتورة مبيعات' %}
+  {% include 'partials/print_letterhead.html' %}
+  {% endwith %}
+  <div style="font-size:12px;margin-bottom:8px;">
+    رقم الفاتورة: <strong>{{ sale.sale_number or sale.id }}</strong> —
+    التاريخ: {{ sale.sale_date and sale.sale_date.strftime('%Y-%m-%d') or '—' }}
   </div>
 
   <!-- معلومات العميل -->
@@ -162,6 +163,8 @@
     <span style="color:#666;">({{ sale.fx_rate_source or 'تلقائي' }})</span>
   </div>
   {% endif %}
+
+  {% include 'partials/print_footer.html' %}
 
   <!-- أزرار الطباعة -->
   <div class="text-center mt-3 no-print" style="padding:8px 0">

@@ -76,10 +76,9 @@ html,body{font-family:"DejaVu Sans","Amiri","Tahoma","Arial",sans-serif;directio
     <a href="{{ url_for('service.view_receipt', rid=service.id) }}" class="{{ '' if is_simple else 'active' }}">النسخة الاحترافية</a>
     <a href="{{ url_for('service.view_receipt', rid=service.id, simple=1) }}" class="{{ 'active' if is_simple else '' }}">النسخة المبسطة</a>
   </div>
-  <div class="header">
-    <h2>إيصال صيانة</h2>
-    <p class="subtitle">ملخص الطلب</p>
-  </div>
+  {% with doc_title='إيصال صيانة' %}
+  {% include 'partials/print_letterhead.html' %}
+  {% endwith %}
   <div class="meta-grid">
     <div class="meta-box">
       <span class="meta-label">رقم الطلب</span>
@@ -203,6 +202,8 @@ html,body{font-family:"DejaVu Sans","Amiri","Tahoma","Arial",sans-serif;directio
       <span>{{ '%.2f'|format(grand_total) }} {{ service.currency or '₪' }}</span>
     </div>
   </div>
+
+  {% include 'partials/print_footer.html' %}
 
   <div class="actions">
     <button class="print-btn" onclick="window.print()">🖨️ طباعة</button>

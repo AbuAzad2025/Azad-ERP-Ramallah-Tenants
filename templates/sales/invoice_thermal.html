@@ -109,8 +109,7 @@
     {% if barcode_base64 %}
     <img src="{{ barcode_base64 }}" class="barcode">
     {% endif %}
-    <div style="margin-top: 5px;">{{ settings.invoice_footer_text }}</div>
-    <div style="margin-top: 5px;">شكراً لزيارتكم</div>
+    {% include 'partials/print_footer.html' %}
 </div>
 
 {% if settings.thermal_auto_print %}
