@@ -1,6 +1,6 @@
 # ترحيلات قاعدة البيانات (Alembic)
 
-قاعدة واحدة (`public`) + مخططات تينانت (`t_<slug>`). **رأس التسلسل الحالي:** `g1h2i3j4k5l6`.
+قاعدة واحدة (`public`) + مخططات تينانت (`t_<slug>`). **رأس التسلسل الحالي:** `i9j0k1l2m3n4`.
 
 ## تسلسل التهجيرات (مرتب زمنياً)
 
@@ -18,19 +18,20 @@
 | 8b | `b2c3d4e5f6a7` | `b2c3d4e5f6a7_add_tenant_registry_table.py` | جدول `tenants` (سجل التينانت) |
 | 10 | `c4d5e6f7a8b9` | `c4d5e6f7a8b9_merge_heads_949_and_tenants.py` | **دمج الرأسين** |
 | 11 | `g1h2i3j4k5l6` | `g1h2i3j4k5l6_align_tenants_table_defaults.py` | قيم افتراضية لجدول `tenants` |
+| 12 | `i9j0k1l2m3n4` | `i9j0k1l2m3n4_add_fiscal_period_close_tables.py` | إقفال فترات: شهر / ربع / نصف / سنة |
 
 ```text
 79cf2ae42e8e
   → b1a3f0c6d8a9 → c3a0f1b8d2e4 → d4e5f6a7b8c9 → e5f6a7b8c9d0 → f6a7b8c9d0e1 → a7b8c9d0e1f2
         ├─→ 10f6c0ee04dc → 94948c531c03 ─┐
-        └─→ b2c3d4e5f6a7 ────────────────┴─→ c4d5e6f7a8b9 → g1h2i3j4k5l6 (head)
+        └─→ b2c3d4e5f6a7 ────────────────┴─→ c4d5e6f7a8b9 → g1h2i3j4k5l6 → i9j0k1l2m3n4 (head)
 ```
 
 ## أوامر التحقق والتطبيق
 
 ```powershell
 $env:FLASK_APP = "app:create_app"
-.\.venv\Scripts\flask.exe db heads      # يجب: g1h2i3j4k5l6 (head) فقط
+.\.venv\Scripts\flask.exe db heads      # يجب: i9j0k1l2m3n4 (head) فقط
 .\.venv\Scripts\flask.exe db current    # يجب أن يطابق head
 .\.venv\Scripts\flask.exe db upgrade    # تطبيق المتبقي
 .\.venv\Scripts\flask.exe db-verify     # فحص public + مخططات التينانت

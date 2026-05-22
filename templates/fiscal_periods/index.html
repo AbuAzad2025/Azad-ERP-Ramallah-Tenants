@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}الفترات المحاسبية والإقفال{% endblock %}
+{% block content %}
+<div class="container-fluid py-3" dir="rtl">
+  <div class="card shadow-sm mb-3">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center flex-wrap">
+      <h4 class="mb-0"><i class="fas fa-calendar-check ml-2"></i> الفترات المحاسبية والإقفال</h4>
+      <div class="btn-group">
+        <a href="{{ url_for('ledger_control.index') }}" class="btn btn-sm btn-outline-light">دفتر الأستاذ</a>
+        <a href="{{ url_for('budgets.index') }}" class="btn btn-sm btn-outline-light">الموازنات</a>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row g-2 align-items-end mb-3">
+        <div class="col-md-2">
+          <label class="form-label">السنة المالية</label>
+          <input type="number" id="fy" class="form-control" value="{{ fiscal_year }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">نوع الفترة</label>
+          <select id="ptype" class="form-control">
+            <option value="">الكل</option>
+            {% for t in period_types %}
+            <option value="{{ t }}" {% if period_type == t %}selected{% endif %}>{{ period_labels[t] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-7 text-left">
+          <button type="button" class="btn btn-primary" id="btnLoad"><i class="fas fa-sync"></i> تحديث</button>
+          <button type="button" class="btn btn-success" id="btnSync"><i class="fas fa-plus-circle"></i> توليد الفترات</button>
+        </div>
+      </div>
+      <div class="alert alert-info small">
+        <strong>إقفال سنوي (FY):</strong> يقفل حسابات الدخل في GL + لقطات ذمم العملاء/الموردين/الشركاء.
+        الترحيل الافتتاحي للبطاقات يكون اختيارياً من الإعداد أدناه (افتراضياً: لقطات فقط لتجنب ازدواج الرصيد).
+        <strong>ربع سنوي / نصف سنوي:</strong> إقفال P&amp;L للفترة + قفل الترحيل.
+      </div>
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" id="annualCarryOpening">
+        <label class="form-check-label" for="annualCarryOpening">
+          عند الإقفال السنوي: تحديث الرصيد الافتتاحي على بطاقات العملاء/الموردين/الشركاء (متقدم — استخدمه فقط إذا تفهم أثره على الأرصدة التراكمية)
+        </label>
+      </div>
+      <div id="msg" class="mb-2"></div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover table-bordered">
+          <thead class="table-light">
+            <tr>
+              <th>الفترة</th>
+              <th>النوع</th>
+              <th>من</th>
+              <th>إلى</th>
+              <th>الحالة</th>
+              <th>قيود GL</th>
+              <th>صافي الدخل</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="periodRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const API_LIST = "{{ url_for('fiscal_periods_bp.api_list') }}";
+const API_SYNC = "{{ url_for('fiscal_periods_bp.api_sync') }}";
+const API_SETTINGS = "{{ url_for('fiscal_periods_bp.api_settings') }}";
+
+function showMsg(text, kind='info') {
+  const el = document.getElementById('msg');
+  el.className = 'alert alert-' + kind + ' small';
+  el.textContent = text;
+}
+
+async function loadSettings() {
+  const r = await fetch(API_SETTINGS);
+  const j = await r.json();
+  if (j.success) {
+    document.getElementById('annualCarryOpening').checked = !!j.annual_carry_updates_opening_balance;
+  }
+}
+
+document.getElementById('annualCarryOpening').addEventListener('change', async (e) => {
+  await fetch(API_SETTINGS, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ annual_carry_updates_opening_balance: e.target.checked })
+  });
+});
+
+async function loadPeriods() {
+  const fy = document.getElementById('fy').value;
+  const pt = document.getElementById('ptype').value;
+  let url = API_LIST + '?fiscal_year=' + fy;
+  if (pt) url += '&period_type=' + pt;
+  const r = await fetch(url);
+  const j = await r.json();
+  const tbody = document.getElementById('periodRows');
+  tbody.innerHTML = '';
+  if (!j.success || !j.periods.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">لا توجد فترات — اضغط «توليد الفترات»</td></tr>';
+    return;
+  }
+  const labels = {{ period_labels|tojson }};
+  for (const p of j.periods) {
+    const st = p.status === 'LOCKED' ? 'danger' : (p.status === 'CLOSED' ? 'warning' : 'success');
+    const actions = p.status === 'OPEN'
+      ? `<button class="btn btn-xs btn-outline-primary" onclick="previewClose(${p.id})">معاينة</button>
+         <button class="btn btn-xs btn-primary" onclick="doClose(${p.id}, '${p.period_type}')">إقفال</button>`
+      : `<button class="btn btn-xs btn-warning" onclick="doReopen(${p.id})">إعادة فتح</button>
+         <button class="btn btn-xs btn-outline-secondary" onclick="viewSnapshots(${p.id})">لقطات ذمم</button>`;
+    tbody.innerHTML += `<tr>
+      <td><strong>${p.name_ar}</strong><br><small class="text-muted">${p.period_key}</small></td>
+      <td>${labels[p.period_type] || p.period_type}</td>
+      <td>${p.start_date}</td>
+      <td>${p.end_date}</td>
+      <td><span class="badge bg-${st}">${p.status}</span></td>
+      <td>${p.batches_count}</td>
+      <td>${p.net_income != null ? p.net_income.toLocaleString('ar') : '—'}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }
+}
+
+async function syncPeriods() {
+  const fy = parseInt(document.getElementById('fy').value, 10);
+  showMsg('جاري التوليد...', 'secondary');
+  const r = await fetch(API_SYNC, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ from_year: fy - 1, to_year: fy + 1 })
+  });
+  const j = await r.json();
+  showMsg(j.success ? `تم: ${j.created} جديد، ${j.updated} محدّث` : (j.error || 'فشل'), j.success ? 'success' : 'danger');
+  loadPeriods();
+}
+
+async function previewClose(id) {
+  const r = await fetch(`/security/fiscal-periods/api/${id}/preview-close`, { method: 'POST' });
+  const j = await r.json();
+  if (!j.success) { showMsg(j.error || 'فشل', 'danger'); return; }
+  alert(`معاينة إقفال ${j.period_key}\nصافي الدخل: ${j.net_income}\nإيرادات: ${j.total_revenue}\nمصروفات: ${j.total_expenses}\nعدد قيود الإقفال: ${j.closing_entries.length}`);
+}
+
+async function doClose(id, ptype) {
+  const carry = ptype === 'YEAR';
+  if (!confirm('تأكيد إقفال الفترة؟ سيتم قفل الترحيل في GL لهذه الفترة.')) return;
+  const r = await fetch(`/security/fiscal-periods/api/${id}/close`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ close_scope: 'FULL', post_gl: true, carry_forward: carry, lock_period: true })
+  });
+  const j = await r.json();
+  showMsg(j.success ? `تم الإقفال — لقطات: ${j.entity_snapshots}` : (j.error || 'فشل'), j.success ? 'success' : 'danger');
+  loadPeriods();
+}
+
+async function doReopen(id) {
+  if (!confirm('إعادة فتح الفترة؟')) return;
+  const r = await fetch(`/security/fiscal-periods/api/${id}/reopen`, { method: 'POST' });
+  const j = await r.json();
+  showMsg(j.success ? 'تمت إعادة الفتح' : (j.error || 'فشل'), j.success ? 'success' : 'danger');
+  loadPeriods();
+}
+
+async function viewSnapshots(id) {
+  const r = await fetch(`/security/fiscal-periods/api/${id}/snapshots?limit=20`);
+  const j = await r.json();
+  if (!j.success) return;
+  const lines = j.snapshots.map(s => `${s.entity_type} #${s.entity_id}: ${s.closing_balance}`).join('\n');
+  alert(lines || 'لا توجد لقطات');
+}
+
+document.getElementById('btnLoad').onclick = loadPeriods;
+document.getElementById('btnSync').onclick = syncPeriods;
+loadSettings();
+loadPeriods();
+</script>
+{% endblock %}

@@ -80,6 +80,7 @@ from routes.partner_settlements import partner_settlements_bp
 from routes.supplier_settlements import supplier_settlements_bp
 from routes.ledger_blueprint import ledger_bp
 from routes.ledger_control import ledger_control_bp
+from routes.fiscal_periods import fiscal_periods_bp
 from routes.financial_reports import financial_reports_bp
 from routes.accounting_validation import accounting_validation_bp
 from routes.accounting_docs import accounting_docs_bp
@@ -813,6 +814,7 @@ def _register_blueprints(app):
         currencies_bp,
         barcode_scanner_bp,
         ledger_control_bp,
+        fiscal_periods_bp,
         ai_bp,
         ai_admin_bp,
         user_guide_bp,

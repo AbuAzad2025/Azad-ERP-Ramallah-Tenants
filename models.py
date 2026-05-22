@@ -8403,6 +8403,8 @@ def _payment_before_insert(mapper, connection, target: "Payment"):
         amount=getattr(target, "total_amount", 0),
         currency=getattr(target, "currency", "ILS"),
     )
+    from utils.payment_allocation_policy import enforce_open_item_payment_booking
+    enforce_open_item_payment_booking(target)
 
 
 @event.listens_for(Payment, "before_update", propagate=True)
@@ -8429,6 +8431,8 @@ def _payment_before_update(mapper, connection, target: "Payment"):
         amount=getattr(target, "total_amount", 0),
         currency=getattr(target, "currency", "ILS"),
     )
+    from utils.payment_allocation_policy import enforce_open_item_payment_booking
+    enforce_open_item_payment_booking(target)
 
 
 @event.listens_for(Payment, "before_insert")
@@ -13711,6 +13715,24 @@ class GLBatch(db.Model, TimestampMixin):
         return f"<GLBatch {self.code} {self.source_type}:{self.source_id}>"
 
 
+def _assert_gl_batch_not_in_locked_period(target: "GLBatch") -> None:
+    """منع ترحيل قيود في فترة مقفلة (ما عدا قيود الإقفال والعكس والافتتاح)."""
+    st = (getattr(target, "status", None) or "DRAFT").upper()
+    if st != "POSTED":
+        return
+    src = (getattr(target, "source_type", None) or "").upper()
+    if src in ("CLOSING_ENTRY", "REVERSAL", "PERIOD_CLOSE", "OPENING_BALANCE"):
+        return
+    posted = getattr(target, "posted_at", None)
+    if not posted:
+        return
+    try:
+        from utils.period_close_service import assert_posting_allowed
+        assert_posting_allowed(posted)
+    except ValueError as exc:
+        raise ValueError(str(exc)) from exc
+
+
 @event.listens_for(GLBatch, "before_insert")
 def _glb_before_insert(mapper, connection, target: "GLBatch"):
     target.currency = (target.currency or DEFAULT_CURRENCY).upper()
@@ -13718,6 +13740,7 @@ def _glb_before_insert(mapper, connection, target: "GLBatch"):
         target.code = f"{target.source_type or 'SRC'}-{target.source_id or 0}-{target.purpose or 'PUR'}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
     if (target.status or "DRAFT").upper() == "POSTED" and not target.posted_at:
         target.posted_at = datetime.now(timezone.utc)
+    _assert_gl_batch_not_in_locked_period(target)
 
 
 @event.listens_for(GLBatch, "before_update")
@@ -13728,6 +13751,7 @@ def _glb_before_update(mapper, connection, target: "GLBatch"):
         target.posted_at = datetime.now(timezone.utc)
     if st != "POSTED":
         target.posted_at = None
+    _assert_gl_batch_not_in_locked_period(target)
 
 
 class GLEntry(db.Model, TimestampMixin):
@@ -14879,6 +14903,121 @@ class RecurringInvoiceSchedule(db.Model, TimestampMixin):
     
     def __repr__(self):
         return f"<RecurringSchedule {self.scheduled_date} - {self.status}>"
+
+
+class FiscalPeriod(db.Model, TimestampMixin):
+    """فترة محاسبية — شهر / ربع / نصف سنة / سنة مالية."""
+    __tablename__ = "fiscal_periods"
+
+    id = db.Column(db.Integer, primary_key=True)
+    period_key = db.Column(db.String(32), nullable=False, unique=True, index=True)
+    period_type = db.Column(
+        sa_str_enum(["MONTH", "QUARTER", "HALF", "YEAR"], name="fiscal_period_type"),
+        nullable=False,
+        index=True,
+    )
+    fiscal_year = db.Column(db.Integer, nullable=False, index=True)
+    period_number = db.Column(db.Integer, nullable=False, default=1)
+    start_date = db.Column(db.Date, nullable=False, index=True)
+    end_date = db.Column(db.Date, nullable=False, index=True)
+    name_ar = db.Column(db.String(120), nullable=False)
+    status = db.Column(
+        sa_str_enum(["OPEN", "CLOSED", "LOCKED"], name="fiscal_period_status"),
+        nullable=False,
+        default="OPEN",
+        server_default=sa_text("'OPEN'"),
+        index=True,
+    )
+    closed_at = db.Column(db.DateTime, index=True)
+    closed_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    notes = db.Column(db.Text)
+
+    closed_by = db.relationship("User", foreign_keys=[closed_by_id])
+    closes = db.relationship("PeriodClose", back_populates="fiscal_period", lazy="dynamic")
+
+    __table_args__ = (
+        db.Index("ix_fiscal_period_year_type", "fiscal_year", "period_type"),
+        db.CheckConstraint("end_date >= start_date", name="ck_fiscal_period_dates"),
+    )
+
+    @property
+    def is_closed(self) -> bool:
+        return (self.status or "OPEN").upper() in ("CLOSED", "LOCKED")
+
+    def __repr__(self):
+        return f"<FiscalPeriod {self.period_key} {self.status}>"
+
+
+class PeriodClose(db.Model, TimestampMixin):
+    """سجل إقفال فترة — قيود GL + لقطات ذمم."""
+    __tablename__ = "period_closes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    fiscal_period_id = db.Column(
+        db.Integer, db.ForeignKey("fiscal_periods.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    close_scope = db.Column(
+        sa_str_enum(["GL_ONLY", "FULL"], name="period_close_scope"),
+        nullable=False,
+        default="FULL",
+    )
+    net_income = db.Column(db.Numeric(14, 2))
+    total_revenue = db.Column(db.Numeric(14, 2))
+    total_expenses = db.Column(db.Numeric(14, 2))
+    gl_batch_ids = db.Column(db.Text)
+    carry_forward_done = db.Column(db.Boolean, nullable=False, server_default=sa_text("false"))
+    reopened_at = db.Column(db.DateTime)
+    reopened_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    notes = db.Column(db.Text)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), index=True)
+
+    fiscal_period = db.relationship("FiscalPeriod", back_populates="closes")
+    created_by = db.relationship("User", foreign_keys=[created_by_id])
+    entity_snapshots = db.relationship(
+        "EntityPeriodBalance", back_populates="period_close", cascade="all, delete-orphan", lazy="dynamic"
+    )
+
+    __table_args__ = (
+        db.Index("ix_period_close_period_created", "fiscal_period_id", "created_at"),
+    )
+
+    def __repr__(self):
+        return f"<PeriodClose period={self.fiscal_period_id} scope={self.close_scope}>"
+
+
+class EntityPeriodBalance(db.Model, TimestampMixin):
+    """رصيد إقفال عميل/مورد/شريك عند نهاية فترة."""
+    __tablename__ = "entity_period_balances"
+
+    id = db.Column(db.Integer, primary_key=True)
+    period_close_id = db.Column(
+        db.Integer, db.ForeignKey("period_closes.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    fiscal_period_id = db.Column(
+        db.Integer, db.ForeignKey("fiscal_periods.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    entity_type = db.Column(
+        sa_str_enum(["CUSTOMER", "SUPPLIER", "PARTNER"], name="entity_period_entity_type"),
+        nullable=False,
+        index=True,
+    )
+    entity_id = db.Column(db.Integer, nullable=False, index=True)
+    closing_balance = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    currency = db.Column(db.String(10), default="ILS")
+    applied_to_opening = db.Column(db.Boolean, nullable=False, server_default=sa_text("false"))
+    next_period_id = db.Column(db.Integer, db.ForeignKey("fiscal_periods.id", ondelete="SET NULL"), index=True)
+
+    period_close = db.relationship("PeriodClose", back_populates="entity_snapshots")
+    fiscal_period = db.relationship("FiscalPeriod", foreign_keys=[fiscal_period_id])
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "fiscal_period_id", "entity_type", "entity_id", name="uq_entity_period_balance"
+        ),
+    )
+
+    def __repr__(self):
+        return f"<EntityPeriodBalance {self.entity_type}#{self.entity_id} {self.closing_balance}>"
 
 
 class Budget(db.Model, TimestampMixin, AuditMixin):

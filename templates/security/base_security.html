@@ -633,6 +633,11 @@
                                 <i class="fas fa-book"></i> <span>Ledger Control</span>
                             </a>
                         {% endif %}
+                        {% if current_app and ('fiscal_periods_bp.index' in current_app.view_functions) %}
+                            <a href="{{ url_for('fiscal_periods_bp.index') }}" class="nav-link {% if ep.startswith('fiscal_periods_bp.') %}active{% endif %}">
+                                <i class="fas fa-calendar-check"></i> <span>إقفال الفترات</span>
+                            </a>
+                        {% endif %}
                         <a href="{{ url_for('security.advanced_analytics') }}" class="nav-link {% if ep == 'security.advanced_analytics' %}active{% endif %}">
                             <i class="fas fa-chart-pie"></i> <span>Advanced Analytics</span>
                         </a>

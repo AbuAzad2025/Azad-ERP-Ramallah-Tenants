@@ -1441,78 +1441,30 @@ def get_advanced_statistics():
 @ledger_control_bp.route('/operations/fiscal-periods/api', methods=['GET'])
 @permission_required(SystemPermissions.MANAGE_LEDGER)
 def get_fiscal_periods():
-    """API: جلب جميع الفترات المحاسبية"""
+    """API: جلب الفترات المحاسبية (شهر / ربع / نصف / سنة) من جدول fiscal_periods."""
     try:
-        from sqlalchemy import func
-        from datetime import date
-        
-        # حساب الفترات من البيانات الموجودة
-        oldest_batch = db.session.query(func.min(GLBatch.posted_at)).filter(
-            GLBatch.status == 'POSTED'
-        ).scalar()
-        
-        if not oldest_batch:
+        from models import FiscalPeriod
+        from utils.period_close_service import period_to_dict, sync_fiscal_periods
+
+        if FiscalPeriod.query.count() == 0:
+            sync_fiscal_periods()
+
+        ptype = (request.args.get("period_type") or "").strip().upper()
+        fy = request.args.get("fiscal_year", type=int)
+        q = FiscalPeriod.query.order_by(FiscalPeriod.start_date.desc())
+        if ptype:
+            q = q.filter(FiscalPeriod.period_type == ptype)
+        if fy:
+            q = q.filter(FiscalPeriod.fiscal_year == fy)
+
+        periods = [period_to_dict(p) for p in q.limit(200).all()]
+        if not periods:
             return jsonify({
-                'success': True,
-                'periods': [],
-                'message': 'لا توجد قيود محاسبية بعد'
+                "success": True,
+                "periods": [],
+                "message": "لا توجد فترات — نفّذ مزامنة من /security/fiscal-periods/",
             })
-        
-        # إنشاء فترات شهرية تلقائياً
-        if isinstance(oldest_batch, date) and not isinstance(oldest_batch, datetime):
-            start_date = datetime.combine(oldest_batch, datetime.min.time()).replace(day=1)
-        else:
-            start_date = oldest_batch.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        if isinstance(start_date, datetime) and start_date.tzinfo is not None:
-            start_date = start_date.replace(tzinfo=None)
-            
-        end_date = datetime.now()
-        
-        periods = []
-        current = start_date
-        
-        while current <= end_date:
-            # حساب نهاية الشهر
-            if current.month == 12:
-                next_month_start = datetime(current.year + 1, 1, 1)
-            else:
-                next_month_start = datetime(current.year, current.month + 1, 1)
-            
-            month_end = next_month_start - timedelta(seconds=1)
-            
-            # حساب عدد القيود في هذه الفترة
-            batches_count = GLBatch.query.filter(
-                GLBatch.status == 'POSTED',
-                GLBatch.posted_at >= current,
-                GLBatch.posted_at <= month_end
-            ).count()
-            
-            # حساب مجموع المدين والدائن
-            totals = db.session.query(
-                func.sum(GLEntry.debit).label('total_debit'),
-                func.sum(GLEntry.credit).label('total_credit')
-            ).join(GLBatch).filter(
-                GLBatch.status == 'POSTED',
-                GLBatch.posted_at >= current,
-                GLBatch.posted_at <= month_end
-            ).first()
-            
-            periods.append({
-                'period_id': current.strftime('%Y%m'),
-                'start_date': current.isoformat(),
-                'end_date': month_end.isoformat(),
-                'name': current.strftime('%B %Y'),
-                'name_ar': f"{current.strftime('%B')} {current.year}",
-                'is_closed': False,
-                'batches_count': batches_count,
-                'total_debit': float(totals.total_debit or 0),
-                'total_credit': float(totals.total_credit or 0),
-                'is_current': current.month == datetime.now().month and current.year == datetime.now().year
-            })
-            
-            # الانتقال للشهر التالي
-            current = next_month_start
-        
+
         return jsonify({
             'success': True,
             'periods': list(reversed(periods))  # الأحدث أولاً
