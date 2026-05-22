@@ -474,8 +474,8 @@
         <div class="security-brand">
             <i class="fas fa-user-secret text-danger fa-lg ms-3"></i>
             <div>
-                <h5>الكونسول السري</h5>
-                <span class="brand-badge">TOP SECRET</span>
+                <h5>لوحة مالك المنصة</h5>
+                <span class="brand-badge">أزاد · SaaS</span>
                 {% if system_settings and system_settings.maintenance_mode %}
                     <div class="mt-1">
                         <span class="badge badge-danger">وضع الصيانة مفعّل</span>
@@ -486,10 +486,10 @@
         
         <nav class="security-nav custom-scrollbar">
             {% set ep = request.endpoint or '' %}
-            {% set sec_home = ep in ['security.index', 'security.settings_center', 'security.tools_center', 'security.reports_center'] %}
+            {% set sec_home = ep in ['security.index', 'security.settings_center', 'security.tools_center', 'security.reports_center', 'security.owner_branding'] %}
             {% set sec_monitoring = ep in ['security.live_monitoring', 'security.monitoring_dashboard', 'security.performance_monitor', 'security.data_quality_center', 'security.security_center', 'security.grafana_setup', 'security.audit_log_viewer', 'security.audit_log_detail'] %}
             {% set sec_management = ep in ['security.user_control', 'security.users_center', 'security.permissions_manager', 'security.saas_manager'] %}
-            {% set sec_system = ep in ['security.system_settings', 'security.system_branding', 'security.integrations', 'security.notifications_log', 'security.tax_reports', 'security.email_manager', 'security.invoice_designer', 'security.logo_manager', 'security.theme_editor'] %}
+            {% set sec_system = ep in ['security.system_settings', 'security.owner_branding', 'security.integrations', 'security.notifications_log', 'security.tax_reports', 'security.email_manager', 'security.invoice_designer', 'security.theme_editor'] %}
             {% set sec_data = ep in ['security.database_manager', 'security.data_export', 'security.advanced_analytics', 'security.dark_mode_settings'] %}
             {% set sec_danger = ep in ['security.emergency_tools', 'security.system_cleanup', 'security.block_ip', 'security.blocked_ips', 'security.block_country', 'security.blocked_countries', 'security.ultimate_control'] %}
 
@@ -505,6 +505,9 @@
                         </a>
                         <a href="{{ url_for('security.settings_center') }}" class="nav-link {% if ep == 'security.settings_center' and not request.args.get('tab') %}active{% endif %}">
                             <i class="fas fa-satellite-dish"></i> <span>مركز العمليات</span>
+                        </a>
+                        <a href="{{ url_for('security.owner_branding') }}" class="nav-link {% if ep == 'security.owner_branding' %}active{% endif %}">
+                            <i class="fas fa-palette"></i> <span>الهوية والترويسة</span>
                         </a>
                         <a href="{{ url_for('security.tools_center') }}" class="nav-link {% if ep == 'security.tools_center' %}active{% endif %}">
                             <i class="fas fa-toolbox"></i> <span>مركز الأدوات</span>
@@ -591,9 +594,11 @@
                         <a href="{{ url_for('security.system_settings') }}" class="nav-link {% if ep == 'security.system_settings' %}active{% endif %}">
                             <i class="fas fa-sliders-h"></i> <span>الإعدادات المتقدمة</span>
                         </a>
-                        <a href="{{ url_for('security.system_branding') }}" class="nav-link {% if ep == 'security.system_branding' %}active{% endif %}">
-                            <i class="fas fa-fingerprint"></i> <span>الهوية والمظهر</span>
+                        {% if current_app and ('advanced.owner_hub' in current_app.view_functions) %}
+                        <a href="{{ url_for('advanced.owner_hub') }}" class="nav-link {% if ep == 'advanced.owner_hub' %}active{% endif %}">
+                            <i class="fas fa-cloud"></i> <span>مركز SaaS</span>
                         </a>
+                        {% endif %}
                         <a href="{{ url_for('security.theme_editor') }}" class="nav-link {% if ep == 'security.theme_editor' %}active{% endif %}">
                             <i class="fas fa-palette"></i> <span>محرر الثيم</span>
                         </a>

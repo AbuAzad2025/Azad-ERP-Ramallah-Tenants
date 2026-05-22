@@ -30,7 +30,7 @@
         </div>
         <div class="card-body text-center d-flex flex-col flex-column">
           <div class="logo-preview-box mb-3 p-4 bg-light rounded flex-grow-1 d-flex align-items-center justify-content-center" style="min-height: 150px;">
-            <img src="{{ url_for('static', filename='img/' ~ logos.main) }}?v={{ range(1000, 9999)|random }}" 
+            <img src="{{ static_url(logos.main) }}" 
                  alt="Main Logo" class="img-fluid" style="max-height: 80px;">
           </div>
           <p class="small text-muted mb-3">يظهر في شريط التنقل العلوي، الفواتير، وصفحة تسجيل الدخول.</p>
@@ -57,7 +57,7 @@
         </div>
         <div class="card-body text-center d-flex flex-col flex-column">
           <div class="logo-preview-box mb-3 p-4 bg-light rounded flex-grow-1 d-flex align-items-center justify-content-center" style="min-height: 150px;">
-            <img src="{{ url_for('static', filename='img/' ~ logos.emblem) }}?v={{ range(1000, 9999)|random }}" 
+            <img src="{{ static_url(logos.emblem) }}" 
                  alt="Emblem" class="img-fluid" style="max-height: 60px;">
           </div>
           <p class="small text-muted mb-3">يظهر عندما تكون القائمة الجانبية مغلقة (Collapsed Sidebar).</p>
@@ -84,7 +84,7 @@
         </div>
         <div class="card-body text-center d-flex flex-col flex-column">
           <div class="logo-preview-box mb-3 p-4 bg-dark rounded flex-grow-1 d-flex align-items-center justify-content-center" style="min-height: 150px;">
-            <img src="{{ url_for('static', filename='img/' ~ logos.white) }}?v={{ range(1000, 9999)|random }}" 
+            <img src="{{ static_url(logos.white) }}" 
                  alt="White Logo" class="img-fluid" style="max-height: 80px;">
           </div>
           <p class="small text-muted mb-3">يظهر في الوضع الليلي (Dark Mode) أو على الخلفيات الداكنة.</p>
@@ -111,7 +111,7 @@
         </div>
         <div class="card-body text-center d-flex flex-col flex-column">
           <div class="logo-preview-box mb-3 p-4 bg-light rounded flex-grow-1 d-flex align-items-center justify-content-center" style="min-height: 150px;">
-            <img src="{{ url_for('static', filename='img/' ~ logos.favicon) }}?v={{ range(1000, 9999)|random }}" 
+            <img src="{{ static_url(logos.favicon) }}" 
                  alt="Favicon" class="img-fluid" style="max-height: 32px; width: 32px;">
           </div>
           <p class="small text-muted mb-3">أيقونة المتصفح (Browser Tab Icon). يفضل مقاس 32x32 بكسل.</p>

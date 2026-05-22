@@ -113,12 +113,18 @@
   <link rel="apple-touch-icon" sizes="180x180" href="{{ system_settings.custom_favicon_url }}">
   {% else %}
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo.png') }}">
-  <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/logo.png') }}">
+  <link rel="apple-touch-icon" href="{{ system_settings.custom_logo_url }}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ system_settings.custom_logo_url }}">
   {% endif %}
 
   <meta name="gm-company-name" content="{{ system_settings.company_name or system_settings.system_name or 'النظام' }}">
-  <meta name="gm-logo-url" content="{% if system_settings.custom_logo_url %}{{ system_settings.custom_logo_url }}{% else %}{{ url_for('static', filename='img/logo.png') }}{% endif %}">
+  <meta name="gm-logo-url" content="{{ system_settings.custom_logo_url }}">
+  <meta name="gm-favicon-url" content="{{ system_settings.custom_favicon_url }}">
+  <meta name="gm-company-name" content="{{ system_settings.company_name or '' }}">
+  <meta name="gm-branding-scope" content="{{ system_settings.branding_scope or 'platform' }}">
+  {% if system_settings.custom_header_url %}
+  <meta name="gm-header-url" content="{{ system_settings.custom_header_url }}">
+  {% endif %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>

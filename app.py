@@ -495,6 +495,24 @@ def _register_template_support(app):
         return {"current_app": current_app, "get_unique_flashes": get_unique_flashes, "static_url": static_url}
 
     @app.context_processor
+    def inject_branding_helpers():
+        from models import SystemSettings as _SS
+        from utils.branding_assets import build_static_url, rel_path_platform, rel_path_tenant
+
+        def branding_url(scope="platform", slug=None, asset_type="logos", name="primary.png"):
+            try:
+                ver = _SS.get_setting("assets_version", "") or ""
+            except Exception:
+                ver = ""
+            if scope == "tenant" and slug:
+                rel = rel_path_tenant(slug, asset_type, name)
+            else:
+                rel = rel_path_platform(asset_type, name)
+            return build_static_url(rel, assets_version=ver)
+
+        return {"branding_url": branding_url}
+
+    @app.context_processor
     def inject_permissions():
         def _get_user_perms_cached(u) -> set:
             if not getattr(u, "is_authenticated", False):
@@ -650,7 +668,9 @@ def _register_template_support(app):
     app.jinja_env.globals["get_entity_balance_in_ils"] = utils.get_entity_balance_in_ils
     app.jinja_env.globals["url_for_any"] = url_for_any
     app.jinja_env.globals["now"] = lambda: datetime.now(timezone.utc)
-    app.jinja_env.globals["get_setting"] = lambda key, default=None: SystemSettings.get_setting(key, default)
+    from utils.print_branding import get_scoped_setting
+
+    app.jinja_env.globals["get_setting"] = get_scoped_setting
     app.jinja_env.globals["system_component_map"] = app.config.get("SYSTEM_COMPONENT_MAP", {})
 
     from translations.accounting_ar import get_all_translations
@@ -1596,61 +1616,27 @@ def create_app(config_object=Config) -> Flask:
         def _get(key, default=None):
             return _coerce(raw_settings.get(key, raw_settings.get(str(key).upper())), default)
 
-        def _safe_static_path(value, default='img/azad_logo.png'):
-            s = str(value or '').strip().replace('\\', '/')
-            if not s:
-                return default
-            lowered = s.lower()
-            if lowered.startswith(('http://', 'https://', '//')):
-                return default
-            s = s.lstrip('/')
-            if s.startswith('static/'):
-                s = s[len('static/'):]
-            if '/' not in s:
-                s = f'img/{s}'
-            parts = [p for p in s.split('/') if p]
-            if not parts or any(p in {'.', '..'} for p in parts):
-                return default
-            return '/'.join(parts)
-
-        def _safe_static_path_allow_root(value, default='favicon.ico'):
-            s = str(value or '').strip().replace('\\', '/')
-            if not s:
-                return default
-            lowered = s.lower()
-            if lowered.startswith(('http://', 'https://', '//')):
-                return default
-            s = s.lstrip('/')
-            if s.startswith('static/'):
-                s = s[len('static/'):]
-            parts = [p for p in s.split('/') if p]
-            if not parts or any(p in {'.', '..'} for p in parts):
-                return default
-            return '/'.join(parts)
+        from utils.branding_assets import (
+            normalize_rel_path,
+            rel_path_platform,
+            resolve_active_branding,
+            ASSET_FAVICONS,
+            ASSET_LOGOS,
+            FAVICON_FILE,
+            LOGO_PRIMARY,
+        )
 
         system_name_val = _get('system_name') or _get('SystemName') or 'أزاد لإدارة الكراج'
         company_name_val = _get('company_name') or _get('CompanyName') or 'شركة أزاد للأنظمة الذكية'
 
         assets_version = _get('assets_version', '') or ''
 
-        def _with_ver(u: str) -> str:
-            v = str(assets_version or '').strip()
-            if not v:
-                return u
-            sep = '&' if '?' in u else '?'
-            return f"{u}{sep}v={v}"
-
         custom_logo = _get('custom_logo')
-        logo_filename = _safe_static_path(custom_logo)
-        logo_url = _with_ver(url_for('static', filename=logo_filename))
-
         favicon_val = _get('custom_favicon', '') or ''
-        favicon_filename = _safe_static_path_allow_root(favicon_val, default='favicon.ico')
-        favicon_url = _with_ver(url_for('static', filename=favicon_filename))
 
+        tenant_name = ''
         try:
-            tenancy_enabled = SystemSettings.get_setting('multi_tenancy_enabled', False)
-            if bool(tenancy_enabled):
+            if SystemSettings.get_setting('multi_tenancy_enabled', False):
                 tenant_name = (request.environ.get("gm.tenant_slug") or "").strip()
                 if not tenant_name:
                     host = (request.host or '').split(':')[0].strip().lower()
@@ -1675,29 +1661,29 @@ def create_app(config_object=Config) -> Flask:
                             cache.set(mapping_key, domains, timeout=300)
                         except Exception:
                             pass
-
-                    tenant_name = domains.get(host)
+                    tenant_name = domains.get(host) or ''
                 if tenant_name:
-                    tenant_logo = SystemSettings.get_setting(f'tenant_{tenant_name}_logo', '') or ''
-                    tenant_logo_filename = _safe_static_path(tenant_logo, default='')
-                    if tenant_logo_filename:
-                        logo_url = _with_ver(url_for('static', filename=tenant_logo_filename))
-
-                    tenant_company_name = SystemSettings.get_setting(f'tenant_{tenant_name}_company_name', '') or ''
-                    if str(tenant_company_name).strip():
-                        company_name_val = str(tenant_company_name).strip()
-
-                    tenant_system_name = SystemSettings.get_setting(f'tenant_{tenant_name}_system_name', '') or ''
-                    if str(tenant_system_name).strip():
-                        system_name_val = str(tenant_system_name).strip()
-
-                    tenant_favicon = SystemSettings.get_setting(f'tenant_{tenant_name}_favicon', '') or ''
-                    if str(tenant_favicon).strip():
-                        favicon_val = str(tenant_favicon).strip()
-                        favicon_filename = _safe_static_path_allow_root(favicon_val, default=favicon_filename)
-                        favicon_url = _with_ver(url_for('static', filename=favicon_filename))
+                    tcn = SystemSettings.get_setting(f'tenant_{tenant_name}_company_name', '') or ''
+                    if str(tcn).strip():
+                        company_name_val = str(tcn).strip()
+                    tsn = SystemSettings.get_setting(f'tenant_{tenant_name}_system_name', '') or ''
+                    if str(tsn).strip():
+                        system_name_val = str(tsn).strip()
         except Exception:
-            pass
+            tenant_name = ''
+
+        branding = resolve_active_branding(
+            tenant_slug=tenant_name or None,
+            raw_settings=raw_settings,
+            assets_version=assets_version,
+        )
+        logo_url = branding.get("logo_url") or url_for(
+            "static", filename=normalize_rel_path("", default=rel_path_platform(ASSET_LOGOS, LOGO_PRIMARY))
+        )
+        favicon_url = branding.get("favicon_url") or url_for(
+            "static", filename=normalize_rel_path(favicon_val, default=rel_path_platform(ASSET_FAVICONS, FAVICON_FILE))
+        )
+        header_url = branding.get("header_url") or ''
 
         settings = {
             'system_name': system_name_val,
@@ -1705,10 +1691,13 @@ def create_app(config_object=Config) -> Flask:
             'login_title': _get('login_title', 'مرحباً بك'),
             'login_subtitle': _get('login_subtitle', 'سجل دخولك للمتابعة'),
             'footer_text': _get('footer_text', 'جميع الحقوق محفوظة'),
-            'custom_logo': custom_logo or '',
+            'custom_logo': branding.get('logo_rel') or custom_logo or '',
             'custom_logo_url': logo_url,
-            'custom_favicon': favicon_val,
+            'custom_favicon': branding.get('favicon_rel') or favicon_val,
             'custom_favicon_url': favicon_url,
+            'custom_header_url': header_url,
+            'branding_scope': branding.get('scope') or 'platform',
+            'branding_tenant_slug': branding.get('tenant_slug'),
             'assets_version': assets_version,
             'primary_color': _get('primary_color', '#007bff'),
             'secondary_color': _get('secondary_color', '#1f2937'),
@@ -1728,8 +1717,50 @@ def create_app(config_object=Config) -> Flask:
             'marketing_price_from_usd': _get('MARKETING_PRICE_FROM_USD', '500'),
         }
 
+        from utils.print_branding import resolve_print_settings
+
+        print_settings = resolve_print_settings(
+            tenant_slug=tenant_name or None,
+            raw_settings=raw_settings,
+            branding=branding,
+        )
+        if tenant_name:
+            if print_settings.get("company_name"):
+                settings["company_name"] = print_settings["company_name"]
+            if print_settings.get("system_name"):
+                settings["system_name"] = print_settings["system_name"]
+            for ck in ("COMPANY_ADDRESS", "COMPANY_PHONE", "COMPANY_EMAIL", "TAX_NUMBER"):
+                if print_settings.get(ck):
+                    settings[ck] = print_settings[ck]
+            if print_settings.get("footer_text"):
+                settings["footer_text"] = print_settings["footer_text"]
+
         system_appearance = {}
-        return dict(system_settings=settings, system_appearance=system_appearance)
+        return dict(
+            system_settings=settings,
+            system_appearance=system_appearance,
+            print_settings=print_settings,
+        )
+
+    @app.context_processor
+    def inject_gm_scope():
+        from flask import g as flask_g
+        from utils.branding_assets import (
+            is_platform_owner_user,
+            is_tenant_session_user,
+        )
+        tenant_slug = getattr(flask_g, "tenant_slug", None)
+        in_tenant = bool(tenant_slug)
+        from utils.branding_scope import branding_hub_url
+
+        return dict(
+            is_tenant_scope=in_tenant,
+            is_platform_scope=not in_tenant,
+            is_tenant_session=is_tenant_session_user(),
+            is_platform_owner=is_platform_owner_user() and not in_tenant,
+            gm_tenant_slug=tenant_slug,
+            branding_hub_url=branding_hub_url,
+        )
     
     @app.before_request
     def check_maintenance_mode():

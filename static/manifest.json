@@ -12,13 +12,13 @@
   "dir": "rtl",
   "icons": [
     {
-      "src": "/static/img/logo.png",
+      "src": "/static/branding/platform/logos/primary.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/static/img/logo.png",
+      "src": "/static/branding/platform/logos/primary.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -39,28 +39,28 @@
       "short_name": "مبيعات",
       "description": "إدارة فواتير المبيعات",
       "url": "/sales",
-      "icons": [{ "src": "/static/img/logo.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/static/branding/platform/logos/primary.png", "sizes": "96x96" }]
     },
     {
       "name": "العملاء",
       "short_name": "عملاء",
       "description": "إدارة العملاء",
       "url": "/customers",
-      "icons": [{ "src": "/static/img/logo.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/static/branding/platform/logos/primary.png", "sizes": "96x96" }]
     },
     {
       "name": "المخازن",
       "short_name": "مخازن",
       "description": "إدارة المستودعات",
       "url": "/warehouses",
-      "icons": [{ "src": "/static/img/logo.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/static/branding/platform/logos/primary.png", "sizes": "96x96" }]
     },
     {
       "name": "الدفعات",
       "short_name": "دفعات",
       "description": "إدارة سندات الدفع",
       "url": "/payments",
-      "icons": [{ "src": "/static/img/logo.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/static/branding/platform/logos/primary.png", "sizes": "96x96" }]
     }
   ],
   "prefer_related_applications": false

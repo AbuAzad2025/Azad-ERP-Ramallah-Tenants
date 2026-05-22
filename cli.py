@@ -3909,6 +3909,62 @@ def sync_balances(entity, limit, dry_run, include_archived, batch_size):
         click.echo("\n✅ تمت مزامنة الأرصدة بنجاح.")
 
 
+@click.command("backfill-sale-invoices")
+@click.option("--limit", type=int, default=0, show_default=True, help="0 = كل المبيعات المؤكدة")
+@click.option("--dry-run", is_flag=True)
+@with_appcontext
+def backfill_sale_invoices(limit, dry_run):
+    """إنشاء/تحديث سجلات Invoice للمبيعات المؤكدة التي لا تملك فاتورة."""
+    from models import Sale, SaleStatus
+    from utils.sale_billing import ensure_invoice_for_sale, refresh_customer_balance_for_sale
+
+    q = (
+        Sale.query.filter(
+            Sale.customer_id.isnot(None),
+            Sale.status == SaleStatus.CONFIRMED.value,
+            Sale.is_archived.is_(False),
+        )
+        .order_by(Sale.id.asc())
+    )
+    if limit and limit > 0:
+        q = q.limit(int(limit))
+    sales = q.all()
+    created = updated = 0
+    for sale in sales:
+        from models import Invoice
+
+        had = Invoice.query.filter_by(sale_id=sale.id).first() is not None
+        if dry_run:
+            if not had:
+                created += 1
+            else:
+                updated += 1
+            continue
+        inv = ensure_invoice_for_sale(sale)
+        if inv:
+            if had:
+                updated += 1
+            else:
+                created += 1
+    if not dry_run:
+        from extensions import db
+
+        db.session.commit()
+        touched_customers = {int(s.customer_id) for s in sales if s.customer_id}
+        for cid in touched_customers:
+            try:
+                from utils.customer_balance_updater import update_customer_balance_components
+
+                update_customer_balance_components(cid, db.session)
+            except Exception:
+                pass
+        db.session.commit()
+    click.echo(
+        f"مبيعات: {len(sales)} | جديد: {created} | محدّث: {updated}"
+        + (" (dry-run)" if dry_run else "")
+    )
+
+
 @click.command("accounting-audit")
 @click.option("--limit", type=int, default=0, show_default=True, help="0 = كل الجهات")
 @click.option("--fix", is_flag=True, help="إعادة حساب الأرصدة المخزّنة عند الفروقات")
@@ -4634,6 +4690,81 @@ def tenants_provision(slug: str, display_name: str | None, schema_name: str | No
     click.echo(f"OK: tenant '{slug}' schema='{schema_name}' active={not inactive}")
 
 
+@click.group("branding")
+@with_appcontext
+def branding_group():
+    """أصول الهوية: منصة أزاد مقابل تينانت."""
+    pass
+
+
+@branding_group.command("bootstrap")
+@click.option("--alhazem-source", default=None, help="مجلد شعارات الحازم (افتراضي: سطح المكتب/انس)")
+@with_appcontext
+def branding_bootstrap(alhazem_source):
+    """تهيئة مجلدات branding وربط الإعدادات — garage_manager فقط."""
+    from utils.branding_assets import assert_garage_manager_only, bootstrap_dev_branding
+
+    assert_garage_manager_only()
+    report = bootstrap_dev_branding(db.session, alhazem_source=alhazem_source)
+    db.session.commit()
+    click.echo(report)
+
+
+@branding_group.command("reorganize")
+@click.option("--no-archive", is_flag=True, help="لا تنقل المكررات إلى _deprecated")
+@with_appcontext
+def branding_reorganize(no_archive):
+    """تنظيم المجلدات، تطبيع مسارات DB، أرشفة مكررات static/img."""
+    from utils.branding_assets import assert_garage_manager_only, reorganize_and_wire
+
+    assert_garage_manager_only()
+    report = reorganize_and_wire(db.session, archive_dupes=not no_archive)
+    db.session.commit()
+    click.echo(f"normalized_settings={report.get('settings_normalized')}")
+    click.echo(f"archived={report.get('archived_duplicates')}")
+    click.echo(report.get("audit"))
+
+
+@branding_group.command("audit")
+@with_appcontext
+def branding_audit():
+    """تقرير أصول branding وملفات img المتبقية."""
+    from utils.branding_assets import assert_garage_manager_only, audit_branding_tree
+
+    assert_garage_manager_only()
+    import json
+    click.echo(json.dumps(audit_branding_tree(), ensure_ascii=False, indent=2))
+
+
+@tenants_group.command("setup-production")
+@click.option("--owner-email", envvar="TENANT_OWNER_EMAIL", required=True)
+@click.option("--owner-password", envvar="TENANT_OWNER_PASSWORD", required=True)
+@click.option("--slug", multiple=True, help="تينانتات إضافية (افتراضي: nasrallah alhazem)")
+@click.option("--no-copy", is_flag=True, default=False, help="لا تنسخ بيانات public إلى schemas الجديدة")
+@with_appcontext
+def tenants_setup_production(owner_email, owner_password, slug, no_copy):
+    """
+    إعداد إنتاجي محلي للتينانتات — قاعدة garage_manager فقط.
+    لا يمس قواعد PostgreSQL الأخرى (mavi_erp, naser_company, ...).
+    """
+    from utils.tenant_prod_seed import assert_garage_manager_only, setup_production_dev_tenants
+
+    assert_garage_manager_only()
+    slugs = tuple(slug) if slug else ("nasrallah", "alhazem")
+    report = setup_production_dev_tenants(
+        owner_email=owner_email,
+        owner_password=owner_password,
+        provision_schemas=slugs,
+        copy_data=not no_copy,
+    )
+    for t in report.get("tenants", []):
+        click.echo(f"OK tenant: {t}")
+    for err in report.get("errors", []):
+        click.echo(f"ERR: {err}", err=True)
+    if report.get("errors"):
+        raise SystemExit(1)
+
+
 def _guard_production_dangerous_cli(cmd):
     if not getattr(cmd, "callback", None):
         return cmd
@@ -4655,6 +4786,7 @@ def register_cli(app) -> None:
         import_sqlite_appdb,
         compare_sqlite_appdb,
         compare_sqlite_full,
+        branding_group,
         tenants_group,
         seed_roles, sync_permissions, list_permissions, list_roles, role_add_perms, create_role, export_rbac,
         create_user, user_set_password, user_activate, user_assign_role, list_users, list_customers,
@@ -4673,7 +4805,7 @@ def register_cli(app) -> None:
         create_system_admin, create_system_admin_interactive,
         optimize_db, perf_snapshot, recompute_sale_returns, link_missing_counterparties,
         seed_employees, seed_salaries, seed_expenses_demo, seed_customer_statement_demo, seed_branches,
-        workflow_check_timeouts, gl_recreate_payments, sync_balances, accounting_audit, audit_integrity, checks_sync_due,
+        workflow_check_timeouts, gl_recreate_payments, sync_balances, backfill_sale_invoices, accounting_audit, audit_integrity, checks_sync_due,
         seed_product_categories, restore_product_categories,
         restore_upgrade_production,
         upgrade_production

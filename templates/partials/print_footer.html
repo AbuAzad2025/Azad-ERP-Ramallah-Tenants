@@ -1,0 +1,9 @@
+{% set ps = print_settings if print_settings is defined else {} %}
+{% if ps.invoice_terms_text %}
+<div class="print-terms small text-muted" style="margin-top:12px;">{{ ps.invoice_terms_text }}</div>
+{% endif %}
+{% if ps.invoice_footer_text or ps.footer_text %}
+<div class="print-footer text-center small" style="margin-top:8px;padding-top:8px;border-top:1px dashed #ccc;">
+  {{ ps.invoice_footer_text or ps.footer_text }}
+</div>
+{% endif %}

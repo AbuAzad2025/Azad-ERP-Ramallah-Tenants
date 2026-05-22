@@ -1,0 +1,164 @@
+{# نموذج هوية موحّد — scope: platform | tenant #}
+<form method="POST" enctype="multipart/form-data" action="{{ branding_form_action }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="branding_scope" value="{{ branding_scope }}">
+
+  <div class="alert {% if branding_scope == 'platform' %}alert-info{% else %}alert-warning{% endif %} mb-3">
+    {% if branding_scope == 'platform' %}
+    <strong>نطاق المنصة:</strong> إعدادات أزاد العامة — لا تؤثر على تينانتات محددة.
+    {% else %}
+    <strong>نطاق التينانت:</strong> إعدادات <code>{{ gm_tenant_slug }}</code> فقط — معزولة عن منصة أزاد.
+    {% endif %}
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-5">
+      <div class="card shadow-sm mb-3">
+        <div class="card-header bg-primary text-white"><strong>بيانات الشركة</strong></div>
+        <div class="card-body">
+          <div class="form-group mb-2">
+            <label>اسم الشركة</label>
+            <input type="text" name="company_name" class="form-control" value="{{ profile.company_name }}">
+          </div>
+          <div class="form-group mb-2">
+            <label>اسم النظام</label>
+            <input type="text" name="system_name" class="form-control" value="{{ profile.system_name }}">
+          </div>
+          <div class="form-group mb-2">
+            <label>العنوان</label>
+            <input type="text" name="COMPANY_ADDRESS" class="form-control" value="{{ profile.COMPANY_ADDRESS }}">
+          </div>
+          <div class="row">
+            <div class="col-md-6 form-group mb-2">
+              <label>الهاتف</label>
+              <input type="text" name="COMPANY_PHONE" class="form-control" value="{{ profile.COMPANY_PHONE }}">
+            </div>
+            <div class="col-md-6 form-group mb-2">
+              <label>البريد</label>
+              <input type="email" name="COMPANY_EMAIL" class="form-control" value="{{ profile.COMPANY_EMAIL }}">
+            </div>
+          </div>
+          <div class="form-group mb-2">
+            <label>الرقم الضريبي</label>
+            <input type="text" name="TAX_NUMBER" class="form-control" value="{{ profile.TAX_NUMBER }}">
+          </div>
+          <div class="form-group mb-0">
+            <label>تذييل عام</label>
+            <input type="text" name="footer_text" class="form-control" value="{{ profile.footer_text }}">
+          </div>
+        </div>
+      </div>
+
+      {% if branding_scope == 'platform' %}
+      <div class="card shadow-sm mb-3">
+        <div class="card-header"><strong>ألوان وشاشة الدخول (المنصة)</strong></div>
+        <div class="card-body">
+          <div class="form-group mb-2">
+            <label>عنوان الدخول</label>
+            <input type="text" name="login_title" class="form-control" value="{{ profile.login_title }}">
+          </div>
+          <div class="form-group mb-2">
+            <label>وصف الدخول</label>
+            <input type="text" name="login_subtitle" class="form-control" value="{{ profile.login_subtitle }}">
+          </div>
+          <div class="row">
+            <div class="col-6 form-group mb-2">
+              <label>لون أساسي</label>
+              <input type="color" name="primary_color" class="form-control" value="{{ profile.primary_color }}">
+            </div>
+            <div class="col-6 form-group mb-2">
+              <label>لون ثانوي</label>
+              <input type="color" name="secondary_color" class="form-control" value="{{ profile.secondary_color }}">
+            </div>
+            <div class="col-6 form-group mb-2">
+              <label>خلفية القائمة</label>
+              <input type="color" name="sidebar_bg" class="form-control" value="{{ profile.sidebar_bg }}">
+            </div>
+            <div class="col-6 form-group mb-0">
+              <label>نص القائمة</label>
+              <input type="color" name="sidebar_text" class="form-control" value="{{ profile.sidebar_text }}">
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-header"><strong>الشعار والترويسة</strong></div>
+        <div class="card-body">
+          <div class="form-group mb-2">
+            <label>وضع الترويسة</label>
+            <select name="{{ letterhead_mode_key }}" class="form-control">
+              <option value="auto" {% if profile.letterhead_mode == 'auto' %}selected{% endif %}>تلقائي</option>
+              <option value="image" {% if profile.letterhead_mode == 'image' %}selected{% endif %}>صورة</option>
+              <option value="built" {% if profile.letterhead_mode == 'built' %}selected{% endif %}>هيدر مبني</option>
+            </select>
+          </div>
+          {% if system_settings.custom_logo_url %}
+          <div class="text-center mb-2"><img src="{{ system_settings.custom_logo_url }}" style="max-height:56px;"></div>
+          {% endif %}
+          <div class="form-group mb-2"><label>شعار رئيسي</label><input type="file" name="upload_logo" class="form-control-file" accept="image/*"></div>
+          {% if branding_scope == 'platform' %}
+          <div class="form-group mb-2"><label>شعار فرعي (emblem)</label><input type="file" name="upload_logo_emblem" class="form-control-file" accept="image/*"></div>
+          <div class="form-group mb-2"><label>شعار أبيض</label><input type="file" name="upload_logo_white" class="form-control-file" accept="image/*"></div>
+          {% endif %}
+          <div class="form-group mb-2"><label>ترويسة (letterhead)</label><input type="file" name="upload_header" class="form-control-file" accept="image/*"></div>
+          <div class="form-group mb-0"><label>Favicon</label><input type="file" name="upload_favicon" class="form-control-file" accept="image/*"></div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white"><strong>الفواتير والطباعة</strong></div>
+        <div class="card-body">
+          <div class="form-group mb-2">
+            <label>عنوان المستند</label>
+            <input type="text" name="invoice_header_title" class="form-control" value="{{ profile.invoice_header_title }}">
+          </div>
+          <div class="form-group mb-2">
+            <label>لون التمييز</label>
+            <input type="color" name="invoice_header_color" class="form-control" value="{{ profile.invoice_header_color }}">
+          </div>
+          <div class="form-check mb-1">
+            <input class="form-check-input" type="checkbox" name="invoice_show_logo" id="obLogo" {% if profile.invoice_show_logo == 'True' %}checked{% endif %}>
+            <label class="form-check-label" for="obLogo">إظهار الشعار</label>
+          </div>
+          <div class="form-check mb-1">
+            <input class="form-check-input" type="checkbox" name="invoice_show_contact" id="obContact" {% if profile.invoice_show_contact == 'True' %}checked{% endif %}>
+            <label class="form-check-label" for="obContact">معلومات الاتصال</label>
+          </div>
+          <div class="form-check mb-1">
+            <input class="form-check-input" type="checkbox" name="invoice_show_tax_number" id="obTaxN" {% if profile.invoice_show_tax_number == 'True' %}checked{% endif %}>
+            <label class="form-check-label" for="obTaxN">الرقم الضريبي</label>
+          </div>
+          <div class="form-group mb-2">
+            <label>الشروط</label>
+            <textarea name="invoice_terms_text" class="form-control" rows="2">{{ profile.invoice_terms_text }}</textarea>
+          </div>
+          <div class="form-group mb-3">
+            <label>تذييل الفاتورة</label>
+            <input type="text" name="invoice_footer_text" class="form-control" value="{{ profile.invoice_footer_text }}">
+          </div>
+          <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-save"></i> حفظ</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="card shadow-sm">
+        <div class="card-header"><strong>معاينة</strong></div>
+        <div class="card-body branding-preview" style="background:#fff;color:#111;">
+          {% with print_settings=preview, doc_title=preview.invoice_header_title %}
+          {% include 'partials/print_letterhead.html' %}
+          {% endwith %}
+          <table class="table table-sm table-bordered mt-3">
+            <thead style="background:{{ preview.invoice_header_color }};color:#fff;">
+              <tr><th>صنف</th><th>كمية</th><th>المبلغ</th></tr>
+            </thead>
+            <tbody><tr><td>بند تجريبي</td><td>1</td><td>100.00</td></tr></tbody>
+          </table>
+          {% with print_settings=preview %}{% include 'partials/print_footer.html' %}{% endwith %}
+        </div>
+      </div>
+    </div>
+  </div>
+</form>

@@ -11,7 +11,7 @@ from sqlalchemy import func, or_, desc, extract, case, and_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload, selectinload, load_only
 from extensions import db, cache
-from models import Sale, SaleLine, Invoice, Customer, Product, AuditLog, Warehouse, User, Payment, StockLevel, Employee, CostCenter, SaleStatus, PaymentStatus, PaymentMethod
+from models import Sale, SaleLine, Invoice, Customer, Product, AuditLog, Warehouse, User, Payment, StockLevel, Employee, CostCenter, SaleStatus, PaymentStatus, PaymentMethod, PaymentProgress
 from models import convert_amount, run_sale_gl_sync_after_commit
 
 
@@ -49,6 +49,8 @@ PAYMENT_METHOD_MAP = {
 }
 
 def _format_sale(s: Sale) -> None:
+    from utils.sale_billing import sale_receivable_display
+
     s.customer_name = s.customer.name if s.customer else "-"
     if getattr(s, "seller_employee", None):
         s.seller_name = s.seller_employee.name or "-"
@@ -59,8 +61,11 @@ def _format_sale(s: Sale) -> None:
     s.date = s.sale_date
     s.date_iso = s.sale_date.strftime("%Y-%m-%d") if s.sale_date else "-"
     s.total_fmt = f"{float(getattr(s, 'total_amount', 0) or 0):,.2f}"
-    s.paid_fmt = f"{float(getattr(s, 'total_paid', 0) or 0):,.2f}"
-    s.balance_fmt = f"{float(getattr(s, 'balance_due', 0) or 0):,.2f}"
+    recv = sale_receivable_display(s)
+    s.receivable_fmt = recv["amount_fmt"]
+    s.receivable_label = recv["label"]
+    s.receivable_class = recv["badge_class"]
+    s.is_receivable = recv["is_receivable"]
     lbl, cls = STATUS_MAP.get(s.status, (s.status, ""))
     s.status_label, s.status_class = lbl, cls
 
@@ -646,8 +651,9 @@ def list_sales():
         (total_paid_ils < refunded_net_ils, total_paid_ils),
         else_=refunded_net_ils,
     )
-    balance_due_pos_ils = case(
-        (balance_due_ils > 0, balance_due_ils),
+    # إجمالي الذمم من المبيعات = مجموع مبالغ المبيعات المؤكدة (وليس «متبقي» بعد الدفعات)
+    sale_receivable_ils = case(
+        (contributing_cond & (total_amount_ils > 0), total_amount_ils),
         else_=0,
     )
 
@@ -678,12 +684,7 @@ def list_sales():
             0,
         ).label("total_paid_refunded"),
         func.coalesce(
-            func.sum(
-                case(
-                    (contributing_cond, balance_due_pos_ils),
-                    else_=0,
-                )
-            ),
+            func.sum(sale_receivable_ils),
             0,
         ).label("total_pending"),
         func.coalesce(
@@ -775,8 +776,7 @@ def list_sales():
       <th data-sortable="false">الإجمالي</th>
       <th data-sortable="false" class="text-center">العملة</th>
       <th data-sortable="false" class="text-center d-none d-lg-table-cell">سعر الصرف</th>
-      <th data-sortable="false">مدفوع</th>
-      <th data-sortable="false">متبقي</th>
+      <th data-sortable="false">الذمة</th>
       <th class="text-center" data-sortable="false">إجراءات</th>
     </tr>
   </thead>
@@ -800,11 +800,12 @@ def list_sales():
         <span class="text-muted">-</span>
         {% endif %}
       </td>
-      <td data-sort-value="{{ sale.total_paid or 0 }}">{{ sale.paid_fmt }}</td>
-      <td data-sort-value="{{ sale.balance_due or 0 }}">
-        <span class="badge {{ 'bg-success' if (sale.balance_due or 0) == 0 else 'bg-danger' }}">
-          {{ sale.balance_fmt }}
-        </span>
+      <td data-sort-value="{{ sale.total_amount or 0 }}">
+        {% if sale.is_receivable %}
+        <span class="badge {{ sale.receivable_class }}">{{ sale.receivable_label }}: {{ sale.receivable_fmt }}</span>
+        {% else %}
+        <span class="text-muted">—</span>
+        {% endif %}
       </td>
       <td class="text-center">
         <div class="table-actions">
@@ -822,16 +823,14 @@ def list_sales():
               <a href="{{ url_for('sales_bp.generate_invoice', id=sale.id) }}" class="dropdown-item" target="_blank">
                 <i class="fas fa-file-invoice-dollar mr-2"></i> فاتورة ضريبية
               </a>
-              {% if sale.balance_due and sale.balance_due > 0 %}
+              {% if sale.customer_id and sale.is_receivable %}
               <a href="{{ url_for('payments.create_payment',
-                                   entity_type='SALE',
-                                   entity_id=sale.id,
-                                   amount=sale.balance_due,
-                                   currency=sale.currency if sale.currency else 'ILS',
-                                   reference='دفع مبيعة من ' ~ (sale.customer.name if sale.customer else 'عميل') ~ ' - ' ~ (sale.sale_number or sale.id),
-                                   notes='دفع مبيعة: ' ~ (sale.sale_number or sale.id) ~ ' - العميل: ' ~ (sale.customer.name if sale.customer else 'غير محدد'),
-                                   customer_id=sale.customer_id) }}" class="dropdown-item text-success">
-                <i class="fas fa-money-bill-wave mr-2"></i> إضافة دفعة
+                                         entity_type='CUSTOMER',
+                                         entity_id=sale.customer_id,
+                                         reference='دفعة من ' ~ (sale.customer.name if sale.customer else 'عميل') ~ ' - مبيعة ' ~ (sale.sale_number or sale.id),
+                                         notes='تسجيل على حساب العميل — مبيعة: ' ~ (sale.sale_number or sale.id),
+                                         customer_id=sale.customer_id) }}" class="dropdown-item text-success">
+                <i class="fas fa-money-bill-wave mr-2"></i> دفعة على حساب العميل
               </a>
               {% endif %}
               <div class="dropdown-divider"></div>
@@ -932,9 +931,9 @@ def list_sales():
       <div class="card-body">
         <div class="d-flex justify-content-between">
           <div>
-            <h6 class="card-title mb-1">المستحق</h6>
+            <h6 class="card-title mb-1">إجمالي الذمم (مبيعات)</h6>
             <h3 class="mb-0 fw-bold">{{ "{:,.2f}".format(summary.total_pending) }} ₪</h3>
-            <small class="opacity-75">{{ "{:.1f}".format((summary.total_pending / summary.total_sales * 100) if summary.total_sales > 0 else 0) }}%</small>
+            <small class="opacity-75">مبالغ المبيعات المؤكدة</small>
           </div>
           <div class="align-self-center">
             <i class="fas fa-clock fa-2x opacity-75"></i>
@@ -1041,7 +1040,7 @@ def create_sale():
                 seller_employee_id=form.seller_employee_id.data,
                 sale_date=form.sale_date.data or _utc_now_naive(),
                 status=target_status,
-                payment_status="PENDING",
+                payment_status=PaymentProgress.PENDING.value,
                 currency=(form.currency.data or "ILS").upper(),
                 tax_rate=sale_tax,
                 discount_total=form.discount_total.data or 0,
@@ -1061,32 +1060,24 @@ def create_sale():
             if require_stock and target_status == "CONFIRMED":
                 _deduct_stock(sale)
             _log(sale, "CREATE", None, sale_to_dict(sale))
+            from utils.sale_billing import ensure_invoice_for_sale, refresh_customer_balance_for_sale
+            ensure_invoice_for_sale(sale)
             # TaxEntry يُنشأ تلقائياً من حدث _sale_create_tax_entry في models بعد التأكيد
             db.session.commit()
+            refresh_customer_balance_for_sale(sale)
             try:
                 run_sale_gl_sync_after_commit(sale.id)
             except Exception as e:
                 current_app.logger.error(f"⚠️ GL Sync Failed for Sale #{sale.id}: {e}")
                 # Don't flash error to user as the sale is valid, but log it for admin
             try:
-                from utils.payment_allocation_policy import payment_auto_allocate_enabled
-                if payment_auto_allocate_enabled():
-                    from utils.credit_allocator import apply_customer_credit_to_obligations
-                    apply_customer_credit_to_obligations(int(sale.customer_id), created_by=getattr(current_user, "id", None))
-                try:
-                    s2 = db.session.get(Sale, sale.id)
-                    if s2 and hasattr(s2, "update_payment_status"):
-                        s2.update_payment_status()
-                        db.session.add(s2)
-                        db.session.commit()
-                except Exception:
-                    db.session.rollback()
+                from models import run_invoice_gl_sync_after_commit
+                inv_row = Invoice.query.filter_by(sale_id=sale.id).first()
+                if inv_row:
+                    run_invoice_gl_sync_after_commit(inv_row.id)
             except Exception:
-                try:
-                    db.session.rollback()
-                except Exception:
-                    pass
-            flash("✅ تم إنشاء الفاتورة.", "success")
+                pass
+            flash("✅ تم إنشاء المبيعة وسجل الذمة (الفاتورة) على حساب العميل.", "success")
             return redirect(url_for("sales_bp.sale_detail", id=sale.id))
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1173,7 +1164,20 @@ def sale_detail(id: int):
             paid_ils = Decimal('0.00'); grand_total_ils = grand_total; balance_due_ils = (grand_total - paid_ils)
     except Exception:
         current_app.logger.warning(f'Failed to compute ILS totals for sale {id}')
+    try:
+        from utils.sale_billing import ensure_invoice_for_sale, refresh_customer_balance_for_sale
+        ensure_invoice_for_sale(sale)
+        db.session.commit()
+        refresh_customer_balance_for_sale(sale)
+    except Exception:
+        db.session.rollback()
     invoice = Invoice.query.filter_by(sale_id=id).first()
+    recv = None
+    try:
+        from utils.sale_billing import sale_receivable_display
+        recv = sale_receivable_display(sale)
+    except Exception:
+        recv = {"label": "ذمة", "amount_fmt": sale.total_fmt, "badge_class": "bg-warning text-dark"}
     return render_template(
         "sales/detail.html",
         sale=sale,
@@ -1184,7 +1188,8 @@ def sale_detail(id: int):
         paid_ils=float(paid_ils.quantize(TWOPLACES, rounding=ROUND_HALF_UP)) if 'paid_ils' in locals() else 0.0,
         grand_total_ils=float(grand_total_ils.quantize(TWOPLACES, rounding=ROUND_HALF_UP)) if 'grand_total_ils' in locals() else float(grand_total),
         balance_due_ils=float(balance_due_ils.quantize(TWOPLACES, rounding=ROUND_HALF_UP)) if 'balance_due_ils' in locals() else float((grand_total - paid_ils).quantize(TWOPLACES, rounding=ROUND_HALF_UP)),
-        show_ils_display=((sale.currency or 'ILS').upper() != 'ILS')
+        show_ils_display=((sale.currency or 'ILS').upper() != 'ILS'),
+        receivable=recv,
     )
 
 @sales_bp.route("/<int:id>/payments", methods=["GET"], endpoint="sale_payments")
@@ -1294,19 +1299,22 @@ def edit_sale(id):
             if require_stock:
                 _reserve_stock(sale)
             _log(sale, "UPDATE", old, sale_to_dict(sale))
+            from utils.sale_billing import ensure_invoice_for_sale, refresh_customer_balance_for_sale
+            ensure_invoice_for_sale(sale)
             db.session.commit()
             try:
                 run_sale_gl_sync_after_commit(sale.id)
             except Exception as e:
                 current_app.logger.error(f"⚠️ GL Sync Failed for Sale #{sale.id} (Update): {e}")
-            # تحديث رصيد العميل
             try:
-                from utils.customer_balance_updater import update_customer_balance_components
-                update_customer_balance_components(sale.customer_id)
-            except Exception as e:
-                current_app.logger.error(f"Error updating customer balance: {e}")
-                
-            flash("✅ تم التعديل بنجاح.", "success")
+                inv_row = Invoice.query.filter_by(sale_id=sale.id).first()
+                if inv_row:
+                    from models import run_invoice_gl_sync_after_commit
+                    run_invoice_gl_sync_after_commit(inv_row.id)
+            except Exception:
+                pass
+            refresh_customer_balance_for_sale(sale)
+            flash("✅ تم التعديل وتحديث الذمة والرصيد.", "success")
             return redirect(url_for("sales_bp.sale_detail", id=sale.id))
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1429,6 +1437,11 @@ def change_status(id: int, status: str):
             sale.status = "CONFIRMED"
             db.session.flush()
             _reserve_stock(sale)
+            try:
+                from utils.sale_billing import ensure_invoice_for_sale, refresh_customer_balance_for_sale
+                ensure_invoice_for_sale(sale)
+            except Exception:
+                current_app.logger.exception("ensure_invoice_for_sale on confirm")
         elif status == "CANCELLED":
             _release_stock(sale)
             sale.status = "CANCELLED"
@@ -1436,11 +1449,17 @@ def change_status(id: int, status: str):
             _release_stock(sale)
             sale.status = "REFUNDED"
         db.session.commit()
-
-        # تحديث رصيد العميل فوراً
+        if status == "CONFIRMED":
+            try:
+                from models import Invoice, run_invoice_gl_sync_after_commit
+                inv = Invoice.query.filter_by(sale_id=sale.id).first()
+                if inv:
+                    run_invoice_gl_sync_after_commit(inv.id)
+            except Exception:
+                pass
         try:
-            from utils.customer_balance_updater import update_customer_balance_components
-            update_customer_balance_components(sale.customer_id)
+            from utils.sale_billing import refresh_customer_balance_for_sale
+            refresh_customer_balance_for_sale(sale)
         except Exception as e:
             current_app.logger.error(f"Error updating customer balance: {e}")
 
@@ -1490,43 +1509,10 @@ def generate_invoice(id: int):
     base_for_tax = (subtotal_after_discount + sale_shipping).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
     invoice_tax_amount = (base_for_tax * sale_tax_rate / Decimal("100")).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
     grand_total = (base_for_tax + invoice_tax_amount).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
-    try:
-        sale.total_amount = float(grand_total)
-        paid = D(getattr(sale, "total_paid", 0) or 0)
-        # إعادة حساب المتبقي بدقة مع تحويل عملات الدفعات إلى عملة البيع عند العرض
-        paid_display = D(0)
-        sale_curr = (getattr(sale, "currency", None) or "ILS").upper()
-        from models import convert_amount as _convert_amount
-        for p in getattr(sale, "payments", []) or []:
-            if getattr(p, "status", None) == "COMPLETED":
-                splits = getattr(p, "splits", None) or []
-                if splits:
-                    for s in splits:
-                        amt = D(str(getattr(s, "converted_amount", 0) or 0))
-                        cur = (getattr(s, "converted_currency", None) or getattr(s, "currency", None) or getattr(p, "currency", None) or sale_curr).upper()
-                        if amt <= 0:
-                            amt = D(str(getattr(s, "amount", 0) or 0))
-                            cur = (getattr(s, "currency", None) or getattr(p, "currency", None) or sale_curr).upper()
-                        if cur != sale_curr:
-                            try:
-                                amt = D(str(_convert_amount(amt, cur, sale_curr, getattr(p, "payment_date", None))))
-                            except Exception:
-                                current_app.logger.debug('Currency conversion skipped')
-                        paid_display += amt
-                else:
-                    amt = D(str(getattr(p, "total_amount", 0) or 0))
-                    cur = (getattr(p, "currency", None) or sale_curr).upper()
-                    if cur != sale_curr:
-                        try:
-                            amt = D(str(_convert_amount(amt, cur, sale_curr, getattr(p, "payment_date", None))))
-                        except Exception:
-                            current_app.logger.debug('Currency conversion skipped')
-                    paid_display += amt
-        sale.total_paid = float(paid_display.quantize(TWOPLACES, rounding=ROUND_HALF_UP))
-        sale.balance_due = float((grand_total - paid_display).quantize(TWOPLACES, rounding=ROUND_HALF_UP))
-    except Exception:
-        pass
-    
+    from utils.sale_billing import compute_sale_paid_display
+
+    paid_display, balance_due_display = compute_sale_paid_display(sale, grand_total)
+
     # التحقق من نوع القالب (بسيط أو ملون)
     use_simple = request.args.get('simple', '').strip().lower() in ('1', 'true', 'yes')
     template_name = "sales/receipt_simple.html" if use_simple else "sales/receipt.html"
@@ -1542,5 +1528,7 @@ def generate_invoice(id: int):
         invoice_tax_amount=invoice_tax_amount,
         sale_shipping=sale_shipping,
         grand_total=grand_total,
+        paid_display=paid_display,
+        balance_due_display=balance_due_display,
         money_fmt=money_fmt,
     )

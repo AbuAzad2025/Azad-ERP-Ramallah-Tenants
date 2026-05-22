@@ -12,7 +12,7 @@
 
 body {
   font-family: 'Tajawal', sans-serif;
-  background: url("../img/azad_login_bg.webp") no-repeat center center fixed;
+  background: url("../branding/platform/auth/login_bg.webp") no-repeat center center fixed;
   background-size: cover;
   min-height: 100vh;
   margin: 0;

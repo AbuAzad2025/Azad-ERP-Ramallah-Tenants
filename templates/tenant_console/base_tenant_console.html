@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}{% block tenant_console_title %}لوحة مالك التينانت{% endblock %} — {{ system_settings.company_name }}{% endblock %}
+
+{% block head_extra %}
+<style>
+  .tenant-console-wrap { display: flex; min-height: calc(100vh - 120px); gap: 0; }
+  .tenant-console-sidebar {
+    width: 260px; flex-shrink: 0;
+    background: linear-gradient(180deg, #1a365d 0%, #2c5282 100%);
+    color: #fff; padding: 0;
+  }
+  .tenant-console-brand { padding: 1.25rem 1rem; border-bottom: 1px solid rgba(255,255,255,.12); }
+  .tenant-console-brand h5 { font-size: 1rem; margin: 0; font-weight: 700; }
+  .tenant-console-brand .slug { font-size: 0.75rem; opacity: .85; }
+  .tenant-console-nav { padding: 0.5rem 0; }
+  .tenant-console-nav a {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.65rem 1rem; color: rgba(255,255,255,.9); text-decoration: none;
+    border-right: 3px solid transparent; font-size: 0.9rem;
+  }
+  .tenant-console-nav a:hover { background: rgba(255,255,255,.08); color: #fff; }
+  .tenant-console-nav a.active { background: rgba(255,255,255,.12); border-right-color: #f6ad55; color: #fff; font-weight: 600; }
+  .tenant-console-nav .nav-header {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 0.75rem 1rem 0.25rem; opacity: 0.6;
+  }
+  .tenant-console-main { flex: 1; padding: 1.25rem 1.5rem; background: #f4f6f9; min-width: 0; }
+  .tenant-console-hero {
+    background: #fff; border-radius: 10px; padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem; border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .owner-hub-card { transition: transform .15s, box-shadow .15s; }
+  .owner-hub-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.1) !important; }
+  @media (max-width: 991px) {
+    .tenant-console-wrap { flex-direction: column; }
+    .tenant-console-sidebar { width: 100%; }
+  }
+</style>
+{% block tenant_console_head %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="tenant-console-wrap">
+  <aside class="tenant-console-sidebar">
+    <div class="tenant-console-brand">
+      {% if system_settings.custom_logo_url %}
+      <img src="{{ system_settings.custom_logo_url }}" alt="" style="max-height:40px;margin-bottom:8px;">
+      {% endif %}
+      <h5>{{ system_settings.company_name or gm_tenant_slug }}</h5>
+      <div class="slug"><code>/t/{{ gm_tenant_slug }}</code></div>
+      <span class="badge badge-warning text-dark mt-2">مالك التينانت</span>
+    </div>
+    <nav class="tenant-console-nav">
+      <div class="nav-header">الرئيسية</div>
+      <a href="{{ url_for('tenant_console.index') }}" class="{% if request.endpoint == 'tenant_console.index' %}active{% endif %}">
+        <i class="fas fa-home"></i> لوحة المالك
+      </a>
+      {% if is_tenant_session %}
+      <div class="nav-header">الهوية</div>
+      <a href="{{ url_for('tenant_console.branding') }}" class="{% if request.endpoint == 'tenant_console.branding' %}active{% endif %}">
+        <i class="fas fa-palette"></i> الهوية والترويسة
+      </a>
+      {% endif %}
+      <div class="nav-header">التشغيل</div>
+      <a href="{{ url_for('main.dashboard') }}">
+        <i class="fas fa-tachometer-alt"></i> لوحة التشغيل
+      </a>
+      <a href="{{ url_for('users_bp.list_users') }}">
+        <i class="fas fa-users"></i> المستخدمون
+      </a>
+      <div class="nav-header mt-2">المنصة</div>
+      <a href="{{ url_for('auth.logout') }}" class="small" title="للوصول لمنصة أزاد سجّل الخروج ثم ادخل من المسار الرئيسي">
+        <i class="fas fa-sign-out-alt"></i> خروج (منصة أزاد منفصلة)
+      </a>
+    </nav>
+  </aside>
+  <main class="tenant-console-main">
+    {% block tenant_console_content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}

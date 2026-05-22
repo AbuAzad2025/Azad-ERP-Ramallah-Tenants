@@ -520,42 +520,68 @@
         {% endif %}
         {% endif %}
 
-        {# --- لوحة المالك والكونسول السري --- #}
-        {% if has_perm('access_owner_dashboard') %}
-        {% if current_user.role_name_l in ['owner', 'developer'] %}
-        <li class="nav-item has-treeview {% if request.blueprint in ['security', 'shop'] %}menu-open{% endif %}">
-          <a href="#" class="nav-link {% if request.blueprint in ['security', 'shop'] %}active{% endif %}">
+        {% if is_tenant_scope %}
+        <li class="nav-header text-muted small px-3">مالك التينانت</li>
+        <li class="nav-item">
+          <a href="{{ url_for('tenant_console.index') }}" class="nav-link {% if request.blueprint == 'tenant_console' %}active{% endif %}">
+            <i class="nav-icon fas fa-building text-warning"></i>
+            <p>لوحة مالك التينانت</p>
+          </a>
+        </li>
+        {% if is_tenant_session and branding_hub_url %}
+        <li class="nav-item">
+          <a href="{{ branding_hub_url }}" class="nav-link {% if request.endpoint == 'tenant_console.branding' %}active{% endif %}">
+            <i class="nav-icon fas fa-palette text-info"></i>
+            <p>الهوية والترويسة</p>
+          </a>
+        </li>
+        {% endif %}
+        {% endif %}
+
+        {# --- لوحة مالك المنصة (شركة أزاد) — مخفية داخل مسار التينانت --- #}
+        {% if is_platform_scope and is_platform_owner %}
+        <li class="nav-header text-muted small px-3">منصة أزاد</li>
+        <li class="nav-item has-treeview {% if request.blueprint in ['security', 'advanced'] %}menu-open{% endif %}">
+          <a href="#" class="nav-link {% if request.blueprint in ['security', 'advanced'] %}active{% endif %}">
             <i class="nav-icon fas fa-crown text-warning"></i>
-            <p>
-              لوحة المالك
-              <i class="right fas fa-angle-left"></i>
-            </p>
+            <p>لوحة مالك المنصة<i class="right fas fa-angle-left"></i></p>
           </a>
           <ul class="nav nav-treeview">
             <li class="nav-item">
-              <a href="{{ url_for('security.index') }}" class="nav-link {% if request.blueprint == 'security' and request.endpoint != 'security.audit_log_viewer' and request.endpoint != 'security.tax_reports' %}active{% endif %}">
-                <i class="far fa-circle nav-icon text-danger"></i>
-                <p>اللوحة السرية</p>
+              <a href="{{ url_for('security.index') }}" class="nav-link {% if request.endpoint == 'security.index' %}active{% endif %}">
+                <i class="far fa-circle nav-icon text-warning"></i>
+                <p>الرئيسية</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ url_for('security.owner_branding') }}" class="nav-link {% if request.endpoint == 'security.owner_branding' %}active{% endif %}">
+                <i class="far fa-circle nav-icon text-info"></i>
+                <p>الهوية والترويسة</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ url_for('security.settings_center') }}" class="nav-link {% if request.endpoint == 'security.settings_center' %}active{% endif %}">
+                <i class="far fa-circle nav-icon text-primary"></i>
+                <p>مركز العمليات</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ url_for('advanced.owner_hub') }}" class="nav-link {% if request.endpoint == 'advanced.owner_hub' %}active{% endif %}">
+                <i class="far fa-circle nav-icon text-success"></i>
+                <p>مركز SaaS</p>
               </a>
             </li>
             <li class="nav-item">
               <a href="{{ url_for('security.audit_log_viewer') }}" class="nav-link {% if request.endpoint == 'security.audit_log_viewer' %}active{% endif %}">
-                <i class="far fa-circle nav-icon text-primary"></i>
+                <i class="far fa-circle nav-icon text-secondary"></i>
                 <p>سجل التدقيق</p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="{{ url_for('security.tax_reports') }}" class="nav-link {% if request.endpoint == 'security.tax_reports' %}active{% endif %}">
-                <i class="far fa-circle nav-icon text-warning"></i>
-                <p>إقرار VAT</p>
               </a>
             </li>
           </ul>
         </li>
         {% endif %}
-        {% endif %}
 
-        {% if has_perm('backup_database') %}
+        {% if has_perm('backup_database') and not is_tenant_scope %}
         <li class="nav-item">
           <a href="{{ url_for('main.backup_db') }}" class="nav-link {% if request.endpoint == 'main.backup_db' %}active{% endif %}">
             <i class="nav-icon fas fa-database text-secondary"></i>

@@ -8,6 +8,12 @@ from models import (
 )
 from extensions import db
 from datetime import datetime, timezone
+from utils.ar_accounting_rules import (
+    PAYMENT_STATUSES_BALANCE,
+    SALE_OBLIGATION_STATUSES,
+    open_preorder_net_obligation,
+    standalone_invoice_filters,
+)
 
 
 def convert_amount(amount, from_currency, to_currency, date=None):
@@ -61,7 +67,7 @@ def calculate_customer_balance_components(customer_id, session=None):
     try:
         ils_sales_sum = session.query(func.coalesce(func.sum(Sale.total_amount), 0)).filter(
             Sale.customer_id == customer_id,
-            Sale.status == 'CONFIRMED',
+            Sale.status.in_(SALE_OBLIGATION_STATUSES),
             Sale.currency == 'ILS'
         ).scalar() or 0
         result['sales_balance'] += Decimal(str(ils_sales_sum))
@@ -70,7 +76,7 @@ def calculate_customer_balance_components(customer_id, session=None):
             func.sum(Sale.total_amount), Sale.currency, func.date(Sale.sale_date)
         ).filter(
             Sale.customer_id == customer_id,
-            Sale.status == 'CONFIRMED',
+            Sale.status.in_(SALE_OBLIGATION_STATUSES),
             Sale.currency != 'ILS'
         ).group_by(Sale.currency, func.date(Sale.sale_date)).all()
         for total_amt, currency, date_val in other_currency_sales:
@@ -108,10 +114,7 @@ def calculate_customer_balance_components(customer_id, session=None):
         # فواتير مستقلة فقط — الفاتورة المرتبطة ببيع/خدمة/حجز تُحسب ضمن ذلك الالتزام
         ils_invoices_sum = session.query(func.coalesce(func.sum(Invoice.total_amount), 0)).filter(
             Invoice.customer_id == customer_id,
-            Invoice.cancelled_at.is_(None),
-            Invoice.sale_id.is_(None),
-            Invoice.service_id.is_(None),
-            Invoice.preorder_id.is_(None),
+            *standalone_invoice_filters(),
             Invoice.currency == 'ILS'
         ).scalar() or 0
         result['invoices_balance'] += Decimal(str(ils_invoices_sum))
@@ -120,10 +123,7 @@ def calculate_customer_balance_components(customer_id, session=None):
             func.sum(Invoice.total_amount), Invoice.currency, func.date(Invoice.invoice_date)
         ).filter(
             Invoice.customer_id == customer_id,
-            Invoice.cancelled_at.is_(None),
-            Invoice.sale_id.is_(None),
-            Invoice.service_id.is_(None),
-            Invoice.preorder_id.is_(None),
+            *standalone_invoice_filters(),
             Invoice.currency != 'ILS'
         ).group_by(Invoice.currency, func.date(Invoice.invoice_date)).all()
         for total_amt, currency, date_val in other_currency_invoices:
@@ -204,8 +204,19 @@ def calculate_customer_balance_components(customer_id, session=None):
                 except Exception:
                     pass
         
-        result['preorders_balance'] = Decimal('0.00')
-        
+        open_preorders = session.query(PreOrder).filter(
+            PreOrder.customer_id == customer_id,
+            PreOrder.status.notin_(["CANCELLED", "FULFILLED"]),
+        ).all()
+        for po in open_preorders:
+            net = open_preorder_net_obligation(po)
+            if po.currency and po.currency != "ILS":
+                try:
+                    net = convert_amount(net, po.currency, "ILS", po.preorder_date or po.created_at)
+                except Exception:
+                    pass
+            result["preorders_balance"] += net
+
         ils_online_orders_sum = session.query(func.coalesce(func.sum(OnlinePreOrder.total_amount), 0)).filter(
             OnlinePreOrder.customer_id == customer_id,
             OnlinePreOrder.payment_status != 'CANCELLED',
@@ -253,7 +264,7 @@ def calculate_customer_balance_components(customer_id, session=None):
         payments_in_filters = (
             payment_customer_criteria,
             Payment.direction == 'IN',
-            Payment.status.in_(['COMPLETED', 'PENDING']),
+            Payment.status.in_(PAYMENT_STATUSES_BALANCE),
             Payment.expense_id.is_(None),
         )
 
@@ -394,7 +405,7 @@ def calculate_customer_balance_components(customer_id, session=None):
         payments_out_filters = (
             payment_customer_criteria,
             Payment.direction == 'OUT',
-            Payment.status.in_(['COMPLETED', 'PENDING']),
+            Payment.status.in_(PAYMENT_STATUSES_BALANCE),
             Payment.expense_id.is_(None),
         )
 
@@ -1169,7 +1180,7 @@ def calculate_balance_before_date(customer_id, before_date, session=None):
         .outerjoin(Expense, Payment.expense_id == Expense.id)
         .filter(
             Payment.direction == 'IN',
-            Payment.status.in_(['COMPLETED', 'PENDING']),
+            Payment.status.in_(PAYMENT_STATUSES_BALANCE),
             Payment.payment_date < before_date,
             or_(
                 Payment.customer_id == customer_id,
@@ -1255,17 +1266,14 @@ def calculate_balance_before_date(customer_id, before_date, session=None):
     rights_total = payments_in + returns_balance + checks_in + service_expenses
     
     # 3. Obligations (Flow OUT - Increases what he owes us)
-    sales_balance = sum_model(Sale, 'sale_date', 'total_amount', [Sale.status == 'CONFIRMED'])
+    sales_balance = sum_model(
+        Sale, 'sale_date', 'total_amount', [Sale.status.in_(SALE_OBLIGATION_STATUSES)]
+    )
     invoices_balance = sum_model(
         Invoice,
         'invoice_date',
         'total_amount',
-        [
-            Invoice.cancelled_at.is_(None),
-            Invoice.sale_id.is_(None),
-            Invoice.service_id.is_(None),
-            Invoice.preorder_id.is_(None),
-        ],
+        list(standalone_invoice_filters()),
     )
     
     # Services
@@ -1302,7 +1310,7 @@ def calculate_balance_before_date(customer_id, before_date, session=None):
         .outerjoin(Expense, Payment.expense_id == Expense.id)
         .filter(
             Payment.direction == 'OUT',
-            Payment.status.in_(['COMPLETED', 'PENDING']),
+            Payment.status.in_(PAYMENT_STATUSES_BALANCE),
             Payment.payment_date < before_date,
             or_(
                 Payment.customer_id == customer_id,

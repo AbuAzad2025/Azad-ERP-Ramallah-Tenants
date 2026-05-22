@@ -60,7 +60,7 @@ function generatePrintHeader() {
     const title = document.title || 'تقرير';
     const currentPage = document.querySelector('h1')?.textContent || 'تقرير النظام';
     const companyName = readMeta('gm-company-name') || title || 'تقرير';
-    const logoUrl = readMeta('gm-logo-url') || '/static/img/logo.png';
+    const logoUrl = readMeta('gm-logo-url') || '';
     
     return `
         <div class="print-header">

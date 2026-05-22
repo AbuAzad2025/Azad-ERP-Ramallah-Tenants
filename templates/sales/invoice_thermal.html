@@ -39,13 +39,11 @@
 {% endblock %}
 
 {% block content %}
-<div class="header">
-    {% if settings.invoice_logo_visibility == 'show' %}
-    <img class="logo" src="{{ system_settings.custom_logo_url }}" alt="Logo">
-    {% endif %}
-    <div style="font-weight: bold; font-size: 1.2em;">{{ get_setting('company_name', 'الشركة') }}</div>
-    <div>{{ get_setting('company_phone', '') }}</div>
-    <div>{{ get_setting('company_address', '') }}</div>
+{% with doc_title='إيصال مبيعات' %}
+{% include 'partials/print_letterhead.html' %}
+{% endwith %}
+<div class="header" style="border:none;">
+    <div style="font-weight: bold;">{{ print_settings.company_name|default(get_setting('company_name', 'الشركة')) }}</div>
 </div>
 
 <div class="meta">

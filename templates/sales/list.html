@@ -97,11 +97,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
         <span class="print-meta-value">{{ "{:.2f}".format(summary.total_sales) }} ₪</span>
       </div>
       <div class="print-meta-item">
-        <span class="print-meta-label">المدفوع</span>
-        <span class="print-meta-value">{{ "{:.2f}".format(summary.total_paid) }} ₪</span>
-      </div>
-      <div class="print-meta-item">
-        <span class="print-meta-label">المتبقي</span>
+        <span class="print-meta-label">إجمالي الذمم</span>
         <span class="print-meta-value">{{ "{:.2f}".format(summary.total_pending) }} ₪</span>
       </div>
     </div>
@@ -117,8 +113,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
           <col style="width:12%"><!-- التاريخ -->
           <col style="width:28%"><!-- العميل -->
           <col style="width:18%"><!-- الإجمالي -->
-          <col style="width:12%"><!-- مدفوع -->
-          <col style="width:18%"><!-- متبقي -->
+          <col style="width:18%"><!-- ذمة -->
           <col style="width:6%"><!-- العملة -->
         </colgroup>
         <thead>
@@ -127,8 +122,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
             <th>التاريخ</th>
             <th>العميل</th>
             <th>الإجمالي</th>
-            <th>مدفوع</th>
-            <th>متبقي</th>
+            <th>الذمة</th>
             <th>العملة</th>
           </tr>
         </thead>
@@ -139,8 +133,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
             <td>{{ sale.date_iso }}</td>
             <td>{{ sale.customer_name }}</td>
             <td>{{ sale.total_fmt }}</td>
-            <td>{{ sale.paid_fmt }}</td>
-            <td>{{ sale.balance_fmt }}</td>
+            <td>{% if sale.is_receivable %}{{ sale.receivable_label }}: {{ sale.receivable_fmt }}{% else %}—{% endif %}</td>
             <td>{{ sale.currency or 'ILS' }}</td>
           </tr>
           {% endfor %}
@@ -149,8 +142,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
           <tr>
             <td colspan="3">إجمالي المبيعات</td>
             <td>{{ "{:.2f}".format(summary.total_sales) }} ₪</td>
-            <td>{{ "{:.2f}".format(summary.total_paid) }} ₪</td>
-            <td>المتبقي: {{ "{:.2f}".format(summary.total_pending) }} ₪</td>
+            <td colspan="2">إجمالي الذمم: {{ "{:.2f}".format(summary.total_pending) }} ₪</td>
           </tr>
         </tfoot>
       </table>
@@ -220,9 +212,9 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
             <div class="card-body">
               <div class="d-flex justify-content-between">
                 <div>
-                  <h6 class="card-title mb-1">المستحق</h6>
+                  <h6 class="card-title mb-1">إجمالي الذمم</h6>
                   <h3 class="mb-0 fw-bold">{{ "{:,.2f}".format(summary.total_pending) }} ₪</h3>
-                  <small class="opacity-75">{{ "{:.1f}".format((summary.total_pending / summary.total_sales * 100) if summary.total_sales > 0 else 0) }}%</small>
+                  <small class="opacity-75">مبالغ المبيعات المؤكدة</small>
                 </div>
                 <div class="align-self-center">
                   <i class="fas fa-clock fa-2x opacity-75"></i>
@@ -291,7 +283,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
                   <option value="customer" {% if sort_val == 'customer' %}selected{% endif %}>العميل</option>
                   <option value="total" {% if sort_val == 'total' %}selected{% endif %}>الإجمالي</option>
                   <option value="paid" {% if sort_val == 'paid' %}selected{% endif %}>المدفوع</option>
-                  <option value="balance" {% if sort_val == 'balance' %}selected{% endif %}>المتبقي</option>
+                  <option value="balance" {% if sort_val == 'balance' %}selected{% endif %}>الإجمالي</option>
                 </select>
               </div>
               <div class="form-group col-lg-2 col-md-6">
@@ -325,8 +317,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
               <th data-sortable="false">الإجمالي</th>
               <th data-sortable="false" class="text-center">العملة</th>
               <th data-sortable="false" class="text-center d-none d-lg-table-cell">سعر الصرف</th>
-              <th data-sortable="false">مدفوع</th>
-              <th data-sortable="false">متبقي</th>
+              <th data-sortable="false">الذمة</th>
               <th class="text-center" data-sortable="false">إجراءات</th>
             </tr>
           </thead>
@@ -350,11 +341,12 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
                   <span class="text-muted">-</span>
                 {% endif %}
               </td>
-              <td data-sort-value="{{ sale.total_paid or 0 }}">{{ sale.paid_fmt }}</td>
-              <td data-sort-value="{{ sale.balance_due or 0 }}">
-                <span class="badge {{ 'bg-success' if (sale.balance_due or 0) == 0 else 'bg-danger' }}">
-                  {{ sale.balance_fmt }}
-                </span>
+              <td data-sort-value="{{ sale.total_amount or 0 }}">
+                {% if sale.is_receivable %}
+                <span class="badge {{ sale.receivable_class }}">{{ sale.receivable_label }}: {{ sale.receivable_fmt }}</span>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
               </td>
               <td class="text-center">
                 <div class="table-actions">
@@ -372,16 +364,14 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
                       <a href="{{ url_for('sales_bp.generate_invoice', id=sale.id) }}" class="dropdown-item" target="_blank">
                         <i class="fas fa-file-invoice-dollar mr-2"></i> فاتورة ضريبية
                       </a>
-                      {% if sale.balance_due and sale.balance_due > 0 %}
-                      <a href="{{ url_for('payments.create_payment', 
-                                         entity_type='SALE', 
-                                         entity_id=sale.id,
-                                         amount=sale.balance_due,
-                                         currency=sale.currency if sale.currency else 'ILS',
-                                         reference='دفع مبيعة من ' ~ (sale.customer.name if sale.customer else 'عميل') ~ ' - ' ~ (sale.sale_number or sale.id),
-                                         notes='دفع مبيعة: ' ~ (sale.sale_number or sale.id) ~ ' - العميل: ' ~ (sale.customer.name if sale.customer else 'غير محدد'),
+                      {% if sale.customer_id and sale.is_receivable %}
+                      <a href="{{ url_for('payments.create_payment',
+                                         entity_type='CUSTOMER',
+                                         entity_id=sale.customer_id,
+                                         reference='دفعة من ' ~ (sale.customer.name if sale.customer else 'عميل') ~ ' - مبيعة ' ~ (sale.sale_number or sale.id),
+                                         notes='تسجيل على حساب العميل — مبيعة: ' ~ (sale.sale_number or sale.id),
                                          customer_id=sale.customer_id) }}" class="dropdown-item text-success">
-                        <i class="fas fa-money-bill-wave mr-2"></i> إضافة دفعة
+                        <i class="fas fa-money-bill-wave mr-2"></i> دفعة على حساب العميل
                       </a>
                       {% endif %}
                       <div class="dropdown-divider"></div>

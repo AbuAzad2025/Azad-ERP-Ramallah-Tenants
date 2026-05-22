@@ -9,6 +9,7 @@ import utils
 from functools import wraps
 import json
 import os
+import shutil
 import warnings
 from collections import defaultdict, Counter
 from routes.advanced_control import _log_owner_action
@@ -767,7 +768,14 @@ def index():
     
     مع Caching للإحصائيات (5 دقائق)
     """
-    return render_template('security/index.html', stats=get_cached_security_stats(), recent=get_recent_suspicious_activities())
+    from utils.owner_hubs import PLATFORM_HUB_SECTIONS, PLATFORM_OWNER_TAGLINE
+    return render_template(
+        'security/index.html',
+        stats=get_cached_security_stats(),
+        recent=get_recent_suspicious_activities(),
+        hub_sections=PLATFORM_HUB_SECTIONS,
+        hub_tagline=PLATFORM_OWNER_TAGLINE,
+    )
 
 
 @security_bp.route('/index-old')
@@ -1694,8 +1702,10 @@ def settings_center():
     from models import SystemSettings, Branch
     from constants import DEFAULT_CURRENCY
     
-    allowed_tabs = {'system', 'constants', 'config', 'branding', 'theme', 'logos', 'darkmode', 'branches'}
+    allowed_tabs = {'system', 'constants', 'config', 'theme', 'darkmode', 'branches'}
     tab = request.args.get('tab', 'system')
+    if tab in ('branding', 'logos'):
+        return redirect(url_for('security.owner_branding'))
     if tab not in allowed_tabs:
         flash('⚠️ تبويب غير صالح، تم تحويلك للإعدادات العامة.', 'warning')
         return redirect(url_for('security.settings_center', tab='system'))
@@ -1715,40 +1725,8 @@ def settings_center():
                 flash('⚠️ هذا الإعداد غير مسموح بتعديله مباشرة من هذه الشاشة.', 'warning')
                 
         elif action == 'update_branding':
-            # 1. System Identity (Appearance Panel / System Branding)
-            system_name = (request.form.get('system_name') or "").strip()
-            company_name = (request.form.get('company_name') or "").strip()
-            login_title = (request.form.get('login_title') or "").strip()
-            login_subtitle = (request.form.get('login_subtitle') or "").strip()
-            footer_text = (request.form.get('footer_text') or "").strip()
-
-            if system_name:
-                SystemSettings.set_setting('system_name', system_name)
-            if company_name:
-                SystemSettings.set_setting('company_name', company_name)
-            if login_title:
-                SystemSettings.set_setting('login_title', login_title)
-            if login_subtitle:
-                SystemSettings.set_setting('login_subtitle', login_subtitle)
-            if footer_text:
-                SystemSettings.set_setting('footer_text', footer_text)
-
-            # 2. Theme & Colors (safe keys only)
-            primary_color = (request.form.get('primary_color') or "").strip()
-            secondary_color = (request.form.get('secondary_color') or "").strip()
-            sidebar_bg = (request.form.get('sidebar_bg') or "").strip()
-            sidebar_text = (request.form.get('sidebar_text') or "").strip()
-
-            if primary_color:
-                SystemSettings.set_setting('primary_color', primary_color)
-            if secondary_color:
-                SystemSettings.set_setting('secondary_color', secondary_color)
-            if sidebar_bg:
-                SystemSettings.set_setting('sidebar_bg', sidebar_bg)
-            if sidebar_text:
-                SystemSettings.set_setting('sidebar_text', sidebar_text)
-
-            flash('✅ تم تحديث مظهر وهوية النظام بنجاح', 'success')
+            flash('تم نقل الهوية إلى صفحة موحّدة.', 'info')
+            return redirect(url_for('security.owner_branding'))
 
         # 2. Handle tab-based bulk updates (from system_settings.html)
         elif active_tab == 'general':
@@ -2156,71 +2134,8 @@ def theme_editor():
 @security_bp.route('/logo-manager', methods=['GET', 'POST'])
 @permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
 def logo_manager():
-    """مدير الشعارات - رفع وتعديل الشعارات"""
-    import os
-    import time
-    from werkzeug.utils import secure_filename
-    from models import SystemSettings
-    
-    if request.method == 'POST':
-        if 'logo_file' in request.files:
-            file = request.files['logo_file']
-            logo_type = request.form.get('logo_type', 'main')
-            
-            if file and file.filename:
-                filename = secure_filename(file.filename)
-                allowed_exts = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
-                ext = os.path.splitext(filename)[1].lower()
-                if ext not in allowed_exts:
-                    flash('⚠️ نوع ملف غير مدعوم (استخدم: png, jpg, jpeg, gif, webp)', 'warning')
-                    return redirect(url_for('security.logo_manager'))
-                upload_path = os.path.join(current_app.root_path, 'static', 'img')
-                
-                logo_mapping = {
-                    'main': 'logo_main.png',
-                    'emblem': 'logo_emblem.png',
-                    'white': 'logo_white.png',
-                    'favicon': 'favicon.png'
-                }
-                
-                target_name = logo_mapping.get(logo_type, 'logo_main.png')
-                filepath = os.path.join(upload_path, target_name)
-                
-                # تحديث SystemSettings للمسار الجديد
-                key_map = {
-                    'main': 'custom_logo',
-                    'emblem': 'custom_logo_emblem',
-                    'white': 'custom_logo_white',
-                    'favicon': 'custom_favicon'
-                }
-                
-                # حفظ الملف
-                try:
-                    file.save(filepath)
-                    
-                    # تحديث الإعداد
-                    setting_key = key_map.get(logo_type)
-                    if setting_key:
-                        rel_path = f"static/img/{target_name}"
-                        SystemSettings.set_setting(setting_key, rel_path, data_type='string', commit=False)
-                        SystemSettings.set_setting('assets_version', int(time.time()), data_type='number', commit=False)
-                        db.session.commit()
-
-                    flash(f'✅ تم رفع {target_name} بنجاح!', 'success')
-                except Exception as e:
-                    db.session.rollback()
-                    current_app.logger.exception('internal error')
-                    flash('حدث خطأ داخلي', 'danger')
-    
-    # استرجاع القيم الحالية من الإعدادات أو القيم الافتراضية
-    logos = {
-        'main': SystemSettings.get_setting('custom_logo', 'static/img/logo.png').split('/')[-1],
-        'emblem': SystemSettings.get_setting('custom_logo_emblem', 'static/img/logo_emblem.png').split('/')[-1],
-        'white': SystemSettings.get_setting('custom_logo_white', 'static/img/logo_white.png').split('/')[-1],
-        'favicon': SystemSettings.get_setting('custom_favicon', 'static/img/favicon.png').split('/')[-1]
-    }
-    
-    return render_template('security/logo_manager.html', logos=logos)
+    """أُعيد توجيهه — الهوية الموحّدة لمالك المنصة."""
+    return redirect(url_for('security.owner_branding'))
 
 
 @security_bp.route('/advanced-analytics')
@@ -2355,73 +2270,53 @@ def email_manager():
     return redirect(url_for('security.integrations'))
 
 
+@security_bp.route('/owner-branding', methods=['GET', 'POST'], endpoint='owner_branding')
+@permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
+def owner_branding():
+    """المصدر الوحيد لهوية منصة أزاد."""
+    from utils.branding_scope import require_platform_console, SCOPE_PLATFORM
+    from utils.print_branding import (
+        load_platform_branding_form,
+        save_platform_branding_from_form,
+        resolve_print_settings,
+        LETTERHEAD_MODE_KEY,
+    )
+
+    require_platform_console()
+
+    if request.method == 'POST':
+        from utils.branding_scope import SCOPE_PLATFORM
+        posted_scope = (request.form.get('branding_scope') or '').strip()
+        if posted_scope != SCOPE_PLATFORM:
+            flash('نطاق الحفظ غير صالح.', 'danger')
+            return redirect(url_for('security.owner_branding'))
+        try:
+            save_platform_branding_from_form(request.form, request.files)
+            flash('تم حفظ هوية المنصة والترويسة بنجاح.', 'success')
+        except ValueError as e:
+            flash(str(e), 'warning')
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception('platform branding save failed')
+            flash('حدث خطأ أثناء الحفظ.', 'danger')
+        return redirect(url_for('security.owner_branding'))
+
+    profile = load_platform_branding_form()
+    preview = resolve_print_settings(tenant_slug=None)
+    return render_template(
+        'security/owner_branding.html',
+        profile=profile,
+        preview=preview,
+        letterhead_mode_key=LETTERHEAD_MODE_KEY,
+        branding_scope=SCOPE_PLATFORM,
+    )
+
+
 @security_bp.route('/invoice-designer', methods=['GET', 'POST'])
 @permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
 def invoice_designer():
-    """محرر الفواتير - تخصيص تصميم الفواتير"""
-    from models import SystemSettings
-    
-    # قائمة الإعدادات المدعومة
-    supported_settings = [
-        'invoice_header_color',
-        'invoice_footer_text',
-        'invoice_header_title',
-        'invoice_terms_text',
-        'invoice_paper_size',
-        'invoice_show_logo',
-        'invoice_show_tax',
-        'invoice_show_qr',
-        'invoice_show_tax_number',
-        'invoice_show_contact'
-    ]
-
-    if request.method == 'POST':
-        for key in supported_settings:
-            value = request.form.get(key)
-            
-            # معالجة الـ Checkboxes
-            if key.startswith('invoice_show_'):
-                value = 'True' if value == 'on' else 'False'
-            
-            # حفظ القيمة
-            if value is not None:
-                setting = SystemSettings.query.filter_by(key=key).first()
-                if setting:
-                    setting.value = str(value)
-                else:
-                    db.session.add(SystemSettings(key=key, value=str(value)))
-        
-        try:
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            current_app.logger.exception('commit error')
-            flash('حدث خطأ أثناء الحفظ', 'danger')
-        
-        # مسح الكاش إذا وجد
-        try:
-            from extensions import cache
-            for key in supported_settings:
-                cache.delete(f"system_setting_{key}")
-        except Exception:
-            current_app.logger.warning('cache invalidation failed silently in security.py', exc_info=True)
-            
-        flash('✅ تم حفظ تصميم الفواتير بنجاح', 'success')
-        return redirect(url_for('security.invoice_designer'))
-    
-    settings = {}
-    for key in supported_settings:
-        s = SystemSettings.query.filter_by(key=key).first()
-        # تعيين قيم افتراضية ذكية
-        default_val = ''
-        if key == 'invoice_header_title': default_val = 'فاتورة ضريبية'
-        if key == 'invoice_paper_size': default_val = 'A4'
-        if key == 'invoice_header_color': default_val = '#3c8dbc'
-        if key.startswith('invoice_show_'): default_val = 'True'
-        
-        settings[key] = s.value if s else default_val
-    
-    return render_template('security/invoice_designer.html', settings=settings)
+    """إعادة توجيه — دُمج مع لوحة هوية مالك المنصة."""
+    return redirect(url_for('security.owner_branding'))
 
 
 @security_bp.route('/integrations', methods=['GET', 'POST'])
@@ -4623,38 +4518,7 @@ def system_settings():
             flash('✅ تم تحديث بيانات الشركة', 'success')
             
         elif tab == 'branding':
-            # حفظ الهوية والمظهر
-            system_name = request.form.get('system_name')
-            company_name = request.form.get('company_name')
-            
-            if system_name: 
-                _set_system_setting('system_name', system_name)
-            if company_name: 
-                _set_system_setting('company_name', company_name)
-            
-            # معالجة الشعار
-            if 'custom_logo' in request.files:
-                file = request.files['custom_logo']
-                if file and file.filename:
-                    from werkzeug.utils import secure_filename
-                    import os
-                    filename = secure_filename(file.filename)
-                    allowed_exts = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
-                    ext = os.path.splitext(filename)[1].lower()
-                    if ext not in allowed_exts:
-                        flash('⚠️ نوع ملف الشعار غير مدعوم (استخدم: png, jpg, jpeg, gif, webp)', 'warning')
-                        return redirect(url_for('security.settings_center', tab='branding'))
-                    # حفظ في static/img/uploads
-                    upload_folder = os.path.join(current_app.root_path, 'static', 'img', 'uploads')
-                    os.makedirs(upload_folder, exist_ok=True)
-                    
-                    file_path = os.path.join(upload_folder, filename)
-                    file.save(file_path)
-                    
-                    # حفظ المسار النسبي
-                    _set_system_setting('custom_logo', f'static/img/uploads/{filename}')
-            
-            flash('✅ تم تحديث هوية النظام بنجاح', 'success')
+            return redirect(url_for('security.owner_branding'))
             
         elif tab == 'business':
             # حفظ ثوابت الأعمال (Business Constants)
@@ -4947,120 +4811,8 @@ def performance_monitor():
 @security_bp.route('/system-branding', methods=['GET', 'POST'])
 @permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
 def system_branding():
-    """تخصيص هوية النظام - الألوان والشعارات"""
-    from models import SystemSettings
-    
-    if request.method == 'POST':
-        updated = []
-        
-        # 1. تحديث الألوان
-        colors = {
-            'primary_color': request.form.get('primary_color'),
-            'secondary_color': request.form.get('secondary_color'),
-            'sidebar_bg': request.form.get('sidebar_bg'),
-            'sidebar_text': request.form.get('sidebar_text'),
-        }
-        
-        for key, value in colors.items():
-            if value:
-                SystemSettings.set_setting(key, value) # Use direct model method
-                updated.append('الألوان')
-        
-        # 2. تحديث النصوص (اسم النظام واسم الشركة)
-        texts = {
-            'system_name': request.form.get('system_name'),
-            'company_name': request.form.get('company_name'),
-            'login_title': request.form.get('login_title'),
-            'login_subtitle': request.form.get('login_subtitle'),
-            'footer_text': request.form.get('footer_text'),
-        }
-        
-        for key, value in texts.items():
-            if value:
-                SystemSettings.set_setting(key, value)
-                updated.append('النصوص')
-
-        # الشعار
-        if 'logo' in request.files:
-            logo_file = request.files['logo']
-            if logo_file and logo_file.filename:
-                # التحقق من نوع الملف
-                allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-                file_ext = logo_file.filename.rsplit('.', 1)[1].lower() if '.' in logo_file.filename else ''
-                
-                if file_ext in allowed_extensions:
-                    filename = secure_filename(logo_file.filename)
-                    os.makedirs('static/img', exist_ok=True)
-                    logo_path = f'static/img/custom_logo_{filename}'
-                    logo_file.save(logo_path)
-                    SystemSettings.set_setting('custom_logo', logo_path)
-                    updated.append('الشعار')
-                else:
-                    flash('⚠️ نوع ملف الشعار غير مدعوم (استخدم: png, jpg, jpeg, gif, webp)', 'warning')
-        
-        # الأيقونة
-        if 'favicon' in request.files:
-            favicon_file = request.files['favicon']
-            if favicon_file and favicon_file.filename:
-                allowed_extensions = {'png', 'ico'}
-                file_ext = favicon_file.filename.rsplit('.', 1)[1].lower() if '.' in favicon_file.filename else ''
-                
-                if file_ext in allowed_extensions:
-                    filename = secure_filename(favicon_file.filename)
-                    favicon_path = f'static/favicon_custom_{filename}'
-                    favicon_file.save(favicon_path)
-                    SystemSettings.set_setting('custom_favicon', favicon_path)
-                    updated.append('الأيقونة')
-                else:
-                    flash('⚠️ نوع ملف الأيقونة غير مدعوم (استخدم: png, ico)', 'warning')
-        
-        if updated:
-            flash(f'✅ تم تحديث: {", ".join(updated)} بنجاح!', 'success')
-            
-            # تسجيل في AuditLog
-            try:
-                import json
-                log = AuditLog(
-                    user_id=current_user.id,
-                    action='UPDATE',
-                    model_name='SystemSettings',
-                    new_data=json.dumps({'updated_fields': updated, 'note': 'Updated branding settings'}),
-                    ip_address=request.remote_addr
-                )
-                db.session.add(log)
-                db.session.commit()
-            except Exception as e:
-                # Log error but don't stop the process
-                db.session.rollback()
-                current_app.logger.error(f"Audit log failed: {e}")
-                pass
-        else:
-            flash('ℹ️ لم يتم تحديث أي شيء', 'info')
-        
-        return redirect(url_for('security.system_branding'))
-    
-    # قراءة الإعدادات الحالية
-    branding = {
-        'system_name': _get_system_setting('system_name', 'نظام إدارة الكراج'),
-        'company_name': _get_system_setting('company_name', 'شركة ازاد للأنظمة الذكية'),
-        'login_title': _get_system_setting('login_title', 'مرحباً بك'),
-        'login_subtitle': _get_system_setting('login_subtitle', 'سجل دخولك للمتابعة'),
-        'footer_text': _get_system_setting('footer_text', 'جميع الحقوق محفوظة'),
-        'primary_color': _get_system_setting('primary_color', '#06b6d4'),
-        'secondary_color': _get_system_setting('secondary_color', '#1f2937'),
-        'sidebar_bg': _get_system_setting('sidebar_bg', '#111827'),
-        'sidebar_text': _get_system_setting('sidebar_text', '#f9fafb'),
-        'custom_logo': _get_system_setting('custom_logo', ''),
-        'custom_favicon': _get_system_setting('custom_favicon', ''),
-    }
-    
-    return render_template('security/system_branding.html', branding=branding)
-
-
-
-
-
-
+    """أُعيد توجيهه — دُمج في الهوية الموحّدة."""
+    return redirect(url_for('security.owner_branding'))
 
 
 

@@ -1092,6 +1092,13 @@ def account_statement(customer_id):
             return int(q0(grand))
         return int(q0(getattr(svc, "total_amount", getattr(svc, "total_cost", 0)) or 0))
 
+    from utils.ar_accounting_rules import (
+        PAYMENT_STATUSES_STATEMENT,
+        SALE_OBLIGATION_STATUSES,
+        payment_affects_running_balance,
+        standalone_invoice_filters,
+    )
+
     entries = []
 
     invoices = (
@@ -1099,6 +1106,7 @@ def account_statement(customer_id):
         .filter(Invoice.customer_id == customer_id)
         .filter(Invoice.invoice_date >= start_date)
         .filter(Invoice.invoice_date <= end_date)
+        .filter(*standalone_invoice_filters())
         .options(selectinload(Invoice.lines))
         .order_by(Invoice.invoice_date, Invoice.id)
         .all()
@@ -1180,11 +1188,22 @@ def account_statement(customer_id):
             "currency": getattr(inv, 'currency', None) or (getattr(c, 'currency', None) or 'ILS'),
         })
 
-    sales = Sale.query.filter_by(customer_id=customer_id).options(
-        joinedload(Sale.lines).load_only(SaleLine.id, SaleLine.quantity, SaleLine.unit_price, SaleLine.line_total, SaleLine.line_receiver, SaleLine.note),
-        joinedload(Sale.lines).joinedload(SaleLine.product).load_only(Product.id, Product.name),
-        joinedload(Sale.preorder).selectinload(PreOrder.payments)
-    ).filter(Sale.sale_date >= start_date).filter(Sale.sale_date <= end_date).order_by(Sale.sale_date, Sale.id).all()
+    sales = (
+        Sale.query.filter_by(customer_id=customer_id)
+        .filter(Sale.status.in_(SALE_OBLIGATION_STATUSES))
+        .options(
+            joinedload(Sale.lines).load_only(
+                SaleLine.id, SaleLine.quantity, SaleLine.unit_price, SaleLine.line_total,
+                SaleLine.line_receiver, SaleLine.note,
+            ),
+            joinedload(Sale.lines).joinedload(SaleLine.product).load_only(Product.id, Product.name),
+            joinedload(Sale.preorder).selectinload(PreOrder.payments),
+        )
+        .filter(Sale.sale_date >= start_date)
+        .filter(Sale.sale_date <= end_date)
+        .order_by(Sale.sale_date, Sale.id)
+        .all()
+    )
     
     for s in sales:
         sale_lines = getattr(s, 'lines', []) or []
@@ -1381,10 +1400,8 @@ def account_statement(customer_id):
                 "notes": "دفعة مقدمة - طلب أونلاين",
             })
 
-    # ✅ فلترة الدفعات: COMPLETED + PENDING + الشيكات المرتدة (BOUNCED/FAILED) + REFUNDED للعرض التاريخي
-    # PENDING: الشيكات المعلقة تُحسب في الرصيد (حسب العرف المحلي)
-    # BOUNCED/FAILED: الشيكات المرتدة تظهر لتوثيق عكس القيد
-    payment_statuses = ['COMPLETED', 'PENDING', 'BOUNCED', 'FAILED', 'REJECTED', 'REFUNDED']
+    # عرض: كل الحالات ذات الصلة؛ الرصيد الجاري يتأثر فقط بـ COMPLETED (انظر affects_balance)
+    payment_statuses = list(PAYMENT_STATUSES_STATEMENT)
     
     # ✅ إضافة joinedload(Payment.splits) لجميع استعلامات الدفعات لضمان تحميل splits
     # ✅ إضافة selectinload(Payment.related_check) لتحميل الشيكات المرتبطة وتجنب N+1 queries
@@ -1956,6 +1973,7 @@ def account_statement(customer_id):
                 "currency": "ILS",
                 "payment_details": payment_details,
                 "notes": notes,
+                "affects_balance": payment_affects_running_balance(payment_status),
             })
 
             # إضافة الشيكات المرتدة كقيود منفصلة
@@ -2320,7 +2338,8 @@ def account_statement(customer_id):
         if e.get("type") == "OPENING_BALANCE":
             e["balance"] = running
             continue
-        running = running + e["credit"] - e["debit"]
+        if e.get("affects_balance", True):
+            running = running + e["credit"] - e["debit"]
         e["balance"] = running
 
     total_debit = sum(e["debit"] for e in entries)

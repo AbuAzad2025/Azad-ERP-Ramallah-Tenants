@@ -3749,6 +3749,17 @@ def _get_all_tenants():
         if active is None:
             active = tenant_settings.get('active', 'False') == 'True'
         
+        logo_rel = tenant_settings.get('logo', '') or ''
+        fav_rel = tenant_settings.get('favicon', '') or ''
+        try:
+            from utils.branding_assets import build_static_url, normalize_rel_path
+            from models import SystemSettings as _SS
+            _ver = _SS.get_setting('assets_version', '') or ''
+            logo_url = build_static_url(normalize_rel_path(logo_rel), assets_version=_ver) if logo_rel else ''
+            favicon_url = build_static_url(normalize_rel_path(fav_rel), assets_version=_ver) if fav_rel else ''
+        except Exception:
+            logo_url = favicon_url = ''
+
         tenant_list.append({
             'name': name,
             'slug': name,
@@ -3756,10 +3767,12 @@ def _get_all_tenants():
             'db': db_map.get(name, ''),
             'active': bool(active),
             'domain': domain,
-            'logo': tenant_settings.get('logo', ''),
+            'logo': logo_rel,
+            'logo_url': logo_url,
             'company_name': tenant_settings.get('company_name', ''),
             'system_name': tenant_settings.get('system_name', ''),
-            'favicon': tenant_settings.get('favicon', ''),
+            'favicon': fav_rel,
+            'favicon_url': favicon_url,
             'max_users': tenant_settings.get('max_users', '10'),
             'modules': modules,
             'created_at': tenant_settings.get('created_at', '')

@@ -225,7 +225,7 @@
                 <i class="fas fa-image"></i> الشعار (Logo URL)
               </label>
               <input type="text" name="tenant_logo" class="form-control" 
-                     placeholder="/static/img/logo.png">
+                     placeholder="branding/tenants/alhazem/logos/primary.png">
             </div>
 
             <div class="mb-3">
@@ -306,8 +306,8 @@
               <div class="row align-items-center">
                 <div class="col-md-8">
                   <div class="d-flex align-items-center mb-2" style="gap: 1rem;">
-                    {% if tenant.logo %}
-                      <img src="{{ tenant.logo }}" alt="{{ tenant.name }}" style="width: 40px; height: 40px; object-fit: contain;">
+                    {% if tenant.logo_url %}
+                      <img src="{{ tenant.logo_url }}" alt="{{ tenant.name }}" style="width: 40px; height: 40px; object-fit: contain;">
                     {% else %}
                       <i class="fas fa-building fa-2x text-primary"></i>
                     {% endif %}

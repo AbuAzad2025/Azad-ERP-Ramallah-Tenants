@@ -1,8 +1,8 @@
 {% extends 'security/base_security.html' %}
 
-{% block security_title %}لوحة التحكم{% endblock %}
-{% block security_icon %}<i class="fas fa-tachometer-alt"></i>{% endblock %}
-{% block security_description %}مركز التحكم الشامل للوحدة السرية - {{ stats.total_modules }} وحدة • {{ stats.total_apis }} API{% endblock %}
+{% block security_title %}لوحة مالك المنصة{% endblock %}
+{% block security_icon %}<i class="fas fa-crown"></i>{% endblock %}
+{% block security_description %}{{ hub_tagline|default('لوحة مالك المنصة — شركة أزاد') }} — {{ stats.total_modules }} وحدة • {{ stats.total_apis }} API{% endblock %}
 
 {% block security_breadcrumb %}
 <li class="breadcrumb-item active">لوحة التحكم</li>
@@ -20,6 +20,25 @@
 {% endblock %}
 
 {% block security_content %}
+  <div class="sec-card mb-4 border border-warning border-opacity-25">
+    <div class="sec-card-body py-3">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+          <h4 class="text-white mb-1"><i class="fas fa-crown text-warning"></i> {{ hub_tagline|default('لوحة مالك المنصة') }}</h4>
+          <p class="text-muted small mb-0">تطوير المنصة، SaaS، التينانتات، والهوية الافتراضية — منفصل عن لوحات مالكي التينانت.</p>
+        </div>
+        <a href="{{ url_for('advanced.owner_hub') }}" class="btn btn-glass btn-sm"><i class="fas fa-cloud"></i> مركز SaaS</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-card mb-4">
+    <div class="sec-card-header"><strong><i class="fas fa-th-large"></i> مراكز لوحة المالك</strong></div>
+    <div class="sec-card-body rounded-bottom" style="background:#f4f6f9;">
+      {% include 'partials/owner_hub_cards.html' %}
+    </div>
+  </div>
+
   <div class="sec-card mb-4">
     <div class="sec-card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
       <div>
@@ -30,6 +49,12 @@
     </div>
     <div class="sec-card-body">
       <div class="row g-2">
+        <div class="col-lg-4 col-md-6">
+          <a href="{{ url_for('security.owner_branding') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between">
+            <span class="d-flex align-items-center"><i class="fas fa-palette text-warning ms-2"></i> الهوية والترويسة</span>
+            <i class="fas fa-arrow-left text-white-50"></i>
+          </a>
+        </div>
         <div class="col-lg-4 col-md-6">
           <a href="{{ url_for('security.settings_center') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between">
             <span class="d-flex align-items-center"><i class="fas fa-satellite-dish text-info ms-2"></i> مركز العمليات</span>

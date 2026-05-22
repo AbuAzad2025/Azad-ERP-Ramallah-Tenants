@@ -93,7 +93,7 @@ def update_customer_balance_components(customer_id, session=None):
                 # - sales_balance: مبيعات (يشمل المبيعات الناتجة من الحجوزات المسبقة عند التسليم)
                 # - invoices_balance: فواتير مستقلة (غير المرتبطة ببيع/خدمة/حجز)
                 # - services_balance: خدمات
-                # - preorders_balance: حجوزات مسبقة (دائماً = 0 - قيمة الحجز الكاملة لا تُقيد قبل التسليم)
+                # - preorders_balance: ذمة الحجوزات المفتوحة (إجمالي − العربون)
                 # - online_orders_balance: طلبات أونلاين
                 # - payments_out_balance: دفعات صادرة (دفعنا له = التزام عليه = يجب أن يعيد المبلغ)
                 # - returned_checks_in_balance: شيكات مرتجعة واردة

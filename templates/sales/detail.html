@@ -34,6 +34,16 @@
     </div>
 
     <div class="card-body bg-light">
+      {% if receivable and receivable.is_receivable %}
+      <div class="alert alert-warning mb-3">
+        <i class="fas fa-book mr-1"></i>
+        <strong>ذمة على العميل:</strong> {{ receivable.amount_fmt }} {{ sale.currency }}
+        — التحصيل يُسجَّل كدفعة على <strong>حساب العميل</strong> ولا يُغلق البيع مباشرة.
+        {% if invoice %}
+        <span class="d-block mt-1 small text-muted">سجل الفاتورة: {{ invoice.invoice_number }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
       <div class="row mb-3">
         <div class="col-md-4"><strong>التاريخ:</strong> {{ sale.date_iso }}</div>
         <div class="col-md-4"><strong>العميل:</strong> {{ sale.customer_name }}</div>
@@ -128,26 +138,25 @@
 
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <h5 class="mb-2 mb-md-0">
-          <i class="fas fa-money-bill-wave mr-2"></i> سجل الدفعات
+          <i class="fas fa-money-bill-wave mr-2"></i> دفعات مرتبطة مباشرة بالمبيعة
         </h5>
-        <div class="d-flex align-items-center">
-          <a class="btn btn-outline-primary btn-sm ml-2" href="{{ url_for('sales_bp.sale_payments', id=sale.id) }}">
-            <i class="fas fa-list mr-1"></i> السجل الخاص بهذه الفاتورة
-          </a>
-          {% if sale.balance_due and sale.balance_due > 0 %}
-          <a class="btn btn-success btn-sm" href="{{ url_for('payments.create_payment', 
-                                                           entity_type='SALE', 
-                                                           entity_id=sale.id,
-                                                           amount=sale.balance_due,
-                                                           currency=sale.currency if sale.currency else 'ILS',
-                                                           reference='دفع مبيعة من ' ~ (sale.customer.name if sale.customer else 'عميل') ~ ' - ' ~ (sale.sale_number or sale.id),
-                                                           notes='دفع مبيعة: ' ~ (sale.sale_number or sale.id) ~ ' - العميل: ' ~ (sale.customer.name if sale.customer else 'غير محدد'),
+        <div class="d-flex align-items-center flex-wrap">
+          {% if sale.customer_id %}
+          <a class="btn btn-success btn-sm ml-2 mb-1" href="{{ url_for('payments.create_payment',
+                                                           entity_type='CUSTOMER',
+                                                           entity_id=sale.customer_id,
+                                                           reference='دفعة — ' ~ (sale.customer.name if sale.customer else 'عميل'),
+                                                           notes='مبيعة ' ~ (sale.sale_number or sale.id),
                                                            customer_id=sale.customer_id) }}">
-            <i class="fas fa-plus mr-1"></i> إضافة دفعة ({{ '%.2f'|format(sale.balance_due) }} {{ sale.currency if sale.currency else 'ILS' }})
+            <i class="fas fa-plus mr-1"></i> دفعة على حساب العميل
+          </a>
+          <a class="btn btn-outline-secondary btn-sm ml-2 mb-1" href="{{ url_for('customers.account_statement', customer_id=sale.customer_id) }}">
+            <i class="fas fa-file-invoice mr-1"></i> كشف حساب العميل
           </a>
           {% endif %}
         </div>
       </div>
+      <p class="text-muted small">الدفعات العادية تُخصم من رصيد العميل الإجمالي. لا يُعرض «متبقي البيع» كحالة فتح.</p>
 
       <div class="table-responsive">
         <table class="table table-sm align-middle">
@@ -192,23 +201,15 @@
             </tr>
             {% endif %}
             <tr>
-              <th class="text-right">المتبقي:</th>
+              <th class="text-right">مبلغ الذمة (هذه المبيعة):</th>
               <td>
-                <span class="badge {{ 'badge-success' if (sale.balance_due or 0)|float == 0 else 'badge-danger' }}">
-                  {{ num(sale.balance_due) }} {{ sale.currency }}
-                </span>
+                {% if receivable and receivable.is_receivable %}
+                <span class="badge {{ receivable.badge_class|replace('bg-','badge-') }}">{{ receivable.label }}: {{ receivable.amount_fmt }} {{ sale.currency }}</span>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
               </td>
             </tr>
-            {% if show_ils_display %}
-            <tr>
-              <th class="text-right">المتبقي (بالشيكل):</th>
-              <td>
-                <span class="badge {{ 'badge-success' if (balance_due_ils or 0)|float == 0 else 'badge-danger' }}">
-                  {{ num(balance_due_ils) }} ILS
-                </span>
-              </td>
-            </tr>
-            {% endif %}
           </table>
         </div>
       </div>

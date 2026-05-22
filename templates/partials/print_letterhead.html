@@ -1,0 +1,35 @@
+{# ترويسة ديناميكية: صورة letterhead أو هيدر مبني من print_settings / system_settings #}
+{% set ps = print_settings if print_settings is defined else {} %}
+{% set doc_title = doc_title|default(ps.invoice_header_title|default('فاتورة')) %}
+
+{% if ps.use_letterhead_image|default(false) and system_settings.custom_header_url %}
+<div class="print-letterhead-image" style="margin-bottom:10px;text-align:center;">
+  <img src="{{ system_settings.custom_header_url }}" alt="" style="max-width:100%;max-height:90px;object-fit:contain;">
+</div>
+{% elif ps.use_built_header|default(true) %}
+<div class="print-built-header" style="margin-bottom:12px;padding-bottom:10px;border-bottom:3px solid {{ ps.invoice_header_color|default('#3c8dbc') }};">
+  <div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      {% if ps.invoice_show_logo|default('True') == 'True' and system_settings.custom_logo_url %}
+      <img src="{{ system_settings.custom_logo_url }}" alt="" style="max-height:64px;max-width:140px;object-fit:contain;">
+      {% endif %}
+      <div>
+        <div style="font-size:1.15em;font-weight:700;">{{ ps.company_name|default(system_settings.company_name) }}</div>
+        {% if ps.invoice_show_contact|default('True') == 'True' %}
+        <div style="font-size:0.85em;color:#555;margin-top:4px;">
+          {% if ps.COMPANY_ADDRESS %}{{ ps.COMPANY_ADDRESS }}<br>{% endif %}
+          {% if ps.COMPANY_PHONE %}هاتف: {{ ps.COMPANY_PHONE }}{% endif %}
+          {% if ps.COMPANY_EMAIL %} — {{ ps.COMPANY_EMAIL }}{% endif %}
+        </div>
+        {% endif %}
+        {% if ps.invoice_show_tax_number|default('True') == 'True' and ps.TAX_NUMBER %}
+        <div style="font-size:0.85em;color:#555;">الرقم الضريبي: {{ ps.TAX_NUMBER }}</div>
+        {% endif %}
+      </div>
+    </div>
+    <div style="text-align:left;">
+      <div style="font-size:1.35em;font-weight:700;color:{{ ps.invoice_header_color|default('#3c8dbc') }};">{{ doc_title }}</div>
+    </div>
+  </div>
+</div>
+{% endif %}

@@ -76,14 +76,10 @@
 
 {% block content %}
 <div id="receipt">
-  <div class="receipt-header">
-    <div class="brand">
-      <img class="logo" src="{{ system_settings.custom_logo_url }}" alt="Logo">
-      <div>
-        <div class="brand-name">{{ get_setting('company_name', 'الشركة') }}</div>
-        <div class="brand-sub">فاتورة مبيعات</div>
-      </div>
-    </div>
+  {% with doc_title='فاتورة مبيعات' %}
+  {% include 'partials/print_letterhead.html' %}
+  {% endwith %}
+  <div class="receipt-header" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
     <div class="text-muted">
       رقم الفاتورة: <strong>{{ sale.sale_number or sale.id }}</strong><br>
       التاريخ: {{ sale.sale_date and sale.sale_date.strftime('%Y-%m-%d') or '—' }}
@@ -181,7 +177,5 @@
   </div>
 </div>
 
-<div class="receipt-footer">
-  مع تحياتنا — نتشرف بخدمتكم — رام الله - فلسطين — جوال: 0592800646 — واتساب: +970592800646
-</div>
+{% include 'partials/print_footer.html' %}
 {% endblock %}
