@@ -807,8 +807,10 @@ class PermissionsRegistry:
         },
         
         SystemRoles.SUPER: {
-            'name_ar': 'سوبر',
-            'description': '⚡ سوبر — مرادف لـ super_admin (نفس المستوى 1 والصلاحيات)',
+            'name_ar': 'سوبر (قديم)',
+            'description': '⚠️ مرادف قديم — يُدمج تلقائياً في super_admin؛ لا تُنشئ مستخدمين جدد على هذا الدور',
+            'deprecated': True,
+            'alias_of': SystemRoles.SUPER_ADMIN,
             'permissions': '*',
             'exclude': [
                 SystemPermissions.ACCESS_OWNER_DASHBOARD, 
@@ -1077,9 +1079,12 @@ class PermissionsRegistry:
         Returns:
             set: أكواد الصلاحيات
         """
+        from permissions_config.role_policy import canonical_role_name_str
+
+        role_name = canonical_role_name_str(role_name)
         if role_name not in cls.ROLES:
             return set()
-        
+
         role = cls.ROLES[role_name]
         
         if role['permissions'] == '*':
@@ -1180,7 +1185,9 @@ class PermissionsRegistry:
         Returns:
             bool
         """
-        role = cls.ROLES.get(role_name)
+        from permissions_config.role_policy import canonical_role_name_str
+
+        role = cls.ROLES.get(canonical_role_name_str(role_name))
         if not role:
             return False
         return role.get('is_super', False)
@@ -1217,10 +1224,15 @@ class PermissionsRegistry:
         Returns:
             int: المستوى (0 = أعلى، 7 = أدنى)
         """
-        role = cls.ROLES.get(role_name)
+        from permissions_config.role_policy import CUSTOM_ROLE_LEVEL, canonical_role_name_str, is_known_system_role
+
+        name = canonical_role_name_str(role_name)
+        if not is_known_system_role(name):
+            return CUSTOM_ROLE_LEVEL
+        role = cls.ROLES.get(name)
         if not role:
-            return 999
-        return role.get('level', 999)
+            return CUSTOM_ROLE_LEVEL
+        return int(role.get('level', CUSTOM_ROLE_LEVEL))
     
     
     @classmethod

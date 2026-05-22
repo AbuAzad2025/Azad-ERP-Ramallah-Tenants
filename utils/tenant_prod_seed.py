@@ -324,7 +324,7 @@ def provision_new_tenant(
     """
     from extensions import db
     from utils.tenant_fiscal_schema import ensure_fiscal_tables_in_schema, set_local_search_path
-    from utils.tenant_permissions import sync_tenant_owner_role_permissions, permission_codes_for_tenant_owner
+    from utils.tenant_permissions import permission_codes_for_tenant_owner
     from models import Permission
 
     assert_garage_manager_only(db.engine.url.render_as_string(hide_password=False))
@@ -382,7 +382,9 @@ def provision_new_tenant(
         if code not in existing_codes:
             session.add(Permission(code=code, name=code))
     session.flush()
-    sync_tenant_owner_role_permissions(session)
+    from utils.role_sync import sync_all_tenant_standard_roles
+
+    sync_all_tenant_standard_roles(session)
     _seed_tenant_owner(
         session,
         owner_username=owner_username,

@@ -684,48 +684,37 @@ class UserForm(FlaskForm):
         
         from flask_login import current_user
         from permissions_config.permissions import PermissionsRegistry
-        
-        all_roles = Role.query.all()
-        # Sort roles by level then name
-        def _get_role_info(r_name):
-            return PermissionsRegistry.ROLES.get((r_name or "").strip().lower(), {})
+        from permissions_config.role_policy import (
+            effective_role_level,
+            is_custom_role,
+            is_deprecated_role_name,
+        )
 
-        all_roles.sort(key=lambda r: (
-            int(_get_role_info(r.name).get("level", 999)), 
-            r.name
-        ))
+        all_roles = Role.query.all()
+        all_roles.sort(key=lambda r: (effective_role_level(r.name), r.name))
         
         current_username = str(getattr(current_user, "username", "") or "").strip()
         current_role_name = str(getattr(getattr(current_user, "role", None), "name", "") or "").strip().lower()
 
-        def _role_level(role_name: str) -> int:
-            info = PermissionsRegistry.ROLES.get((role_name or "").strip().lower())
-            if isinstance(info, dict):
-                return int(info.get("level", 999))
-            return 999
-
-        actor_level = _role_level(current_role_name)
+        actor_level = effective_role_level(current_role_name)
         is_owner = bool(getattr(current_user, "is_system_account", False)) or current_username.upper() == "__OWNER__" or actor_level == 0
 
         choices = []
         for r in all_roles:
             r_name = (r.name or "").strip()
-            r_info = _get_role_info(r_name)
-            r_level = int(r_info.get("level", 999))
-            r_label = r_info.get("name_ar", r_name)  # Use Arabic name if available
+            if is_deprecated_role_name(r_name):
+                continue
+            r_level = effective_role_level(r_name)
+            r_info = PermissionsRegistry.ROLES.get((r_name or "").strip().lower(), {})
+            if is_custom_role(r_name):
+                r_label = r_name
+            else:
+                r_label = r_info.get("name_ar", r_name)
 
-            # Logic:
-            # 1. Owner (Level 0) can see everything.
-            # 2. Others can see Level >= Actor Level.
-            
-            allowed = False
-            if is_owner:
-                allowed = True
-            elif r_level >= actor_level:
-                allowed = True
-            
+            allowed = is_owner or r_level >= actor_level
             if allowed:
-                choices.append((r.id, f"{r_label} ({r_name})"))
+                suffix = " — مخصص" if is_custom_role(r_name) else ""
+                choices.append((r.id, f"{r_label} ({r_name}){suffix}"))
 
         self.role_id.choices = choices
         

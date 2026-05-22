@@ -16,6 +16,51 @@ PLATFORM_OWNER_ROLES: frozenset[str] = frozenset(
     {SystemRoles.OWNER.value, SystemRoles.DEVELOPER.value}
 )
 
+# مرادف تاريخي — يُدمج في DB إلى super_admin
+DEPRECATED_ROLE_ALIASES: dict[str, str] = {
+    SystemRoles.SUPER.value: SystemRoles.SUPER_ADMIN.value,
+}
+CANONICAL_SUPER_ROLE = SystemRoles.SUPER_ADMIN.value
+
+# أدوار تُزامَن في كل schema تينانت (owner له مسار خاص)
+TENANT_SYNC_STANDARD_ROLES: tuple[str, ...] = (
+    "owner",
+    SystemRoles.SUPER_ADMIN.value,
+    SystemRoles.ADMIN.value,
+    SystemRoles.MANAGER.value,
+    SystemRoles.STAFF.value,
+    SystemRoles.MECHANIC.value,
+    SystemRoles.REGISTERED_CUSTOMER.value,
+    SystemRoles.GUEST.value,
+)
+
+CUSTOM_ROLE_LEVEL = 999
+
+
+def canonical_role_name_str(role_name: str | None) -> str:
+    raw = (role_name or "").strip().lower()
+    return DEPRECATED_ROLE_ALIASES.get(raw, raw)
+
+
+def is_custom_role(role_name: str | None) -> bool:
+    return bool(role_name) and not is_known_system_role(canonical_role_name_str(role_name))
+
+
+def effective_role_level(role_name: str | None) -> int:
+    name = canonical_role_name_str(role_name)
+    if is_custom_role(name):
+        return CUSTOM_ROLE_LEVEL
+    role = PermissionsRegistry.ROLES.get(name)
+    if not role:
+        return CUSTOM_ROLE_LEVEL
+    return int(role.get("level", CUSTOM_ROLE_LEVEL))
+
+
+def is_deprecated_role_name(role_name: str | None) -> bool:
+    raw = (role_name or "").strip().lower()
+    return raw in DEPRECATED_ROLE_ALIASES and raw != DEPRECATED_ROLE_ALIASES[raw]
+
+
 # أدوار is_super في السجل — صلاحيات واسعة لكن ليست بالضرورة مالك منصة
 def super_role_names() -> frozenset[str]:
     return frozenset(PermissionsRegistry.get_super_roles())
@@ -28,7 +73,8 @@ def normalize_role_name(user) -> str:
     if (getattr(user, "username", "") or "").strip().upper() == "__OWNER__":
         return SystemRoles.OWNER.value
     try:
-        return (getattr(getattr(user, "role", None), "name", None) or "").strip().lower()
+        raw = (getattr(getattr(user, "role", None), "name", None) or "").strip().lower()
+        return canonical_role_name_str(raw)
     except Exception:
         return ""
 
@@ -69,7 +115,7 @@ def is_tenant_owner_role(user) -> bool:
 
 
 def role_level(role_name: str) -> int:
-    return PermissionsRegistry.get_role_level((role_name or "").strip().lower())
+    return effective_role_level(role_name)
 
 
 def is_known_system_role(role_name: str) -> bool:
@@ -81,7 +127,6 @@ _ROLE_HOME_ROWS: tuple[tuple[str, str, str], ...] = (
     (SystemRoles.OWNER.value, "security.index", "tenant_console.index"),
     (SystemRoles.DEVELOPER.value, "security.index", "tenant_console.index"),
     (SystemRoles.SUPER_ADMIN.value, "main.dashboard", "main.dashboard"),
-    (SystemRoles.SUPER.value, "main.dashboard", "main.dashboard"),
     (SystemRoles.ADMIN.value, "main.dashboard", "main.dashboard"),
     (SystemRoles.MANAGER.value, "main.dashboard", "main.dashboard"),
     (SystemRoles.STAFF.value, "main.dashboard", "main.dashboard"),
@@ -101,14 +146,9 @@ TENANT_ROLE_HOME: dict[str, str] = role_home_table(tenant=True)
 
 
 def validate_roles_registry() -> list[str]:
-    """تحذيرات داخلية: تكرار super/super_admin، أدوار بلا مستوى، إلخ."""
+    """تحذيرات داخلية."""
     issues: list[str] = []
     for name in SYSTEM_ROLE_NAMES:
         if name not in PermissionsRegistry.ROLES:
             issues.append(f"missing_registry:{name}")
-    sa = PermissionsRegistry.ROLES.get(SystemRoles.SUPER_ADMIN.value, {})
-    su = PermissionsRegistry.ROLES.get(SystemRoles.SUPER.value, {})
-    if sa and su:
-        if sa.get("level") != su.get("level"):
-            issues.append("level_mismatch:super_admin_vs_super")
     return issues

@@ -1084,7 +1084,6 @@ def seed_roles(force: bool, dry_run: bool, reset_roles: bool, allow_default_pass
             owner_role = _get_or_create_role("owner")
             developer_role = _get_or_create_role("developer")
             super_admin = _get_or_create_role("super_admin")
-            super_role = _get_or_create_role("super")
             admin = _get_or_create_role("admin")
             manager = _get_or_create_role("manager")
             staff = _get_or_create_role("staff")
@@ -1094,7 +1093,7 @@ def seed_roles(force: bool, dry_run: bool, reset_roles: bool, allow_default_pass
 
             all_perms = [p for p in Permission.query.all() if isinstance(p, Permission)]
             
-            for super_role_obj in [owner_role, developer_role, super_admin, super_role]:
+            for super_role_obj in [owner_role, developer_role, super_admin]:
                 role_key = (super_role_obj.name or "").strip().lower()
                 role_info = PermissionsRegistry.ROLES.get(role_key, {})
                 exclude_list = set(role_info.get("exclude", []))
@@ -1153,6 +1152,14 @@ def seed_roles(force: bool, dry_run: bool, reset_roles: bool, allow_default_pass
             _get_or_create_user(STAFF_USERNAME, STAFF_EMAIL, STAFF_PASSWORD, staff)
             _get_or_create_user(MECH_USERNAME, MECH_EMAIL, MECH_PASSWORD, mechanic)
             _get_or_create_user(RC_USERNAME, RC_EMAIL, RC_PASSWORD, registered_customer)
+
+        from utils.role_sync import consolidate_super_roles
+
+        merge_stats = consolidate_super_roles(db.session)
+        if merge_stats.get("migrated_users"):
+            click.echo(f"• Merged super→super_admin users: {merge_stats['migrated_users']}")
+        if merge_stats.get("removed_role"):
+            click.echo("• Removed deprecated role: super")
 
         for rid in affected_roles:
             try:
@@ -1802,7 +1809,6 @@ def seed_all(force: bool, reset_roles: bool, deactivate_missing_expense_types: b
             owner_role = _get_or_create_role("owner")
             developer_role = _get_or_create_role("developer")
             super_admin = _get_or_create_role("super_admin")
-            super_role = _get_or_create_role("super")
             admin = _get_or_create_role("admin")
             manager = _get_or_create_role("manager")
             staff = _get_or_create_role("staff")
@@ -1812,7 +1818,7 @@ def seed_all(force: bool, reset_roles: bool, deactivate_missing_expense_types: b
 
             click.echo("• Assigning full permissions to privileged roles...")
             all_perms = [p for p in Permission.query.all() if isinstance(p, Permission)]
-            for super_role_obj in [owner_role, developer_role, super_admin, super_role]:
+            for super_role_obj in [owner_role, developer_role, super_admin]:
                 if getattr(super_role_obj, "permissions", None) is None:
                     super_role_obj.permissions = []
                 else:
@@ -4070,9 +4076,10 @@ def tenants_ensure_org_structure(slug: str | None):
 @click.command("tenants-sync-permissions")
 @with_appcontext
 def tenants_sync_permissions():
-    """مزامنة صلاحيات دور owner في كل تينانت (بدون صلاحيات منصة أزاد)."""
+    """مزامنة صلاحيات كل الأدوار القياسية في كل تينانت (owner + admin + mechanic + …)."""
     from utils.tenant_fiscal_schema import iter_tenant_schemas, set_local_search_path
-    from utils.tenant_permissions import sync_tenant_owner_role_permissions, permission_codes_for_tenant_owner
+    from utils.tenant_permissions import permission_codes_for_tenant_owner
+    from utils.role_sync import sync_all_tenant_standard_roles
     from models import Permission
 
     codes = permission_codes_for_tenant_owner()
@@ -4086,12 +4093,37 @@ def tenants_sync_permissions():
             if code not in existing:
                 db.session.add(Permission(code=code, name=code))
         db.session.flush()
-        stats = sync_tenant_owner_role_permissions(db.session)
-        stats["slug"] = slug
-        stats["schema"] = schema
-        click.echo(f"  {slug}/{schema}: owner perms={stats.get('permissions', 0)}")
+        role_stats = sync_all_tenant_standard_roles(db.session)
+        parts = [f"{s.get('role')}={s.get('permissions', s.get('skipped', '?'))}" for s in role_stats]
+        click.echo(f"  {slug}/{schema}: " + ", ".join(parts))
     db.session.commit()
     click.echo("OK")
+
+
+@click.command("sync-system-roles")
+@click.option("--force", is_flag=True, help="مطلوب على الإنتاج")
+@with_appcontext
+def sync_system_roles(force: bool) -> None:
+    """مزامنة أدوار المنصة من السجل + دمج super في super_admin (بدون إنشاء مستخدمين)."""
+    if not force and os.getenv("ALLOW_SEED_ROLES") != "1":
+        raise click.ClickException("sync-system-roles disabled. Use --force or ALLOW_SEED_ROLES=1.")
+    from utils.role_sync import consolidate_super_roles, sync_platform_standard_roles
+
+    try:
+        with _begin():
+            for code in sorted(RESERVED_CODES):
+                _ensure_permission(code)
+            platform_stats = sync_platform_standard_roles(db.session)
+            merge_stats = consolidate_super_roles(db.session)
+        for r in Role.query.all():
+            try:
+                clear_role_permission_cache(r.id)
+            except Exception:
+                pass
+        click.echo(f"OK: platform roles synced ({len(platform_stats)}), super merge={merge_stats}")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        raise click.ClickException(f"DB error: {e}") from e
 
 
 @click.command("fiscal-period-close")
@@ -5050,7 +5082,7 @@ def register_cli(app) -> None:
         compare_sqlite_full,
         branding_group,
         tenants_group,
-        seed_roles, sync_permissions, list_permissions, list_roles, role_add_perms, create_role, export_rbac,
+        seed_roles, sync_system_roles, sync_permissions, list_permissions, list_roles, role_add_perms, create_role, export_rbac,
         create_user, user_set_password, user_activate, user_assign_role, list_users, list_customers,
         seed_expense_types, expense_type_cmd, seed_palestine_cmd, seed_all, clear_rbac_caches,
         wh_create, wh_list, wh_stock, product_create, product_find, product_stock, product_set_price,

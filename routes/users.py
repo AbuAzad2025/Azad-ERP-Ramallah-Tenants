@@ -11,6 +11,12 @@ import utils
 from utils import _get_or_404
 from permissions_config.enums import SystemPermissions, SystemRoles
 from permissions_config.permissions import PermissionsRegistry
+from permissions_config.role_policy import (
+    canonical_role_name_str,
+    effective_role_level,
+    is_custom_role,
+    is_deprecated_role_name,
+)
 
 users_bp = Blueprint("users_bp", __name__, url_prefix="/users", template_folder="templates/users")
 
@@ -23,9 +29,7 @@ def _actor_role_name() -> str:
 
 def _role_level_by_name(role_name: str) -> int:
     try:
-        info = PermissionsRegistry.ROLES.get((role_name or "").strip().lower())
-        if isinstance(info, dict):
-            return int(info.get("level", 999))
+        return effective_role_level(role_name)
     except Exception:
         current_app.logger.debug('numeric conversion failed in users.py', exc_info=True)
     return 999
@@ -49,9 +53,13 @@ def _role_is_assignable_by_actor(role: Role | None) -> bool:
     if not role:
         return False
     try:
-        name = (role.name or "").strip().lower()
+        name = canonical_role_name_str(role.name)
+        if is_deprecated_role_name(role.name):
+            return False
         if _actor_level() == 0:
             return True
+        if is_custom_role(name):
+            return _actor_level() <= 2
         if name not in PermissionsRegistry.ROLES:
             return False
         tgt_level = _role_level_by_name(name)
@@ -222,8 +230,9 @@ def list_users():
         allowed_role_ids = []
         for r in all_roles:
             r_name = (r.name or "").strip()
-            r_info = PermissionsRegistry.ROLES.get(r_name.lower(), {})
-            r_level = int(r_info.get("level", 999))
+            if is_deprecated_role_name(r_name):
+                continue
+            r_level = effective_role_level(r_name)
             
             # Allow seeing users with Same Level or Lower Level (Higher Number)
             if r_level >= actor_level:
