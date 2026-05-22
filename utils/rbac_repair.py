@@ -59,19 +59,13 @@ def repair_users(session) -> dict:
 
 
 def cleanup_junk_roles(session, *, delete_unused_custom: bool = True) -> dict:
-    """حذف أدوار خاطئة/مكررة/يتيمة."""
+    """حذف أدوار خاطئة/مكررة/يتيمة (بدون مستخدمين)."""
     from sqlalchemy import delete
 
     from models import Role, User, role_permissions
     from permissions_config.role_policy import JUNK_ROLE_NAMES, JUNK_ROLE_PREFIXES
 
-    stats = {"roles_deleted": 0, "skipped_protected": 0, "skipped_has_users": 0}
-
-    canonical_present = {
-        canonical_role_name_str(r.name)
-        for r in session.query(Role).all()
-        if r.name
-    }
+    stats = {"roles_deleted": 0, "skipped_has_users": 0}
 
     for role in list(session.query(Role).all()):
         name = (role.name or "").strip()
@@ -79,24 +73,17 @@ def cleanup_junk_roles(session, *, delete_unused_custom: bool = True) -> dict:
             continue
         canonical = canonical_role_name_str(name)
         user_count = session.query(User).filter(User.role_id == role.id).count()
-
         if user_count > 0:
-            continue
-
-        if PermissionsRegistry.is_role_protected(canonical) and name == canonical:
-            stats["skipped_protected"] += 1
+            stats["skipped_has_users"] += 1
             continue
 
         is_junk = (
             is_deprecated_role_name(name)
             or any(name.startswith(p) for p in JUNK_ROLE_PREFIXES)
             or name in JUNK_ROLE_NAMES
-            or (canonical in SYSTEM_ROLE_NAMES and name != canonical and canonical in canonical_present)
+            or name != canonical
+            or (delete_unused_custom and not is_known_system_role(canonical))
         )
-        if not is_junk and delete_unused_custom:
-            if not is_known_system_role(canonical):
-                is_junk = True
-
         if not is_junk:
             continue
 

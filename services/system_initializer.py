@@ -214,7 +214,10 @@ class SystemInitializer:
 
         # 3. Default Admin User
         if not User.query.first():
-            admin_role = Role.query.filter_by(name='Owner').first() or Role.query.filter_by(name='Super Admin').first()
+            admin_role = (
+                Role.query.filter_by(name='owner').first()
+                or Role.query.filter_by(name='super_admin').first()
+            )
             if admin_role:
                 user = User(
                     username='admin',
@@ -237,69 +240,9 @@ class SystemInitializer:
                 )
 
     def _get_roles_config(self, perm_lookup, all_db_perms):
-        """تحديد صلاحيات الأدوار"""
-        owner_perms = list(perm_lookup.values())
-
-        excluded_for_admin = {
-            'access_owner_dashboard', 'manage_tenants', 'manage_system_config', 
-            'manage_any_user_permissions', 'manage_ai', 'access_ai_assistant', 'train_ai',
-            'backup_database', 'restore_database', 'hard_delete', 'manage_saas', 
-            'manage_mobile_app', 'manage_system_health'
-        }
-        super_admin_perms = [p for p in all_db_perms if p.code not in excluded_for_admin]
-
-        # Accountant
-        accountant_codes = {
-            'access_dashboard',
-            'manage_accounting_docs', 'validate_accounting', 'manage_ledger',
-            'manage_payments', 'manage_expenses', 'view_reports', 'manage_reports',
-            'manage_exchange', 'manage_currencies', 'manage_bank', 'view_bank', 'add_bank_transaction',
-            'manage_sales', 'archive_sale', 'view_sales',
-            'view_customers', 'manage_customers',
-            'manage_vendors', 'add_supplier', 'add_partner',
-            'view_inventory', 'view_warehouses',
-            'view_shop', 'view_preorders', 'view_own_orders', 'view_own_account'
-        }
-        
-        # Service Advisor
-        service_advisor_codes = {
-            'access_dashboard',
-            'manage_service', 'view_service',
-            'add_customer', 'view_customers', 'manage_customers',
-            'view_inventory', 'view_parts', 'view_warehouses',
-            'view_sales', 'view_barcode', 'view_notes', 'manage_notes',
-            'view_own_orders', 'view_own_account'
-        }
-
-        # Mechanic
-        mechanic_codes = {
-            'access_dashboard', 'view_service', 'view_parts', 'view_inventory',
-            'view_notes', 'view_own_orders', 'view_own_account'
-        }
-
-        # Storekeeper
-        storekeeper_codes = {
-            'access_dashboard', 'manage_warehouses', 'view_warehouses',
-            'manage_inventory', 'view_inventory', 'warehouse_transfer',
-            'view_parts', 'manage_vendors', 'add_supplier',
-            'manage_shipments', 'view_barcode', 'manage_barcode',
-            'view_own_orders', 'view_own_account'
-        }
-        
-        # Sales Rep
-        sales_rep_codes = {
-            'access_dashboard', 'manage_sales', 'view_sales',
-            'add_customer', 'view_customers',
-            'view_inventory', 'view_shop', 'browse_products', 'place_online_order',
-            'view_preorders', 'add_preorder', 'view_own_orders', 'view_own_account'
-        }
-
-        return [
-            ('Owner', 'المالك', owner_perms),
-            ('Super Admin', 'مدير النظام', super_admin_perms),
-            ('Accountant', 'محاسب', [perm_lookup[c] for c in accountant_codes if c in perm_lookup]),
-            ('Service Advisor', 'مستشار صيانة', [perm_lookup[c] for c in service_advisor_codes if c in perm_lookup]),
-            ('Mechanic', 'فني صيانة', [perm_lookup[c] for c in mechanic_codes if c in perm_lookup]),
-            ('Storekeeper', 'أمين مستودع', [perm_lookup[c] for c in storekeeper_codes if c in perm_lookup]),
-            ('Sales Representative', 'مندوب مبيعات', [perm_lookup[c] for c in sales_rep_codes if c in perm_lookup]),
-        ]
+        """
+        الأدوار تُدار عبر PermissionsRegistry + أوامر:
+        flask sync-system-roles / tenants-sync-permissions / repair-rbac
+        لا نُعيد إنشاء أدوار قديمة (Owner, Accountant, …) لتجنب التكرار.
+        """
+        return []
