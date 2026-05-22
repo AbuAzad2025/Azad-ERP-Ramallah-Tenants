@@ -1187,31 +1187,6 @@ def account_statement(customer_id):
     ).filter(Sale.sale_date >= start_date).filter(Sale.sale_date <= end_date).order_by(Sale.sale_date, Sale.id).all()
     
     for s in sales:
-        if s.preorder_id:
-            preorder = s.preorder
-            if preorder:
-                prepaid_amount = D(preorder.prepaid_amount or 0)
-                if prepaid_amount > 0:
-                    # تحسين الأداء: استخدام البيانات المحملة مسبقاً بدلاً من الاستعلام
-                    prepaid_payment = next((
-                        p for p in getattr(preorder, 'payments', [])
-                        if (getattr(p, 'direction', None) == 'IN' or str(getattr(p, 'direction', 'IN')) == 'IN')
-                        and getattr(p, 'status', None) in ['COMPLETED', 'PENDING']
-                        and getattr(p, 'sale_id', None) is None
-                    ), None)
-                    
-                    if prepaid_payment:
-                        prepaid_payment.sale_id = s.id
-                        prepaid_payment.preorder_id = None
-                        prepaid_payment.customer_id = None
-                        prepaid_payment.supplier_id = None
-                        prepaid_payment.partner_id = None
-                        prepaid_payment.entity_type = "SALE"
-                        db.session.add(prepaid_payment)
-    
-    # db.session.flush() and expire_all removed to prevent performance degradation
-    
-    for s in sales:
         sale_lines = getattr(s, 'lines', []) or []
         sale_discount_total = D(getattr(s, "discount_total", 0) or 0)
         sale_shipping = D(getattr(s, "shipping_cost", 0) or 0)

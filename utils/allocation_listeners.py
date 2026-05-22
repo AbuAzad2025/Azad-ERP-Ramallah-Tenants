@@ -25,6 +25,12 @@ def _allocate(customer_id: int, source: str = "") -> None:
     """
     if not customer_id:
         return
+    try:
+        from utils.payment_allocation_policy import payment_auto_allocate_enabled
+        if not payment_auto_allocate_enabled():
+            return
+    except Exception:
+        return
 
     try:
         from utils.credit_allocator import apply_customer_credit_to_obligations
@@ -168,21 +174,45 @@ def _queue_partner_allocation(target, partner_id: int, source: str = "") -> None
 
 def on_sale_created(mapper, connection, target):
     """مستمع إنشاء مبيعة جديدة"""
+    try:
+        from utils.payment_allocation_policy import payment_auto_allocate_enabled
+        if not payment_auto_allocate_enabled():
+            return
+    except Exception:
+        return
     if target.customer_id and (getattr(target, 'balance_due', 0) or 0) > 0:
         _queue_customer_allocation(target, target.customer_id, f"Sale #{getattr(target, 'sale_number', target.id)}")
 
 def on_service_created(mapper, connection, target):
     """مستمع إنشاء طلب صيانة جديد"""
+    try:
+        from utils.payment_allocation_policy import payment_auto_allocate_enabled
+        if not payment_auto_allocate_enabled():
+            return
+    except Exception:
+        return
     if target.customer_id and (getattr(target, 'balance_due', 0) or 0) > 0:
         _queue_customer_allocation(target, target.customer_id, f"Service #{getattr(target, 'request_number', target.id)}")
 
 def on_preorder_created(mapper, connection, target):
     """مستمع إنشاء حجز جديد"""
+    try:
+        from utils.payment_allocation_policy import payment_auto_allocate_enabled
+        if not payment_auto_allocate_enabled():
+            return
+    except Exception:
+        return
     if target.customer_id and (getattr(target, 'balance_due', 0) or 0) > 0:
         _queue_customer_allocation(target, target.customer_id, f"Preorder #{getattr(target, 'preorder_number', target.id)}")
 
 def on_invoice_created(mapper, connection, target):
     """مستمع إنشاء فاتورة جديدة (مستقلة)"""
+    try:
+        from utils.payment_allocation_policy import payment_auto_allocate_enabled
+        if not payment_auto_allocate_enabled():
+            return
+    except Exception:
+        return
     if target.customer_id and not target.sale_id and not target.service_id and not target.preorder_id:
         balance = (getattr(target, 'total_amount', 0) or 0) - (getattr(target, 'total_paid', 0) or 0)
         if balance > 0:
@@ -194,6 +224,12 @@ def on_invoice_created(mapper, connection, target):
 # =============================================================================
 
 def on_payment_received(mapper, connection, target):
+    try:
+        from utils.payment_allocation_policy import payment_auto_allocate_enabled
+        if not payment_auto_allocate_enabled():
+            return
+    except Exception:
+        return
     direction = getattr(target, "direction", None)
     status = getattr(target, "status", None)
 
@@ -248,6 +284,12 @@ def on_payment_received(mapper, connection, target):
 
 
 def on_check_updated(mapper, connection, target):
+    try:
+        from utils.payment_allocation_policy import payment_auto_allocate_enabled
+        if not payment_auto_allocate_enabled():
+            return
+    except Exception:
+        return
     try:
         status = str(getattr(target, "status", "") or "").upper()
         if status != "CASHED":

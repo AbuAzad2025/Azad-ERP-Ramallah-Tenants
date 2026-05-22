@@ -376,6 +376,12 @@ def _open_customer_obligations(customer_id: int):
 
 
 def apply_customer_credit_to_obligations(customer_id: int, *, created_by: int | None = None) -> list[int]:
+    try:
+        from utils.payment_allocation_policy import payment_auto_allocate_enabled
+        if not payment_auto_allocate_enabled():
+            return []
+    except Exception:
+        return []
     if not customer_id:
         return []
 

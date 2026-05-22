@@ -2138,7 +2138,7 @@ def _normalize_cost_center_settings(source, base=None, preserve_missing=False):
         'budget_danger_threshold': danger_threshold,
         'budget_block_threshold': block_threshold,
         'allow_over_budget': _to_bool_flag(_setting_value(source, 'allow_over_budget', base, False if not preserve_missing else base.get('allow_over_budget', False), preserve_missing)),
-        'auto_allocate': _to_bool_flag(_setting_value(source, 'auto_allocate', base, True if preserve_missing else False, preserve_missing)),
+        'auto_allocate': _to_bool_flag(_setting_value(source, 'auto_allocate', base, False if preserve_missing else False, preserve_missing)),
         'default_expense_account': (str(expense_raw or expense_default).strip() or expense_default),
     }
 
@@ -2285,7 +2285,7 @@ def _get_accounting_settings_bundle():
         'budget_danger_threshold': int(SystemSettings.get_setting('budget_danger_threshold', 95)),
         'budget_block_threshold': int(SystemSettings.get_setting('budget_block_threshold', 100)),
         'allow_over_budget': SystemSettings.get_setting('allow_over_budget', False),
-        'auto_allocate': SystemSettings.get_setting('auto_allocate', True),
+        'auto_allocate': SystemSettings.get_setting('auto_allocate', False),
         'default_expense_account': SystemSettings.get_setting('default_expense_account', '501000'),
     }
     project_settings = {

@@ -1069,8 +1069,10 @@ def create_sale():
                 current_app.logger.error(f"⚠️ GL Sync Failed for Sale #{sale.id}: {e}")
                 # Don't flash error to user as the sale is valid, but log it for admin
             try:
-                from utils.credit_allocator import apply_customer_credit_to_obligations
-                apply_customer_credit_to_obligations(int(sale.customer_id), created_by=getattr(current_user, "id", None))
+                from utils.payment_allocation_policy import payment_auto_allocate_enabled
+                if payment_auto_allocate_enabled():
+                    from utils.credit_allocator import apply_customer_credit_to_obligations
+                    apply_customer_credit_to_obligations(int(sale.customer_id), created_by=getattr(current_user, "id", None))
                 try:
                     s2 = db.session.get(Sale, sale.id)
                     if s2 and hasattr(s2, "update_payment_status"):

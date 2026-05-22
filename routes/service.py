@@ -639,8 +639,10 @@ def create_request():
             log_service_action(service,"CREATE")
             _refresh_service_related_balances(service)
             try:
-                from utils.credit_allocator import apply_customer_credit_to_obligations
-                apply_customer_credit_to_obligations(int(service.customer_id), created_by=getattr(current_user, "id", None))
+                from utils.payment_allocation_policy import payment_auto_allocate_enabled
+                if payment_auto_allocate_enabled():
+                    from utils.credit_allocator import apply_customer_credit_to_obligations
+                    apply_customer_credit_to_obligations(int(service.customer_id), created_by=getattr(current_user, "id", None))
             except Exception:
                 try:
                     db.session.rollback()

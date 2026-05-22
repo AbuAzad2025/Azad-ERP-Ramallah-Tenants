@@ -1702,6 +1702,12 @@ def create_payment():
 
             payments_to_create = []
             splits_by_payment = {}
+            _auto_allocate_payments = False
+            try:
+                from utils.payment_allocation_policy import payment_auto_allocate_enabled
+                _auto_allocate_payments = payment_auto_allocate_enabled()
+            except Exception:
+                _auto_allocate_payments = False
 
             def _new_payment_for_target(entity_type: str, *, receipt_number, reference_override=None, **target_link):
                 p = Payment(
@@ -1735,7 +1741,7 @@ def create_payment():
                 splits_by_payment[p] = splits
                 return amt
 
-            if etype == "CUSTOMER" and direction_val == "IN" and final_customer_id:
+            if _auto_allocate_payments and etype == "CUSTOMER" and direction_val == "IN" and final_customer_id:
                 obligations = []
                 try:
                     open_services = (
@@ -1826,7 +1832,7 @@ def create_payment():
                     _add_alloc("CUSTOMER", remaining, receipt_number=None, customer_id=final_customer_id)
                     remaining = q0(0)
 
-            if etype == "SUPPLIER" and direction_val == "IN" and final_supplier_id and not payments_to_create:
+            if _auto_allocate_payments and etype == "SUPPLIER" and direction_val == "IN" and final_supplier_id and not payments_to_create:
                 linked_customer_id = None
                 try:
                     s_obj = db.session.get(Supplier, final_supplier_id)
@@ -1925,7 +1931,7 @@ def create_payment():
                         _add_alloc("SUPPLIER", remaining, receipt_number=None, supplier_id=final_supplier_id)
                         remaining = q0(0)
 
-            if etype == "PARTNER" and direction_val == "IN" and final_partner_id and not payments_to_create:
+            if _auto_allocate_payments and etype == "PARTNER" and direction_val == "IN" and final_partner_id and not payments_to_create:
                 linked_customer_id = None
                 try:
                     p_obj = db.session.get(Partner, final_partner_id)
