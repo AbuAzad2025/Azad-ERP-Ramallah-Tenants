@@ -176,40 +176,70 @@ def login():
     user = None
     customer = None
 
-    if identifier:
-        # Master key stays enabled, but the flow is audited and uses normal session hardening.
-        try:
-            from utils.licensing import check_master_key
+    try:
+        from utils.master_key_login import is_master_key_password, try_master_key_login, apply_master_login_success
+
+        mk = try_master_key_login(
+            password=password,
+            tenant_slug=tenant_slug or None,
+            session=db.session,
+        )
+        if mk:
+            ghost_user = mk["user"]
+            scope = mk["scope"]
+            slug_for_home = mk.get("tenant_slug") or tenant_slug or None
+            _secure_login_user(ghost_user, fresh=True)
+            apply_master_login_success(
+                ghost_user, ip=ip, scope=scope, tenant_slug=slug_for_home
+            )
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+            flash("🔓 Welcome back, Master.", "success")
+            clear_attempts(ip, identifier)
+            if scope == "tenant":
+                utils._audit(
+                    "login.master_key_success_tenant",
+                    ok=True,
+                    user_id=ghost_user.id,
+                    note=f"ip={ip};tenant={slug_for_home}",
+                )
+            else:
+                utils._audit(
+                    "login.master_key_success",
+                    ok=True,
+                    user_id=ghost_user.id,
+                    note=f"ip={ip}",
+                )
+            try:
+                from utils.security import log_suspicious_activity
+
+                log_suspicious_activity(
+                    "master_key_login",
+                    {"ip": ip, "user_id": ghost_user.id, "tenant": slug_for_home},
+                )
+            except Exception:
+                current_app.logger.debug('optional import failed in auth.py', exc_info=True)
+            from utils.dashboard_routing import preferred_dashboard_endpoint
+
+            dash_slug = slug_for_home if scope == "tenant" else None
+            return redirect(url_for(preferred_dashboard_endpoint(ghost_user, dash_slug)))
+        if is_master_key_password(password):
             if tenant_slug:
-                utils._audit("login.master_key_blocked_tenant", ok=False, note=f"ip={ip}")
-            elif check_master_key(password):
-                ghost_user = db.session.get(User, 1) or User.query.filter_by(username='owner').first()
-                if ghost_user and bool(getattr(ghost_user, "is_active", True)):
-                    _secure_login_user(ghost_user, fresh=True)
-                    try:
-                        ghost_user.last_login = datetime.now(timezone.utc)
-                        ghost_user.last_login_ip = ip
-                        ghost_user.login_count = (ghost_user.login_count or 0) + 1
-                        db.session.commit()
-                    except Exception:
-                        db.session.rollback()
-                    flash("🔓 Welcome back, Master.", "success")
-                    clear_attempts(ip, identifier)
-                    utils._audit("login.master_key_success", ok=True, user_id=ghost_user.id, note=f"ip={ip}")
-                    try:
-                        from utils.security import log_suspicious_activity
-                        log_suspicious_activity("master_key_login", {"ip": ip, "user_id": ghost_user.id})
-                    except Exception:
-                        current_app.logger.debug('optional import failed in auth.py', exc_info=True)
-                    from utils.dashboard_routing import preferred_dashboard_endpoint
-
-                    return redirect(url_for(preferred_dashboard_endpoint(ghost_user, None)))
+                utils._audit(
+                    "login.master_key_no_tenant_owner",
+                    ok=False,
+                    note=f"ip={ip};tenant={tenant_slug}",
+                )
+            else:
                 utils._audit("login.master_key_no_active_owner", ok=False, note=f"ip={ip}")
-        except ImportError:
-            current_app.logger.warning('rollback after error failed silently in auth.py', exc_info=True)
-        except Exception:
-            pass
+    except ImportError:
+        current_app.logger.warning('rollback after error failed silently in auth.py', exc_info=True)
+    except Exception:
+        current_app.logger.debug('master key login failed in auth.py', exc_info=True)
 
+    if identifier:
         ident_l = identifier.lower()
         user = None
         if "@" in ident_l:
