@@ -1068,6 +1068,15 @@ class PermissionsRegistry:
         return protected
     
     
+    @staticmethod
+    def permission_code_str(code) -> str:
+        """تحويل SystemPermissions أو نص إلى كود إنجليزي موحّد."""
+        if code is None:
+            return ""
+        if hasattr(code, "value"):
+            return str(code.value).strip().lower()
+        return str(code).strip().lower()
+
     @classmethod
     def get_role_permissions(cls, role_name: str) -> Set[str]:
         """
@@ -1077,7 +1086,7 @@ class PermissionsRegistry:
             role_name: اسم الدور
         
         Returns:
-            set: أكواد الصلاحيات
+            set: أكواد الصلاحيات (نصوص إنجليزية فقط)
         """
         from permissions_config.role_policy import canonical_role_name_str
 
@@ -1089,10 +1098,13 @@ class PermissionsRegistry:
         
         if role['permissions'] == '*':
             all_perms = cls.get_all_permission_codes()
-            exclude = set(role.get('exclude', []))
-            return all_perms - exclude
+            exclude = {cls.permission_code_str(x) for x in role.get('exclude', [])}
+            exclude.discard("")
+            return {c for c in all_perms if c not in exclude}
         
-        return set(role['permissions'])
+        out = {cls.permission_code_str(c) for c in role.get('permissions', [])}
+        out.discard("")
+        return out
     
     
     @classmethod

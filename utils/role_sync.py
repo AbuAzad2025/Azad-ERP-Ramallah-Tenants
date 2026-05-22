@@ -12,6 +12,12 @@ from permissions_config.role_policy import (
 )
 
 
+def _role_key_to_name(role_key) -> str:
+    if hasattr(role_key, "value"):
+        return str(role_key.value).strip().lower()
+    return canonical_role_name_str(str(role_key))
+
+
 def registry_permission_codes(role_name: str) -> set[str]:
     name = canonical_role_name_str(role_name)
     if name not in PermissionsRegistry.ROLES:
@@ -83,12 +89,49 @@ def consolidate_super_roles(session) -> dict:
 _PLATFORM_SYNC_SKIP = frozenset({"owner", "developer", "super_admin", "super"})
 
 
+_PRIVILEGED_PLATFORM_ROLES = frozenset({"owner", "developer", "super_admin"})
+
+
+def sync_privileged_platform_roles(session) -> list[dict]:
+    """مزامنة owner / developer / super_admin (صلاحيات * مع استثناءات)."""
+    from models import Permission, Role, role_permissions
+    from sqlalchemy import delete, insert
+
+    out = []
+    all_perms = session.query(Permission).all()
+    for role_name in sorted(_PRIVILEGED_PLATFORM_ROLES):
+        role = session.query(Role).filter_by(name=role_name).one_or_none()
+        if not role:
+            role = Role(name=role_name)
+            session.add(role)
+            session.flush()
+        info = PermissionsRegistry.ROLES.get(role_name, {})
+        exclude = {PermissionsRegistry.permission_code_str(x) for x in info.get("exclude", [])}
+        exclude.discard("")
+        if info.get("permissions") == "*":
+            desired = [p for p in all_perms if str(p.code or "").strip().lower() not in exclude]
+        else:
+            codes = registry_permission_codes(role_name)
+            desired = [p for p in all_perms if str(p.code or "").strip().lower() in codes]
+        session.execute(delete(role_permissions).where(role_permissions.c.role_id == role.id))
+        if desired:
+            session.execute(
+                insert(role_permissions),
+                [{"role_id": role.id, "permission_id": p.id} for p in desired],
+            )
+        session.expire(role, ["permissions"])
+        session.flush()
+        out.append({"role": role_name, "permissions": len(desired)})
+    return out
+
+
 def sync_platform_standard_roles(session) -> list[dict]:
     """مزامنة admin/manager/staff/mechanic/... على المنصة من السجل."""
     from models import Role
 
     out = []
-    for role_name in sorted(PermissionsRegistry.ROLES.keys()):
+    for role_key in sorted(PermissionsRegistry.ROLES.keys(), key=lambda k: _role_key_to_name(k)):
+        role_name = _role_key_to_name(role_key)
         if role_name in _PLATFORM_SYNC_SKIP:
             continue
         role = session.query(Role).filter_by(name=role_name).one_or_none()

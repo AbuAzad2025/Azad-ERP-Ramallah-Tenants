@@ -4115,12 +4115,17 @@ def sync_system_roles(force: bool) -> None:
     """مزامنة أدوار المنصة من السجل + دمج super في super_admin (بدون إنشاء مستخدمين)."""
     if not force and os.getenv("ALLOW_SEED_ROLES") != "1":
         raise click.ClickException("sync-system-roles disabled. Use --force or ALLOW_SEED_ROLES=1.")
-    from utils.role_sync import consolidate_super_roles, sync_platform_standard_roles
+    from utils.role_sync import (
+        consolidate_super_roles,
+        sync_platform_standard_roles,
+        sync_privileged_platform_roles,
+    )
 
     try:
         with _begin():
             for code in sorted(RESERVED_CODES):
                 _ensure_permission(code)
+            priv_stats = sync_privileged_platform_roles(db.session)
             platform_stats = sync_platform_standard_roles(db.session)
             merge_stats = consolidate_super_roles(db.session)
         for r in Role.query.all():
