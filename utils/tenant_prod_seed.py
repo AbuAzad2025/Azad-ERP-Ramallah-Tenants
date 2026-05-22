@@ -295,6 +295,111 @@ def _seed_tenant_owner(session, *, owner_username: str, owner_email: str, owner_
     session.flush()
 
 
+def tenant_schema_from_slug(slug: str) -> str:
+    base = (slug or "").strip().lower().replace("-", "_")
+    base = "".join(ch for ch in base if (ch.isalnum() or ch == "_"))
+    if not base:
+        raise ValueError("slug غير صالح")
+    if base[0].isdigit():
+        base = f"t{base}"
+    return f"t_{base}"[:63]
+
+
+def provision_new_tenant(
+    session,
+    *,
+    slug: str,
+    display_name: str | None = None,
+    domain: str | None = None,
+    owner_username: str = "owner",
+    owner_email: str,
+    owner_password: str,
+    copy_data: bool = False,
+) -> dict:
+    """
+    إنشاء تينانت كامل: schema + (اختياري) نسخ بيانات + مالك شركة + صلاحيات + جداول إقفال.
+    يعمل على قاعدة garage_manager فقط.
+    """
+    from extensions import db
+    from utils.tenant_fiscal_schema import ensure_fiscal_tables_in_schema, set_local_search_path
+    from utils.tenant_permissions import sync_tenant_owner_role_permissions, permission_codes_for_tenant_owner
+    from models import Permission
+
+    assert_garage_manager_only(db.engine.url.render_as_string(hide_password=False))
+
+    slug = (slug or "").strip().lower()
+    if not slug or slug == "ramallah":
+        raise ValueError("slug غير صالح أو محجوز (ramallah يستخدم public)")
+
+    owner_email = (owner_email or "").strip()
+    owner_password = (owner_password or "").strip()
+    if not owner_email or not owner_password:
+        raise ValueError("owner_email و owner_password مطلوبان")
+
+    schema_name = tenant_schema_from_slug(slug)
+    if _schema_exists(session, schema_name):
+        existing = session.execute(
+            sa_text(
+                "SELECT 1 FROM information_schema.tables "
+                "WHERE table_schema = :s AND table_name = 'users' LIMIT 1"
+            ),
+            {"s": schema_name},
+        ).scalar()
+        if existing:
+            raise ValueError(f"مخطط {schema_name} موجود مسبقاً — استخدم تينانت آخر أو أمر tenants provision")
+
+    session.execute(sa_text(f"CREATE SCHEMA IF NOT EXISTS {schema_name}"))
+    session.commit()
+    session.execute(sa_text(f"DROP TABLE IF EXISTS {schema_name}.tenants CASCADE"))
+    session.commit()
+
+    ensure_tenant_registry_row(
+        session,
+        slug=slug,
+        schema_name=schema_name,
+        display_name=display_name or slug.replace("_", " ").title(),
+        domain=domain,
+    )
+    session.commit()
+
+    if copy_data:
+        stats = clone_public_tables_to_schema(session, schema_name)
+    else:
+        set_local_search_path(session, schema_name)
+        db.create_all()
+        session.commit()
+        stats = {"tables": 0, "rows": 0, "skipped": [], "mode": "empty_schema"}
+
+    ensure_fiscal_tables_in_schema(session, schema_name)
+    _stamp_tenant_alembic_head(session, schema_name)
+    session.commit()
+
+    set_local_search_path(session, schema_name)
+    existing_codes = {str(p.code or "").strip().lower(): p for p in Permission.query.all()}
+    for code in permission_codes_for_tenant_owner():
+        if code not in existing_codes:
+            session.add(Permission(code=code, name=code))
+    session.flush()
+    sync_tenant_owner_role_permissions(session)
+    _seed_tenant_owner(
+        session,
+        owner_username=owner_username,
+        owner_email=owner_email,
+        owner_password=owner_password,
+    )
+    session.execute(sa_text("SET search_path TO public"))
+    session.commit()
+
+    return {
+        "slug": slug,
+        "schema": schema_name,
+        "path": f"/t/{slug}/",
+        "owner_username": owner_username,
+        "owner_email": owner_email,
+        "copy": stats,
+    }
+
+
 def setup_production_dev_tenants(
     *,
     owner_email: str,

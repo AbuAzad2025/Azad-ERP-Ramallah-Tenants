@@ -43,7 +43,62 @@ HUB_ENDPOINT_PERMISSIONS: dict[str, str] = {
     "tenant_console.branding": TENANT_CONSOLE_PERMISSION,
     "tenant_console.business_settings": TENANT_CONSOLE_PERMISSION,
     "users_bp.list_users": SP.MANAGE_USERS.value,
+    "users_bp.create_user": SP.MANAGE_USERS.value,
 }
+
+# لوحة مالك المنصة — إنشاء تينانتات وغيرها
+PLATFORM_HUB_ENDPOINT_PERMISSIONS: dict[str, str] = {
+    "security.index": SP.ACCESS_OWNER_DASHBOARD.value,
+    "security.settings_center": SP.ACCESS_OWNER_DASHBOARD.value,
+    "advanced.owner_hub": SP.ACCESS_OWNER_DASHBOARD.value,
+    "security.monitoring_dashboard": SP.MANAGE_SYSTEM_HEALTH.value,
+    "security.owner_branding": SP.ACCESS_OWNER_DASHBOARD.value,
+    "security.users_center": SP.MANAGE_USERS.value,
+    "security.saas_manager": SP.MANAGE_SAAS.value,
+    "security.audit_log_viewer": SP.VIEW_AUDIT_LOGS.value,
+    "advanced.multi_tenant": SP.MANAGE_TENANTS.value,
+}
+
+# عناصر القائمة الجانبية في /t/<slug>/console
+TENANT_CONSOLE_NAV: tuple[dict, ...] = (
+    {
+        "title": "الرئيسية",
+        "items": (
+            {"endpoint": "tenant_console.index", "label": "لوحة المالك", "icon": "fa-home"},
+        ),
+    },
+    {
+        "title": "الهوية والإعدادات",
+        "owner_only": True,
+        "items": (
+            {"endpoint": "tenant_console.branding", "label": "الهوية والترويسة", "icon": "fa-palette"},
+            {"endpoint": "tenant_console.business_settings", "label": "إعدادات المحاسبة", "icon": "fa-sliders-h"},
+        ),
+    },
+    {
+        "title": "التشغيل",
+        "items": (
+            {"endpoint": "main.dashboard", "label": "لوحة التشغيل", "icon": "fa-tachometer-alt"},
+            {"endpoint": "sales_bp.list_sales", "label": "المبيعات", "icon": "fa-shopping-cart"},
+            {"endpoint": "payments.index", "label": "الدفعات", "icon": "fa-money-bill-wave"},
+        ),
+    },
+    {
+        "title": "المحاسبة",
+        "items": (
+            {"endpoint": "ledger_control.index", "label": "دفتر الأستاذ", "icon": "fa-book"},
+            {"endpoint": "tenant_fiscal_bp.index", "label": "إقفال الفترات", "icon": "fa-calendar-check"},
+            {"endpoint": "financial_reports.index", "label": "التقارير المالية", "icon": "fa-chart-pie"},
+        ),
+    },
+    {
+        "title": "الفريق",
+        "items": (
+            {"endpoint": "users_bp.list_users", "label": "المستخدمون", "icon": "fa-users"},
+            {"endpoint": "users_bp.create_user", "label": "إضافة مستخدم", "icon": "fa-user-plus"},
+        ),
+    },
+)
 
 
 def is_tenant_request() -> bool:
@@ -93,19 +148,54 @@ def user_has_effective_permission(user, code: str) -> bool:
     return False
 
 
-def user_can_access_hub_endpoint(user, endpoint: str) -> bool:
-    needed = HUB_ENDPOINT_PERMISSIONS.get(endpoint)
+def _user_can_access_endpoint(user, endpoint: str, perm_map: dict[str, str]) -> bool:
+    needed = perm_map.get(endpoint)
     if not needed:
         return True
     return user_has_effective_permission(user, needed)
 
 
-def filter_hub_sections(sections, user) -> tuple:
+def user_can_access_hub_endpoint(user, endpoint: str) -> bool:
+    return _user_can_access_endpoint(user, endpoint, HUB_ENDPOINT_PERMISSIONS)
+
+
+def filter_platform_hub_sections(sections, user) -> tuple:
+    return filter_hub_sections(sections, user, endpoint_map=PLATFORM_HUB_ENDPOINT_PERMISSIONS)
+
+
+def build_tenant_console_nav(user) -> tuple:
+    """قائمة جانبية مفلترة حسب الصلاحيات."""
+    try:
+        from utils.branding_assets import is_tenant_session_user
+
+        owner_session = is_tenant_session_user()
+    except Exception:
+        owner_session = False
+
+    out = []
+    for group in TENANT_CONSOLE_NAV:
+        if group.get("owner_only") and not owner_session:
+            continue
+        items = tuple(
+            it
+            for it in group.get("items", ())
+            if user_can_access_hub_endpoint(user, it.get("endpoint", ""))
+        )
+        if items:
+            sec = dict(group)
+            sec["items"] = items
+            out.append(sec)
+    return tuple(out)
+
+
+def filter_hub_sections(sections, user, *, endpoint_map: dict[str, str] | None = None) -> tuple:
+    perm_map = endpoint_map or HUB_ENDPOINT_PERMISSIONS
     out = []
     for section in sections:
         cards = tuple(
-            c for c in section.get("cards", ())
-            if user_can_access_hub_endpoint(user, c.get("endpoint", ""))
+            c
+            for c in section.get("cards", ())
+            if _user_can_access_endpoint(user, c.get("endpoint", ""), perm_map)
         )
         if cards:
             sec = dict(section)

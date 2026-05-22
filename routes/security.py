@@ -777,11 +777,14 @@ def index():
     مع Caching للإحصائيات (5 دقائق)
     """
     from utils.owner_hubs import PLATFORM_HUB_SECTIONS, PLATFORM_OWNER_TAGLINE
+    from utils.tenant_permissions import filter_platform_hub_sections
+
+    hub_sections = filter_platform_hub_sections(PLATFORM_HUB_SECTIONS, current_user)
     return render_template(
         'security/index.html',
         stats=get_cached_security_stats(),
         recent=get_recent_suspicious_activities(),
-        hub_sections=PLATFORM_HUB_SECTIONS,
+        hub_sections=hub_sections,
         hub_tagline=PLATFORM_OWNER_TAGLINE,
     )
 

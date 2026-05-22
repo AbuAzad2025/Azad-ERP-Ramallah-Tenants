@@ -4861,37 +4861,45 @@ def tenants_provision(slug: str, display_name: str | None, schema_name: str | No
     if schema_name.lower() != "public":
         schema_name = _validate_pg_identifier(schema_name)
 
-    if not skip_migrate and schema_name.lower() != "public":
-        db.session.execute(sa_text(f"CREATE SCHEMA IF NOT EXISTS {schema_name}"))
+    if schema_name.lower() == "public":
+        _ensure_tenant_registry(slug=slug, schema_name=schema_name, display_name=display_name, is_active=not inactive)
         db.session.commit()
-        db.session.execute(sa_text(f"SET search_path TO {schema_name}, public"))
-        db.create_all()
-        db.session.execute(sa_text(f"DROP TABLE IF EXISTS {schema_name}.tenants CASCADE"))
-        head = db.session.execute(sa_text("SELECT version_num FROM public.alembic_version")).scalar()
-        head = (head or "").strip()
-        if not head:
-            raise click.ClickException("تعذّر تحديد alembic head من public")
-        db.session.execute(sa_text(f"CREATE TABLE IF NOT EXISTS {schema_name}.alembic_version (version_num VARCHAR(32) NOT NULL PRIMARY KEY)"))
-        db.session.execute(sa_text(f"DELETE FROM {schema_name}.alembic_version"))
-        db.session.execute(sa_text(f"INSERT INTO {schema_name}.alembic_version (version_num) VALUES (:v)"), {"v": head})
-        db.session.execute(sa_text("SET search_path TO public"))
+        click.echo(f"OK: tenant '{slug}' schema='{schema_name}' active={not inactive}")
+        return
+
+    owner_email = (owner_email or os.getenv("TENANT_OWNER_EMAIL") or "").strip()
+    owner_password = (owner_password or os.getenv("TENANT_OWNER_PASSWORD") or "").strip()
+    if not owner_email or not owner_password:
+        raise click.ClickException("owner_email/owner_password مطلوبة (أو عبر TENANT_OWNER_EMAIL/TENANT_OWNER_PASSWORD)")
+
+    from utils.tenant_prod_seed import provision_new_tenant, ensure_tenant_registry_row, _seed_tenant_owner
+
+    if skip_migrate:
+        _ensure_tenant_registry(slug=slug, schema_name=schema_name, display_name=display_name, is_active=not inactive)
         db.session.commit()
-
-    _ensure_tenant_registry(slug=slug, schema_name=schema_name, display_name=display_name, is_active=not inactive)
-    db.session.commit()
-
-    if schema_name.lower() != "public":
-        owner_email = (owner_email or os.getenv("TENANT_OWNER_EMAIL") or "").strip()
-        owner_password = (owner_password or os.getenv("TENANT_OWNER_PASSWORD") or "").strip()
-        if not owner_email or not owner_password:
-            raise click.ClickException("owner_email/owner_password مطلوبة (أو عبر TENANT_OWNER_EMAIL/TENANT_OWNER_PASSWORD)")
         db.session.execute(sa_text(f"SET search_path TO {schema_name}, public"))
         _seed_tenant_owner(owner_username=owner_username, owner_email=owner_email, owner_password=owner_password)
         db.session.commit()
         db.session.execute(sa_text("SET search_path TO public"))
         db.session.commit()
+        click.echo(f"OK: tenant '{slug}' schema='{schema_name}' (skip-migrate) active={not inactive}")
+        return
 
-    click.echo(f"OK: tenant '{slug}' schema='{schema_name}' active={not inactive}")
+    prov = provision_new_tenant(
+        db.session,
+        slug=slug,
+        display_name=display_name,
+        owner_username=owner_username,
+        owner_email=owner_email,
+        owner_password=owner_password,
+        copy_data=False,
+    )
+    if inactive:
+        row = TenantRegistry.query.filter_by(slug=slug).first()
+        if row:
+            row.is_active = False
+        db.session.commit()
+    click.echo(f"OK: {prov.get('path')} schema={schema_name} owner={owner_username} active={not inactive}")
 
 
 @click.group("branding")

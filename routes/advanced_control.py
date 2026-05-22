@@ -377,6 +377,10 @@ def multi_tenant():
         if action == 'create_tenant':
             tenant_name = request.form.get('tenant_name')
             tenant_db = request.form.get('tenant_db')
+            owner_email = (request.form.get('owner_email') or '').strip()
+            owner_password = (request.form.get('owner_password') or '').strip()
+            owner_username = (request.form.get('owner_username') or 'owner').strip() or 'owner'
+            copy_seed = request.form.get('copy_seed_data') == 'on'
             tenant_domain = request.form.get('tenant_domain', '')
             tenant_logo = request.form.get('tenant_logo', '')
             tenant_company_name = request.form.get('tenant_company_name', '')
@@ -387,6 +391,16 @@ def multi_tenant():
             if not _validate_safe_slug(tenant_name):
                 flash('❌ اسم الـ Tenant يجب أن يكون بدون مسافات أو محارف خاصة', 'danger')
                 return redirect(url_for('advanced.multi_tenant'))
+
+            if not owner_email or not owner_password:
+                flash('❌ بريد وكلمة مرور مالك الشركة مطلوبان', 'danger')
+                return redirect(url_for('advanced.multi_tenant'))
+
+            main_db = (current_app.config.get('SQLALCHEMY_DATABASE_URI') or '').strip()
+            tenant_db = (tenant_db or main_db).strip()
+            if main_db and tenant_db != main_db:
+                flash('⚠️ يُستخدم schema منفصل داخل garage_manager — تم تجاهل رابط قاعدة خارجية', 'warning')
+                tenant_db = main_db
 
             existing_tenant = SystemSettings.query.filter_by(key=f'tenant_{tenant_name}_db').first()
             if existing_tenant:
@@ -419,8 +433,8 @@ def multi_tenant():
             db.session.add(SystemSettings(key=f'tenant_{tenant_name}_modules', value=json.dumps(tenant_modules)))
             db.session.add(SystemSettings(key=f'tenant_{tenant_name}_created_at', value=datetime.now(timezone.utc).isoformat()))
             
-            if not tenant_db or not str(tenant_db).strip().startswith('postgresql://'):
-                flash('❌ قاعدة بيانات الـ Tenant يجب أن تكون PostgreSQL (postgresql://...)', 'danger')
+            if not main_db or 'postgresql' not in main_db.lower():
+                flash('❌ يتطلب النظام PostgreSQL (garage_manager)', 'danger')
                 return redirect(url_for('advanced.multi_tenant'))
 
             domain_norm = (tenant_domain or '').strip().lower()
@@ -438,14 +452,44 @@ def multi_tenant():
                     return redirect(url_for('advanced.multi_tenant'))
 
             display_name = (tenant_company_name or tenant_system_name or tenant_name or '').strip() or tenant_name
-            db.session.add(TenantRegistry(
-                slug=tenant_name,
-                schema_name=schema_name,
-                display_name=display_name,
-                domain=domain_norm or None,
-                is_active=True,
-            ))
-            
+
+            try:
+                from utils.tenant_prod_seed import provision_new_tenant
+
+                prov = provision_new_tenant(
+                    db.session,
+                    slug=tenant_name,
+                    display_name=display_name,
+                    domain=domain_norm or None,
+                    owner_username=owner_username,
+                    owner_email=owner_email,
+                    owner_password=owner_password,
+                    copy_data=copy_seed,
+                )
+            except ValueError as exc:
+                flash(f'❌ {exc}', 'danger')
+                return redirect(url_for('advanced.multi_tenant'))
+            except Exception:
+                db.session.rollback()
+                current_app.logger.exception('provision_new_tenant failed')
+                flash('❌ فشل إنشاء مخطط التينانت أو مالك الشركة', 'danger')
+                return redirect(url_for('advanced.multi_tenant'))
+
+            registry = TenantRegistry.query.filter_by(slug=tenant_name).first()
+            if not registry:
+                db.session.add(TenantRegistry(
+                    slug=tenant_name,
+                    schema_name=schema_name,
+                    display_name=display_name,
+                    domain=domain_norm or None,
+                    is_active=True,
+                ))
+            else:
+                registry.schema_name = schema_name
+                registry.display_name = display_name
+                registry.domain = domain_norm or None
+                registry.is_active = True
+
             try:
                 db.session.commit()
             except Exception:
@@ -463,9 +507,15 @@ def multi_tenant():
             _log_owner_action('multi_tenant.create', tenant_name, {
                 'db': tenant_db,
                 'modules': tenant_modules,
+                'schema': prov.get('schema'),
+                'owner': owner_email,
             })
-            
-            flash(f'✅ تم إنشاء Tenant: {tenant_name}', 'success')
+
+            flash(
+                f'✅ تم إنشاء التينانت {tenant_name} — المسار {prov.get("path")} '
+                f'— مالك: {owner_username} ({owner_email})',
+                'success',
+            )
             return redirect(url_for('advanced.multi_tenant'))
         
         elif action == 'toggle_tenant':

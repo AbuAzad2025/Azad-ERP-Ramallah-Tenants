@@ -497,6 +497,22 @@ def _register_template_support(app):
         return {"current_app": current_app, "get_unique_flashes": get_unique_flashes, "static_url": static_url}
 
     @app.context_processor
+    def inject_tenant_console_nav():
+        slug = str(getattr(g, "tenant_slug", None) or "").strip()
+        if not slug:
+            return {}
+        from flask_login import current_user
+        from utils.tenant_permissions import build_tenant_console_nav, user_can_access_hub_endpoint
+
+        user = current_user if getattr(current_user, "is_authenticated", False) else None
+        return {
+            "tenant_console_nav_groups": build_tenant_console_nav(user),
+            "can_access_endpoint": (
+                lambda ep: user_can_access_hub_endpoint(user, ep) if user else False
+            ),
+        }
+
+    @app.context_processor
     def inject_branding_helpers():
         from models import SystemSettings as _SS
         from utils.branding_assets import build_static_url, rel_path_platform, rel_path_tenant
