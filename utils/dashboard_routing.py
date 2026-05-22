@@ -4,6 +4,11 @@
 from __future__ import annotations
 
 from permissions_config.enums import SystemPermissions as SP
+from permissions_config.role_policy import (
+    PLATFORM_ROLE_HOME,
+    TENANT_ROLE_HOME,
+    normalize_role_name,
+)
 
 # endpoint → صلاحية مطلوبة (أولوية على HUB للمسارات التشغيلية)
 ENDPOINT_REQUIRED_PERMISSION: dict[str, str] = {
@@ -47,40 +52,9 @@ _PERMISSION_HOME_CHAIN: tuple[tuple[str, str], ...] = (
     (SP.VIEW_SHOP.value, "shop.catalog"),
 )
 
-# لوحة افتراضية حسب اسم الدور (منخفض الحروف)
-PLATFORM_ROLE_HOME: dict[str, str] = {
-    "owner": "security.index",
-    "developer": "security.index",
-    "__owner__": "security.index",
-    "super_admin": "main.dashboard",
-    "super": "main.dashboard",
-    "admin": "main.dashboard",
-    "manager": "main.dashboard",
-    "staff": "main.dashboard",
-    "mechanic": "service.list_requests",
-}
-
-TENANT_ROLE_HOME: dict[str, str] = {
-    "owner": "tenant_console.index",
-    "developer": "tenant_console.index",
-    "super_admin": "main.dashboard",
-    "super": "main.dashboard",
-    "admin": "main.dashboard",
-    "manager": "main.dashboard",
-    "staff": "main.dashboard",
-    "mechanic": "service.list_requests",
-}
-
 
 def _role_name(user) -> str:
-    if not user:
-        return ""
-    if getattr(user, "username", "").strip().upper() == "__OWNER__":
-        return "owner"
-    try:
-        return (getattr(getattr(user, "role", None), "name", None) or "").strip().lower()
-    except Exception:
-        return ""
+    return normalize_role_name(user)
 
 
 def _user_has(user, code: str) -> bool:
@@ -122,7 +96,6 @@ def user_can_access_endpoint(user, endpoint: str) -> bool:
     if needed:
         return _user_has(user, needed)
 
-    # عميل متجر بدون has_permission
     if endpoint.startswith("shop."):
         return not hasattr(user, "has_permission")
     return hasattr(user, "has_permission")
@@ -190,7 +163,6 @@ def dashboard_label_for_user(user, tenant_slug: str | None = None) -> str:
 def redirect_if_wrong_home(view_endpoint: str, user, tenant_slug: str | None = None) -> str | None:
     """
     إن كانت الصفحة الحالية ليست لوحة هذا المستخدم، أرجع endpoint التوجيه.
-    مثال: ميكانيكي يفتح / يُحوَّل إلى الصيانة.
     """
     preferred = preferred_dashboard_endpoint(user, tenant_slug)
     if not preferred or preferred == view_endpoint:

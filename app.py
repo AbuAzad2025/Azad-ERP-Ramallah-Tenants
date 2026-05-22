@@ -1846,11 +1846,12 @@ def create_app(config_object=Config) -> Flask:
             return None
         
         try:
+            from permissions_config.role_policy import is_platform_owner_role
+
             if (
-                (hasattr(current_user, "has_permission") and current_user.has_permission("access_owner_dashboard"))
+                is_platform_owner_role(current_user)
+                or (hasattr(current_user, "has_permission") and current_user.has_permission("access_owner_dashboard"))
                 or (hasattr(utils, "is_super") and utils.is_super())
-                or current_user.id == 1
-                or (getattr(current_user, "username", "") or "").lower() in ["owner", "admin"]
             ):
                 return None
         except Exception:

@@ -474,7 +474,10 @@ class AccountingAuditor:
             rows = User.query.filter_by(is_active=True).limit(10000).all() if hasattr(User, "is_active") else User.query.limit(10000).all()
             super_users = []
             for row in rows:
-                is_super = bool(getattr(row, "is_system", False) or getattr(row, "is_super_role", False) or getattr(row, "role_name_l", "") in {"owner", "developer", "admin"})
+                is_super = bool(
+                    getattr(row, "is_system", False)
+                    or getattr(row, "is_super_role", False)
+                )
                 if is_super:
                     super_users.append(row)
             if len(super_users) > 3:

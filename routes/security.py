@@ -69,9 +69,12 @@ def _platform_security_only():
 @login_required
 def restrict_security_access():
     # الحماية: فقط للمالك والمطور (Level 0)
-    if not (current_user.is_system or current_user.role_name_l in ['owner', 'developer']):
+    from permissions_config.role_policy import is_platform_owner_role
+    from utils.dashboard_routing import preferred_dashboard_endpoint
+
+    if not is_platform_owner_role(current_user):
         flash('⛔ غير مصرح لك بالوصول للوحة المالك', 'danger')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for(preferred_dashboard_endpoint(current_user, None)))
 
 
 def make_aware(dt):

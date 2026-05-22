@@ -160,7 +160,9 @@ def get_permission_context(user: Any = None) -> Dict[str, Any]:
 
     role = (getattr(user, "role_name_l", "") or getattr(getattr(user, "role", None), "name", "") or "").strip().lower()
     is_system = bool(getattr(user, "is_system", False) or getattr(user, "is_system_account", False))
-    is_owner_like = bool(is_system or role in {"owner", "developer", "super_admin", "super"})
+    from permissions_config.role_policy import is_super_role_user
+
+    is_owner_like = bool(is_system or is_super_role_user(user))
 
     known_perms = set()
     for values in MODULE_PERMISSION_MAP.values():

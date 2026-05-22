@@ -50,9 +50,12 @@ def restrict_shop_access():
     if request.endpoint and 'admin' in request.endpoint:
         if not current_user.is_authenticated:
              return redirect(url_for('auth.login'))
-        if not (current_user.is_system or current_user.role_name_l in ['owner', 'developer']):
+        from permissions_config.role_policy import is_platform_owner_role
+        from utils.dashboard_routing import preferred_dashboard_endpoint
+
+        if not is_platform_owner_role(current_user):
             flash('⛔ غير مصرح لك بإدارة المتجر (تتطلب صلاحيات المالك)', 'danger')
-            return redirect(url_for('main.dashboard'))
+            return redirect(url_for(preferred_dashboard_endpoint(current_user, None)))
 
 @shop_bp.app_context_processor
 def _inject_shop_helpers():
@@ -333,10 +336,10 @@ def _super_roles():
         return {"developer", "owner"}
 
 def is_super_admin(user) -> bool:
+    """إدارة المتجر — يعتمد على صلاحية manage_shop وليس دور super_admin."""
     try:
         if not getattr(user, "is_authenticated", False):
             return False
-        # PBAC: التحقق من الصلاحية بدلاً من الدور
         if hasattr(user, 'has_permission'):
             return user.has_permission(SystemPermissions.MANAGE_SHOP)
         return False

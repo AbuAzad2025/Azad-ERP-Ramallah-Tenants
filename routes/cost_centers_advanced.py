@@ -18,7 +18,9 @@ cost_centers_advanced_bp = Blueprint('cost_centers_advanced', __name__, url_pref
 @login_required
 def restrict_cost_centers_access():
     # الحماية: فقط للمالك والمطور (Level 0)
-    if not (current_user.is_system or current_user.role_name_l in ['owner', 'developer']):
+    from permissions_config.role_policy import is_platform_owner_role
+
+    if not is_platform_owner_role(current_user):
         flash('⛔ غير مصرح لك بالوصول لمراكز التكلفة المتقدمة', 'danger')
         return redirect(url_for('main.dashboard'))
 

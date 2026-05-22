@@ -16,7 +16,9 @@ projects_bp = Blueprint('projects', __name__, url_prefix='/projects')
 @login_required
 def restrict_projects_access():
     # الحماية: فقط للمالك والمطور (Level 0)
-    if not (current_user.is_system or current_user.role_name_l in ['owner', 'developer']):
+    from permissions_config.role_policy import is_platform_owner_role
+
+    if not is_platform_owner_role(current_user):
         flash('⛔ غير مصرح لك بالوصول لإدارة المشاريع', 'danger')
         return redirect(url_for('main.dashboard'))
 

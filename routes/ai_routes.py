@@ -8,6 +8,7 @@ from flask_login import current_user, login_required
 
 from utils import permission_required
 from permissions_config.enums import SystemPermissions
+from permissions_config.role_policy import is_platform_owner_role
 
 from AI.engine.ai_service import ai_chat_with_search, gather_system_context
 from AI.engine.ai_management import (
@@ -75,7 +76,7 @@ def ai_access(f):
         is_owner_like = bool(
             getattr(current_user, "is_system", False)
             or getattr(current_user, "is_system_account", False)
-            or getattr(current_user, "role_name_l", "") in {"owner", "developer"}
+            or is_platform_owner_role(current_user)
             or _has_permission(SystemPermissions.ACCESS_OWNER_DASHBOARD)
         )
         if not is_owner_like:

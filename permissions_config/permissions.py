@@ -808,7 +808,7 @@ class PermissionsRegistry:
         
         SystemRoles.SUPER: {
             'name_ar': 'سوبر',
-            'description': '⚡ سوبر - نفس صلاحيات المدير الأعلى',
+            'description': '⚡ سوبر — مرادف لـ super_admin (نفس المستوى 1 والصلاحيات)',
             'permissions': '*',
             'exclude': [
                 SystemPermissions.ACCESS_OWNER_DASHBOARD, 
@@ -837,7 +837,7 @@ class PermissionsRegistry:
                 'can_manage_permissions': True,
                 'can_access_everything': False,
                 'can_access_owner_dashboard': False,
-                'can_manage_advanced_accounting': False,
+                'can_manage_advanced_accounting': True,
                 'can_manage_any_user_permissions': False,
             },
         },
@@ -945,9 +945,8 @@ class PermissionsRegistry:
         
         SystemRoles.MECHANIC: {
             'name_ar': 'الميكانيكي',
-            'description': '🔧 ميكانيكي - الصيانة والقطع فقط',
+            'description': '🔧 ميكانيكي - الصيانة والقطع فقط (بدون لوحة التشغيل العامة)',
             'permissions': [
-                SystemPermissions.ACCESS_DASHBOARD,
                 SystemPermissions.MANAGE_SERVICE, SystemPermissions.VIEW_SERVICE,
                 SystemPermissions.VIEW_WAREHOUSES, SystemPermissions.VIEW_INVENTORY, SystemPermissions.VIEW_PARTS,
                 SystemPermissions.VIEW_REPORTS,

@@ -1993,11 +1993,9 @@ class User(db.Model, UserMixin, TimestampMixin, AuditMixin):
         from utils.tenant_permissions import is_tenant_request, tenant_owner_has_permission
 
         if is_tenant_request():
-            if self.is_system or self.is_super_role or self.role_name_l in {"owner", "developer"}:
+            if self.is_system or self.is_super_role:
                 return tenant_owner_has_permission(self, code)
         elif self.is_system or self.is_super_role:
-            return True
-        elif self.role_name_l in {"owner", "developer"}:
             return True
         from utils import _expand_perms, _get_user_permissions
         targets = {c.strip().lower() for c in _expand_perms(code)}

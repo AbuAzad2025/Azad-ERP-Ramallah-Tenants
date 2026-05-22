@@ -178,10 +178,13 @@ def is_platform_owner_user(user=None) -> bool:
             u = current_user
         if not getattr(u, "is_authenticated", False):
             return False
+        from permissions_config.role_policy import is_platform_owner_role
+
+        if is_platform_owner_role(u):
+            return True
         if hasattr(u, "has_permission") and u.has_permission("access_owner_dashboard"):
             return True
-        uname = (getattr(u, "username", "") or "").lower()
-        return uname in {"owner", "admin"} or getattr(u, "id", None) == 1
+        return False
     except Exception:
         return False
 
