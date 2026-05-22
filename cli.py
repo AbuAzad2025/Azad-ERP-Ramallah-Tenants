@@ -4108,6 +4108,18 @@ def tenants_sync_permissions():
     click.echo("OK")
 
 
+@click.command("test-rbac")
+@click.option("--fix", is_flag=True, help="تطبيق تحسينات البيانات")
+@with_appcontext
+def test_rbac(fix: bool) -> None:
+    """اختبار تكامل RBAC على القاعدة الحقيقية (منصة + تينانتات)."""
+    from scripts.integration_test_rbac import run
+
+    code = run(fix=bool(fix))
+    if code:
+        raise click.ClickException("RBAC integration test failed — see output above.")
+
+
 @click.command("repair-rbac")
 @click.option("--dry-run", is_flag=True, help="عرض فقط بدون حفظ")
 @with_appcontext
@@ -5132,7 +5144,7 @@ def register_cli(app) -> None:
         compare_sqlite_full,
         branding_group,
         tenants_group,
-        seed_roles, repair_rbac, sync_system_roles, sync_permissions, list_permissions, list_roles, role_add_perms, create_role, export_rbac,
+        seed_roles, test_rbac, repair_rbac, sync_system_roles, sync_permissions, list_permissions, list_roles, role_add_perms, create_role, export_rbac,
         create_user, user_set_password, user_activate, user_assign_role, list_users, list_customers,
         seed_expense_types, expense_type_cmd, seed_palestine_cmd, seed_all, clear_rbac_caches,
         wh_create, wh_list, wh_stock, product_create, product_find, product_stock, product_set_price,
