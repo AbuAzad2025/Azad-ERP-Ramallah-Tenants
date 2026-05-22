@@ -25,56 +25,15 @@ PLATFORM_ONLY_PERMISSIONS = frozenset(
 
 TENANT_CONSOLE_PERMISSION = SP.ACCESS_TENANT_CONSOLE.value
 
-# endpoint → صلاحية لعرض البطاقة / عنصر القائمة
-HUB_ENDPOINT_PERMISSIONS: dict[str, str] = {
-    "tenant_console.index": TENANT_CONSOLE_PERMISSION,
-    "main.dashboard": SP.ACCESS_DASHBOARD.value,
-    "sales_bp.list_sales": SP.MANAGE_SALES.value,
-    "returns.list_returns": SP.MANAGE_SALES.value,
-    "customers_bp.list_customers": SP.MANAGE_CUSTOMERS.value,
-    "payments.index": SP.MANAGE_PAYMENTS.value,
-    "vendors_bp.suppliers_list": SP.MANAGE_VENDORS.value,
-    "expenses_bp.list_expenses": SP.MANAGE_EXPENSES.value,
-    "branches_bp.list_branches": SP.MANAGE_BRANCHES.value,
-    "warehouse_bp.list": SP.VIEW_WAREHOUSES.value,
-    "shipments_bp.list_shipments": SP.MANAGE_SHIPMENTS.value,
-    "service.list_requests": SP.MANAGE_SERVICE.value,
-    "parts_bp.parts_list": SP.VIEW_PARTS.value,
-    "checks.index": SP.MANAGE_PAYMENTS.value,
-    "ledger_control.index": SP.MANAGE_LEDGER.value,
-    "ledger.index": SP.MANAGE_LEDGER.value,
-    "tenant_fiscal_bp.index": SP.MANAGE_LEDGER.value,
-    "budgets.index": SP.MANAGE_LEDGER.value,
-    "accounting_validation.index": SP.VALIDATE_ACCOUNTING.value,
-    "accounting_docs.index": SP.MANAGE_ACCOUNTING_DOCS.value,
-    "financial_reports.index": SP.VIEW_REPORTS.value,
-    "reports_bp.index": SP.VIEW_REPORTS.value,
-    "currencies.list_currencies": SP.MANAGE_CURRENCIES.value,
-    "bank.accounts": SP.MANAGE_BANK.value,
-    "cost_centers.index": SP.MANAGE_COST_CENTERS.value,
-    "engineering.dashboard": SP.MANAGE_ENGINEERING.value,
-    "projects.index": SP.MANAGE_PROJECTS.value,
-    "workflows.index": SP.MANAGE_WORKFLOWS.value,
-    "tenant_console.branding": TENANT_CONSOLE_PERMISSION,
-    "tenant_console.business_settings": TENANT_CONSOLE_PERMISSION,
-    "users_bp.list_users": SP.MANAGE_USERS.value,
-    "users_bp.create_user": SP.MANAGE_USERS.value,
-    "roles_bp.list_roles": SP.MANAGE_ROLES.value,
-    "shop.catalog": SP.VIEW_SHOP.value,
-    "notes.list_notes": SP.VIEW_NOTES.value,
-}
+from permissions_config.endpoint_access import (  # noqa: E402 — بعد ثوابت SP
+    PLATFORM_OWNER_ENDPOINT_PERMISSIONS,
+    TENANT_ENDPOINT_PERMISSIONS,
+    permission_for_endpoint,
+)
 
-PLATFORM_HUB_ENDPOINT_PERMISSIONS: dict[str, str] = {
-    "security.index": SP.ACCESS_OWNER_DASHBOARD.value,
-    "security.settings_center": SP.ACCESS_OWNER_DASHBOARD.value,
-    "advanced.owner_hub": SP.ACCESS_OWNER_DASHBOARD.value,
-    "security.monitoring_dashboard": SP.MANAGE_SYSTEM_HEALTH.value,
-    "security.owner_branding": SP.ACCESS_OWNER_DASHBOARD.value,
-    "security.users_center": SP.MANAGE_USERS.value,
-    "security.saas_manager": SP.MANAGE_SAAS.value,
-    "security.audit_log_viewer": SP.VIEW_AUDIT_LOGS.value,
-    "advanced.multi_tenant": SP.MANAGE_TENANTS.value,
-}
+# مرادفات للتوافق — المصدر: permissions_config/endpoint_access.py
+HUB_ENDPOINT_PERMISSIONS = TENANT_ENDPOINT_PERMISSIONS
+PLATFORM_HUB_ENDPOINT_PERMISSIONS = PLATFORM_OWNER_ENDPOINT_PERMISSIONS
 
 TENANT_CONSOLE_NAV: tuple[dict, ...] = (
     {
@@ -192,8 +151,8 @@ def _tenant_owner_session() -> bool:
         return False
 
 
-def _user_can_access_endpoint(user, endpoint: str, perm_map: dict[str, str]) -> bool:
-    needed = perm_map.get(endpoint)
+def _user_can_access_endpoint(user, endpoint: str, perm_map: dict[str, str] | None = None) -> bool:
+    needed = (perm_map or {}).get(endpoint) if perm_map is not None else permission_for_endpoint(endpoint)
     if not needed:
         return False
     return user_has_effective_permission(user, needed)

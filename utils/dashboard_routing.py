@@ -3,34 +3,13 @@
 """
 from __future__ import annotations
 
+from permissions_config.endpoint_access import permission_for_endpoint
 from permissions_config.enums import SystemPermissions as SP
 from permissions_config.role_policy import (
     PLATFORM_ROLE_HOME,
     TENANT_ROLE_HOME,
     normalize_role_name,
 )
-
-# endpoint → صلاحية مطلوبة (أولوية على HUB للمسارات التشغيلية)
-ENDPOINT_REQUIRED_PERMISSION: dict[str, str] = {
-    "security.index": SP.ACCESS_OWNER_DASHBOARD.value,
-    "tenant_console.index": SP.ACCESS_TENANT_CONSOLE.value,
-    "main.dashboard": SP.ACCESS_DASHBOARD.value,
-    "ledger_control.index": SP.MANAGE_LEDGER.value,
-    "financial_reports.index": SP.VIEW_REPORTS.value,
-    "reports_bp.index": SP.VIEW_REPORTS.value,
-    "sales_bp.list_sales": SP.MANAGE_SALES.value,
-    "service.list_requests": SP.MANAGE_SERVICE.value,
-    "customers_bp.list_customers": SP.MANAGE_CUSTOMERS.value,
-    "warehouse_bp.list": SP.VIEW_WAREHOUSES.value,
-    "payments.index": SP.MANAGE_PAYMENTS.value,
-    "expenses_bp.list_expenses": SP.MANAGE_EXPENSES.value,
-    "vendors_bp.suppliers_list": SP.MANAGE_VENDORS.value,
-    "users_bp.list_users": SP.MANAGE_USERS.value,
-    "shop.catalog": SP.VIEW_SHOP.value,
-    "checks.index": SP.MANAGE_PAYMENTS.value,
-    "budgets.index": SP.MANAGE_LEDGER.value,
-    "accounting_validation.index": SP.VALIDATE_ACCOUNTING.value,
-}
 
 # ترتيب احتياطي حسب الصلاحية (بعد دور المستخدم)
 _PERMISSION_HOME_CHAIN: tuple[tuple[str, str], ...] = (
@@ -84,15 +63,7 @@ def user_can_access_endpoint(user, endpoint: str) -> bool:
     if not _endpoint_exists(endpoint):
         return False
 
-    needed = ENDPOINT_REQUIRED_PERMISSION.get(endpoint)
-    if not needed:
-        try:
-            from utils.tenant_permissions import HUB_ENDPOINT_PERMISSIONS
-
-            needed = HUB_ENDPOINT_PERMISSIONS.get(endpoint)
-        except Exception:
-            needed = None
-
+    needed = permission_for_endpoint(endpoint)
     if needed:
         return _user_has(user, needed)
 

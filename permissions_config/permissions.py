@@ -1150,9 +1150,9 @@ class PermissionsRegistry:
             set: {'owner', 'developer', 'super_admin', 'super'}
         """
         return {
-            role_name 
-            for role_name, role_data in cls.ROLES.items() 
-            if role_data.get('is_super', False)
+            role_name
+            for role_name, role_data in cls.ROLES.items()
+            if role_data.get('is_super', False) and not role_data.get('deprecated', False)
         }
     
     

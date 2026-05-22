@@ -52,11 +52,19 @@ def _parse_dt(val: str | None, end: bool = False):
     except Exception:
         return None
 
-ROLE_PERMISSIONS = {
-    role_name: PermissionsRegistry.get_role_permissions(role_name)
-    for role_name in PermissionsRegistry.ROLES.keys()
-    if role_name not in ['owner', 'developer', 'super_admin', 'super']
-}
+_SKIP_SEED_ROLE_SYNC = frozenset({"owner", "developer", "super_admin", "super"})
+
+
+def _standard_role_permission_codes() -> dict[str, set[str]]:
+    """أدوار المنصة القياسية — من السجل فقط (بدون تكرار يدوي)."""
+    return {
+        role_name: PermissionsRegistry.get_role_permissions(role_name)
+        for role_name in PermissionsRegistry.ROLES.keys()
+        if role_name not in _SKIP_SEED_ROLE_SYNC
+    }
+
+
+ROLE_PERMISSIONS = _standard_role_permission_codes()
 
 OWNER_USERNAME = os.getenv("OWNER_USERNAME", "owner").strip()
 OWNER_EMAIL = (os.getenv("OWNER_EMAIL", "owner@example.com") or "").strip().lower()

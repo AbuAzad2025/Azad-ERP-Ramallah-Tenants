@@ -470,7 +470,10 @@ def context_aware_response(query: str, user_role: str = 'User') -> str:
     query_lower = query.lower()
     
     # فهم السياق حسب الدور
-    if user_role in ['Owner', 'owner', 'super_admin']:
+    from permissions_config.role_policy import canonical_role_name_str
+
+    role_l = canonical_role_name_str(str(user_role or ""))
+    if role_l in ("owner", "developer", "super_admin"):
         # المالك يحتاج تحليل عميق
         if 'إحصائيات' in query_lower or 'stats' in query_lower:
             return 'owner_deep_analysis'

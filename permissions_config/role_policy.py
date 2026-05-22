@@ -146,9 +146,21 @@ TENANT_ROLE_HOME: dict[str, str] = role_home_table(tenant=True)
 
 
 def validate_roles_registry() -> list[str]:
-    """تحذيرات داخلية."""
+    """تحذيرات داخلية: أدوار، مرادفات، تغطية اللوحات."""
     issues: list[str] = []
     for name in SYSTEM_ROLE_NAMES:
         if name not in PermissionsRegistry.ROLES:
             issues.append(f"missing_registry:{name}")
+    if SystemRoles.SUPER.value in PermissionsRegistry.get_super_roles():
+        issues.append("deprecated_super_still_super_role")
+    try:
+        from permissions_config.endpoint_access import audit_hub_endpoint_coverage
+        from utils.owner_hubs import PLATFORM_HUB_SECTIONS, TENANT_HUB_SECTIONS
+
+        for ep in audit_hub_endpoint_coverage(PLATFORM_HUB_SECTIONS):
+            issues.append(f"unmapped_platform_hub:{ep}")
+        for ep in audit_hub_endpoint_coverage(TENANT_HUB_SECTIONS):
+            issues.append(f"unmapped_tenant_hub:{ep}")
+    except Exception as exc:
+        issues.append(f"hub_audit_error:{exc}")
     return issues

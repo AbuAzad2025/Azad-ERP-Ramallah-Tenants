@@ -45,6 +45,11 @@
 | الملف | التعديل |
 |-------|---------|
 | `permissions_config/permissions.py` | إزالة تكرار مفتاح `MANAGE_BRANCHES` في `PERMISSIONS_AR_MAP`. |
+| `permissions_config/endpoint_access.py` | **مصدر واحد** لـ endpoint → صلاحية (تينانت + منصة). |
+| `utils/tenant_permissions.py` | `HUB_*` مرادفات لـ `endpoint_access` — لا تعريف مكرر. |
+| `utils/dashboard_routing.py` | يستورد `permission_for_endpoint` فقط. |
+| `permissions_config/role_policy.py` | أدوار، مرادف `super`، تدقيق تغطية اللوحات. |
+| `scripts/audit_permission_maps.py` | `python scripts/audit_permission_maps.py` — فحص تلقائي. |
 | `permissions_config/enums.py` | بدون تغيير — مرجع للمراجعة. |
 | `permissions_config/blueprint_guards.py` | بدون تغيير — يستخدم الـ enum فقط. |
 | `utils.py` | تعليق توضيحي لـ `_PERMISSION_ALIASES`. |

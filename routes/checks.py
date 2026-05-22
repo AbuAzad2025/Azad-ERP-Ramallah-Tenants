@@ -1559,9 +1559,9 @@ def _current_user_is_owner() -> bool:
         username = (getattr(current_user, 'username', None) or '').strip().lower()
         if username in {'owner', '__owner__'}:
             return True
-        role = getattr(current_user, 'role', None)
-        role_name = (getattr(role, 'name', '') or '').strip().lower()
-        return role_name in {'owner', 'developer'}
+        from permissions_config.role_policy import is_platform_owner_role
+
+        return is_platform_owner_role(current_user)
     except Exception:
         return False
 

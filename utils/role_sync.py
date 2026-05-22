@@ -6,10 +6,9 @@ from __future__ import annotations
 from permissions_config.permissions import PermissionsRegistry
 from permissions_config.role_policy import (
     CANONICAL_SUPER_ROLE,
-    DEPRECATED_ROLE_ALIASES,
     TENANT_SYNC_STANDARD_ROLES,
     canonical_role_name_str,
-    is_known_system_role,
+    is_deprecated_role_name,
 )
 
 
