@@ -6,7 +6,9 @@
 {% block security_breadcrumb %}<li class="breadcrumb-item active">Ledger Control</li>{% endblock %}
 {% block head_extra %}{% endblock %}
 {% block security_content %}
-<script></script>
+<script>
+const LEDGER_BASE = {{ ledger_api_base|tojson }}.replace(/\/$/, '');
+</script>
     <div class="card shadow-lg border-0">
         <div class="card-body p-0">
             
@@ -542,7 +544,7 @@ function loadAccounts() {
     
     tbody.innerHTML = '<tr><td colspan="5" class="text-center"><div class="spinner-border spinner-border-sm"></div> جاري التحميل...</td></tr>';
     
-    fetch('/security/ledger-control/accounts')
+    fetch(LEDGER_BASE + '/accounts')
         .then(function(r) { 
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.json(); 
@@ -589,7 +591,7 @@ function loadEntries() {
     
     tbody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border spinner-border-sm"></div> جاري التحميل...</td></tr>';
     
-    fetch('/security/ledger-control/entries')
+    fetch(LEDGER_BASE + '/entries')
         .then(function(r) { 
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.json(); 
@@ -628,7 +630,7 @@ function loadBatches() {
     
     tbody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border spinner-border-sm"></div> جاري التحميل...</td></tr>';
     
-    fetch('/security/ledger-control/batches/all')
+    fetch(LEDGER_BASE + '/batches/all')
         .then(function(r) { 
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.json(); 
@@ -664,7 +666,7 @@ function loadBatches() {
 // الأدوات
 function doBackup() {
     if (!confirm('إنشاء نسخة احتياطية؟')) return;
-    fetch('/security/ledger-control/backup', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } })
+    fetch(LEDGER_BASE + '/backup', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
@@ -682,7 +684,7 @@ function doBackup() {
 }
 
 function doValidate() {
-    fetch('/security/ledger-control/validate')
+    fetch(LEDGER_BASE + '/validate')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
@@ -710,7 +712,7 @@ function openTrialBalance() {
 
 function doCleanup() {
     if (!confirm('حذف القيود الملغاة؟')) return;
-    fetch('/security/ledger-control/cleanup', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } })
+    fetch(LEDGER_BASE + '/cleanup', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
@@ -729,7 +731,7 @@ function doCleanup() {
 
 function deleteAcc(id) {
     if (!confirm('حذف الحساب؟')) return;
-    fetch('/security/ledger-control/accounts/' + id + '/delete', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } })
+    fetch(LEDGER_BASE + '/accounts/' + id + '/delete', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
@@ -748,7 +750,7 @@ function deleteAcc(id) {
 
 function voidBatch(id) {
     if (!confirm('إلغاء القيد؟')) return;
-    fetch('/security/ledger-control/entries/' + id + '/void', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } })
+    fetch(LEDGER_BASE + '/entries/' + id + '/void', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
@@ -800,7 +802,7 @@ function saveNewAccount() {
         is_active: formData.get('is_active') ? true : false
     };
     
-    fetch('/security/ledger-control/accounts/create', {
+    fetch(LEDGER_BASE + '/accounts/create', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
         body: JSON.stringify(data)
@@ -845,7 +847,7 @@ function saveEditAccount() {
         is_active: isActive
     };
     
-    fetch('/security/ledger-control/accounts/' + id + '/update', {
+    fetch(LEDGER_BASE + '/accounts/' + id + '/update', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
         body: JSON.stringify(data)
@@ -867,7 +869,7 @@ function saveEditAccount() {
 function recalculateBalances() {
     if (!confirm('إعادة حساب جميع الأرصدة؟\nهذه العملية قد تستغرق وقتاً...')) return;
     
-    fetch('/security/ledger-control/recalculate-balances', { method: 'POST', headers: { 'X-CSRFToken': (window.SecurityLedger && window.SecurityLedger.tokens && window.SecurityLedger.tokens.csrf) || '' } })
+    fetch(LEDGER_BASE + '/recalculate-balances', { method: 'POST', headers: { 'X-CSRFToken': (window.SecurityLedger && window.SecurityLedger.tokens && window.SecurityLedger.tokens.csrf) || '' } })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
@@ -887,7 +889,7 @@ function recalculateBalances() {
 function syncChecks() {
     if (!confirm('مزامنة الدفعات مع الشيكات؟')) return;
     
-    fetch('/security/ledger-control/sync-checks', { method: 'POST', headers: { 'X-CSRFToken': (window.SecurityLedger && window.SecurityLedger.tokens && window.SecurityLedger.tokens.csrf) || '' } })
+    fetch(LEDGER_BASE + '/sync-checks', { method: 'POST', headers: { 'X-CSRFToken': (window.SecurityLedger && window.SecurityLedger.tokens && window.SecurityLedger.tokens.csrf) || '' } })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
@@ -910,7 +912,7 @@ function loadStats() {
     
     container.innerHTML = '<div class="text-center"><div class="spinner-border"></div><p>جاري التحميل...</p></div>';
     
-    fetch('/security/ledger-control/statistics')
+    fetch(LEDGER_BASE + '/statistics')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
@@ -963,7 +965,7 @@ function loadStats() {
 // تحميل الفترات المحاسبية
 async function loadFiscalPeriods() {
     try {
-        const response = await fetch('/security/ledger-control/operations/fiscal-periods/api');
+        const response = await fetch(LEDGER_BASE + '/operations/fiscal-periods/api');
         const data = await response.json();
         
         if (data.success) {
@@ -1012,7 +1014,7 @@ async function generateClosingEntries() {
     }
     
     try {
-        const response = await fetch('/security/ledger-control/operations/closing-entries/generate', {
+        const response = await fetch(LEDGER_BASE + '/operations/closing-entries/generate', {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
             body: JSON.stringify({period_end: date})
@@ -1079,7 +1081,7 @@ async function postClosingEntries(date, entries) {
     if (!confirm('هل أنت متأكد من ترحيل قيود الإقفال؟')) return;
     
     try {
-        const response = await fetch('/security/ledger-control/operations/closing-entries/post', {
+        const response = await fetch(LEDGER_BASE + '/operations/closing-entries/post', {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
             body: JSON.stringify({period_end: date, entries: entries})
@@ -1101,7 +1103,7 @@ async function postClosingEntries(date, entries) {
 // تحميل القيود المعلقة
 async function loadPendingBatches() {
     try {
-        const response = await fetch('/security/ledger-control/operations/review-queue');
+        const response = await fetch(LEDGER_BASE + '/operations/review-queue');
         const data = await response.json();
         
         if (data.success) {
@@ -1150,7 +1152,7 @@ async function approveBatch(batchId) {
     if (!confirm('هل أنت متأكد من الموافقة على هذا القيد؟')) return;
     
     try {
-        const response = await fetch(`/security/ledger-control/operations/approve-batch/${batchId}`, {
+        const response = await fetch(`${LEDGER_BASE}/operations/approve-batch/${batchId}`, {
             method: 'POST',
             headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
         });
@@ -1176,7 +1178,7 @@ async function rejectBatch(batchId) {
     if (!reason) return;
     
     try {
-        const response = await fetch(`/security/ledger-control/operations/reject-batch/${batchId}`, {
+        const response = await fetch(`${LEDGER_BASE}/operations/reject-batch/${batchId}`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
             body: JSON.stringify({reason: reason})
@@ -1209,7 +1211,7 @@ async function reverseBatch() {
     if (!confirm(`هل أنت متأكد من إنشاء قيد عكسي للقيد رقم ${batchId}؟`)) return;
     
     try {
-        const response = await fetch(`/security/ledger-control/operations/reverse-entry/${batchId}`, {
+        const response = await fetch(`${LEDGER_BASE}/operations/reverse-entry/${batchId}`, {
             method: 'POST',
             headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
         });
@@ -1245,7 +1247,7 @@ let currentEntityType = null;
 // تحميل القيود للمحرر
 async function loadBatchesForEditor() {
     try {
-        const response = await fetch('/security/ledger-control/batches/all');
+        const response = await fetch(LEDGER_BASE + '/batches/all');
         const data = await response.json();
         
         if (data.success) {
@@ -1270,7 +1272,7 @@ async function loadBatchesForEditor() {
 // فتح قيد للتحرير
 async function editBatch(batchId) {
     try {
-        const response = await fetch(`/security/ledger-control/operations/batch/${batchId}/edit`);
+        const response = await fetch(`${LEDGER_BASE}/operations/batch/${batchId}/edit`);
         const data = await response.json();
         
         if (data.success) {
@@ -1352,7 +1354,7 @@ async function searchEntity() {
     
     searchTimeout = setTimeout(async () => {
         try {
-            const response = await fetch(`/security/ledger-control/operations/entities/search?type=${entityType}&q=${searchTerm}`);
+            const response = await fetch(`${LEDGER_BASE}/operations/entities/search?type=${entityType}&q=${searchTerm}`);
             const data = await response.json();
             
             if (data.success && data.results.length > 0) {
@@ -1402,7 +1404,7 @@ async function linkCurrentEntity() {
     if (!confirm(`ربط القيد بـ ${currentEntityType} #${currentEntityId}?`)) return;
     
     try {
-        const response = await fetch(`/security/ledger-control/operations/batch/${currentBatchId}/link-entity`, {
+        const response = await fetch(`${LEDGER_BASE}/operations/batch/${currentBatchId}/link-entity`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
             body: JSON.stringify({
@@ -1430,7 +1432,7 @@ async function saveBatch() {
     if (!confirm('حفظ التعديلات؟')) return;
     
     try {
-        const response = await fetch(`/security/ledger-control/operations/batch/${currentBatchId}/update-full`, {
+        const response = await fetch(`${LEDGER_BASE}/operations/batch/${currentBatchId}/update-full`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
             body: JSON.stringify({

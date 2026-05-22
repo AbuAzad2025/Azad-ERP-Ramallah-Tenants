@@ -52,6 +52,9 @@ def sync_fiscal_periods(
     include_year: bool = True,
 ) -> Dict[str, int]:
     from models import FiscalPeriod
+    from utils.tenant_fiscal_schema import ensure_fiscal_tables_for_request
+
+    ensure_fiscal_tables_for_request()
 
     now = datetime.now().year
     fy_start = get_fiscal_year_start_month()
@@ -144,7 +147,9 @@ def _existing_period_close(period_id: int):
 
 def generate_closing_entries_for_period(period_id: int) -> Dict[str, Any]:
     from models import FiscalPeriod
+    from utils.tenant_fiscal_schema import ensure_fiscal_tables_for_request
 
+    ensure_fiscal_tables_for_request()
     period = db.session.get(FiscalPeriod, period_id)
     if not period:
         raise ValueError("الفترة غير موجودة")
@@ -371,7 +376,9 @@ def close_fiscal_period(
     notes: Optional[str] = None,
 ) -> Dict[str, Any]:
     from models import FiscalPeriod, PeriodClose
+    from utils.tenant_fiscal_schema import ensure_fiscal_tables_for_request
 
+    ensure_fiscal_tables_for_request()
     period = db.session.get(FiscalPeriod, period_id)
     if not period:
         raise ValueError("الفترة غير موجودة")

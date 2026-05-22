@@ -1,0 +1,31 @@
+{% extends 'tenant_console/base_tenant_console.html' %}
+{% block tenant_console_title %}إعدادات المحاسبة{% endblock %}
+
+{% block tenant_console_content %}
+<div class="tenant-console-hero">
+  <h4 class="mb-1 font-weight-bold">إعدادات المحاسبة</h4>
+  <p class="text-muted small mb-0">تنطبق على شركتك فقط (<code>{{ gm_tenant_slug }}</code>) — توليد الفترات والإقفال.</p>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <form method="post" class="row g-3" style="max-width: 480px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="col-12">
+        <label class="form-label">شهر بداية السنة المالية</label>
+        <select name="fiscal_year_start_month" class="form-control">
+          {% for m in range(1, 13) %}
+          <option value="{{ m }}" {% if fiscal_year_start_month == m %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+        <div class="form-text">يُستخدم عند توليد الفترات الشهرية والربعية والسنوية.</div>
+      </div>
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ</button>
+        <a href="{{ url_for('tenant_fiscal_bp.index') }}" class="btn btn-outline-secondary">إقفال الفترات</a>
+        <a href="{{ url_for('tenant_console.index') }}" class="btn btn-link">لوحة المالك</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

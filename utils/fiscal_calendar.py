@@ -37,8 +37,9 @@ class PeriodSpec:
 
 def get_fiscal_year_start_month() -> int:
     try:
-        from models import SystemSettings
-        m = int(SystemSettings.get_setting("fiscal_year_start_month", 1) or 1)
+        from utils.print_branding import get_scoped_setting
+
+        m = int(get_scoped_setting("fiscal_year_start_month", 1) or 1)
         return max(1, min(12, m))
     except Exception:
         return 1

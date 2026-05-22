@@ -17,14 +17,13 @@ tenant_console_bp = Blueprint("tenant_console", __name__, url_prefix="/console")
 def _tenant_hub_sections():
     from utils.branding_assets import is_tenant_session_user
 
-    if is_tenant_session_user():
-        return TENANT_HUB_SECTIONS
-    filtered = []
+    owner = is_tenant_session_user()
+    sections = []
     for section in TENANT_HUB_SECTIONS:
-        if section["id"] == "brand":
+        if section.get("owner_only") and not owner:
             continue
-        filtered.append(section)
-    return tuple(filtered)
+        sections.append(section)
+    return tuple(sections)
 
 
 @tenant_console_bp.route("/", endpoint="index")
@@ -75,4 +74,31 @@ def branding():
         preview=preview,
         letterhead_mode_key=LETTERHEAD_MODE_KEY,
         branding_scope=SCOPE_TENANT,
+    )
+
+
+@tenant_console_bp.route("/business-settings", methods=["GET", "POST"], endpoint="business_settings")
+@login_required
+def business_settings():
+    """ثوابت محاسبية للتينانت (سنة مالية، إلخ) — داخل schema الشركة فقط."""
+    guard = require_tenant_owner_console(expected_slug=g.tenant_slug)
+    if guard is not None:
+        return guard
+    from models import SystemSettings
+    from utils.print_branding import get_scoped_setting
+
+    if request.method == "POST":
+        try:
+            m = int(request.form.get("fiscal_year_start_month") or 1)
+            m = max(1, min(12, m))
+            SystemSettings.set_setting("fiscal_year_start_month", m, data_type="integer")
+            flash("تم حفظ إعدادات المحاسبة.", "success")
+        except (TypeError, ValueError):
+            flash("قيمة شهر بداية السنة غير صالحة.", "danger")
+        return redirect(url_for("tenant_console.business_settings"))
+
+    fy_month = int(get_scoped_setting("fiscal_year_start_month", 1) or 1)
+    return render_template(
+        "tenant_console/business_settings.html",
+        fiscal_year_start_month=fy_month,
     )

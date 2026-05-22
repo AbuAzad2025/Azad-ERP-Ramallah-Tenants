@@ -114,8 +114,28 @@ def index():
         }
     }
     
-    from flask import make_response
-    resp = make_response(render_template('security/ledger_control.html', stats=stats))
+    from flask import g, make_response, url_for
+
+    ledger_api_base = url_for("ledger_control.index").rstrip("/")
+    fiscal_manage_url = (
+        url_for("tenant_fiscal_bp.index")
+        if getattr(g, "tenant_slug", None)
+        else url_for("fiscal_periods_bp.index")
+    )
+    hub_back_url = (
+        url_for("tenant_console.index")
+        if getattr(g, "tenant_slug", None)
+        else url_for("security.index")
+    )
+    resp = make_response(
+        render_template(
+            "security/ledger_control.html",
+            stats=stats,
+            ledger_api_base=ledger_api_base,
+            fiscal_manage_url=fiscal_manage_url,
+            hub_back_url=hub_back_url,
+        )
+    )
     resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     resp.headers['Pragma'] = 'no-cache'
     resp.headers['Expires'] = '0'

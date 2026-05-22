@@ -57,15 +57,35 @@
         <i class="fas fa-home"></i> لوحة المالك
       </a>
       {% if is_tenant_session %}
-      <div class="nav-header">الهوية</div>
+      <div class="nav-header">الهوية والإعدادات</div>
       <a href="{{ url_for('tenant_console.branding') }}" class="{% if request.endpoint == 'tenant_console.branding' %}active{% endif %}">
         <i class="fas fa-palette"></i> الهوية والترويسة
+      </a>
+      <a href="{{ url_for('tenant_console.business_settings') }}" class="{% if request.endpoint == 'tenant_console.business_settings' %}active{% endif %}">
+        <i class="fas fa-sliders-h"></i> إعدادات المحاسبة
       </a>
       {% endif %}
       <div class="nav-header">التشغيل</div>
       <a href="{{ url_for('main.dashboard') }}">
         <i class="fas fa-tachometer-alt"></i> لوحة التشغيل
       </a>
+      <a href="{{ url_for('sales_bp.list_sales') }}">
+        <i class="fas fa-shopping-cart"></i> المبيعات
+      </a>
+      <a href="{{ url_for('payments.index') }}">
+        <i class="fas fa-money-bill-wave"></i> الدفعات
+      </a>
+      <div class="nav-header">المحاسبة</div>
+      <a href="{{ url_for('ledger_control.index') }}" class="{% if request.endpoint == 'ledger_control.index' %}active{% endif %}">
+        <i class="fas fa-book"></i> دفتر الأستاذ
+      </a>
+      <a href="{{ url_for('tenant_fiscal_bp.index') }}" class="{% if request.endpoint and request.endpoint.startswith('tenant_fiscal_bp.') %}active{% endif %}">
+        <i class="fas fa-calendar-check"></i> إقفال الفترات
+      </a>
+      <a href="{{ url_for('financial_reports.index') }}">
+        <i class="fas fa-chart-pie"></i> التقارير المالية
+      </a>
+      <div class="nav-header">الفريق</div>
       <a href="{{ url_for('users_bp.list_users') }}">
         <i class="fas fa-users"></i> المستخدمون
       </a>

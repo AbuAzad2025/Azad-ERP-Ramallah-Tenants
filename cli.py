@@ -3972,12 +3972,15 @@ def backfill_sale_invoices(limit, dry_run):
 @click.option("--no-quarterly", is_flag=True)
 @click.option("--no-half", is_flag=True)
 @click.option("--no-year", is_flag=True)
+@click.option(
+    "--all-tenants",
+    is_flag=True,
+    help="مزامنة فترات كل تينانت في schema الخاص (وليس public فقط)",
+)
 @with_appcontext
-def fiscal_periods_sync(from_year, to_year, no_monthly, no_quarterly, no_half, no_year):
+def fiscal_periods_sync(from_year, to_year, no_monthly, no_quarterly, no_half, no_year, all_tenants):
     """توليد الفترات المحاسبية (شهر / ربع / نصف / سنة)."""
-    from utils.period_close_service import sync_fiscal_periods
-
-    stats = sync_fiscal_periods(
+    kwargs = dict(
         from_year=from_year,
         to_year=to_year,
         include_monthly=not no_monthly,
@@ -3985,7 +3988,33 @@ def fiscal_periods_sync(from_year, to_year, no_monthly, no_quarterly, no_half, n
         include_half=not no_half,
         include_year=not no_year,
     )
+    if all_tenants:
+        from utils.tenant_fiscal_schema import sync_fiscal_periods_all_tenants
+
+        for stats in sync_fiscal_periods_all_tenants(**kwargs):
+            click.echo(
+                f"  {stats.get('slug')}/{stats.get('schema')}: "
+                f"created={stats.get('created')} updated={stats.get('updated')}"
+            )
+        return
+
+    from utils.period_close_service import sync_fiscal_periods
+
+    stats = sync_fiscal_periods(**kwargs)
     click.echo(f"OK: created={stats['created']} updated={stats['updated']}")
+
+
+@click.command("tenants-ensure-fiscal-tables")
+@with_appcontext
+def tenants_ensure_fiscal_tables():
+    """إنشاء جداول إقفال الفترات في مخططات التينانت إن لم تكن موجودة."""
+    from utils.tenant_fiscal_schema import ensure_all_tenant_fiscal_tables
+
+    for row in ensure_all_tenant_fiscal_tables(db.session):
+        click.echo(
+            f"  {row.get('slug')}/{row.get('schema')}: "
+            f"created={row.get('created', [])} skipped={row.get('skipped', row.get('note', ''))}"
+        )
 
 
 @click.command("fiscal-period-close")
@@ -4590,8 +4619,13 @@ def restore_upgrade_production(backup_path: str, force: bool, confirm_restore: b
 
 @click.command("db-verify")
 @click.option("--fix-stamp", is_flag=True, help="ختم مخططات التينانت برأس public إن اختلفت")
+@click.option(
+    "--ensure-fiscal",
+    is_flag=True,
+    help="إنشاء جداول fiscal_periods/period_closes/entity_period_balances في مخططات التينانت",
+)
 @with_appcontext
-def db_verify(fix_stamp: bool) -> None:
+def db_verify(fix_stamp: bool, ensure_fiscal: bool) -> None:
     """التحقق من رأس Alembic وتطابق ختم مخططات التينانت."""
     from flask import current_app
     from sqlalchemy import text as sa_text
@@ -4652,6 +4686,31 @@ def db_verify(fix_stamp: bool) -> None:
                     f"مخطط {schema_name}: {t_rev} ≠ head {head} — "
                     f"نفّذ: flask db-verify --fix-stamp أو flask tenants setup-production"
                 )
+        if schema_name.lower() != "public":
+            from utils.tenant_fiscal_schema import FISCAL_TABLES, ensure_fiscal_tables_in_schema
+
+            missing = []
+            for tbl in FISCAL_TABLES:
+                has_tbl = db.session.execute(
+                    sa_text(
+                        """
+                        SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = :s AND table_name = :t
+                        """
+                    ),
+                    {"s": schema_name, "t": tbl},
+                ).scalar()
+                if not has_tbl:
+                    missing.append(tbl)
+            if missing:
+                if ensure_fiscal:
+                    ensure_fiscal_tables_in_schema(db.session, schema_name)
+                    click.echo(f"  → أُنشئت جداول الإقفال في {schema_name}: {missing}")
+                else:
+                    raise click.ClickException(
+                        f"مخطط {schema_name}: جداول إقفال ناقصة {missing} — "
+                        f"نفّذ: flask tenants-ensure-fiscal-tables أو db-verify --ensure-fiscal"
+                    )
 
     click.echo("✅ التهجيرات مكتملة ومتسقة.")
 
@@ -4924,7 +4983,7 @@ def register_cli(app) -> None:
         optimize_db, perf_snapshot, recompute_sale_returns, link_missing_counterparties,
         seed_employees, seed_salaries, seed_expenses_demo, seed_customer_statement_demo, seed_branches,
         workflow_check_timeouts, gl_recreate_payments, sync_balances, backfill_sale_invoices,
-        fiscal_periods_sync, fiscal_period_close,
+        fiscal_periods_sync, fiscal_period_close, tenants_ensure_fiscal_tables,
         accounting_audit, audit_integrity, checks_sync_due,
         seed_product_categories, restore_product_categories,
         restore_upgrade_production,

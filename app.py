@@ -81,6 +81,7 @@ from routes.supplier_settlements import supplier_settlements_bp
 from routes.ledger_blueprint import ledger_bp
 from routes.ledger_control import ledger_control_bp
 from routes.fiscal_periods import fiscal_periods_bp
+from routes.tenant_fiscal_periods import tenant_fiscal_bp
 from routes.financial_reports import financial_reports_bp
 from routes.accounting_validation import accounting_validation_bp
 from routes.accounting_docs import accounting_docs_bp
@@ -788,6 +789,7 @@ def _register_blueprints(app):
         auth_bp,
         main_bp,
         tenant_console_bp,
+        tenant_fiscal_bp,
         users_bp,
         service_bp,
         customers_bp,
@@ -1497,8 +1499,12 @@ def create_app(config_object=Config) -> Flask:
         if not tenant or not getattr(tenant, "is_active", False):
             return abort(404)
         g.tenant_schema = getattr(tenant, "schema_name", None)
+        # مسارات أمان المنصة محجوبة — يُستثنى دفتر الأستاذ (بيانات التينانت عبر search_path)
+        _tenant_security_allow = ("/security/ledger-control",)
         if request.path.startswith(("/security", "/advanced")):
-            return abort(404)
+            if not any(request.path.startswith(p) for p in _tenant_security_allow):
+                return abort(404)
+
         try:
             if current_user.is_authenticated:
                 uid = str(session.get("_user_id") or "")

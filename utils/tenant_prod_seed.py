@@ -357,6 +357,9 @@ def setup_production_dev_tenants(
                 if copy_data
                 else {"tables": 0, "rows": 0, "skipped": []}
             )
+            from utils.tenant_fiscal_schema import ensure_fiscal_tables_in_schema
+
+            ensure_fiscal_tables_in_schema(db.session, schema_name)
             _stamp_tenant_alembic_head(db.session, schema_name)
             db.session.commit()
 
