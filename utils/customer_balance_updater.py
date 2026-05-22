@@ -99,25 +99,14 @@ def update_customer_balance_components(customer_id, session=None):
                 # - returned_checks_in_balance: شيكات مرتجعة واردة
                 # - expenses_balance: مصروفات عادية
                 
-                customer_rights = (
-                    Decimal(str(components.get('payments_in_balance', 0) or 0)) +  # دفعات واردة (حق له)
-                    Decimal(str(components.get('returns_balance', 0) or 0)) +  # مرتجعات
-                    Decimal(str(components.get('returned_checks_out_balance', 0) or 0)) +  # شيكات مرتجعة صادرة
-                    Decimal(str(components.get('service_expenses_balance', 0) or 0))  # مصروفات توريد خدمات
+                from utils.accounting_formulas import (
+                    customer_balance_from_components,
+                    customer_obligations_total,
+                    customer_rights_total,
                 )
-                
-                customer_obligations = (
-                    Decimal(str(components.get('sales_balance', 0) or 0)) +  # مبيعات (يشمل المبيعات من الحجوزات عند التسليم)
-                    Decimal(str(components.get('invoices_balance', 0) or 0)) +
-                    Decimal(str(components.get('services_balance', 0) or 0)) +
-                    Decimal(str(components.get('preorders_balance', 0) or 0)) +  # دائماً = 0 (قيمة الحجز الكاملة لا تُقيد قبل التسليم)
-                    Decimal(str(components.get('online_orders_balance', 0) or 0)) +
-                    Decimal(str(components.get('payments_out_balance', 0) or 0)) +  # دفعات صادرة (التزام عليه)
-                    Decimal(str(components.get('returned_checks_in_balance', 0) or 0)) +
-                    Decimal(str(components.get('expenses_balance', 0) or 0))
-                )
-                
-                current_balance = opening_balance + customer_rights - customer_obligations
+                customer_rights = customer_rights_total(components)
+                customer_obligations = customer_obligations_total(components)
+                current_balance = customer_balance_from_components(opening_balance, components)
                 
                 customer.sales_balance = Decimal(str(components.get('sales_balance', 0)))
                 customer.returns_balance = Decimal(str(components.get('returns_balance', 0)))
@@ -180,25 +169,14 @@ def update_customer_balance_components(customer_id, session=None):
             # الرصيد = الرصيد الافتتاحي + الحقوق - الالتزامات
             # سالب = عليه لنا (يجب أن يدفع)، موجب = له عندنا (دفع زيادة)
             
-            customer_rights = (
-                Decimal(str(components.get('payments_in_balance', 0) or 0)) +  # دفعات واردة
-                Decimal(str(components.get('returns_balance', 0) or 0)) +  # مرتجعات
-                Decimal(str(components.get('returned_checks_out_balance', 0) or 0)) +  # شيكات مرتجعة صادرة
-                Decimal(str(components.get('service_expenses_balance', 0) or 0))  # مصروفات توريد خدمات
+            from utils.accounting_formulas import (
+                customer_balance_from_components,
+                customer_obligations_total,
+                customer_rights_total,
             )
-            
-            customer_obligations = (
-                Decimal(str(components.get('sales_balance', 0) or 0)) +
-                Decimal(str(components.get('invoices_balance', 0) or 0)) +
-                Decimal(str(components.get('services_balance', 0) or 0)) +
-                Decimal(str(components.get('preorders_balance', 0) or 0)) +
-                Decimal(str(components.get('online_orders_balance', 0) or 0)) +
-                Decimal(str(components.get('payments_out_balance', 0) or 0)) +
-                Decimal(str(components.get('returned_checks_in_balance', 0) or 0)) +
-                Decimal(str(components.get('expenses_balance', 0) or 0))
-            )
-            
-            current_balance = opening_balance + customer_rights - customer_obligations
+            customer_rights = customer_rights_total(components)
+            customer_obligations = customer_obligations_total(components)
+            current_balance = customer_balance_from_components(opening_balance, components)
             
             session.execute(
                 sa_text("""

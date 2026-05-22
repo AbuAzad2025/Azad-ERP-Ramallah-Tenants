@@ -3909,6 +3909,28 @@ def sync_balances(entity, limit, dry_run, include_archived, batch_size):
         click.echo("\n✅ تمت مزامنة الأرصدة بنجاح.")
 
 
+@click.command("accounting-audit")
+@click.option("--limit", type=int, default=0, show_default=True, help="0 = كل الجهات")
+@click.option("--fix", is_flag=True, help="إعادة حساب الأرصدة المخزّنة عند الفروقات")
+@click.option("--fix-policy", is_flag=True, help="فك ربط الدفعات القديمة من المبيعات وربطها بالعميل فقط")
+@click.option("--include-archived", is_flag=True)
+@with_appcontext
+def accounting_audit(limit, fix, fix_policy, include_archived):
+    """تدقيق محاسبي صارم: حقوق / التزامات / رصيد للعميل والمورد والشريك."""
+    from utils.accounting_audit import audit_entity_balances, format_audit_report_text
+
+    report = audit_entity_balances(
+        limit=int(limit or 0),
+        include_archived=include_archived,
+        fix=fix,
+        fix_policy=fix_policy,
+    )
+    click.echo(format_audit_report_text(report))
+    s = report.get("summary", {})
+    if any(s.get(k, 0) for k in s):
+        raise SystemExit(1)
+
+
 @click.command("audit-integrity")
 @click.option(
     "--scope",
@@ -4651,7 +4673,7 @@ def register_cli(app) -> None:
         create_system_admin, create_system_admin_interactive,
         optimize_db, perf_snapshot, recompute_sale_returns, link_missing_counterparties,
         seed_employees, seed_salaries, seed_expenses_demo, seed_customer_statement_demo, seed_branches,
-        workflow_check_timeouts, gl_recreate_payments, sync_balances, audit_integrity, checks_sync_due,
+        workflow_check_timeouts, gl_recreate_payments, sync_balances, accounting_audit, audit_integrity, checks_sync_due,
         seed_product_categories, restore_product_categories,
         restore_upgrade_production,
         upgrade_production

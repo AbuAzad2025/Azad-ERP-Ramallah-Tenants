@@ -1008,9 +1008,14 @@ def _build_customer_balance_view_impl(customer_id, session):
         {"key": "expenses_balance", "label": "مصاريف / خصومات", "flow": "OUT", "amount": _component("expenses_balance")},
     ]
 
-    rights_total = sum((row["amount"] for row in rights_rows), Decimal("0.00"))
-    obligations_total = sum((row["amount"] for row in obligations_rows), Decimal("0.00"))
-    calculated_balance = opening_balance + rights_total - obligations_total
+    from utils.accounting_formulas import (
+        customer_balance_from_components,
+        customer_obligations_total,
+        customer_rights_total,
+    )
+    rights_total = customer_rights_total(components)
+    obligations_total = customer_obligations_total(components)
+    calculated_balance = customer_balance_from_components(opening_balance, components)
     stored_balance = _dec(customer.current_balance or 0)
     difference = calculated_balance - stored_balance
     tolerance = Decimal("0.01")

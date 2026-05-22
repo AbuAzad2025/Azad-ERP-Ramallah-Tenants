@@ -636,23 +636,14 @@ def update_supplier_balance_components(supplier_id, session=None, emit: bool = T
                 Decimal(str(components.get('sale_returns_from_supplier', 0) or 0)) +
                 Decimal(str(components.get('sale_returns_from_customer', 0) or 0))
             )
-            supplier_credits = (
-                Decimal(str(components.get('exchange_items_balance', 0) or 0)) +
-                Decimal(str(components.get('expenses_service_supply', 0) or 0)) +
-                Decimal(str(components.get('expenses_normal', 0) or 0)) +
-                Decimal(str(sale_returns_total or 0)) +
-                Decimal(str(components.get('payments_in_balance', 0) or 0)) +
-                Decimal(str(components.get('returned_checks_out_balance', 0) or 0))
+            from utils.accounting_formulas import (
+                supplier_balance_from_components,
+                supplier_obligations_total,
+                supplier_rights_total,
             )
-            supplier_debits = (
-                Decimal(str(components.get('returns_balance', 0) or 0)) +
-                Decimal(str(components.get('sales_balance', 0) or 0)) +
-                Decimal(str(components.get('services_balance', 0) or 0)) +
-                Decimal(str(components.get('preorders_balance', 0) or 0)) +
-                Decimal(str(components.get('payments_out_balance', 0) or 0)) +
-                Decimal(str(components.get('returned_checks_in_balance', 0) or 0))
-            )
-            current_balance = opening_balance + supplier_credits - supplier_debits
+            supplier_credits = supplier_rights_total(components)
+            supplier_debits = supplier_obligations_total(components)
+            current_balance = supplier_balance_from_components(opening_balance, components)
             
             supplier.exchange_items_balance = Decimal(str(components.get('exchange_items_balance', 0)))
             supplier.sale_returns_balance = sale_returns_total
@@ -702,23 +693,14 @@ def update_supplier_balance_components(supplier_id, session=None, emit: bool = T
                 Decimal(str(components.get('sale_returns_from_supplier', 0) or 0)) +
                 Decimal(str(components.get('sale_returns_from_customer', 0) or 0))
             )
-            supplier_credits = (
-                Decimal(str(components.get('exchange_items_balance', 0) or 0)) +
-                Decimal(str(components.get('expenses_service_supply', 0) or 0)) +
-                Decimal(str(components.get('expenses_normal', 0) or 0)) +
-                Decimal(str(sale_returns_total or 0)) +
-                Decimal(str(components.get('payments_in_balance', 0) or 0)) +
-                Decimal(str(components.get('returned_checks_out_balance', 0) or 0))
+            from utils.accounting_formulas import (
+                supplier_balance_from_components,
+                supplier_obligations_total,
+                supplier_rights_total,
             )
-            supplier_debits = (
-                Decimal(str(components.get('returns_balance', 0) or 0)) +
-                Decimal(str(components.get('sales_balance', 0) or 0)) +
-                Decimal(str(components.get('services_balance', 0) or 0)) +
-                Decimal(str(components.get('preorders_balance', 0) or 0)) +
-                Decimal(str(components.get('payments_out_balance', 0) or 0)) +
-                Decimal(str(components.get('returned_checks_in_balance', 0) or 0))
-            )
-            current_balance = opening_balance + supplier_credits - supplier_debits
+            supplier_credits = supplier_rights_total(components)
+            supplier_debits = supplier_obligations_total(components)
+            current_balance = supplier_balance_from_components(opening_balance, components)
             
             session.execute(
                 sa_text("""
@@ -793,23 +775,35 @@ def build_supplier_balance_view(supplier_id, session=None):
         except Exception:
             pass
 
+    from utils.accounting_formulas import (
+        supplier_balance_from_components,
+        supplier_obligations_total,
+        supplier_rights_total,
+    )
+
     rights_rows = [
+        {"key": "exchange_items_balance", "label": "قطع التبادل", "amount": _component("exchange_items_balance"), "flow": "EXCHANGE"},
         {"key": "expenses_service_supply", "label": "توريد خدمة", "amount": _component("expenses_service_supply"), "flow": "SERVICE_SUPPLY"},
         {"key": "expenses_normal", "label": "مصروفات عادية", "amount": _component("expenses_normal"), "flow": "EXPENSE"},
         {"key": "sale_returns_from_supplier", "label": "مرتجع مبيعات (من المورد)", "amount": _component("sale_returns_from_supplier"), "flow": "SALE_RETURN_SUPPLIER"},
+        {"key": "sale_returns_from_customer", "label": "مرتجع مبيعات (من عميل مرتبط)", "amount": _component("sale_returns_from_customer"), "flow": "SALE_RETURN_CUSTOMER"},
+        {"key": "payments_in_balance", "label": "دفعات واردة منه", "amount": _component("payments_in_balance"), "flow": "PAYMENT_IN"},
         {"key": "returned_checks_out_balance", "label": "شيكات صادرة له ومرتجعة", "amount": _component("returned_checks_out_balance"), "flow": "RETURNED_OUT"},
     ]
 
     obligations_rows = [
-        {"key": "returned_checks_in_balance", "label": "شيكات واردة منه ومرتجعة", "amount": _component("returned_checks_in_balance"), "flow": "RETURNED_IN"},
-        {"key": "payments_out_balance", "label": "دفعات دفعنا له", "amount": _component("payments_out_balance"), "flow": "PAYMENT_OUT"},
         {"key": "returns_balance", "label": "مرتجعات توريد", "amount": _component("returns_balance"), "flow": "RETURN_SUPPLY"},
+        {"key": "sales_balance", "label": "مبيعات له (عميل مرتبط)", "amount": _component("sales_balance"), "flow": "SALE"},
+        {"key": "services_balance", "label": "خدمات له", "amount": _component("services_balance"), "flow": "SERVICE"},
+        {"key": "preorders_balance", "label": "حجوزات له", "amount": _component("preorders_balance"), "flow": "PREORDER"},
+        {"key": "payments_out_balance", "label": "دفعات دفعنا له", "amount": _component("payments_out_balance"), "flow": "PAYMENT_OUT"},
+        {"key": "returned_checks_in_balance", "label": "شيكات واردة منه ومرتجعة", "amount": _component("returned_checks_in_balance"), "flow": "RETURNED_IN"},
     ]
 
-    rights_total = sum((row["amount"] for row in rights_rows), Decimal("0.00"))
-    obligations_total = sum((row["amount"] for row in obligations_rows), Decimal("0.00"))
+    rights_total = supplier_rights_total(components)
+    obligations_total = supplier_obligations_total(components)
     stored_balance = _dec(supplier.current_balance or 0)
-    calculated_balance = opening_balance + rights_total - obligations_total
+    calculated_balance = supplier_balance_from_components(opening_balance, components)
     tolerance = Decimal("0.01")
 
     def _serialize(rows):

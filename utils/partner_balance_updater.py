@@ -73,27 +73,14 @@ def update_partner_balance_components(partner_id, session=None, emit: bool = Tru
             # - expenses_balance: مصروفات عادية
             # - returned_checks_in_balance: شيكات مرتجعة واردة (ناقص من ما عليه)
             
-            partner_rights = (
-                Decimal(str(components.get('inventory_balance', 0) or 0)) +  # نصيبه من المخزون
-                Decimal(str(components.get('sales_share_balance', 0) or 0)) +  # نصيبه من المبيعات
-                Decimal(str(components.get('shipments_share_balance', 0) or 0)) +
-                Decimal(str(components.get('payments_in_balance', 0) or 0)) +  # دفعات واردة (تشمل العربونات)
-                Decimal(str(components.get('preorders_prepaid_balance', 0) or 0)) +  # عربونات مدفوعة
-                Decimal(str(components.get('service_expenses_balance', 0) or 0)) +  # مصروفات توريد خدمات
-                Decimal(str(components.get('returned_checks_out_balance', 0) or 0))  # شيكات مرتجعة صادرة
+            from utils.accounting_formulas import (
+                partner_balance_from_components,
+                partner_obligations_total,
+                partner_rights_total,
             )
-            
-            partner_obligations = (
-                Decimal(str(components.get('sales_to_partner_balance', 0) or 0)) +  # مبيعات له
-                Decimal(str(components.get('service_fees_balance', 0) or 0)) +  # رسوم صيانة له
-                Decimal(str(components.get('preorders_to_partner_balance', 0) or 0)) +  # حجوزات له
-                Decimal(str(components.get('damaged_items_balance', 0) or 0)) +  # قطع تالفة
-                Decimal(str(components.get('payments_out_balance', 0) or 0)) +  # دفعات صادرة (دفعنا له)
-                Decimal(str(components.get('expenses_balance', 0) or 0)) +  # مصروفات عادية
-                Decimal(str(components.get('returned_checks_in_balance', 0) or 0))  # شيكات مرتجعة واردة
-            )
-            
-            current_balance = opening_balance + partner_rights - partner_obligations
+            partner_rights = partner_rights_total(components)
+            partner_obligations = partner_obligations_total(components)
+            current_balance = partner_balance_from_components(opening_balance, components)
             
             partner.inventory_balance = Decimal(str(components.get('inventory_balance', 0)))
             partner.sales_share_balance = Decimal(str(components.get('sales_share_balance', 0)))
@@ -151,27 +138,14 @@ def update_partner_balance_components(partner_id, session=None, emit: bool = Tru
             # الرصيد = الرصيد الافتتاحي + الحقوق - الالتزامات
             # سالب = عليه لنا (عليه يدفع)، موجب = له عندنا (له رصيد)
             
-            partner_rights = (
-                Decimal(str(components.get('inventory_balance', 0) or 0)) +  # نصيبه من المخزون
-                Decimal(str(components.get('sales_share_balance', 0) or 0)) +  # نصيبه من المبيعات
-                Decimal(str(components.get('shipments_share_balance', 0) or 0)) +
-                Decimal(str(components.get('payments_in_balance', 0) or 0)) +  # دفعات واردة (دفع لنا)
-                Decimal(str(components.get('preorders_prepaid_balance', 0) or 0)) +  # عربونات مدفوعة
-                Decimal(str(components.get('service_expenses_balance', 0) or 0)) +  # مصروفات توريد خدمات
-                Decimal(str(components.get('returned_checks_out_balance', 0) or 0))  # شيكات مرتجعة صادرة
+            from utils.accounting_formulas import (
+                partner_balance_from_components,
+                partner_obligations_total,
+                partner_rights_total,
             )
-            
-            partner_obligations = (
-                Decimal(str(components.get('sales_to_partner_balance', 0) or 0)) +  # مبيعات له
-                Decimal(str(components.get('service_fees_balance', 0) or 0)) +  # رسوم صيانة له
-                Decimal(str(components.get('preorders_to_partner_balance', 0) or 0)) +  # حجوزات له
-                Decimal(str(components.get('damaged_items_balance', 0) or 0)) +  # قطع تالفة
-                Decimal(str(components.get('payments_out_balance', 0) or 0)) +  # دفعات صادرة (دفعنا له)
-                Decimal(str(components.get('expenses_balance', 0) or 0)) +  # مصروفات عادية
-                Decimal(str(components.get('returned_checks_in_balance', 0) or 0))  # شيكات مرتجعة واردة
-            )
-            
-            current_balance = opening_balance + partner_rights - partner_obligations
+            partner_rights = partner_rights_total(components)
+            partner_obligations = partner_obligations_total(components)
+            current_balance = partner_balance_from_components(opening_balance, components)
             
             session.execute(
                 sa_text("""
@@ -270,10 +244,15 @@ def build_partner_balance_view(partner_id, session=None):
         {"key": "returned_checks_in_balance", "label": "شيكات مرتجعة واردة", "amount": _component("returned_checks_in_balance"), "flow": "CHECK_IN"},
     ]
 
-    rights_total = sum((row["amount"] for row in rights_rows), Decimal("0.00"))
-    obligations_total = sum((row["amount"] for row in obligations_rows), Decimal("0.00"))
+    from utils.accounting_formulas import (
+        partner_balance_from_components,
+        partner_obligations_total,
+        partner_rights_total,
+    )
+    rights_total = partner_rights_total(components)
+    obligations_total = partner_obligations_total(components)
     stored_balance = _dec(partner.current_balance or 0)
-    calculated_balance = opening_balance + rights_total - obligations_total
+    calculated_balance = partner_balance_from_components(opening_balance, components)
     tolerance = Decimal("0.01")
 
     def _serialize(rows):
