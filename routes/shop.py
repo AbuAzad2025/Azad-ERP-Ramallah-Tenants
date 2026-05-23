@@ -1291,7 +1291,7 @@ def admin_product_new():
                 db.session.add(stock)
         try:
             db.session.commit()
-            utils.flash_success("تم تحديث المنتج الموجود" if existing else "✅ تم إضافة المنتج", "success")
+            utils.flash_success("تم تحديث المنتج." if existing else "تم إضافة المنتج.")
             return redirect(url_for("shop.admin_products"))
         except SQLAlchemyError as e:
             db.session.rollback()
