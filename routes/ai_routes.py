@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+import utils
 from utils import permission_required
 from permissions_config.enums import SystemPermissions
 from permissions_config.role_policy import is_platform_owner_role
@@ -64,13 +65,13 @@ def ai_access(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            flash("⛔ يجب تسجيل الدخول", "danger")
+            utils.flash_error("يجب تسجيل الدخول أولاً.")
             return redirect(url_for("auth.login"))
 
         from AI.engine.ai_permissions import is_ai_enabled
 
         if not is_ai_enabled() and not _has_permission(SystemPermissions.ACCESS_OWNER_DASHBOARD):
-            flash("⛔ المساعد الذكي معطّل حالياً", "warning")
+            utils.flash_warning("المساعد الذكي معطّل حالياً.")
             return redirect(url_for("main.dashboard"))
 
         is_owner_like = bool(
@@ -80,13 +81,13 @@ def ai_access(f):
             or _has_permission(SystemPermissions.ACCESS_OWNER_DASHBOARD)
         )
         if not is_owner_like:
-            flash("⛔ غير مصرح لك بالوصول للمساعد الذكي", "danger")
+            utils.flash_error(utils.MSG_NOT_ALLOWED)
             return redirect(url_for("main.dashboard"))
 
         if _has_permission(SystemPermissions.ACCESS_AI_ASSISTANT):
             return f(*args, **kwargs)
 
-        flash("⛔ غير مصرح لك بالوصول للمساعد الذكي", "danger")
+        utils.flash_error(utils.MSG_NOT_ALLOWED)
         return redirect(url_for("main.dashboard"))
 
     return decorated_function
@@ -107,14 +108,14 @@ def assistant():
     if request.method == "POST":
         query = request.form.get("query", "").strip()
         if not query:
-            flash("⚠️ الرجاء إدخال سؤال", "warning")
+            utils.flash_warning("الرجاء إدخال سؤال")
             return redirect(url_for("ai.assistant"))
         try:
             response = _chat_for_current_user(query)
             _save_conversation(query, response)
             return render_template("ai/ai_assistant.html", query=query, response=response, suggestions=_get_ai_suggestions())
         except Exception as exc:
-            flash(f"❌ خطأ: {exc}", "danger")
+            utils.flash_error(utils.user_friendly_error(exc))
             return redirect(url_for("ai.assistant"))
     return render_template("ai/ai_assistant.html", suggestions=_get_ai_suggestions(), recent_conversations=_get_recent_conversations(limit=5))
 
@@ -143,9 +144,9 @@ def system_map():
         if action == "rebuild":
             try:
                 build_system_map()
-                flash("✅ تم إعادة بناء خريطة النظام بنجاح!", "success")
+                utils.flash_success("تم إعادة بناء خريطة النظام بنجاح!")
             except Exception as exc:
-                flash(f"⚠️ خطأ: {exc}", "danger")
+                utils.flash_error(utils.user_friendly_error(exc))
             return redirect(url_for("ai.system_map"))
     system_map_data = load_system_map()
     map_exists = system_map_data is not None

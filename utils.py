@@ -2787,7 +2787,10 @@ def serialize_enum(enum_cls):
 
 
 from utils.flash_messages import (  # noqa: E402
+    MSG_DELETE_FAILED,
     MSG_INTERNAL_ERROR,
+    MSG_NOT_ALLOWED,
+    MSG_SAVE_FAILED,
     MSG_SAVED,
     flash_error,
     flash_info,

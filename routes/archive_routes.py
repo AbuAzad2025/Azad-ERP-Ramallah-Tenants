@@ -35,7 +35,7 @@ def archive_shipment(shipment_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'error')
+        utils.flash_error()
         return redirect(url_for('shipments_bp.list_shipments'))
 
 @archive_routes_bp.route("/checks/archive/<int:check_id>", methods=["POST"])
@@ -69,5 +69,5 @@ def archive_check(check_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'error')
+        utils.flash_error()
         return redirect(url_for('checks.index'))

@@ -82,7 +82,7 @@ def balance_check():
     except Exception as e:
         current_app.logger.error(f"خطأ في فحص التوازن: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @accounting_validation_bp.route('/account-consistency')
 @permission_required(SystemPermissions.VALIDATE_ACCOUNTING)
@@ -130,7 +130,7 @@ def account_consistency():
     except Exception as e:
         current_app.logger.error(f"خطأ في فحص اتساق الحسابات: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @accounting_validation_bp.route('/entity-balance-verification')
 @permission_required(SystemPermissions.VALIDATE_ACCOUNTING)
@@ -179,7 +179,7 @@ def entity_balance_verification():
                     'entity_type': 'CUSTOMER',
                     'entity_id': customer.id,
                     'entity_name': customer.name,
-                    'error': 'حدث خطأ داخلي',
+                    'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.',
                     'status': 'ERROR'
                 })
         
@@ -198,7 +198,7 @@ def entity_balance_verification():
     except Exception as e:
         current_app.logger.error(f"خطأ في التحقق من أرصدة الكيانات: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @accounting_validation_bp.route('/transaction-integrity')
 @permission_required(SystemPermissions.VALIDATE_ACCOUNTING)
@@ -307,7 +307,7 @@ def transaction_integrity():
     except Exception as e:
         current_app.logger.error(f"خطأ في فحص تكامل المعاملات: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @accounting_validation_bp.route('/periodic-audit')
 @permission_required(SystemPermissions.VALIDATE_ACCOUNTING)
@@ -388,7 +388,7 @@ def periodic_audit():
     except Exception as e:
         current_app.logger.error(f"خطأ في المراجعة الدورية: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @accounting_validation_bp.route('/fix-unbalanced-batches')
 @permission_required(SystemPermissions.VALIDATE_ACCOUNTING)
@@ -478,4 +478,4 @@ def fix_unbalanced_batches():
         db.session.rollback()
         current_app.logger.error(f"خطأ في إصلاح القيود غير المتوازنة: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500

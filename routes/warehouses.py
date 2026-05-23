@@ -363,7 +363,7 @@ def api_warehouse_info():
         })
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @warehouse_bp.route("/transaction/<int:id>", methods=["GET"], endpoint="transaction_detail")
@@ -413,7 +413,7 @@ def api_upload_product_image():
         )
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"error": "حدث خطأ داخلي"}), 500
+        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 def _in_chunks(items, size=500):
@@ -445,7 +445,7 @@ def api_prepare_online_fields():
         return jsonify({"ok": True, "schema": schema})
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"error": "حدث خطأ داخلي"}), 500
+        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @warehouse_bp.route("/api/apply_online_defaults", methods=["POST"], endpoint="api_apply_online_defaults")
 @login_required
@@ -946,14 +946,14 @@ def delete_warehouse(warehouse_id):
     try:
         db.session.delete(warehouse)
         db.session.commit()
-        flash(f"✅ تم حذف المستودع '{warehouse.name}' بنجاح", "success")
+        utils.flash_success(f"تم حذف المستودع '{warehouse.name}' بنجاح", "success")
     except IntegrityError as e:
         db.session.rollback()
         flash(f"⚠️ لا يمكن حذف المستودع! يحتوي على بيانات مرتبطة. قم بحذف البيانات المرتبطة أولاً أو استخدم الأرشفة بدلاً من الحذف.", "danger")
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
     return redirect(url_for("warehouse_bp.list"))
 
 
@@ -1432,7 +1432,7 @@ def transfer_inline(id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 @warehouse_bp.route("/<int:warehouse_id>/products/<int:product_id>", methods=["POST", "PATCH"], endpoint="update_product_inline")
 @login_required
@@ -2044,7 +2044,7 @@ SELECT setval(
 
         def _flash_success(product, created):
             if not created:
-                flash("✅ تم تحديث القطعة وإضافة الكمية للمخزون", "success")
+                utils.flash_success("تم تحديث القطعة وإضافة الكمية للمخزون")
                 return redirect(url_for("warehouse_bp.products", id=warehouse.id))
             if is_online and (product.online_price is None or product.online_price == 0):
                 flash("تمت إضافة القطعة، تنبيه: سعر المتجر الإلكتروني غير محدد.", "warning")
@@ -2141,7 +2141,7 @@ def import_products(id):
         rows = _read_uploaded_rows(file_obj)
     except RuntimeError as e:
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return render_template("warehouses/import_products.html", form=form, warehouse=w)
     except Exception:
         flash("تعذر قراءة الملف. الرجاء استخدام CSV أو XLSX صحيح.", "danger")
@@ -2253,7 +2253,7 @@ def preview_update(warehouse_id: int):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"error": "حدث خطأ داخلي"}), 500
+        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @warehouse_bp.route("/<int:id>/import/preview", methods=["GET", "POST"], endpoint="import_preview")
@@ -2771,7 +2771,7 @@ def ajax_update_stock(warehouse_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
     alert = "BELOW_MIN" if int(sl.quantity or 0) <= int(sl.min_stock or 0) else "OK"
     p = db.session.get(Product, pid)
@@ -2931,7 +2931,7 @@ def ajax_transfer(warehouse_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 @warehouse_bp.route("/<int:warehouse_id>/exchange", methods=["POST"], endpoint="ajax_exchange")
 @login_required
@@ -2994,7 +2994,7 @@ def ajax_exchange(warehouse_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 @warehouse_bp.route("/<int:warehouse_id>/partner-shares", methods=["GET", "POST"], endpoint="partner_shares")
 @login_required
@@ -3046,7 +3046,7 @@ def partner_shares(warehouse_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @warehouse_bp.route("/<int:id>/transfers", methods=["GET"], endpoint="transfers")
@@ -3601,7 +3601,7 @@ def preorder_convert_to_sale(preorder_id):
         except Exception:
             current_app.logger.warning(f'Failed to sync preorder GL entries: {preorder.id}')
         
-        flash(f"✅ تم إنشاء مبيعة #{sale.id} - أكمل الدفع لإتمام التسليم!", "success")
+        utils.flash_success(f"تم إنشاء مبيعة #{sale.id} - أكمل الدفع لإتمام التسليم!", "success")
         
         # جلب اسم العميل/الجهة
         entity_name = ''
@@ -3630,7 +3630,7 @@ def preorder_convert_to_sale(preorder_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for("warehouse_bp.preorder_detail", preorder_id=preorder_id))
 
 
@@ -3758,7 +3758,7 @@ def api_add_customer():
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"error": "حدث خطأ داخلي"}), 500
+        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @warehouse_bp.route("/api/add_supplier", methods=["POST"], endpoint="api_add_supplier")
@@ -3776,7 +3776,7 @@ def api_add_supplier():
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"error": "حدث خطأ داخلي"}), 500
+        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @warehouse_bp.route("/api/add_partner", methods=["POST"], endpoint="api_add_partner")
@@ -3794,7 +3794,7 @@ def api_add_partner():
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"error": "حدث خطأ داخلي"}), 500
+        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @warehouse_bp.route("/<int:id>/shipments/create", methods=["GET"], endpoint="create_warehouse_shipment")
@@ -3870,7 +3870,7 @@ def api_product_partners_list(product_id):
         return jsonify({"success": True, "partners": result})
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @warehouse_bp.route("/api/products/<int:product_id>/partners", methods=["POST"], endpoint="api_product_partners_add")
@@ -3915,7 +3915,7 @@ def api_product_partners_add(product_id):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
+        return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
     
     return jsonify({
         "success": True,
@@ -3955,7 +3955,7 @@ def api_product_partners_update(product_id, share_id):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
+        return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
     
     return jsonify({
         "success": True,
@@ -3985,7 +3985,7 @@ def api_product_partners_delete(product_id, share_id):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
+        return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
     
     return jsonify({"success": True, "message": "تم حذف الشريك بنجاح"})
 
@@ -4007,7 +4007,7 @@ def api_product_suppliers_list(product_id):
         return jsonify({"success": True, "suppliers": result})
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @warehouse_bp.route("/api/products/<int:product_id>/suppliers", methods=["POST"], endpoint="api_product_suppliers_update")
@@ -4035,7 +4035,7 @@ def api_product_suppliers_update(product_id):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
     
     # جلب اسم المورد إذا كان موجوداً
     supplier_name = ""
@@ -4066,7 +4066,7 @@ def api_partners_list():
         })
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @warehouse_bp.route("/api/suppliers/list", methods=["GET"], endpoint="api_suppliers_list")
@@ -4080,4 +4080,4 @@ def api_suppliers_list():
         })
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500

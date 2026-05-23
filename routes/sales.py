@@ -334,7 +334,7 @@ def archive_sale(id):
         except Exception:
             db.session.rollback()
             current_app.logger.exception('API error')
-            return jsonify({"error": "حدث خطأ داخلي"}), 500
+            return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @sales_bp.route("/<int:id>/restore", methods=["POST"])
 @login_required
@@ -356,9 +356,9 @@ def restore_sale(id):
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('fallback restore_sale commit failed')
-                return jsonify({"error": "حدث خطأ داخلي"}), 500
+                return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
         current_app.logger.exception('API error')
-        return jsonify({"error": "حدث خطأ داخلي"}), 500
+        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @sales_bp.route("/dashboard", methods=["GET"], endpoint="dashboard")
 @login_required
@@ -1011,7 +1011,7 @@ def create_sale():
             require_stock = True
             lines_payload, err = _resolve_lines_from_form(form, require_stock=require_stock)
             if err:
-                flash(f"❌ {err}", "danger")
+                utils.flash_error(f"{err}", "danger")
                 return render_template("sales/form.html", form=form, title="إنشاء فاتورة جديدة",
                                        products=Product.query.options(
                                            load_only(Product.id, Product.name, Product.sku, Product.price, Product.currency, Product.is_active)
@@ -1077,16 +1077,16 @@ def create_sale():
                     run_invoice_gl_sync_after_commit(inv_row.id)
             except Exception:
                 pass
-            flash("✅ تم إنشاء المبيعة وسجل الذمة (الفاتورة) على حساب العميل.", "success")
+            utils.flash_success("تم إنشاء المبيعة وسجل الذمة (الفاتورة) على حساب العميل.")
             return redirect(url_for("sales_bp.sale_detail", id=sale.id))
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('❌ خطأ قاعدة بيانات أثناء الحفظ', 'danger')
+            utils.flash_error("خطأ قاعدة بيانات أثناء الحفظ")
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('❌ خطأ أثناء الحفظ', 'danger')
+            utils.flash_error("خطأ أثناء الحفظ")
     return render_template("sales/form.html", form=form, title="إنشاء فاتورة جديدة",
                            products=Product.query.order_by(Product.name).all(),
                            warehouses=Warehouse.query.order_by(Warehouse.name).all(),
@@ -1227,7 +1227,7 @@ def sale_payments(id: int):
 def edit_sale(id):
     sale = _get_or_404(Sale, id)
     if sale.status in ("CANCELLED", "REFUNDED"):
-        flash("❌ لا يمكن تعديل فاتورة ملغاة/مرتجعة.", "danger")
+        utils.flash_error("لا يمكن تعديل فاتورة ملغاة/مرتجعة.")
         return redirect(url_for("sales_bp.sale_detail", id=sale.id))
     old = sale_to_dict(sale)
     form = SaleForm(obj=sale)
@@ -1259,7 +1259,7 @@ def edit_sale(id):
             if err:
                 if was_confirmed:
                     _reserve_stock(sale)
-                flash(f"❌ {err}", "danger")
+                utils.flash_error(f"{err}", "danger")
                 return render_template("sales/form.html", form=form, sale=sale, title="تعديل الفاتورة",
                                        products=Product.query.options(
                                            load_only(Product.id, Product.name, Product.sku, Product.price, Product.currency, Product.is_active)
@@ -1314,16 +1314,16 @@ def edit_sale(id):
             except Exception:
                 pass
             refresh_customer_balance_for_sale(sale)
-            flash("✅ تم التعديل وتحديث الذمة والرصيد.", "success")
+            utils.flash_success("تم التعديل وتحديث الذمة والرصيد.")
             return redirect(url_for("sales_bp.sale_detail", id=sale.id))
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('❌ خطأ قاعدة بيانات أثناء التعديل', 'danger')
+            utils.flash_error("خطأ قاعدة بيانات أثناء التعديل")
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('❌ خطأ أثناء التعديل', 'danger')
+            utils.flash_error("خطأ أثناء التعديل")
     return render_template("sales/form.html", form=form, sale=sale, title="تعديل الفاتورة",
                            products=Product.query.order_by(Product.name).all(),
                            warehouses=Warehouse.query.order_by(Warehouse.name).all(),
@@ -1389,17 +1389,17 @@ def quick_sell():
         except Exception as e:
             current_app.logger.error(f"Error updating customer balance: {e}")
             
-        flash("✅ تم إنشاء فاتورة سريعة.", "success")
+        utils.flash_success("تم إنشاء فاتورة سريعة.")
         return redirect(url_for("sales_bp.sale_detail", id=sale.id))
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('❌ فشل البيع السريع (قاعدة البيانات)', 'danger')
+        utils.flash_error("فشل البيع السريع (قاعدة البيانات)")
         return redirect(url_for("sales_bp.list_sales"))
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('❌ فشل البيع السريع', 'danger')
+        utils.flash_error("فشل البيع السريع")
         return redirect(url_for("sales_bp.list_sales"))
 
  
@@ -1416,7 +1416,7 @@ def change_status(id: int, status: str):
         "REFUNDED": set()
     }
     if status not in valid.get(sale.status, set()):
-        flash("❌ حالة غير صالحة لهذا السجل.", "danger")
+        utils.flash_error("حالة غير صالحة لهذا السجل.")
         return redirect(url_for("sales_bp.sale_detail", id=sale.id))
     try:
         if status == "CONFIRMED":
@@ -1463,11 +1463,11 @@ def change_status(id: int, status: str):
         except Exception as e:
             current_app.logger.error(f"Error updating customer balance: {e}")
 
-        flash("✅ تم تحديث الحالة.", "success")
+        utils.flash_success("تم تحديث الحالة.")
     except (SQLAlchemyError, ValueError) as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('❌ خطأ أثناء تحديث الحالة', 'danger')
+        utils.flash_error("خطأ أثناء تحديث الحالة")
     return redirect(url_for("sales_bp.sale_detail", id=sale.id))
 
 @sales_bp.route("/<int:id>/invoice", methods=["GET"], endpoint="generate_invoice")

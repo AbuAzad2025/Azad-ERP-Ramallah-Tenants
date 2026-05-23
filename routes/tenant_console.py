@@ -68,7 +68,7 @@ def branding():
 
             db.session.rollback()
             current_app.logger.exception("tenant branding save failed")
-            flash("حدث خطأ أثناء الحفظ.", "danger")
+            utils.flash_error(utils.MSG_SAVE_FAILED)
         return redirect(url_for("tenant_console.branding"))
 
     profile = load_tenant_branding_form(slug)

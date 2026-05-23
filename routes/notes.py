@@ -148,8 +148,8 @@ def create_note():
         db.session.rollback()
         current_app.logger.exception('internal error')
         if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify(success=False, error='حدث خطأ داخلي'), 500
-        flash('حدث خطأ داخلي', 'danger')
+            return jsonify(success=False, error='تعذر تنفيذ العملية. حاول مرة أخرى.'), 500
+        utils.flash_error()
         return redirect(url_for('notes_bp.list_notes'))
 
     if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -213,8 +213,8 @@ def update_note(note_id):
         db.session.rollback()
         current_app.logger.exception('internal error')
         if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify(success=False, error='حدث خطأ داخلي'), 500
-        flash('حدث خطأ داخلي', 'danger')
+            return jsonify(success=False, error='تعذر تنفيذ العملية. حاول مرة أخرى.'), 500
+        utils.flash_error()
         return redirect(url_for('notes_bp.list_notes'))
 
     if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -246,8 +246,8 @@ def delete_note(note_id):
         db.session.rollback()
         current_app.logger.exception('internal error')
         if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify(success=False, error='حدث خطأ داخلي'), 500
-        flash('حدث خطأ داخلي', 'danger')
+            return jsonify(success=False, error='تعذر تنفيذ العملية. حاول مرة أخرى.'), 500
+        utils.flash_error()
         return redirect(url_for('notes_bp.list_notes'))
 
     if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -266,5 +266,5 @@ def toggle_pin(note_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        return jsonify(success=False, error='حدث خطأ داخلي'), 500
+        return jsonify(success=False, error='تعذر تنفيذ العملية. حاول مرة أخرى.'), 500
     return jsonify({'success': True, 'note_id': note.id, 'is_pinned': note.is_pinned})

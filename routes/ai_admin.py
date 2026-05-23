@@ -34,7 +34,7 @@ def restrict_to_owner():
         return redirect(url_for('auth.login'))
     
     if not current_user.is_system:
-        flash('⛔ هذه اللوحة خاصة بالمالك فقط', 'danger')
+        utils.flash_error('هذه اللوحة خاصة بالمالك فقط', 'danger')
         return redirect(url_for('main.dashboard'))
 
 
@@ -100,13 +100,13 @@ def ai_settings():
             
             db.session.commit()
             
-            flash('✅ تم حفظ إعدادات المساعد الذكي', 'success')
+            utils.flash_success("تم حفظ إعدادات المساعد الذكي")
             return redirect(url_for('ai_admin.ai_settings'))
         
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     def to_bool(value, default):
         if value is None:
@@ -159,7 +159,7 @@ def toggle_visibility():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -218,7 +218,7 @@ def reset_knowledge():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -240,7 +240,7 @@ def training_status():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -263,7 +263,7 @@ def training_log():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -278,7 +278,7 @@ def daily_reports():
         reports_dir = 'AI/data/daily_reports'
         
         if not os.path.exists(reports_dir):
-            flash('⚠️ لا توجد تقارير يومية بعد', 'info')
+            utils.flash_warning("لا توجد تقارير يومية بعد")
             return render_template('ai/daily_reports.html', daily_reports=[])
         
         # قراءة التقارير
@@ -295,7 +295,7 @@ def daily_reports():
     
     except Exception as e:
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('ai_admin.ai_settings'))
 
 
@@ -320,7 +320,7 @@ def evolution_report():
     
     except Exception as e:
         current_app.logger.exception('internal error in evolution_report')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('ai_admin.ai_settings'))
 
 
@@ -444,7 +444,7 @@ def run_code_scan():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -473,7 +473,7 @@ def performance_report():
     
     except Exception as e:
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('ai_admin.ai_settings'))
 
 
@@ -499,7 +499,7 @@ def stats_api():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         })
 
 
@@ -532,7 +532,7 @@ def execute_command(command_name):
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -585,7 +585,7 @@ def upload_book():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -607,7 +607,7 @@ def memory_stats():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -629,7 +629,7 @@ def system_status():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -658,7 +658,7 @@ def train_package():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -677,7 +677,7 @@ def train_all_packages():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -729,7 +729,7 @@ def marathon_training():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 

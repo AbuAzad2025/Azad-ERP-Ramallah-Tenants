@@ -19,7 +19,7 @@ def restrict_projects_access():
     from permissions_config.role_policy import is_platform_owner_role
 
     if not is_platform_owner_role(current_user):
-        flash('⛔ غير مصرح لك بالوصول لإدارة المشاريع', 'danger')
+        utils.flash_error('غير مصرح لك بالوصول لإدارة المشاريع', 'danger')
         return redirect(url_for('main.dashboard'))
 
 
@@ -132,13 +132,13 @@ def add_project():
             db.session.add(project)
             db.session.commit()
             
-            flash(f'✅ تم إضافة المشروع {code} - {name} بنجاح', 'success')
+            utils.flash_success(f'تم إضافة المشروع {code} - {name} بنجاح', 'success')
             return redirect(url_for('projects.index'))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     customers = Customer.query.filter_by(is_active=True).order_by(Customer.name).all()
     cost_centers = CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all()
@@ -185,13 +185,13 @@ def edit_project(id):
             
             db.session.commit()
             
-            flash(f'✅ تم تحديث المشروع بنجاح', 'success')
+            utils.flash_success(f'تم تحديث المشروع بنجاح', 'success')
             return redirect(url_for('projects.view_project', id=id))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     customers = Customer.query.filter_by(is_active=True).order_by(Customer.name).all()
     cost_centers = CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all()
@@ -306,13 +306,13 @@ def add_phase(id):
         db.session.add(phase)
         db.session.commit()
         
-        flash(f'✅ تم إضافة المرحلة {next_number} بنجاح', 'success')
+        utils.flash_success(f'تم إضافة المرحلة {next_number} بنجاح', 'success')
         return redirect(url_for('projects.view_project', id=id))
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('projects.view_project', id=id))
 
 
@@ -393,13 +393,13 @@ def add_cost(id):
         
         db.session.commit()
         
-        flash(f'✅ تم تسجيل تكلفة بقيمة {float(amount):.2f} بنجاح', 'success')
+        utils.flash_success(f'تم تسجيل تكلفة بقيمة {float(amount):.2f} بنجاح', 'success')
         return redirect(url_for('projects.view_project', id=id))
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('projects.view_project', id=id))
 
 
@@ -463,13 +463,13 @@ def add_revenue(id):
         
         db.session.commit()
         
-        flash(f'✅ تم تسجيل إيراد بقيمة {float(amount):.2f} بنجاح', 'success')
+        utils.flash_success(f'تم تسجيل إيراد بقيمة {float(amount):.2f} بنجاح', 'success')
         return redirect(url_for('projects.view_project', id=id))
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('projects.view_project', id=id))
 
 

@@ -163,11 +163,11 @@ def edit_profile():
             current_user.username = form.username.data
             current_user.email = form.email.data
             db.session.commit()
-            flash("✅ تم تحديث الملف الشخصي بنجاح", "success")
+            utils.flash_success("تم تحديث الملف الشخصي بنجاح")
             return redirect(url_for("users_bp.profile"))
         except IntegrityError:
             db.session.rollback()
-            flash("❌ اسم المستخدم أو البريد مستخدم بالفعل", "danger")
+            utils.flash_error("اسم المستخدم أو البريد مستخدم بالفعل")
     
     return render_template("users/edit_profile.html", form=form)
 
@@ -198,7 +198,7 @@ def change_password():
     if form.validate_on_submit():
         # التحقق من كلمة المرور الحالية
         if not current_user.check_password(form.current_password.data):
-            flash("❌ كلمة المرور الحالية غير صحيحة", "danger")
+            utils.flash_error("كلمة المرور الحالية غير صحيحة")
         else:
             # تحديث كلمة المرور
             current_user.set_password(form.new_password.data)
@@ -207,9 +207,9 @@ def change_password():
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('commit error')
-                flash('حدث خطأ أثناء الحفظ', 'danger')
+                utils.flash_error(utils.MSG_SAVE_FAILED)
                 return render_template("users/change_password.html", form=form)
-            flash("✅ تم تغيير كلمة المرور بنجاح", "success")
+            utils.flash_success("تم تغيير كلمة المرور بنجاح")
             return redirect(url_for("users_bp.profile"))
     
     return render_template("users/change_password.html", form=form)
@@ -392,7 +392,7 @@ def create_user():
             if posted_role is not None and (not _role_is_assignable_by_actor(posted_role)):
                 if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
                     return jsonify(error="forbidden_role"), 403
-                flash("❌ لا تملك الصلاحية لتعيين هذا الدور.", "danger")
+                utils.flash_error("لا تملك الصلاحية لتعيين هذا الدور.")
                 return redirect(url_for("users_bp.list_users"))
     if form.validate_on_submit():
         try:
@@ -406,13 +406,13 @@ def create_user():
             if not _role_is_assignable_by_actor(role):
                 if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
                     return jsonify(error="forbidden_role"), 403
-                flash("❌ لا تملك الصلاحية لتعيين هذا الدور.", "danger")
+                utils.flash_error("لا تملك الصلاحية لتعيين هذا الدور.")
                 return redirect(url_for("users_bp.list_users"))
 
             if not _selected_permissions_allowed(selected_perm_ids):
                 if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
                     return jsonify(error="forbidden_permissions"), 403
-                flash("❌ لا يمكنك منح صلاحيات إضافية لا تملكها.", "danger")
+                utils.flash_error("لا يمكنك منح صلاحيات إضافية لا تملكها.")
                 return redirect(url_for("users_bp.list_users"))
 
             user = User(
@@ -510,7 +510,7 @@ def edit_user(user_id):
         if role_id_raw and str(role_id_raw).isdigit():
             posted_role = db.session.get(Role, int(role_id_raw))
             if posted_role is not None and (not _role_is_assignable_by_actor(posted_role)):
-                flash("❌ لا يمكنك تعيين دور أعلى أو مساوٍ لصلاحياتك.", "danger")
+                utils.flash_error("لا يمكنك تعيين دور أعلى أو مساوٍ لصلاحياتك.")
                 return redirect(url_for("users_bp.list_users"))
 
     form = UserForm(obj=user)
@@ -529,11 +529,11 @@ def edit_user(user_id):
 
             role = db.session.get(Role, form.role_id.data)
             if not _role_is_assignable_by_actor(role):
-                flash("❌ لا يمكنك تعيين دور أعلى أو مساوٍ لصلاحياتك.", "danger")
+                utils.flash_error("لا يمكنك تعيين دور أعلى أو مساوٍ لصلاحياتك.")
                 return redirect(url_for("users_bp.list_users"))
 
             if not _selected_permissions_allowed(selected_perm_ids):
-                flash("❌ لا يمكنك منح صلاحيات إضافية لا تملكها.", "danger")
+                utils.flash_error("لا يمكنك منح صلاحيات إضافية لا تملكها.")
                 return redirect(url_for("users_bp.list_users"))
 
             old_data = f"{user.username},{user.email}"
@@ -593,7 +593,7 @@ def delete_user(user_id):
     
     # حماية حسابات النظام من الحذف
     if getattr(user, 'is_system_account', False) or user.username == '__OWNER__':
-        flash("❌ لا يمكن حذف حساب النظام المحمي!", "danger")
+        utils.flash_error("لا يمكن حذف حساب النظام المحمي!")
         return redirect(url_for("users_bp.list_users"))
     actor_level = _actor_level()
     target_role_name = str(getattr(getattr(user, "role", None), "name", "") or "").strip().lower()
@@ -618,10 +618,10 @@ def delete_user(user_id):
         if not (actor_level == 1 and target_level >= 1):
              abort(403)
     if user.id == current_user.id:
-        flash("❌ لا يمكن حذف حسابك الحالي.", "danger")
+        utils.flash_error("لا يمكن حذف حسابك الحالي.")
         return redirect(url_for("users_bp.list_users"))
     if user.email == current_app.config.get("DEV_EMAIL", "rafideen.ahmadghannam@gmail.com"):
-        flash("❌ لا يمكن حذف حساب المطور الأساسي.", "danger")
+        utils.flash_error("لا يمكن حذف حساب المطور الأساسي.")
         return redirect(url_for("users_bp.list_users"))
 
     try:

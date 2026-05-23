@@ -168,7 +168,7 @@ def accounts_management():
         })
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/accounts/create', methods=['POST'])
@@ -218,7 +218,7 @@ def create_account():
         db.session.rollback()
         current_app.logger.error(f"❌ خطأ في إنشاء الحساب: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/accounts/<int:account_id>/update', methods=['POST'])
@@ -258,7 +258,7 @@ def update_account(account_id):
         db.session.rollback()
         current_app.logger.error(f"❌ خطأ في تحديث الحساب: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/accounts/<int:account_id>/delete', methods=['POST'])
@@ -291,7 +291,7 @@ def delete_account(account_id):
         db.session.rollback()
         current_app.logger.error(f"❌ خطأ في حذف الحساب: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/entries')
@@ -323,7 +323,7 @@ def entries_management():
         })
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/entries/<int:entry_id>/void', methods=['POST'])
@@ -353,7 +353,7 @@ def void_entry(entry_id):
         db.session.rollback()
         current_app.logger.error(f"❌ خطأ في إلغاء القيد: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/reports')
@@ -405,7 +405,7 @@ def reports_management():
         })
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/settings')
@@ -430,7 +430,7 @@ def settings_management():
         })
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/settings/update', methods=['POST'])
@@ -453,7 +453,7 @@ def update_settings():
     except Exception as e:
         current_app.logger.error(f"❌ خطأ في تحديث الإعدادات: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/health-check')
@@ -754,7 +754,7 @@ def get_account_balance(account_code):
         
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/batches/all')
@@ -841,7 +841,7 @@ def get_all_batches():
     except Exception as e:
         current_app.logger.error(f"Error getting batches: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/batches/<int:batch_id>')
@@ -887,7 +887,7 @@ def get_batch_by_id(batch_id):
     except Exception as e:
         current_app.logger.error(f"Error getting batch {batch_id}: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/batches/<int:batch_id>/update', methods=['POST'])
@@ -964,7 +964,7 @@ def update_batch(batch_id):
         db.session.rollback()
         current_app.logger.error(f"❌ خطأ في تحديث القيد {batch_id}: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/backup', methods=['POST'])
@@ -992,7 +992,7 @@ def backup_ledger():
     except Exception as e:
         current_app.logger.error(f"❌ خطأ في النسخ الاحتياطي: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/backup-old', methods=['POST'])
@@ -1066,7 +1066,7 @@ def backup_ledger_old():
     except Exception as e:
         current_app.logger.error(f"❌ خطأ في النسخ الاحتياطي: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/validate')
@@ -1113,7 +1113,7 @@ def validate_entries():
         
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/cleanup', methods=['POST'])
@@ -1151,7 +1151,7 @@ def cleanup_old_entries():
         db.session.rollback()
         current_app.logger.error(f"❌ خطأ في التنظيف: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 # ===============================
@@ -1211,7 +1211,7 @@ def recalculate_all_balances():
         db.session.rollback()
         current_app.logger.error(f"❌ خطأ في إعادة حساب الأرصدة: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/fix-cashed-checks-balance', methods=['POST'])
@@ -1323,7 +1323,7 @@ def fix_cashed_checks_balance():
         current_app.logger.error(f"❌ خطأ في تصحيح أرصدة الشيكات: {str(e)}")
         
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/sync-checks', methods=['POST'])
@@ -1375,7 +1375,7 @@ def sync_payments_checks():
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/statistics', methods=['GET'])
@@ -1453,7 +1453,7 @@ def get_advanced_statistics():
     except Exception as e:
         current_app.logger.error(f"❌ خطأ في الإحصائيات: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 # ========== مركز التحكم المتقدم - الفترات والعمليات ==========
@@ -1493,7 +1493,7 @@ def get_fiscal_periods():
     except Exception as e:
         current_app.logger.error(f"خطأ في جلب الفترات المحاسبية: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/operations/closing-entries/generate', methods=['POST'])
@@ -1585,7 +1585,7 @@ def generate_closing_entries():
     except Exception as e:
         current_app.logger.error(f"خطأ في إنشاء قيود الإقفال: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/operations/closing-entries/post', methods=['POST'])
@@ -1641,7 +1641,7 @@ def post_closing_entries():
         db.session.rollback()
         current_app.logger.error(f"خطأ في ترحيل قيود الإقفال: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/operations/reverse-entry/<int:batch_id>', methods=['POST'])
@@ -1705,7 +1705,7 @@ def reverse_entry(batch_id):
         db.session.rollback()
         current_app.logger.error(f"خطأ في إنشاء قيد عكسي: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/operations/review-queue', methods=['GET'])
@@ -1745,7 +1745,7 @@ def review_queue():
         
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/operations/approve-batch/<int:batch_id>', methods=['POST'])
@@ -1784,7 +1784,7 @@ def approve_batch(batch_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/operations/reject-batch/<int:batch_id>', methods=['POST'])
@@ -1814,7 +1814,7 @@ def reject_batch(batch_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 # ========== تحرير وربط القيود ==========
@@ -1867,7 +1867,7 @@ def link_batch_to_entity(batch_id):
         db.session.rollback()
         current_app.logger.error(f"خطأ في ربط القيد: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/operations/batch/<int:batch_id>/edit', methods=['GET'])
@@ -1920,7 +1920,7 @@ def get_batch_for_edit(batch_id):
         
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/operations/batch/<int:batch_id>/update-full', methods=['POST'])
@@ -1988,7 +1988,7 @@ def update_batch_full(batch_id):
         db.session.rollback()
         current_app.logger.error(f"خطأ في تحديث القيد: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/operations/entities/search', methods=['GET'])
@@ -2026,7 +2026,7 @@ def search_entities():
         
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_control_bp.route('/verify-customer-balances', methods=['POST'])
@@ -2105,7 +2105,7 @@ def verify_customer_balances():
                 issues.append({
                     'customer_id': customer.id,
                     'customer_name': getattr(customer, 'name', 'Unknown'),
-                    'error': 'حدث خطأ داخلي'
+                    'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
                 })
         
         db.session.commit()
@@ -2122,4 +2122,4 @@ def verify_customer_balances():
         current_app.logger.error(f"❌ خطأ في التحقق من أرصدة العملاء: {str(e)}")
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500

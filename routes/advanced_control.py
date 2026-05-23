@@ -302,7 +302,7 @@ def owner_smoke_checklist():
         }
         SystemSettings.set_setting('owner_smoke_checklist', new_state, data_type='json')
         _log_owner_action('owner.checklist_update', None, {'completed': len(completed)})
-        flash('✅ تم تحديث قائمة الفحص', 'success')
+        utils.flash_success("تم تحديث قائمة الفحص")
         return redirect(url_for('advanced.owner_smoke_checklist'))
     progress = {
         'completed': len(state['completed']),
@@ -497,7 +497,7 @@ def multi_tenant():
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('commit error')
-                flash('حدث خطأ أثناء الحفظ', 'danger')
+                utils.flash_error(utils.MSG_SAVE_FAILED)
                 return redirect(url_for('advanced.multi_tenant'))
             try:
                 cache.delete("all_tenants_list")
@@ -523,7 +523,7 @@ def multi_tenant():
         elif action == 'toggle_tenant':
             tenant_name = request.form.get('tenant_name')
             if not _validate_safe_slug(tenant_name):
-                flash('❌ اسم الـ Tenant غير صالح', 'danger')
+                utils.flash_error("اسم الـ Tenant غير صالح")
                 return redirect(url_for('advanced.multi_tenant'))
             setting = SystemSettings.query.filter_by(key=f'tenant_{tenant_name}_active').first()
             if setting:
@@ -536,22 +536,22 @@ def multi_tenant():
                 except Exception:
                     db.session.rollback()
                     current_app.logger.exception('commit error')
-                    flash('حدث خطأ أثناء الحفظ', 'danger')
+                    utils.flash_error(utils.MSG_SAVE_FAILED)
                     return redirect(url_for('advanced.multi_tenant'))
                 _log_owner_action('multi_tenant.toggle', tenant_name, {
                     'new_status': setting.value,
                 })
-                flash(f'✅ تم تحديث حالة: {tenant_name}', 'success')
+                utils.flash_success(f'تم تحديث حالة: {tenant_name}', 'success')
             return redirect(url_for('advanced.multi_tenant'))
         
         elif action == 'delete_tenant':
             tenant_name = request.form.get('tenant_name')
             confirm_token = request.form.get('confirm_token', '')
             if not _validate_safe_slug(tenant_name):
-                flash('❌ اسم الـ Tenant غير صالح', 'danger')
+                utils.flash_error("اسم الـ Tenant غير صالح")
                 return redirect(url_for('advanced.multi_tenant'))
             if confirm_token != tenant_name:
-                flash('❌ اكتب اسم الـ Tenant للتأكيد قبل الحذف', 'danger')
+                utils.flash_error("اكتب اسم الـ Tenant للتأكيد قبل الحذف")
                 return redirect(url_for('advanced.multi_tenant'))
                                          
             SystemSettings.query.filter(SystemSettings.key.like(f'tenant_{tenant_name}_%')).delete()
@@ -561,7 +561,7 @@ def multi_tenant():
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('commit error')
-                flash('حدث خطأ أثناء الحفظ', 'danger')
+                utils.flash_error(utils.MSG_SAVE_FAILED)
                 return redirect(url_for('advanced.multi_tenant'))
             try:
                 cache.delete("all_tenants_list")
@@ -569,13 +569,13 @@ def multi_tenant():
             except Exception:
                 current_app.logger.warning('cache invalidation failed silently in advanced_control.py', exc_info=True)
             _log_owner_action('multi_tenant.delete', tenant_name)
-            flash(f'✅ تم حذف Tenant: {tenant_name}', 'success')
+            utils.flash_success(f'تم حذف Tenant: {tenant_name}', 'success')
             return redirect(url_for('advanced.multi_tenant'))
         
         elif action == 'update_tenant':
             tenant_name = request.form.get('tenant_name')
             if not _validate_safe_slug(tenant_name):
-                flash('❌ اسم الـ Tenant غير صالح', 'danger')
+                utils.flash_error("اسم الـ Tenant غير صالح")
                 return redirect(url_for('advanced.multi_tenant'))
             tenant_domain = request.form.get('tenant_domain', '')
             tenant_logo = request.form.get('tenant_logo', '')
@@ -592,11 +592,11 @@ def multi_tenant():
                     func.lower(SystemSettings.value) == domain_norm
                 ).first()
                 if existing and not str(existing.key or '').startswith(f'tenant_{tenant_name}_'):
-                    flash('❌ هذا الدومين مستخدم مسبقاً لTenant آخر. يجب أن يكون الدومين فريد لكل Tenant.', 'danger')
+                    utils.flash_error("هذا الدومين مستخدم مسبقاً لTenant آخر. يجب أن يكون الدومين فريد لكل Tenant.")
                     return redirect(url_for('advanced.multi_tenant'))
                 existing_domain = TenantRegistry.query.filter(func.lower(TenantRegistry.domain) == domain_norm).first()
                 if existing_domain and existing_domain.slug != tenant_name:
-                    flash('❌ هذا الدومين مستخدم مسبقاً لTenant آخر. يجب أن يكون الدومين فريد لكل Tenant.', 'danger')
+                    utils.flash_error("هذا الدومين مستخدم مسبقاً لTenant آخر. يجب أن يكون الدومين فريد لكل Tenant.")
                     return redirect(url_for('advanced.multi_tenant'))
             
                              
@@ -624,7 +624,7 @@ def multi_tenant():
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('commit error')
-                flash('حدث خطأ أثناء الحفظ', 'danger')
+                utils.flash_error(utils.MSG_SAVE_FAILED)
                 return redirect(url_for('advanced.multi_tenant'))
             try:
                 cache.delete("all_tenants_list")
@@ -638,7 +638,7 @@ def multi_tenant():
                 'max_users': tenant_max_users,
                 'modules': tenant_modules,
             })
-            flash(f'✅ تم تحديث Tenant: {tenant_name}', 'success')
+            utils.flash_success(f'تم تحديث Tenant: {tenant_name}', 'success')
             return redirect(url_for('advanced.multi_tenant'))
     
                       
@@ -697,10 +697,10 @@ def dashboard_links():
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('commit error')
-                flash('حدث خطأ أثناء الحفظ', 'danger')
+                utils.flash_error(utils.MSG_SAVE_FAILED)
                 return redirect(url_for('advanced.dashboard_links'))
             _log_owner_action('dashboard_links.toggle', link_key, {'visible': visible})
-            flash(f'✅ تم تحديث: {link_key}', 'success')
+            utils.flash_success(f'تم تحديث: {link_key}', 'success')
             return redirect(url_for('advanced.dashboard_links'))
     
     available_links = [
@@ -737,7 +737,7 @@ def version_control():
         if action == 'create_version':
             version_name = request.form.get('version_name')
             if not _validate_safe_slug(version_name):
-                flash('❌ اسم الإصدار يجب أن يكون بدون مسافات أو رموز خاصة', 'danger')
+                utils.flash_error("اسم الإصدار يجب أن يكون بدون مسافات أو رموز خاصة")
                 return redirect(url_for('advanced.version_control'))
             version_notes = request.form.get('version_notes')
             version_diff = request.form.get('version_diff')
@@ -755,17 +755,17 @@ def version_control():
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('commit error')
-                flash('حدث خطأ أثناء الحفظ', 'danger')
+                utils.flash_error(utils.MSG_SAVE_FAILED)
                 return redirect(url_for('advanced.version_control'))
             _log_owner_action('version.create', version_name, summary)
             
-            flash(f'✅ تم إنشاء إصدار: {version_name}', 'success')
+            utils.flash_success(f'تم إنشاء إصدار: {version_name}', 'success')
             return redirect(url_for('advanced.version_control'))
         
         elif action == 'delete_version':
             version_name = request.form.get('version_name')
             if not _validate_safe_slug(version_name):
-                flash('❌ اسم الإصدار يجب أن يكون بدون مسافات أو رموز خاصة', 'danger')
+                utils.flash_error("اسم الإصدار يجب أن يكون بدون مسافات أو رموز خاصة")
                 return redirect(url_for('advanced.version_control'))
             SystemSettings.query.filter(SystemSettings.key.like(f'version_{version_name}_%')).delete()
             try:
@@ -773,10 +773,10 @@ def version_control():
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('commit error')
-                flash('حدث خطأ أثناء الحفظ', 'danger')
+                utils.flash_error(utils.MSG_SAVE_FAILED)
                 return redirect(url_for('advanced.version_control'))
             _log_owner_action('version.delete', version_name)
-            flash(f'✅ تم حذف الإصدار: {version_name}', 'success')
+            utils.flash_success(f'تم حذف الإصدار: {version_name}', 'success')
             return redirect(url_for('advanced.version_control'))
     
     versions = []
@@ -830,8 +830,8 @@ def licensing():
         except Exception:
             db.session.rollback()
             current_app.logger.exception('commit error')
-            return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
-        flash('✅ تم تفعيل الترخيص', 'success')
+            return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
+        utils.flash_success("تم تفعيل الترخيص")
         return redirect(url_for('advanced.licensing'))
     
     license_setting = SystemSettings.query.filter_by(key='license_info').first()
@@ -887,7 +887,7 @@ def module_manager():
             unmet = [dep for dep in deps if not module_states.get(dep, True)]
             if unmet:
                 names = ', '.join(MODULE_LOOKUP.get(dep, {}).get('name', dep) for dep in unmet)
-                flash(f'❌ يجب تفعيل الوحدات: {names} قبل تفعيل {module_key}', 'danger')
+                utils.flash_error(f'يجب تفعيل الوحدات: {names} قبل تفعيل {module_key}', 'danger')
                 return redirect(url_for('advanced.module_manager'))
         
         # Use centralized setter for consistency and cache management
@@ -901,7 +901,7 @@ def module_manager():
         # Log the action
         _log_owner_action('module.toggle', module_key, {'enabled': enabled})
         
-        flash(f'✅ تم تحديث: {module_key}', 'success')
+        utils.flash_success(f'تم تحديث: {module_key}', 'success')
         return redirect(url_for('advanced.module_manager'))
     
     modules = []
@@ -950,13 +950,13 @@ def backup_manager():
             try:
                 custom_name = (request.form.get('backup_name') or '').strip() or None
                 if custom_name and not _validate_safe_slug(custom_name):
-                    flash('❌ اسم النسخة يجب أن يكون بدون مسافات أو رموز خاصة', 'danger')
+                    utils.flash_error("اسم النسخة يجب أن يكون بدون مسافات أو رموز خاصة")
                     return redirect(url_for('advanced.backup_manager'))
 
                 from extensions import perform_backup_db
                 success, message, backup_path = perform_backup_db(current_app)
                 if not success or not backup_path or not os.path.exists(backup_path):
-                    flash(f'❌ {message}', 'danger')
+                    utils.flash_error(f'{message}', 'danger')
                     return redirect(url_for('advanced.backup_manager'))
 
                 final_path = backup_path
@@ -975,7 +975,7 @@ def backup_manager():
                         final_path = backup_path
 
                 size_mb = os.path.getsize(final_path) / (1024 * 1024)
-                flash(f'✅ تم إنشاء نسخة احتياطية', 'success')
+                utils.flash_success(f'تم إنشاء نسخة احتياطية', 'success')
                 _log_owner_action('backup.create', os.path.basename(final_path), {
                     'size_mb': round(size_mb, 2),
                     'path': final_path.replace(current_app.root_path, '')
@@ -983,7 +983,7 @@ def backup_manager():
             except Exception as e:
                 _record_backup_failure('فشل إنشاء النسخة الاحتياطية')
                 current_app.logger.exception('internal error')
-                flash('حدث خطأ داخلي', 'danger')
+                utils.flash_error()
             
             return redirect(url_for('advanced.backup_manager'))
         
@@ -991,10 +991,10 @@ def backup_manager():
             schedule_type = request.form.get('schedule_type')
             schedule_time = request.form.get('schedule_time', '03:00')
             if not _validate_time_string(schedule_time):
-                flash('❌ صيغة الوقت غير صحيحة (HH:MM)', 'danger')
+                utils.flash_error("صيغة الوقت غير صحيحة (HH:MM)")
                 return redirect(url_for('advanced.backup_manager'))
             if schedule_type not in SCHEDULE_LABELS:
-                flash('❌ نوع الجدولة غير مدعوم', 'danger')
+                utils.flash_error("نوع الجدولة غير مدعوم")
                 return redirect(url_for('advanced.backup_manager'))
             
             setting = SystemSettings.query.filter_by(key='auto_backup_enabled').first()
@@ -1014,15 +1014,15 @@ def backup_manager():
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('commit error')
-                return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
-            flash(f'✅ تم جدولة النسخ الاحتياطي: {schedule_type}', 'success')
+                return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
+            utils.flash_success(f'تم جدولة النسخ الاحتياطي: {schedule_type}', 'success')
             _log_owner_action('backup.schedule', schedule_type, {
                 'time': schedule_time,
             })
             return redirect(url_for('advanced.backup_manager'))
         
         elif action == 'convert_database':
-            flash('❌ تحويل قاعدة البيانات غير مدعوم. النظام يعمل على PostgreSQL فقط.', 'danger')
+            utils.flash_error("تحويل قاعدة البيانات غير مدعوم. النظام يعمل على PostgreSQL فقط.")
             return redirect(url_for('advanced.backup_manager'))
     
     backups = []
@@ -1108,11 +1108,11 @@ def download_backup(filename):
         if os.path.exists(filepath):
             return send_file(filepath, as_attachment=True, download_name=filename)
         else:
-            flash('❌ الملف غير موجود', 'danger')
+            utils.flash_error("الملف غير موجود")
             return redirect(url_for('advanced.backup_manager'))
     except Exception as e:
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('advanced.backup_manager'))
 
 
@@ -1126,18 +1126,18 @@ def restore_json_backup(filename):
         confirm_token = request.form.get('confirm_token')
         
         if confirm_token != filename:
-            flash('❌ يجب كتابة اسم النسخة للتأكيد قبل الاستعادة', 'danger')
+            utils.flash_error("يجب كتابة اسم النسخة للتأكيد قبل الاستعادة")
             return redirect(url_for('advanced.backup_manager'))
         
         if not os.path.exists(filepath):
-            flash('❌ الملف غير موجود', 'danger')
+            utils.flash_error("الملف غير موجود")
             return redirect(url_for('advanced.backup_manager'))
         
         from extensions import perform_backup_db
         # Always take a safety backup first
         safety_ok, _, safety_path = perform_backup_db(current_app)
         if not safety_ok:
-             flash('⚠️ فشل إنشاء نسخة أمان تلقائية، لكن سيتم متابعة الاستعادة بحذر.', 'warning')
+             utils.flash_warning("فشل إنشاء نسخة أمان تلقائية، لكن سيتم متابعة الاستعادة بحذر.")
         else:
              flash(f'💾 تم حفظ نسخة أمان: {os.path.basename(safety_path)}', 'info')
 
@@ -1145,10 +1145,10 @@ def restore_json_backup(filename):
         success, messages = import_from_json(filepath, app=current_app)
         
         if success:
-            flash(f'✅ تم استعادة البيانات من {filename} بنجاح.', 'success')
+            utils.flash_success(f'تم استعادة البيانات من {filename} بنجاح.', 'success')
             _log_owner_action('backup.restore_json', filename, {'status': 'success'})
         else:
-            flash(f'❌ حدثت أخطاء أثناء الاستعادة. راجع السجلات.', 'danger')
+            utils.flash_error(f'حدثت أخطاء أثناء الاستعادة. راجع السجلات.', 'danger')
             for msg in messages:
                 if "Error" in msg or "Warning" in msg:
                     flash(msg, 'warning')
@@ -1156,7 +1156,7 @@ def restore_json_backup(filename):
             
     except Exception as e:
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         
     return redirect(url_for('advanced.backup_manager'))
 
@@ -1172,33 +1172,33 @@ def restore_backup(filename):
         confirm_token = request.form.get('confirm_token')
         
         if confirm_token != filename:
-            flash('❌ يجب كتابة اسم النسخة للتأكيد قبل الاستعادة', 'danger')
+            utils.flash_error("يجب كتابة اسم النسخة للتأكيد قبل الاستعادة")
             return redirect(url_for('advanced.backup_manager'))
         
         if not os.path.exists(backup_path) or not filename.endswith('.dump'):
-            flash('❌ الملف غير موجود', 'danger')
+            utils.flash_error("الملف غير موجود")
             return redirect(url_for('advanced.backup_manager'))
         
         from extensions import perform_backup_db, restore_database
         safety_ok, _, safety_path = perform_backup_db(current_app)
         if not safety_ok or not safety_path:
-            flash('❌ فشل حفظ نسخة الأمان قبل الاستعادة', 'danger')
+            utils.flash_error("فشل حفظ نسخة الأمان قبل الاستعادة")
             return redirect(url_for('advanced.backup_manager'))
 
         ok, msg = restore_database(current_app, backup_path)
         if ok:
-            flash(f'✅ تم استعادة النسخة: {filename}', 'success')
+            utils.flash_success(f'تم استعادة النسخة: {filename}', 'success')
             flash(f'💾 تم حفظ نسخة أمان: {os.path.basename(safety_path)}', 'info')
             _log_owner_action('backup.restore', filename, {
                 'safety_backup': os.path.basename(safety_path),
             })
         else:
-            flash(f'❌ {msg}', 'danger')
+            utils.flash_error(f'{msg}', 'danger')
     
     except Exception as e:
         _record_backup_failure(f'فشل استعادة النسخة ({filename})')
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
     
     return redirect(url_for('advanced.backup_manager'))
 
@@ -1213,7 +1213,7 @@ def delete_backup(filename):
         confirm_token = request.form.get('confirm_token')
         
         if confirm_token != filename:
-            flash('❌ يجب كتابة اسم النسخة للتأكيد قبل الحذف', 'danger')
+            utils.flash_error("يجب كتابة اسم النسخة للتأكيد قبل الحذف")
             return redirect(url_for('advanced.backup_manager'))
         
         if os.path.exists(filepath) and filename.endswith('.dump'):
@@ -1224,14 +1224,14 @@ def delete_backup(filename):
                     os.remove(info_file)
                 except Exception:
                     current_app.logger.debug('file operation failed in advanced_control.py', exc_info=True)
-            flash(f'✅ تم حذف النسخة: {filename}', 'success')
+            utils.flash_success(f'تم حذف النسخة: {filename}', 'success')
             _log_owner_action('backup.delete', filename)
         else:
-            flash('❌ الملف غير موجود', 'danger')
+            utils.flash_error("الملف غير موجود")
     except Exception as e:
         _record_backup_failure(f'فشل حذف النسخة ({filename})')
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
     
     return redirect(url_for('advanced.backup_manager'))
 
@@ -1251,16 +1251,16 @@ def toggle_auto_backup():
         
         status = setting.value if setting else 'True'
         if status == 'True':
-            flash('✅ تم تفعيل النسخ الاحتياطي التلقائي', 'success')
+            utils.flash_success("تم تفعيل النسخ الاحتياطي التلقائي")
             _log_owner_action('backup.auto_toggle', 'enabled')
         else:
-            flash('⚠️ تم تعطيل النسخ الاحتياطي التلقائي', 'warning')
+            utils.flash_warning("تم تعطيل النسخ الاحتياطي التلقائي")
             _log_owner_action('backup.auto_toggle', 'disabled')
             
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
     
     return redirect(url_for('advanced.backup_manager'))
 
@@ -1300,7 +1300,7 @@ def test_db_connection():
                 
     except Exception as e:
         current_app.logger.exception('internal error')
-        return jsonify({'success': False, 'message': 'حدث خطأ داخلي'})
+        return jsonify({'success': False, 'message': 'تعذر تنفيذ العملية. حاول مرة أخرى.'})
 
 
 @advanced_bp.route('/api-generator', methods=['GET', 'POST'])
@@ -1312,7 +1312,7 @@ def api_generator():
         endpoints = request.form.getlist('endpoints')
         
         _log_owner_action('api_generator.create', table_name, {'endpoints': endpoints})
-        flash(f'✅ تم إنشاء API لـ {table_name}', 'success')
+        utils.flash_success(f'تم إنشاء API لـ {table_name}', 'success')
         return redirect(url_for('advanced.api_generator'))
     
     inspector = inspect(db.engine)
@@ -1340,10 +1340,10 @@ def feature_flags():
         except Exception:
             db.session.rollback()
             current_app.logger.exception('commit error')
-            flash('حدث خطأ أثناء الحفظ', 'danger')
+            utils.flash_error(utils.MSG_SAVE_FAILED)
             return redirect(url_for('advanced.feature_flags'))
         _log_owner_action('feature_flags.toggle', flag_key, {'enabled': enabled})
-        flash(f'✅ تم تحديث: {flag_key}', 'success')
+        utils.flash_success(f'تم تحديث: {flag_key}', 'success')
         return redirect(url_for('advanced.feature_flags'))
     
     flags = [
@@ -1378,10 +1378,10 @@ def system_health():
                 for dir_path in dirs_to_fix:
                     full_path = os.path.join(current_app.root_path, dir_path)
                     os.makedirs(full_path, exist_ok=True)
-                flash('✅ تم إصلاح الصلاحيات', 'success')
+                utils.flash_success("تم إصلاح الصلاحيات")
             except Exception as e:
                 current_app.logger.exception('internal error')
-                flash('حدث خطأ داخلي', 'danger')
+                utils.flash_error()
         
         elif action == 'clear_cache':
             try:
@@ -1390,25 +1390,25 @@ def system_health():
                     cache_path = os.path.join(current_app.root_path, cache_dir)
                     if os.path.exists(cache_path):
                         shutil.rmtree(cache_path)
-                flash('✅ تم تنظيف الكاش', 'success')
+                utils.flash_success("تم تنظيف الكاش")
             except Exception as e:
                 current_app.logger.exception('internal error')
-                flash('حدث خطأ داخلي', 'danger')
+                utils.flash_error()
         
         elif action == 'optimize_db':
             try:
                 from extensions import perform_vacuum_optimize
                 perform_vacuum_optimize(current_app)
-                flash('✅ تم تحسين قاعدة البيانات', 'success')
+                utils.flash_success("تم تحسين قاعدة البيانات")
             except Exception as e:
                 current_app.logger.exception('internal error')
-                flash('حدث خطأ داخلي', 'danger')
+                utils.flash_error()
         elif action == 'auto_run':
             checks, score = _collect_system_health_checks()
             SystemSettings.set_setting('system_health_last_run',
                                        {'checks': checks, 'score': score, 'time': datetime.now(timezone.utc).isoformat()},
                                        data_type='json')
-            flash('✅ تم تشغيل فحص الصحة تلقائياً', 'success')
+            utils.flash_success("تم تشغيل فحص الصحة تلقائياً")
         
         return redirect(url_for('advanced.system_health'))
     
@@ -1773,12 +1773,12 @@ def _get_license_status():
 
 
 def _handle_db_merger_preview():
-    flash('❌ DB Merger غير مدعوم. النظام يعمل على PostgreSQL فقط.', 'danger')
+    utils.flash_error("DB Merger غير مدعوم. النظام يعمل على PostgreSQL فقط.")
     return redirect(url_for('advanced.backup_manager'))
 
 
 def _handle_db_merger_execute():
-    flash('❌ DB Merger غير مدعوم. النظام يعمل على PostgreSQL فقط.', 'danger')
+    utils.flash_error("DB Merger غير مدعوم. النظام يعمل على PostgreSQL فقط.")
     return redirect(url_for('advanced.backup_manager'))
 
 
@@ -2272,7 +2272,7 @@ def _save_bank_settings(source, base=None, preserve_missing=False):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
     return settings
 
 
@@ -2284,7 +2284,7 @@ def _save_cost_center_settings(source, base=None, preserve_missing=False):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
     return settings
 
 
@@ -2296,7 +2296,7 @@ def _save_project_settings(source, base=None, preserve_missing=False):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
     return settings
 
 
@@ -2308,7 +2308,7 @@ def _save_automation_settings(source, base=None, preserve_missing=False):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
     return settings
 
 
@@ -2320,7 +2320,7 @@ def _save_security_settings(source, base=None, preserve_missing=False):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
     return settings
 
 
@@ -2477,7 +2477,7 @@ def _run_accounting_system_check():
 def download_cloned_system(clone_name):
     """تحميل نظام مستنسخ"""
     if not _validate_safe_slug(clone_name):
-        flash('❌ اسم النسخة غير صالح', 'danger')
+        utils.flash_error("اسم النسخة غير صالح")
         return redirect(url_for('advanced.system_cloner'))
     try:
         import zipfile
@@ -2486,7 +2486,7 @@ def download_cloned_system(clone_name):
         clone_dir = os.path.join(current_app.root_path, 'instance', 'clones', secure_filename(clone_name))
         
         if not os.path.exists(clone_dir):
-            flash('❌ النظام غير موجود', 'danger')
+            utils.flash_error("النظام غير موجود")
             return redirect(url_for('advanced.system_cloner'))
         
                               
@@ -2509,7 +2509,7 @@ def download_cloned_system(clone_name):
         
     except Exception as e:
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('advanced.system_cloner'))
 
 
@@ -2680,13 +2680,13 @@ def system_cloner():
         selected_modules = request.form.getlist('modules')
         clone_name = request.form.get('clone_name', 'custom_system')
         if not _validate_safe_slug(clone_name):
-            flash('❌ اسم النسخة يجب أن يكون بدون مسافات أو رموز خاصة', 'danger')
+            utils.flash_error("اسم النسخة يجب أن يكون بدون مسافات أو رموز خاصة")
             return redirect(url_for('advanced.system_cloner'))
         
         try:
             result = _clone_system(selected_modules, clone_name, available_modules)
             
-            flash(f'✅ تم إنشاء النظام المخصص: {clone_name}', 'success')
+            utils.flash_success(f'تم إنشاء النظام المخصص: {clone_name}', 'success')
             flash(f'📦 الملفات: {result["files_count"]} ملف', 'info')
             flash(f'📍 الموقع: {result["output_path"]}', 'info')
             
@@ -2695,7 +2695,7 @@ def system_cloner():
             
         except Exception as e:
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
             return redirect(url_for('advanced.system_cloner'))
     
                            
@@ -2957,11 +2957,11 @@ def download_mobile_app(app_name):
         if os.path.exists(zip_path):
             return send_file(zip_path, as_attachment=True, download_name=f'{app_name}.zip')
         else:
-            flash('❌ التطبيق غير موجود', 'danger')
+            utils.flash_error("التطبيق غير موجود")
             return redirect(url_for('advanced.mobile_app_generator'))
     except Exception as e:
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('advanced.mobile_app_generator'))
 
 
@@ -2988,7 +2988,7 @@ def mobile_app_generator():
                 base_url=base_url
             )
             
-            flash(f'✅ تم إنشاء تطبيق: {result.get("display_name") or app_name}', 'success')
+            utils.flash_success(f'تم إنشاء تطبيق: {result.get("display_name") or app_name}', 'success')
             flash(f'📱 المنصة: {result["platform"]}', 'info')
             flash(f'📦 الحجم: {result["size"]}', 'info')
             flash(f'📍 الموقع: {result["output_path"]}', 'info')
@@ -2997,7 +2997,7 @@ def mobile_app_generator():
             
         except Exception as e:
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
             return redirect(url_for('advanced.mobile_app_generator'))
     
     available_modules = _get_mobile_modules()
@@ -3997,7 +3997,7 @@ def financial_control():
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('commit error')
-                return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
+                return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
             flash('تم حفظ إعدادات الميزانية بنجاح', 'success')
             return redirect(url_for('advanced.financial_control'))
         
@@ -4026,7 +4026,7 @@ def financial_control():
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('commit error')
-                return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
+                return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
             flash('تم حفظ إعدادات الأصول الثابتة بنجاح', 'success')
             return redirect(url_for('advanced.financial_control'))
     
@@ -4306,7 +4306,7 @@ def performance_profiler():
             cache.set(cache_key, profiler_data, timeout=300)
         except Exception as e:
             current_app.logger.exception('profiler error')
-            profiler_data['error'] = 'حدث خطأ داخلي'
+            profiler_data['error'] = 'تعذر تنفيذ العملية. حاول مرة أخرى.'
     else:
         profiler_data = cached_data
     
@@ -4330,24 +4330,24 @@ def database_optimizer():
                     current_app.logger.warning('rollback after error failed silently in advanced_control.py', exc_info=True)
                 with db.engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
                     conn.execute(text("VACUUM (ANALYZE)"))
-                flash('✅ تم تحسين قاعدة البيانات بنجاح', 'success')
+                utils.flash_success("تم تحسين قاعدة البيانات بنجاح")
                 cache.delete("performance_profiler_data")
                 cache.delete("total_records_count")
             except Exception as e:
                 db.session.rollback()
                 current_app.logger.exception('internal error')
-                flash('حدث خطأ داخلي', 'danger')
+                utils.flash_error()
             return redirect(url_for('advanced.database_optimizer'))
         
         elif action == 'analyze':
             try:
                 db.session.execute(text("ANALYZE"))
                 db.session.commit()
-                flash('✅ تم تحليل قاعدة البيانات', 'success')
+                utils.flash_success("تم تحليل قاعدة البيانات")
             except Exception as e:
                 db.session.rollback()
                 current_app.logger.exception('internal error')
-                flash('حدث خطأ داخلي', 'danger')
+                utils.flash_error()
             return redirect(url_for('advanced.database_optimizer'))
         
         elif action == 'reindex':
@@ -4367,11 +4367,11 @@ def database_optimizer():
                         continue
                 
                 db.session.commit()
-                flash(f'✅ تم إعادة فهرسة {len(reindexed)} جدول', 'success')
+                utils.flash_success(f'تم إعادة فهرسة {len(reindexed)} جدول', 'success')
             except Exception as e:
                 db.session.rollback()
                 current_app.logger.exception('internal error')
-                flash('حدث خطأ داخلي', 'danger')
+                utils.flash_error()
             return redirect(url_for('advanced.database_optimizer'))
     
     try:
@@ -4409,7 +4409,7 @@ def database_optimizer():
         }
     except Exception as e:
         current_app.logger.exception('database optimizer error')
-        stats = {'error': 'حدث خطأ داخلي'}
+        stats = {'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
     
     template = """
     {% extends 'base.html' %}
@@ -4541,5 +4541,5 @@ def api_performance_stats():
         current_app.logger.exception('API error')
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500

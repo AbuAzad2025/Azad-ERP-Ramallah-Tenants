@@ -374,7 +374,7 @@ def get_accounts():
     except Exception as e:
         current_app.logger.error(f"خطأ في جلب الحسابات: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @ledger_bp.route("/manual-entry", methods=["POST"], endpoint="create_manual_entry")
 @login_required
@@ -472,7 +472,7 @@ def create_manual_entry():
         current_app.logger.error(f"❌ خطأ في إنشاء قيد يدوي: {str(e)}")
         
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @ledger_bp.route("/data", methods=["GET"], endpoint="get_ledger_data")
 @login_required
@@ -783,7 +783,7 @@ def get_ledger_data():
         
     except Exception as e:
         current_app.logger.error(f"Error in get_ledger_data: {str(e)}")
-        return jsonify({"error": "حدث خطأ داخلي", "data": [], "statistics": {}}), 500
+        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى.", "data": [], "statistics": {}}), 500
 
 @ledger_bp.route("/statistics", methods=["GET"], endpoint="get_ledger_statistics")
 @login_required
@@ -797,7 +797,7 @@ def get_ledger_statistics():
         return jsonify({"statistics": statistics})
     except Exception as e:
         current_app.logger.error(f"Error in get_ledger_statistics: {str(e)}")
-        return jsonify({"error": "حدث خطأ داخلي", "statistics": {}}), 500
+        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى.", "statistics": {}}), 500
 
 @ledger_bp.route("/cogs-audit", methods=["GET"], endpoint="cogs_audit_report")
 @login_required
@@ -971,7 +971,7 @@ def cogs_audit_report():
     except Exception as e:
         current_app.logger.error(f"Error in cogs_audit_report: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @ledger_bp.route("/entity-balance-audit", methods=["GET"], endpoint="entity_balance_audit")
 @login_required
@@ -1311,7 +1311,7 @@ def entity_balance_audit():
     except Exception as e:
         current_app.logger.error(f"Error in entity_balance_audit: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @ledger_bp.route("/entity-balance-audit/fix-gl-entities", methods=["POST"], endpoint="fix_gl_entities_for_entity_audit")
 @login_required
@@ -1474,7 +1474,7 @@ def fix_gl_entities_for_entity_audit():
         db.session.rollback()
         current_app.logger.error(f"Error in fix_gl_entities_for_entity_audit: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @ledger_bp.route("/entity-balance-audit/recalculate-entities", methods=["POST"], endpoint="recalculate_entities_for_entity_audit")
 @login_required
@@ -1736,7 +1736,7 @@ def recalculate_entities_for_entity_audit():
         db.session.rollback()
         current_app.logger.error(f"Error in recalculate_entities_for_entity_audit: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @ledger_bp.route("/entity-balance-audit/auto-fix", methods=["POST"], endpoint="auto_fix_entity_balance_audit")
 @login_required
@@ -2031,7 +2031,7 @@ def auto_fix_entity_balance_audit():
         db.session.rollback()
         current_app.logger.error(f"Error in auto_fix_entity_balance_audit: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @ledger_bp.route("/accounts-summary", methods=["GET"], endpoint="get_accounts_summary")
 @login_required
@@ -2146,7 +2146,7 @@ def get_accounts_summary():
 
     except Exception:
         current_app.logger.exception('Error in get_accounts_summary')
-        return jsonify({"error": "حدث خطأ داخلي"}), 500
+        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @ledger_bp.route("/receivables-detailed-summary", methods=["GET"], endpoint="get_receivables_detailed_summary")
 @login_required
@@ -2781,7 +2781,7 @@ def get_batch_details(batch_id):
         })
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @ledger_bp.route('/api/ar_ap_summary', methods=['GET'])
 @login_required
@@ -2894,7 +2894,7 @@ def get_ar_ap_summary():
         
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"error": "حدث خطأ داخلي"}), 500
+        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @ledger_bp.route("/stats", methods=["GET"], endpoint="get_dashboard_stats")
 @login_required
@@ -2943,7 +2943,7 @@ def get_dashboard_stats():
         return jsonify({"cash": cash, "ar": ar, "ap": ap, "profit": profit})
     except Exception as e:
         current_app.logger.error(f"Error in get_dashboard_stats: {str(e)}")
-        return jsonify({"cash": 0, "ar": 0, "ap": 0, "profit": 0, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"cash": 0, "ar": 0, "ap": 0, "profit": 0, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @ledger_bp.route('/api/inventory_breakdown', methods=['GET'])
@@ -2994,4 +2994,4 @@ def get_inventory_breakdown():
         
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"error": "حدث خطأ داخلي"}), 500
+        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500

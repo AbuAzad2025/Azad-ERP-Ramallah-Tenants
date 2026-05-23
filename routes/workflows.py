@@ -21,7 +21,7 @@ def restrict_workflows_access():
     from permissions_config.role_policy import is_platform_owner_role
 
     if not is_platform_owner_role(current_user):
-        flash('⛔ غير مصرح لك بالوصول لإدارة سير العمل', 'danger')
+        utils.flash_error('غير مصرح لك بالوصول لإدارة سير العمل', 'danger')
         return redirect(url_for('main.dashboard'))
 
 
@@ -150,13 +150,13 @@ def add_definition():
             db.session.add(definition)
             db.session.commit()
             
-            flash(f'✅ تم إضافة Workflow {workflow_code} بنجاح', 'success')
+            utils.flash_success(f'تم إضافة Workflow {workflow_code} بنجاح', 'success')
             return redirect(url_for('workflows.definitions'))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     return render_template('workflows/definition_form.html', definition=None)
 
@@ -190,13 +190,13 @@ def edit_definition(id):
             
             db.session.commit()
             
-            flash('✅ تم تحديث Workflow بنجاح', 'success')
+            utils.flash_success("تم تحديث Workflow بنجاح")
             return redirect(url_for('workflows.definitions'))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     return render_template('workflows/definition_form.html', definition=definition)
 
@@ -214,13 +214,13 @@ def toggle_definition(id):
         db.session.commit()
         
         status = 'مفعل' if definition.is_active else 'معطل'
-        flash(f'✅ Workflow الآن {status}', 'success')
+        utils.flash_success(f'Workflow الآن {status}', 'success')
         return redirect(url_for('workflows.definitions'))
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('workflows.definitions'))
 
 
@@ -311,15 +311,15 @@ def execute_action(id):
                 'COMMENT': 'التعليق'
             }.get(action_type, action_type)
             
-            flash(f'✅ تم {action_label} بنجاح', 'success')
+            utils.flash_success(f'تم {action_label} بنجاح', 'success')
         else:
-            flash('❌ فشل تنفيذ الإجراء', 'danger')
+            utils.flash_error("فشل تنفيذ الإجراء")
         
         return redirect(url_for('workflows.view_instance', id=id))
         
     except Exception as e:
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('workflows.view_instance', id=id))
 
 
@@ -337,15 +337,15 @@ def cancel_instance(id):
         )
         
         if success:
-            flash('✅ تم إلغاء Workflow بنجاح', 'success')
+            utils.flash_success("تم إلغاء Workflow بنجاح")
         else:
-            flash('❌ فشل إلغاء Workflow', 'danger')
+            utils.flash_error("فشل إلغاء Workflow")
         
         return redirect(url_for('workflows.instances'))
         
     except Exception as e:
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('workflows.instances'))
 
 
@@ -389,7 +389,7 @@ def api_start_workflow():
             
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @workflows_bp.route('/reports/summary')

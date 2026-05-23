@@ -342,11 +342,11 @@ def customer_register():
         existing_customer = Customer.query.filter(func.lower(Customer.email) == email_lower).first()
         
         if existing_user or existing_customer:
-            flash("❌ هذا البريد الإلكتروني مستخدم بالفعل. الرجاء استخدام بريد آخر أو تسجيل الدخول.", "danger")
+            utils.flash_error("هذا البريد الإلكتروني مستخدم بالفعل. الرجاء استخدام بريد آخر أو تسجيل الدخول.")
             return render_template("auth/customer_register.html", form=form)
         raw_pwd = (form.password.data or "").strip()
         if not raw_pwd:
-            flash("❌ كلمة المرور مطلوبة ولا يسمح بإنشاء حساب بكلمة افتراضية.", "danger")
+            utils.flash_error("كلمة المرور مطلوبة ولا يسمح بإنشاء حساب بكلمة افتراضية.")
             return render_template("auth/customer_register.html", form=form)
         customer = Customer(
             name=form.name.data,
@@ -364,11 +364,11 @@ def customer_register():
         except Exception:
             db.session.rollback()
             current_app.logger.exception('commit error')
-            flash('حدث خطأ أثناء الحفظ', 'danger')
+            utils.flash_error(utils.MSG_SAVE_FAILED)
             return render_template("auth/customer_register.html", form=form)
         login_user(customer, fresh=True)
         utils._audit("customer.register", ok=True, customer_id=customer.id)
-        flash("✅ تم إنشاء حسابك بنجاح! يمكنك الآن استخدام المتجر.", "success")
+        utils.flash_success("تم إنشاء حسابك بنجاح! يمكنك الآن استخدام المتجر.")
         return redirect(url_for("shop.catalog"))
     return render_template("auth/customer_register.html", form=form)
 
@@ -405,7 +405,7 @@ def customer_password_reset(token: str):
         flash("⏳ انتهت صلاحية الرابط.", "warning")
         return redirect(url_for("auth.customer_password_reset_request"))
     except BadSignature:
-        flash("❌ الرابط غير صالح.", "danger")
+        utils.flash_error("الرابط غير صالح.")
         return redirect(url_for("auth.customer_password_reset_request"))
     customer = _get_or_404(Customer, customer_id)
     if form.validate_on_submit():
@@ -415,10 +415,10 @@ def customer_password_reset(token: str):
         except Exception:
             db.session.rollback()
             current_app.logger.exception('commit error')
-            flash('حدث خطأ أثناء الحفظ', 'danger')
+            utils.flash_error(utils.MSG_SAVE_FAILED)
             return render_template("auth/customer_password_reset.html", form=form, token=token)
         utils._audit("customer.password_reset", ok=True, customer_id=customer.id)
-        flash("✅ تم تحديث كلمة المرور بنجاح.", "success")
+        utils.flash_success("تم تحديث كلمة المرور بنجاح.")
         return redirect(url_for("auth.login"))
     return render_template("auth/customer_password_reset.html", form=form, token=token)
 

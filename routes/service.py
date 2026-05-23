@@ -618,11 +618,11 @@ def create_request():
     except Exception: pass
     if form.validate_on_submit():
         if not form.customer_id.data:
-            flash("⚠️ يجب اختيار عميل قبل إنشاء طلب صيانة.","warning")
+            utils.flash_warning("يجب اختيار عميل قبل إنشاء طلب صيانة.")
             return redirect(url_for("customers_bp.create_form", return_to=url_for("service.create_request")))
         customer=db.session.get(Customer,utils._get_id(form.customer_id.data))
         if not customer:
-            flash("⚠️ العميل غير موجود. الرجاء إضافته.","danger")
+            utils.flash_error("العميل غير موجود. أضف العميل أولاً.")
             return redirect(url_for("customers_bp.create_form", return_to=url_for("service.create_request")))
         # Sanitize priority/status to avoid invalid enum values (e.g., 'NEW')
         _prio_code = (form.priority.data or 'MEDIUM').upper()
@@ -651,7 +651,7 @@ def create_request():
                 except Exception:
                     pass
             if customer.phone: utils.send_whatsapp_message(customer.phone, f"تم استلام طلب الصيانة رقم {service.service_number}.")
-            flash("✅ تم إنشاء طلب الصيانة بنجاح","success")
+            utils.flash_success("تم إنشاء طلب الصيانة بنجاح")
             return redirect(url_for('service.view_request', rid=service.id))
         except SQLAlchemyError as exc:
             db.session.rollback()
@@ -724,7 +724,7 @@ def update_diagnosis(rid):
         log_service_action(service,"DIAGNOSIS", old_data=old, new_data={'problem_description':service.problem_description,'diagnosis':service.diagnosis,'resolution':service.resolution,'estimated_duration':service.estimated_duration,'estimated_cost':str(service.estimated_cost or 0),'status':getattr(service.status,"value",service.status)})
         _refresh_service_related_balances(service)
         if service.customer and service.customer.phone: utils.send_whatsapp_message(service.customer.phone, f"تم تحديث ملاحظات المهندس للمركبة {service.vehicle_vrn}.")
-        flash('✅ تم تحديث الملاحظات بنجاح','success')
+        utils.flash_success("تم تحديث الملاحظات بنجاح")
     except SQLAlchemyError as e:
         db.session.rollback()
         _log_and_flash("service.update_diagnosis", e, "تعذر حفظ التعديلات، يرجى المحاولة لاحقاً.")
@@ -787,7 +787,7 @@ def update_discount_tax(rid):
                           })
         _refresh_service_related_balances(service)
         
-        flash('✅ تم تحديث الخصم والضريبة بنجاح', 'success')
+        utils.flash_success("تم تحديث الخصم والضريبة بنجاح")
         
     except ValueError as e:
         _flash_error(_friendly_error(e, "القيم المدخلة غير صالحة."))
@@ -840,7 +840,7 @@ def toggle_service(rid, action):
             except Exception as e:
                 current_app.logger.warning(f'⚠️ Notification failed: {e}')
         
-        flash('✅ تم تحديث حالة الصيانة','success')
+        utils.flash_success("تم تحديث حالة الصيانة")
     except ValueError as ve:
         db.session.rollback()
         _flash_error(_friendly_error(ve, "لا يمكن تنفيذ هذه العملية."))
@@ -918,8 +918,8 @@ def add_part(rid):
             if available < quantity:
                 product = Product.query.get(product_id)
                 product_name = product.name if product else f'#{product_id}'
-                flash(f'❌ المخزون غير كافٍ للمنتج "{product_name}". '
-                      f'المتوفر: {available}، المطلوب: {quantity}', 'error')
+                utils.flash_error(f'❌ المخزون غير كافٍ للمنتج "{product_name}". '
+                      f'المتوفر: {available}، المطلوب: {quantity}')
                 return redirect(url_for('service.view_request', rid=rid))
         
         part=ServicePart(
@@ -960,15 +960,15 @@ def add_part(rid):
         except Exception as e:
             current_app.logger.error(f"⚠️ GL Sync Failed for Service #{service.id}: {e}")
         _refresh_service_related_balances(service)
-        flash('✅ تمت إضافة القطعة بنجاح','success')
+        utils.flash_success("تمت إضافة القطعة بنجاح")
         
     except ValueError as ve:
         db.session.rollback()
         error_msg = str(ve).lower()
         if 'insufficient stock' in error_msg:
-            flash('❌ المخزون غير كافٍ لهذه القطعة.', 'error')
+            utils.flash_error('❌ المخزون غير كافٍ لهذه القطعة.')
         elif 'partner warehouse' in error_msg or 'warehouse' in error_msg:
-            flash('❌ المستودع المحدد غير صالح أو غير نشط.', 'error')
+            utils.flash_error('❌ المستودع المحدد غير صالح أو غير نشط.')
         else:
             _flash_error(_friendly_error(ve, "القيم المدخلة غير صالحة."))
     except SQLAlchemyError as e:
@@ -1033,9 +1033,9 @@ def delete_part(pid):
             current_app.logger.error(f"⚠️ GL Sync Failed for Service #{service.id}: {e}")
         _refresh_service_related_balances(service)
         if stock_release_ok:
-            flash('✅ تم حذف القطعة ومعالجة المخزون','success')
+            utils.flash_success("تم حذف القطعة ومعالجة المخزون")
         else:
-            flash('✅ تم حذف القطعة، لكن تعذر تحديث المخزون تلقائياً. يرجى مراجعة المخزون يدوياً.','warning')
+            utils.flash_success('تم حذف القطعة، لكن تعذر تحديث المخزون تلقائياً. يرجى مراجعة المخزون يدوياً.','warning')
     except SQLAlchemyError as e:
         db.session.rollback()
         _log_and_flash("service.delete_part", e, "تعذر حذف القطعة حالياً.")
@@ -1117,8 +1117,8 @@ def edit_part(rid, pid):
                 if available < qty_to_consume:
                     product = Product.query.get(part.part_id)
                     product_name = product.name if product else f'#{part.part_id}'
-                    flash(f'❌ المخزون غير كافٍ للمنتج "{product_name}". '
-                          f'المتوفر: {available}، المطلوب: {qty_to_consume}', 'error')
+                    utils.flash_error(f'❌ المخزون غير كافٍ للمنتج "{product_name}". '
+                          f'المتوفر: {available}، المطلوب: {qty_to_consume}')
                     return redirect(url_for('service.view_request', rid=rid))
         
         # ✅ الآن يمكن تحديث البيانات بعد التحقق من المخزون
@@ -1173,15 +1173,15 @@ def edit_part(rid, pid):
                     product = Product.query.get(part.part_id)
                     product_name = product.name if product else f'#{part.part_id}'
                     
-                    flash(f'❌ المخزون غير كافٍ للمنتج "{product_name}". '
-                          f'المتوفر: {available}، المطلوب: {new_quantity}', 'error')
+                    utils.flash_error(f'❌ المخزون غير كافٍ للمنتج "{product_name}". '
+                          f'المتوفر: {available}، المطلوب: {new_quantity}')
                 else:
-                    flash(f'❌ خطأ: {ve}', 'error')
+                    utils.flash_error(f'❌ خطأ: {ve}')
                 db.session.rollback()
                 return redirect(url_for('service.view_request', rid=rid))
             except Exception as stock_e:
                 current_app.logger.exception("service.part_edit.stock_adjust_failed")
-                flash('⚠️ تم تعديل القطعة، لكن تعذر تحديث المخزون تلقائياً.', 'warning')
+                utils.flash_warning("تم تعديل القطعة، لكن تعذر تحديث المخزون تلقائياً.")
         else:
             # المخزون لا يُخصم في هذه الحالة، لا مشكلة
             stock_adjusted = True
@@ -1199,20 +1199,20 @@ def edit_part(rid, pid):
             current_app.logger.error(f"⚠️ GL Sync Failed: {e}")
         
         _refresh_service_related_balances(service)
-        flash('✅ تم تعديل القطعة بنجاح', 'success')
+        utils.flash_success("تم تعديل القطعة بنجاح")
         
     except ValueError as ve:
         db.session.rollback()
         error_msg = str(ve).lower()
         if 'insufficient stock' in error_msg:
-            flash('❌ المخزون غير كافٍ لهذه القطعة.', 'error')
+            utils.flash_error('❌ المخزون غير كافٍ لهذه القطعة.')
         else:
             _flash_error(_friendly_error(ve, "بيانات غير صالحة."))
         return redirect(url_for('service.view_request', rid=rid))
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("service.edit_part.failed")
-        flash('❌ تعذر حفظ القطعة، يرجى المحاولة لاحقاً.', 'error')
+        utils.flash_error('❌ تعذر حفظ القطعة، يرجى المحاولة لاحقاً.')
         return redirect(url_for('service.view_request', rid=rid))
     
     return redirect(url_for('service.view_request', rid=rid))
@@ -1291,7 +1291,7 @@ def add_task(rid):
         except Exception as e:
             current_app.logger.error(f"⚠️ GL Sync Failed for Service #{service.id}: {e}")
         _refresh_service_related_balances(service)
-        flash('✅ تمت إضافة المهمة بنجاح','success')
+        utils.flash_success("تمت إضافة المهمة بنجاح")
         
     except ValueError as ve:
         db.session.rollback()
@@ -1376,7 +1376,7 @@ def edit_task(rid, tid):
             current_app.logger.error(f"⚠️ GL Sync Failed for Service #{service.id}: {e}")
         
         _refresh_service_related_balances(service)
-        flash('✅ تم تعديل المهمة بنجاح', 'success')
+        utils.flash_success("تم تعديل المهمة بنجاح")
         
     except ValueError as ve:
         db.session.rollback()
@@ -1408,7 +1408,7 @@ def delete_task(tid):
         except Exception as e:
             current_app.logger.error(f"⚠️ GL Sync Failed for Service #{service.id}: {e}")
         _refresh_service_related_balances(service)
-        flash('✅ تم حذف المهمة','success')
+        utils.flash_success("تم حذف المهمة")
     except SQLAlchemyError as e:
         db.session.rollback()
         _log_and_flash("service.delete_task", e, "تعذر حذف المهمة حالياً.")
@@ -1501,7 +1501,7 @@ def delete_request(rid):
             run_service_gl_reversal_after_delete(reversal_snapshot)
         except Exception:
             current_app.logger.warning('GL reversal failed after service delete')
-        flash('✅ تم حذف الطلب ومعالجة المخزون','success')
+        utils.flash_success("تم حذف الطلب ومعالجة المخزون")
         try:
             if customer_id:
                 from utils.customer_balance_updater import update_customer_balance_components

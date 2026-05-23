@@ -606,7 +606,7 @@ def shipments_report():
         if end_str:
             end = datetime.strptime(end_str, "%Y-%m-%d").date()
     except Exception:
-        flash("❌ صيغة التاريخ غير صحيحة", "danger")
+        utils.flash_error("صيغة التاريخ غير صحيحة")
     q = db.session.query(Shipment)
     if start:
         q = q.filter(Shipment.shipment_date >= start)
@@ -3077,7 +3077,7 @@ def supplier_detail_report(supplier_id):
         balance_data = _calculate_smart_supplier_balance(supplier_id, date_from, date_to)
     except Exception as e:
         current_app.logger.exception('supplier balance calculation error')
-        balance_data = {"success": False, "error": "حدث خطأ داخلي"}
+        balance_data = {"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}
     
     if balance_data and balance_data.get("success"):
         total_exchange_in = Decimal(str(balance_data.get("rights", {}).get("exchange_items", {}).get("total_value_ils", 0)))

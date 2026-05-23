@@ -3700,8 +3700,8 @@ def get_checks():
         
         return jsonify({
             'success': False,
-            'message': 'حدث خطأ داخلي',
-            'error': 'حدث خطأ داخلي'
+            'message': 'تعذر تنفيذ العملية. حاول مرة أخرى.',
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -3817,8 +3817,8 @@ def get_statistics():
         
         return jsonify({
             'success': False,
-            'message': 'حدث خطأ داخلي',
-            'error': 'حدث خطأ داخلي'
+            'message': 'تعذر تنفيذ العملية. حاول مرة أخرى.',
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -3910,8 +3910,8 @@ def get_first_incomplete_check():
         
         return jsonify({
             'success': False,
-            'message': 'حدث خطأ داخلي',
-            'error': 'حدث خطأ داخلي'
+            'message': 'تعذر تنفيذ العملية. حاول مرة أخرى.',
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -3951,7 +3951,7 @@ def get_check_lifecycle(check_id, check_type):
         current_app.logger.error(f"Error fetching check lifecycle: {str(e)}")
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -4684,8 +4684,8 @@ def get_alerts():
         current_app.logger.error(f"Error fetching check alerts: {str(e)}")
         return jsonify({
             'success': False,
-            'message': 'حدث خطأ داخلي',
-            'error': 'حدث خطأ داخلي'
+            'message': 'تعذر تنفيذ العملية. حاول مرة أخرى.',
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -4777,7 +4777,7 @@ def add_check():
             db.session.rollback()
             current_app.logger.error(f"Error adding check: {str(e)}")
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
             return redirect(url_for("checks.add_check"))
     
     customers = Customer.query.filter_by(is_active=True, is_archived=False).order_by(Customer.name).limit(1000).all()
@@ -4840,7 +4840,7 @@ def edit_check(check_id):
             db.session.rollback()
             current_app.logger.error(f"Error updating check: {str(e)}")
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     customers = Customer.query.filter_by(is_active=True, is_archived=False).order_by(Customer.name).limit(1000).all()
     suppliers = Supplier.query.order_by(Supplier.name).limit(1000).all()
@@ -4886,7 +4886,7 @@ def delete_check(check_id):
         db.session.rollback()
         current_app.logger.error(f"Error deleting check: {str(e)}")
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for("checks.index"))
 
 

@@ -838,7 +838,7 @@ def dashboard():
 def backup_db():
     is_prod = (current_app.config.get("ENV") == "production" or current_app.config.get("FLASK_ENV") == "production")
     if is_prod and not utils.is_super():
-        flash("❌ غير مسموح بالنسخ الاحتياطي في بيئة الإنتاج إلا للمسؤولين (Super/Owner).", "danger")
+        utils.flash_error("غير مسموح بالنسخ الاحتياطي في بيئة الإنتاج إلا للمسؤولين (Super/Owner).")
         return redirect(url_for("main.dashboard"))
 
     try:
@@ -848,13 +848,13 @@ def backup_db():
         if success and filepath and os.path.exists(filepath):
             return send_file(filepath, as_attachment=True, download_name=os.path.basename(filepath))
         else:
-            flash(f"❌ {message}", "danger")
+            utils.flash_error(f"{message}", "danger")
             return redirect(url_for("main.dashboard"))
             
     except Exception as e:
         current_app.logger.error(f"Backup error: {e}")
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for("main.dashboard"))
 
 @main_bp.route("/restore_db", methods=["GET", "POST"], endpoint="restore_db")
@@ -865,7 +865,7 @@ def restore_db():
     if is_prod and not utils.is_super():
         if request.is_json or request.headers.get('Accept') == 'application/json':
             return jsonify({"success": False, "message": "غير مسموح بالاستعادة في بيئة الإنتاج إلا للمسؤولين"}), 403
-        flash("❌ غير مسموح بالاستعادة في بيئة الإنتاج إلا للمسؤولين (Super/Owner).", "danger")
+        utils.flash_error("غير مسموح بالاستعادة في بيئة الإنتاج إلا للمسؤولين (Super/Owner).")
         return redirect(url_for("main.dashboard"))
 
     form = RestoreForm()
@@ -888,17 +888,17 @@ def restore_db():
             if ok:
                 if request.is_json or request.headers.get('Accept') == 'application/json':
                     return jsonify({"success": True, "message": msg}), 200
-                flash(f"✅ {msg}", "success")
+                utils.flash_success(f"{msg}", "success")
                 return redirect(url_for("main.dashboard"))
             if request.is_json or request.headers.get('Accept') == 'application/json':
                 return jsonify({"success": False, "message": msg}), 400
-            flash(f"❌ {msg}", "danger")
+            utils.flash_error(f"{msg}", "danger")
             return redirect(url_for("main.restore_db"))
         except Exception as e:
             if request.is_json or request.headers.get('Accept') == 'application/json':
                 current_app.logger.exception('API error')
-                return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
-            flash("❌ خطأ أثناء الاستعادة.", "danger")
+                return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
+            utils.flash_error("خطأ أثناء الاستعادة.")
             return redirect(url_for("main.restore_db"))
     return render_template("restore_db.html", form=form)
 
@@ -932,7 +932,7 @@ def automated_backup_status():
 @login_required
 def toggle_automated_backup():
     if not utils.is_super():
-        flash("❌ غير مسموح", "danger")
+        utils.flash_error("غير مسموح")
         return redirect(url_for("main.dashboard"))
     
     from extensions import scheduler
@@ -941,7 +941,7 @@ def toggle_automated_backup():
     
     if backup_job:
         scheduler.remove_job('automated_daily_backup')
-        flash("✅ تم تعطيل النسخ الاحتياطي التلقائي", "success")
+        utils.flash_success("تم تعطيل النسخ الاحتياطي التلقائي")
     else:
         scheduler.add_job(
             func=perform_automated_backup,
@@ -952,7 +952,7 @@ def toggle_automated_backup():
             name='النسخ الاحتياطي اليومي التلقائي',
             replace_existing=True
         )
-        flash("✅ تم تفعيل النسخ الاحتياطي التلقائي (يومياً الساعة 3:00 صباحاً)", "success")
+        utils.flash_success("تم تفعيل النسخ الاحتياطي التلقائي (يومياً الساعة 3:00 صباحاً)")
     
     return redirect(url_for("main.dashboard"))
 

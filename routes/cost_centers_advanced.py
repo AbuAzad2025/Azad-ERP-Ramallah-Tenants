@@ -21,7 +21,7 @@ def restrict_cost_centers_access():
     from permissions_config.role_policy import is_platform_owner_role
 
     if not is_platform_owner_role(current_user):
-        flash('⛔ غير مصرح لك بالوصول لمراكز التكلفة المتقدمة', 'danger')
+        utils.flash_error('غير مصرح لك بالوصول لمراكز التكلفة المتقدمة', 'danger')
         return redirect(url_for('main.dashboard'))
 
 
@@ -142,13 +142,13 @@ def add_alert():
         db.session.add(alert)
         db.session.commit()
         
-        flash('✅ تم إضافة التنبيه بنجاح', 'success')
+        utils.flash_success("تم إضافة التنبيه بنجاح")
         return redirect(url_for('cost_centers_advanced.alerts_list'))
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('cost_centers_advanced.alerts_list'))
 
 @cost_centers_advanced_bp.route('/alerts/<int:alert_id>/toggle', methods=['POST'])
@@ -164,13 +164,13 @@ def toggle_alert(alert_id):
         db.session.commit()
         
         status = 'مفعل' if alert.is_active else 'معطل'
-        flash(f'✅ التنبيه الآن {status}', 'success')
+        utils.flash_success(f'التنبيه الآن {status}', 'success')
         return redirect(url_for('cost_centers_advanced.alerts_list'))
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('cost_centers_advanced.alerts_list'))
 
 @cost_centers_advanced_bp.route('/allocation-rules')
@@ -249,13 +249,13 @@ def add_allocation_rule():
             
             db.session.commit()
             
-            flash(f'✅ تم إضافة قاعدة التوزيع {code} - {name} بنجاح', 'success')
+            utils.flash_success(f'تم إضافة قاعدة التوزيع {code} - {name} بنجاح', 'success')
             return redirect(url_for('cost_centers_advanced.allocation_rules'))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     cost_centers = CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all()
     
@@ -271,7 +271,7 @@ def execute_allocation_rule(rule_id):
         rule = db.get_or_404(CostAllocationRule, rule_id)
         
         if not rule.is_active:
-            flash('⚠️ لا يمكن تنفيذ قاعدة غير مفعلة', 'warning')
+            utils.flash_warning("لا يمكن تنفيذ قاعدة غير مفعلة")
             return redirect(url_for('cost_centers_advanced.allocation_rules'))
         
         execution_date = datetime.strptime(request.form.get('execution_date'), '%Y-%m-%d').date()
@@ -327,13 +327,13 @@ def execute_allocation_rule(rule_id):
         
         db.session.commit()
         
-        flash(f'✅ تم تنفيذ التوزيع بنجاح: {total_amount} ₪', 'success')
+        utils.flash_success(f'تم تنفيذ التوزيع بنجاح: {total_amount} ₪', 'success')
         return redirect(url_for('cost_centers_advanced.allocation_rules'))
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('cost_centers_advanced.allocation_rules'))
 
 @cost_centers_advanced_bp.route('/reports/trends')

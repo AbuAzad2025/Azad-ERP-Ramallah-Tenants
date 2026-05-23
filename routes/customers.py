@@ -296,7 +296,7 @@ def list_customers():
     }
 
     if not customers_list and not print_mode:
-        flash("⚠️ لا توجد بيانات لعرضها", "info")
+        utils.flash_warning("لا توجد بيانات لعرضها")
 
     if print_mode:
         if print_scope == "range":
@@ -458,7 +458,7 @@ def balances_recalculate():
     except Exception as e:
         if request.accept_mimetypes.best == "application/json":
             current_app.logger.exception('API error')
-            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+            return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
         flash("حدث خطأ أثناء تحديث الأرصدة.", "danger")
         return redirect(url_for("customers_bp.list_customers"))
 
@@ -795,7 +795,7 @@ def create_customer():
         current_app.logger.exception("SQLAlchemyError while creating customer")
         if is_ajax:
             return jsonify({"ok": False, "message": "خطأ أثناء إضافة العميل"}), 500
-        flash('❌ خطأ أثناء إضافة العميل', 'danger')
+        utils.flash_error("خطأ أثناء إضافة العميل")
         # إبقاء المستخدم على نفس الصفحة مع عرض الخطأ بشكل ودي
         return render_template("customers/new.html", form=form, return_to=request.form.get("return_to"))
     if is_ajax:
@@ -847,7 +847,7 @@ def edit_customer(customer_id):
             except SQLAlchemyError:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError while editing customer")
-                flash('❌ خطأ أثناء تعديل العميل', 'danger')
+                utils.flash_error("خطأ أثناء تعديل العميل")
                 return render_template("customers/edit.html", form=form, customer=cust), 500
             flash("تم تعديل بيانات العميل", "success")
             return redirect(url_for("customers_bp.customer_detail", customer_id=customer_id))
@@ -872,18 +872,18 @@ def delete_customer(id):
     has_opening_balance = (customer.opening_balance and float(customer.opening_balance) != 0)
     
     if has_invoices or has_payments or has_sales or has_services or has_preorders or has_opening_balance:
-        flash("❌ لا يمكن حذف العميل لأنه مرتبط بمعاملات أو له رصيد افتتاحي.", "danger")
+        utils.flash_error("لا يمكن حذف العميل لأنه مرتبط بمعاملات أو له رصيد افتتاحي.")
         return redirect(url_for("customers_bp.list_customers"))
     
     try:
         name = customer.name
         db.session.delete(customer)
         db.session.commit()
-        flash(f"✅ تم حذف العميل: {name}", "success")
+        utils.flash_success(f"تم حذف العميل: {name}", "success")
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('❌ خطأ أثناء الحذف', 'danger')
+        utils.flash_error("خطأ أثناء الحذف")
     
     return redirect(url_for("customers_bp.list_customers"))
 
@@ -2668,10 +2668,10 @@ def archive_customer(customer_id):
         db.session.rollback()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             current_app.logger.exception('API error')
-            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+            return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
             
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'error')
+        utils.flash_error()
         return redirect(url_for('customers_bp.list_customers'))
 
 @customers_bp.route('/restore/<int:customer_id>', methods=['POST'])
@@ -2710,10 +2710,10 @@ def restore_customer(customer_id):
         db.session.rollback()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             current_app.logger.exception('API error')
-            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+            return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
             
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'error')
+        utils.flash_error()
         return redirect(url_for('customers_bp.list_customers'))
 
 
@@ -2766,10 +2766,10 @@ def reset_passwords():
         db.session.commit()
 
         if total_candidates == 0:
-            flash('ℹ️ لا يوجد عملاء بحاجة لتعيين كلمة مرور (الحقل موجود بالفعل).', 'info')
+            utils.flash_info('لا يوجد عملاء بحاجة لتعيين كلمة مرور (الحقل موجود بالفعل).', 'info')
             return redirect(url_for('customers_bp.list_customers'))
 
-        flash(f'✅ تم تعيين كلمة مرور فريدة لعدد {updated} عميل من أصل {total_candidates}.', 'success')
+        utils.flash_success(f'تم تعيين كلمة مرور فريدة لعدد {updated} عميل من أصل {total_candidates}.', 'success')
         from markupsafe import escape as _esc
         rows_html = ''.join(
             f"<tr><td>{c['id']}</td><td>{_esc(c['name'])}</td><td>{_esc(c['phone'])}</td><td style='font-family:monospace'>{_esc(c['password'])}</td></tr>"
@@ -2791,7 +2791,7 @@ def reset_passwords():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error("خطأ في تعيين كلمات المرور: %s", e)
-        flash('خطأ في تعيين كلمات المرور', 'error')
+        utils.flash_error('خطأ في تعيين كلمات المرور')
         return redirect(url_for('customers_bp.list_customers'))
 
 
@@ -2830,7 +2830,7 @@ def make_online_all():
         db.session.commit()
 
         if new_passwords:
-            flash(f'✅ تم تحويل {updated} عميل للأونلاين. تم توليد كلمات مرور لـ {len(new_passwords)} عميل.', 'success')
+            utils.flash_success(f'تم تحويل {updated} عميل للأونلاين. تم توليد كلمات مرور لـ {len(new_passwords)} عميل.', 'success')
             from markupsafe import escape as _esc
             rows_html = ''.join(
                 f"<tr><td>{c['id']}</td><td>{_esc(c['name'])}</td><td>{_esc(c['phone'])}</td><td style='font-family:monospace'>{_esc(c['password'])}</td></tr>"
@@ -2850,12 +2850,12 @@ def make_online_all():
                 )
             )
 
-        flash(f'✅ تم تحويل جميع العملاء ({updated}) إلى وضع الأونلاين.', 'success')
+        utils.flash_success(f'تم تحويل جميع العملاء ({updated}) إلى وضع الأونلاين.', 'success')
         return redirect(url_for('customers_bp.list_customers'))
     except Exception as e:
         db.session.rollback()
         current_app.logger.error("خطأ في تحويل العملاء للأونلاين: %s", e)
-        flash('خطأ أثناء تحويل العملاء للأونلاين', 'error')
+        utils.flash_error('خطأ أثناء تحويل العملاء للأونلاين')
         return redirect(url_for('customers_bp.list_customers'))
 
 
@@ -2880,12 +2880,12 @@ def set_default_emails():
             cust.email = target_email
             updated += 1
         db.session.commit()
-        flash(f'✅ تم ضبط بريد افتراضي لـ {updated} عميل. تم تخطي {skipped} بسبب تعارض أو عدم وجود هاتف.', 'success')
+        utils.flash_success(f'تم ضبط بريد افتراضي لـ {updated} عميل. تم تخطي {skipped} بسبب تعارض أو عدم وجود هاتف.', 'success')
         return redirect(url_for('customers_bp.list_customers'))
     except Exception as e:
         db.session.rollback()
         current_app.logger.error("خطأ في ضبط البريد الافتراضي: %s", e)
-        flash('خطأ أثناء ضبط البريد الافتراضي', 'error')
+        utils.flash_error('خطأ أثناء ضبط البريد الافتراضي')
         return redirect(url_for('customers_bp.list_customers'))
 
 @customers_bp.route('/export-online-credentials', methods=['GET'])

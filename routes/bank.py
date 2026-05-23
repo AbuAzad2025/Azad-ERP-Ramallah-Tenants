@@ -22,7 +22,7 @@ def restrict_bank_access():
     from permissions_config.role_policy import is_platform_owner_role
 
     if not is_platform_owner_role(current_user):
-        flash('⛔ غير مصرح لك بالوصول لإدارة البنوك (تتطلب صلاحيات المالك)', 'danger')
+        utils.flash_error('غير مصرح لك بالوصول لإدارة البنوك (تتطلب صلاحيات المالك)', 'danger')
         return redirect(url_for('main.dashboard'))
 
 
@@ -136,13 +136,13 @@ def add_account():
             
             db.session.commit()
             
-            flash(f'✅ تم إضافة الحساب البنكي {code} - {name} بنجاح', 'success')
+            utils.flash_success(f'تم إضافة الحساب البنكي {code} - {name} بنجاح', 'success')
             return redirect(url_for('bank.accounts'))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     gl_accounts = Account.query.filter_by(type='ASSET', is_active=True).filter(
         Account.code.like('101%')
@@ -175,13 +175,13 @@ def edit_account(id):
             
             db.session.commit()
             
-            flash(f'✅ تم تحديث الحساب البنكي بنجاح', 'success')
+            utils.flash_success(f'تم تحديث الحساب البنكي بنجاح', 'success')
             return redirect(url_for('bank.view_account', id=id))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     gl_accounts = Account.query.filter_by(type='ASSET', is_active=True).filter(
         Account.code.like('101%')
@@ -377,7 +377,7 @@ def upload_statement():
                     
                     transaction_count += 1
                 
-                flash(f'✅ تم رفع {transaction_count} معاملة من الكشف', 'info')
+                utils.flash_success(f'تم رفع {transaction_count} معاملة من الكشف', 'info')
             else:
                 flash('الملف فارغ أو غير صالح', 'danger')
                 return redirect(request.url)
@@ -385,7 +385,7 @@ def upload_statement():
             expected_closing = opening_balance + total_debit_amount - total_credit_amount
             if round(expected_closing, 2) != round(closing_balance, 2):
                 diff = float(expected_closing - closing_balance)
-                flash(f'❌ الرصيد الختامي المدخل لا يطابق الحركة المحسوبة. الفارق: {diff:.2f} ₪', 'danger')
+                utils.flash_error(f'الرصيد الختامي المدخل لا يطابق الحركة المحسوبة. الفارق: {diff:.2f} ₪', 'danger')
                 return redirect(request.url)
             
             statement = BankStatement(
@@ -423,13 +423,13 @@ def upload_statement():
             
             db.session.commit()
             
-            flash(f'✅ تم رفع كشف الحساب بنجاح', 'success')
+            utils.flash_success(f'تم رفع كشف الحساب بنجاح', 'success')
             return redirect(url_for('bank.view_statement', id=statement.id))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     bank_accounts = BankAccount.query.filter_by(is_active=True).order_by(BankAccount.name).all()
     
@@ -537,13 +537,13 @@ def new_reconciliation():
             db.session.add(reconciliation)
             db.session.commit()
             
-            flash(f'✅ تم إنشاء التسوية {recon_number}', 'success')
+            utils.flash_success(f'تم إنشاء التسوية {recon_number}', 'success')
             return redirect(url_for('bank.view_reconciliation', id=reconciliation.id))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     bank_accounts = BankAccount.query.filter_by(is_active=True).order_by(BankAccount.name).all()
     
@@ -618,13 +618,13 @@ def complete_reconciliation(id):
         
         db.session.commit()
         
-        flash(f'✅ تم إكمال التسوية {reconciliation.reconciliation_number}', 'success')
+        utils.flash_success(f'تم إكمال التسوية {reconciliation.reconciliation_number}', 'success')
         return redirect(url_for('bank.view_reconciliation', id=id))
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('bank.view_reconciliation', id=id))
 
 
@@ -836,5 +836,5 @@ def auto_match(bank_account_id):
         current_app.logger.exception('API error')
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500

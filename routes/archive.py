@@ -101,7 +101,7 @@ def bulk_archive():
             record_type = request.form.get('record_type')
             model_class = model_map.get(record_type)
             if not model_class:
-                flash('نوع السجل غير مدعوم', 'error')
+                utils.flash_error('نوع السجل غير مدعوم')
                 return redirect(url_for('archive.bulk_archive'))
             
             # البحث عن السجلات المؤهلة للأرشفة
@@ -112,7 +112,7 @@ def bulk_archive():
             dt_from = _parse_date(date_from)
             dt_to = _parse_date(date_to)
             if not dt_from or not dt_to:
-                flash('صيغة التاريخ غير صحيحة', 'error')
+                utils.flash_error('صيغة التاريخ غير صحيحة')
                 return redirect(url_for('archive.bulk_archive'))
 
             query = model_class.query.filter(
@@ -145,7 +145,7 @@ def bulk_archive():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'error')
+            utils.flash_error()
     
     return render_template('archive/bulk_archive.html')
 
@@ -179,7 +179,7 @@ def restore_archive(archive_id):
             
         except Exception as e:
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'error')
+            utils.flash_error()
     
     return render_template('archive/restore.html', archive=archive)
 
@@ -197,7 +197,7 @@ def delete_archive(archive_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'error')
+        utils.flash_error()
     
     return redirect(url_for('archive.index'))
 

@@ -176,7 +176,7 @@ def _update_type_meta(expense_type, meta):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
     return _normalize_meta(expense_type.fields_meta)
 
 

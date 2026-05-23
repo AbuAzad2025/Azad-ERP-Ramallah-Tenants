@@ -117,13 +117,13 @@ def add():
             db.session.add(cost_center)
             db.session.commit()
             
-            flash(f'✅ تم إضافة مركز التكلفة {code} - {name} بنجاح', 'success')
+            utils.flash_success(f'تم إضافة مركز التكلفة {code} - {name} بنجاح', 'success')
             return redirect(url_for('cost_centers.index'))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     from models import User
     parent_centers = CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all()
@@ -159,13 +159,13 @@ def edit(id):
             
             db.session.commit()
             
-            flash(f'✅ تم تحديث مركز التكلفة بنجاح', 'success')
+            utils.flash_success(f'تم تحديث مركز التكلفة بنجاح', 'success')
             return redirect(url_for('cost_centers.view', id=id))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     from models import User
     parent_centers = CostCenter.query.filter(
@@ -267,13 +267,13 @@ def allocate(id):
         db.session.add(allocation)
         db.session.commit()
         
-        flash(f'✅ تم توزيع {float(amount):.2f} على المركز بنجاح', 'success')
+        utils.flash_success(f'تم توزيع {float(amount):.2f} على المركز بنجاح', 'success')
         return redirect(url_for('cost_centers.view', id=id))
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('cost_centers.view', id=id))
 
 

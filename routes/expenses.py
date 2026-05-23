@@ -740,11 +740,11 @@ def add_employee():
         db.session.add(e)
         try:
             db.session.commit()
-            flash("✅ تمت إضافة الموظف بنجاح", "success")
+            utils.flash_success("تمت إضافة الموظف بنجاح")
             return redirect(url_for("expenses_bp.employees_list"))
         except SQLAlchemyError as err:
             db.session.rollback()
-            flash(f"❌ خطأ في إضافة الموظف: {err}", "danger")
+            utils.flash_error(f"خطأ في إضافة الموظف: {err}", "danger")
     return render_template("expenses/employee_form.html", form=form, is_edit=False)
 
 @expenses_bp.route("/employees/edit/<int:emp_id>", methods=["GET", "POST"], endpoint="edit_employee")
@@ -766,11 +766,11 @@ def edit_employee(emp_id):
         form.populate_obj(e)
         try:
             db.session.commit()
-            flash("✅ تم تعديل الموظف", "success")
+            utils.flash_success("تم تعديل الموظف")
             return redirect(url_for("expenses_bp.employees_list"))
         except SQLAlchemyError as err:
             db.session.rollback()
-            flash(f"❌ خطأ في تعديل الموظف: {err}", "danger")
+            utils.flash_error(f"خطأ في تعديل الموظف: {err}", "danger")
     return render_template("expenses/employee_form.html", form=form, is_edit=True)
 
 @expenses_bp.route("/employees/<int:emp_id>/statement", methods=["GET"], endpoint="employee_statement")
@@ -940,17 +940,17 @@ def generate_salary(emp_id):
     remaining_balance = net_salary - actual_payment
     
     if actual_payment > net_salary:
-        flash(f"❌ المبلغ المدفوع ({actual_payment}) أكبر من الراتب الصافي ({net_salary})", "danger")
+        utils.flash_error(f"المبلغ المدفوع ({actual_payment}) أكبر من الراتب الصافي ({net_salary})", "danger")
         return redirect(url_for('expenses_bp.employee_statement', emp_id=emp_id))
     
     if actual_payment < 0:
-        flash("❌ المبلغ المدفوع لا يمكن أن يكون سالباً", "danger")
+        utils.flash_error("المبلغ المدفوع لا يمكن أن يكون سالباً")
         return redirect(url_for('expenses_bp.employee_statement', emp_id=emp_id))
     
     
     salary_type = ExpenseType.query.filter_by(code='SALARY').first()
     if not salary_type:
-        flash("❌ نوع المصروف 'SALARY' غير موجود في النظام", "danger")
+        utils.flash_error("نوع المصروف 'SALARY' غير موجود في النظام", "danger")
         return redirect(url_for('expenses_bp.employee_statement', emp_id=emp_id))
     
     existing_salary = Expense.query.filter(
@@ -1125,7 +1125,7 @@ def generate_salary(emp_id):
     except Exception as err:
         db.session.rollback()
         current_app.logger.error(f"❌ خطأ في توليد الراتب: {err}")
-        flash(f"❌ خطأ في توليد الراتب: {err}", "danger")
+        utils.flash_error(f"خطأ في توليد الراتب: {err}", "danger")
         return redirect(url_for('expenses_bp.employee_statement', emp_id=emp_id))
 
 
@@ -1140,7 +1140,7 @@ def salary_receipt(salary_exp_id):
     salary_expense = _get_or_404(Expense, salary_exp_id, load_options=[joinedload(Expense.employee).joinedload(Employee.branch)])
     
     if not salary_expense.employee:
-        flash("❌ المصروف غير مرتبط بموظف", "danger")
+        utils.flash_error("المصروف غير مرتبط بموظف")
         return redirect(url_for("expenses_bp.list_expenses"))
     
     employee = salary_expense.employee
@@ -1187,15 +1187,15 @@ def salary_receipt(salary_exp_id):
 def delete_employee(emp_id):
     e = _get_or_404(Employee, emp_id)
     if Expense.query.filter_by(employee_id=emp_id).first():
-        flash("❌ لا يمكن حذف الموظف؛ مرتبط بمصاريف.", "danger")
+        utils.flash_error("لا يمكن حذف الموظف؛ مرتبط بمصاريف.")
     else:
         try:
             db.session.delete(e)
             db.session.commit()
-            flash("✅ تم حذف الموظف", "success")
+            utils.flash_success("تم حذف الموظف")
         except SQLAlchemyError as err:
             db.session.rollback()
-            flash(f"❌ خطأ في حذف الموظف: {err}", "danger")
+            utils.flash_error(f"خطأ في حذف الموظف: {err}", "danger")
     return redirect(url_for("expenses_bp.employees_list"))
 
 @expenses_bp.route("/types", methods=["GET"], endpoint="types_list")
@@ -1216,11 +1216,11 @@ def add_type():
         db.session.add(t)
         try:
             db.session.commit()
-            flash("✅ تمت إضافة نوع المصروف", "success")
+            utils.flash_success("تمت إضافة نوع المصروف")
             return redirect(url_for("expenses_bp.types_list"))
         except SQLAlchemyError as err:
             db.session.rollback()
-            flash(f"❌ خطأ في إضافة النوع: {err}", "danger")
+            utils.flash_error(f"خطأ في إضافة النوع: {err}", "danger")
     return render_template("expenses/type_form.html", form=form, is_edit=False)
 
 @expenses_bp.route("/types/edit/<int:type_id>", methods=["GET", "POST"], endpoint="edit_type")
@@ -1233,11 +1233,11 @@ def edit_type(type_id):
         form.apply_to(t)
         try:
             db.session.commit()
-            flash("✅ تم تعديل النوع", "success")
+            utils.flash_success("تم تعديل النوع")
             return redirect(url_for("expenses_bp.types_list"))
         except SQLAlchemyError as err:
             db.session.rollback()
-            flash(f"❌ خطأ في تعديل النوع: {err}", "danger")
+            utils.flash_error(f"خطأ في تعديل النوع: {err}", "danger")
     return render_template("expenses/type_form.html", form=form, is_edit=True)
 
 @expenses_bp.route("/types/delete/<int:type_id>", methods=["POST"], endpoint="delete_type")
@@ -1246,15 +1246,15 @@ def edit_type(type_id):
 def delete_type(type_id):
     t = _get_or_404(ExpenseType, type_id)
     if Expense.query.filter_by(type_id=type_id).first():
-        flash("❌ لا يمكن حذف النوع؛ مرتبط بمصاريف.", "danger")
+        utils.flash_error("لا يمكن حذف النوع؛ مرتبط بمصاريف.")
     else:
         try:
             db.session.delete(t)
             db.session.commit()
-            flash("✅ تم حذف النوع", "success")
+            utils.flash_success("تم حذف النوع")
         except SQLAlchemyError as err:
             db.session.rollback()
-            flash(f"❌ خطأ في حذف النوع: {err}", "danger")
+            utils.flash_error(f"خطأ في حذف النوع: {err}", "danger")
     return redirect(url_for("expenses_bp.types_list"))
 
 @expenses_bp.route("/", methods=["GET"], endpoint="list_expenses")
@@ -1995,15 +1995,15 @@ def add():
                     exp.date = dt
             
             if not exp.branch_id or exp.branch_id == 0:
-                flash("⚠️ يرجى اختيار الفرع من القائمة", "warning")
+                utils.flash_warning("يرجى اختيار الفرع من القائمة")
                 return _render_expense_form(form, is_edit=False, types_meta=types_meta, types_list=types_list, **render_kwargs)
             
             if not exp.amount or exp.amount <= 0:
-                flash("⚠️ يرجى إدخال مبلغ المصروف", "warning")
+                utils.flash_warning("يرجى إدخال مبلغ المصروف")
                 return _render_expense_form(form, is_edit=False, types_meta=types_meta, types_list=types_list, **render_kwargs)
             
             if not exp.disbursed_by or exp.disbursed_by.strip() == '':
-                flash("⚠️ يرجى إدخال اسم الشخص الذي سلم المال", "warning")
+                utils.flash_warning("يرجى إدخال اسم الشخص الذي سلم المال")
                 return _render_expense_form(form, is_edit=False, types_meta=types_meta, types_list=types_list, **render_kwargs)
             
             if not getattr(form.employee_id, "data", None) or form.employee_id.data == 0:
@@ -2020,7 +2020,7 @@ def add():
         if not exp.branch_id or exp.branch_id == 0:
             exp.branch_id = _default_expense_branch_id() or (int(form.branch_id.data) if getattr(form, "branch_id", None) and form.branch_id.data else None)
         if not exp.branch_id:
-            flash("⚠️ يرجى اختيار الفرع من القائمة أو إنشاء فرع نشط في النظام.", "warning")
+            utils.flash_warning("يرجى اختيار الفرع من القائمة أو إنشاء فرع نشط في النظام.")
             return _render_expense_form(form, is_edit=False, types_meta=types_meta, types_list=types_list, **render_kwargs)
 
         if supplier_service_mode and service_supplier and (not exp.supplier_id or exp.supplier_id == 0):
@@ -2116,7 +2116,7 @@ def add():
 
             if missing:
                 errs = '، '.join(missing)
-                flash(f"❌ حقول إلزامية مفقودة: {errs}", 'danger')
+                utils.flash_error(f"حقول إلزامية مفقودة: {errs}", 'danger')
                 raise ValueError('missing required fields')
         except Exception:
             return _render_expense_form(form, is_edit=False, types_meta=types_meta, types_list=types_list, **render_kwargs), 400
@@ -2135,14 +2135,14 @@ def add():
         if not exp.branch_id:
             exp.branch_id = _default_expense_branch_id()
         if not exp.branch_id:
-            flash("⚠️ لا يوجد فرع نشط. يرجى إنشاء فرع من إدارة الفروع.", "warning")
+            utils.flash_warning("لا يوجد فرع نشط. يرجى إنشاء فرع من إدارة الفروع.")
             return _render_expense_form(form, is_edit=False, types_meta=types_meta, types_list=types_list, **render_kwargs)
         etype = db.session.get(ExpenseType, exp.type_id) if exp.type_id else None
         if etype and (getattr(etype, "code", "") or "").upper() == "SUPPLIER_EXPENSE" and (not exp.supplier_id or exp.supplier_id == 0):
-            flash("⚠️ مصروف مورد يتطلب اختيار المورد. يرجى اختيار المورد من القائمة.", "warning")
+            utils.flash_warning("مصروف مورد يتطلب اختيار المورد. يرجى اختيار المورد من القائمة.")
             return _render_expense_form(form, is_edit=False, types_meta=types_meta, types_list=types_list, **render_kwargs)
         if etype and (getattr(etype, "code", "") or "").upper() == "PARTNER_EXPENSE" and (not exp.partner_id or exp.partner_id == 0):
-            flash("⚠️ مصروف شريك يتطلب اختيار الشريك. يرجى اختيار الشريك من القائمة.", "warning")
+            utils.flash_warning("مصروف شريك يتطلب اختيار الشريك. يرجى اختيار الشريك من القائمة.")
             return _render_expense_form(form, is_edit=False, types_meta=types_meta, types_list=types_list, **render_kwargs)
 
         db.session.add(exp)
@@ -2156,16 +2156,16 @@ def add():
         
         try:
             db.session.commit()
-            flash("✅ تمت إضافة المصروف بنجاح", "success")
+            utils.flash_success("تمت إضافة المصروف بنجاح")
             try:
                 gl_ok = run_expense_gl_sync_after_commit(exp.id)
                 if gl_ok:
                     flash("📒 تم تسجيل القيد في دفتر الأستاذ.", "success")
                 else:
-                    flash("⚠️ لم يُسجّل القيد في دفتر الأستاذ. عدّل المصروف واحفظه لإعادة المحاولة، أو راجع السجلات.", "warning")
+                    utils.flash_warning("لم يُسجّل القيد في دفتر الأستاذ. عدّل المصروف واحفظه لإعادة المحاولة، أو راجع السجلات.")
             except Exception as sync_err:
                 current_app.logger.warning("مزامنة دفتر الأستاذ للمصروف %s فشلت: %s", exp.id, sync_err, exc_info=True)
-                flash("⚠️ لم يُسجّل القيد في دفتر الأستاذ. عدّل المصروف واحفظه لإعادة المحاولة.", "warning")
+                utils.flash_warning("لم يُسجّل القيد في دفتر الأستاذ. عدّل المصروف واحفظه لإعادة المحاولة.")
             try:
                 from models import EmployeeAdvanceInstallment
                 from dateutil.relativedelta import relativedelta
@@ -2262,21 +2262,21 @@ def add():
             error_msg = str(err).lower()
             
             if "expense.entity_required" in error_msg:
-                flash("❌ يجب اختيار جهة للمصروف (مورد/عميل/شريك/موظف) قبل الحفظ.", "danger")
+                utils.flash_error("يجب اختيار جهة للمصروف (مورد/عميل/شريك/موظف) قبل الحفظ.")
             elif "foreign key mismatch" in error_msg:
-                flash("⚠️ يوجد خطأ في إعدادات قاعدة البيانات - يرجى التواصل مع الدعم الفني", "warning")
+                utils.flash_warning("يوجد خطأ في إعدادات قاعدة البيانات - يرجى التواصل مع الدعم الفني")
                 current_app.logger.error(f"Foreign key mismatch في المصروفات: {err}")
             elif "foreign key" in error_msg:
-                flash("❌ خطأ في ربط البيانات - يرجى التأكد من اختيار جميع الحقول المطلوبة", "danger")
+                utils.flash_error("خطأ في ربط البيانات - يرجى التأكد من اختيار جميع الحقول المطلوبة")
             elif "not null" in error_msg or "cannot be null" in error_msg:
-                flash("❌ يرجى تعبئة جميع الحقول الإلزامية (الفرع، المبلغ، التاريخ)", "danger")
+                utils.flash_error("يرجى تعبئة جميع الحقول الإلزامية (الفرع، المبلغ، التاريخ)")
             elif "unique" in error_msg:
-                flash("❌ هذا المصروف مسجل مسبقاً", "danger")
+                utils.flash_error("هذا المصروف مسجل مسبقاً")
             elif "null identity key" in error_msg:
-                flash("❌ خطأ في حفظ البيانات - يرجى المحاولة مرة أخرى", "danger")
+                utils.flash_error("خطأ في حفظ البيانات - يرجى المحاولة مرة أخرى")
                 current_app.logger.error(f"NULL identity key في المصروف: {err}")
             else:
-                flash("❌ حدث خطأ غير متوقع - يرجى المحاولة مرة أخرى أو التواصل مع الدعم", "danger")
+                utils.flash_error("حدث خطأ غير متوقع - يرجى المحاولة مرة أخرى أو التواصل مع الدعم")
             
             current_app.logger.error(f"خطأ في إضافة مصروف: {err}")
     
@@ -2682,28 +2682,28 @@ def edit(exp_id):
             try:
                 gl_ok = run_expense_gl_sync_after_commit(exp.id)
                 if not gl_ok:
-                    flash("⚠️ لم يُحدّث قيد دفتر الأستاذ. راجع السجلات أو أعد الحفظ.", "warning")
+                    utils.flash_warning("لم يُحدّث قيد دفتر الأستاذ. راجع السجلات أو أعد الحفظ.")
             except Exception as sync_err:
                 current_app.logger.warning("مزامنة دفتر الأستاذ للمصروف %s (تعديل) فشلت: %s", exp.id, sync_err, exc_info=True)
-                flash("⚠️ لم يُحدّث قيد دفتر الأستاذ.", "warning")
+                utils.flash_warning("لم يُحدّث قيد دفتر الأستاذ.")
             try:
                 after_pairs = _expense_related_entity_pairs(exp)
                 _refresh_entity_balances(before_pairs | after_pairs)
             except Exception as e:
                 current_app.logger.error(f"❌ فشل تحديث أرصدة الجهات بعد تعديل المصروف: {e}")
 
-            flash("✅ تم تعديل المصروف", "success")
+            utils.flash_success("تم تعديل المصروف")
             return redirect(url_for("expenses_bp.list_expenses"))
         except ValueError as perr:
             db.session.rollback()
             perr_msg = str(perr)
             if "expense.entity_required" in perr_msg:
-                flash("❌ يجب اختيار جهة للمصروف (مورد/عميل/شريك/موظف) قبل الحفظ.", "danger")
+                utils.flash_error("يجب اختيار جهة للمصروف (مورد/عميل/شريك/موظف) قبل الحفظ.")
             else:
                 flash(perr_msg, "danger")
         except SQLAlchemyError as err:
             db.session.rollback()
-            flash(f"❌ خطأ في تعديل المصروف: {err}", "danger")
+            utils.flash_error(f"خطأ في تعديل المصروف: {err}", "danger")
     
     return _render_expense_form(form, is_edit=True, types_meta=types_meta, types_list=types_list, expense=exp)
 
@@ -2783,10 +2783,10 @@ def delete(exp_id):
         except Exception as e:
             current_app.logger.error(f"❌ فشل تحديث أرصدة الجهات بعد حذف المصروف: {e}")
 
-        flash("✅ تم حذف المصروف", "success")
+        utils.flash_success("تم حذف المصروف")
     except SQLAlchemyError as err:
         db.session.rollback()
-        flash(f"❌ خطأ في حذف المصروف: {err}", "danger")
+        utils.flash_error(f"خطأ في حذف المصروف: {err}", "danger")
     return redirect(url_for("expenses_bp.list_expenses"))
 
 @expenses_bp.route("/<int:exp_id>/pay", methods=["GET"], endpoint="pay")
@@ -2992,7 +2992,7 @@ def archive_expense(expense_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'error')
+        utils.flash_error()
         return redirect(url_for('expenses_bp.list_expenses'))
 
 @expenses_bp.route('/restore/<int:expense_id>', methods=['POST'])
@@ -3024,7 +3024,7 @@ def restore_expense(expense_id):
         
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'error')
+        utils.flash_error()
         return redirect(url_for('expenses_bp.list_expenses'))
 
 

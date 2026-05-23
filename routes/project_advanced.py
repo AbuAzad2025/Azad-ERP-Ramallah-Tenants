@@ -205,7 +205,7 @@ def add_task(project_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(request.referrer or url_for('project_advanced.tasks', project_id=project_id))
 
 
@@ -295,7 +295,7 @@ def add_resource(project_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(request.referrer)
 
 
@@ -389,7 +389,7 @@ def add_milestone(project_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(request.referrer)
 
 
@@ -416,7 +416,7 @@ def complete_milestone(project_id, milestone_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(request.referrer)
 
 
@@ -492,7 +492,7 @@ def add_risk(project_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(request.referrer)
 
 
@@ -566,7 +566,7 @@ def add_change_order(project_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(request.referrer)
 
 
@@ -595,7 +595,7 @@ def approve_change_order(project_id, co_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(request.referrer)
 
 

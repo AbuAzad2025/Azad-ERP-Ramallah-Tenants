@@ -73,7 +73,7 @@ def restrict_security_access():
     from utils.dashboard_routing import preferred_dashboard_endpoint
 
     if not is_platform_owner_role(current_user):
-        flash('⛔ غير مصرح لك بالوصول للوحة المالك', 'danger')
+        utils.flash_error('غير مصرح لك بالوصول للوحة المالك', 'danger')
         return redirect(url_for(preferred_dashboard_endpoint(current_user, None)))
 
 
@@ -242,7 +242,7 @@ def api_system_account_change_password():
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @security_bp.route('/saas-manager')
@@ -365,7 +365,7 @@ def api_saas_create_plan():
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @security_bp.route('/api/saas/subscriptions', methods=['POST'])
@@ -403,7 +403,7 @@ def api_saas_create_subscription():
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @security_bp.route('/api/saas/invoices/<int:invoice_id>/mark-paid', methods=['POST'])
@@ -422,7 +422,7 @@ def api_saas_mark_paid(invoice_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @security_bp.route('/api/saas/subscriptions/<int:sub_id>/cancel', methods=['POST'])
@@ -443,7 +443,7 @@ def api_saas_cancel_subscription(sub_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @security_bp.route('/api/saas/subscriptions/<int:sub_id>/renew', methods=['POST'])
@@ -468,7 +468,7 @@ def api_saas_renew_subscription(sub_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @security_bp.route('/api/saas/plans/<int:plan_id>', methods=['PUT'])
@@ -511,7 +511,7 @@ def api_saas_update_plan(plan_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @security_bp.route('/api/saas/invoices', methods=['POST'])
@@ -558,7 +558,7 @@ def api_saas_create_invoice():
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @security_bp.route('/api/saas/invoices/<int:invoice_id>/send-reminder', methods=['POST'])
@@ -598,7 +598,7 @@ def api_saas_send_reminder(invoice_id):
         return jsonify({'success': True, 'message': f'تم إرسال التذكير إلى {customer.email}'})
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @security_bp.route('/api/customers', methods=['GET'])
@@ -618,7 +618,7 @@ def api_get_customers():
         } for c in customers])
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"error": "حدث خطأ داخلي"}), 400
+        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @security_bp.route('/api/saas/subscriptions/<int:sub_id>', methods=['GET'])
@@ -655,7 +655,7 @@ def api_saas_get_subscription(sub_id):
         })
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @security_bp.route('/api/saas/subscriptions/<int:sub_id>', methods=['PUT'])
@@ -681,7 +681,7 @@ def api_saas_update_subscription(sub_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @security_bp.route('/api/saas/invoices/<int:invoice_id>/pdf', methods=['GET'])
@@ -768,7 +768,7 @@ def api_saas_invoice_pdf(invoice_id):
         raise
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @security_bp.route('/')
@@ -838,10 +838,10 @@ def block_ip():
         duration = request.form.get('duration', '').strip()  # permanent, 1h, 24h, 7d, 30d
         
         if not ip:
-            flash('❌ IP مطلوب', 'danger')
+            utils.flash_error("IP مطلوب")
         else:
             _block_ip(ip, reason, duration)
-            flash(f'✅ تم حظر IP: {ip}', 'success')
+            utils.flash_success(f'تم حظر IP: {ip}', 'success')
             return redirect(url_for('security.blocked_ips'))
     
     return render_template('security/block_ip.html')
@@ -860,7 +860,7 @@ def blocked_ips():
 def unblock_ip(ip):
     """إلغاء حظر IP"""
     _unblock_ip(ip)
-    flash(f'✅ تم إلغاء حظر IP: {ip}', 'success')
+    utils.flash_success(f'تم إلغاء حظر IP: {ip}', 'success')
     return redirect(url_for('security.blocked_ips'))
 
 
@@ -873,10 +873,10 @@ def block_country():
         reason = request.form.get('reason', '').strip()
         
         if not country_code or len(country_code) != 2:
-            flash('❌ كود الدولة مطلوب (مثال: US, IL)', 'danger')
+            utils.flash_error("كود الدولة مطلوب (مثال: US, IL)")
         else:
             _block_country(country_code, reason)
-            flash(f'✅ تم حظر الدولة: {country_code}', 'success')
+            utils.flash_success(f'تم حظر الدولة: {country_code}', 'success')
             return redirect(url_for('security.blocked_countries'))
     
     return render_template('security/block_country.html')
@@ -897,7 +897,7 @@ def block_user(user_id):
     user = db.get_or_404(User, user_id)
     
     if utils.is_super() and user.id == current_user.id:
-        flash('❌ لا يمكنك حظر نفسك!', 'danger')
+        utils.flash_error("لا يمكنك حظر نفسك!")
     else:
         user.is_active = False
         try:
@@ -905,8 +905,8 @@ def block_user(user_id):
         except Exception:
             db.session.rollback()
             current_app.logger.exception('commit error')
-            return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
-        flash(f'✅ تم حظر المستخدم: {user.username}', 'success')
+            return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
+        utils.flash_success(f'تم حظر المستخدم: {user.username}', 'success')
     
     return redirect(url_for('users_bp.list_users'))
 
@@ -958,9 +958,9 @@ def system_cleanup():
         # 2. Handle Data Reset (Format) Actions – أخطر جزء
         if confirm or tables:
             if confirm != 'FORMAT_SYSTEM':
-                flash('❌ يجب كتابة "FORMAT_SYSTEM" للتأكيد', 'danger')
+                utils.flash_error('يجب كتابة "FORMAT_SYSTEM" للتأكيد', 'danger')
             elif not tables:
-                flash('❌ اختر جدول واحد على الأقل', 'danger')
+                utils.flash_error("اختر جدول واحد على الأقل")
             else:
                 try:
                     result = _cleanup_tables(tables)
@@ -1002,17 +1002,17 @@ def system_cleanup():
                                     except Exception as seed_err:
                                         current_app.logger.error(f"Seed error {script_name}: {seed_err}")
 
-                            flash(f'✅ تم تنظيف {result.get("cleaned", 0)} جدول وإعادة تهيئة النظام بنجاح', 'success')
+                            utils.flash_success(f'تم تنظيف {result.get("cleaned", 0)} جدول وإعادة تهيئة النظام بنجاح', 'success')
                         except Exception as e:
                             current_app.logger.error(f"Reset Error: {e}")
                             current_app.logger.exception('internal error')
-                            flash('✅ تم التنظيف ولكن حدث خطأ في التهيئة', 'warning')
+                            utils.flash_success('تم التنظيف ولكن حدث خطأ في التهيئة', 'warning')
                     else:
-                        flash(f'✅ تم تنظيف {result.get("cleaned", 0)} جدول', 'success')
+                        utils.flash_success(f'تم تنظيف {result.get("cleaned", 0)} جدول', 'success')
 
                 except Exception as e:
                     current_app.logger.exception('internal error')
-                    flash('❌ حدث خطأ أثناء التنظيف', 'danger')
+                    utils.flash_error("تعذر التنظيف. راجع السجل.")
 
             return redirect(url_for('security.system_cleanup', tab='reset'))
     
@@ -1252,7 +1252,7 @@ def database_manager():
     is_production = (not bool(current_app.config.get("DEBUG", False))) and (app_env not in {"dev", "development", "local"})
     allow_dangerous_consoles = str(os.environ.get("ALLOW_DANGEROUS_CONSOLES", "") or "").strip().lower() in {"1", "true", "yes", "y", "on"}
     if is_production and (tab in {"sql", "python"}) and (not allow_dangerous_consoles):
-        flash('⛔ تم تعطيل SQL/Python Console في بيئة الإنتاج للأمان', 'danger')
+        utils.flash_error('تم تعطيل SQL/Python Console في بيئة الإنتاج للأمان', 'danger')
         return redirect(url_for('security.database_manager', tab='browse'))
     
     # ==== البيانات الأساسية (للجميع) ====
@@ -1408,7 +1408,7 @@ def database_manager():
         allow_sql_console = str(os.environ.get("ENABLE_SQL_CONSOLE", "") or "").strip().lower() in {"1", "true", "yes", "y", "on"}
         allow_sql_write = str(os.environ.get("ENABLE_SQL_WRITE_CONSOLE", "") or "").strip().lower() in {"1", "true", "yes", "y", "on"}
         if (is_production and not allow_sql_console) or (not utils.is_super()):
-            flash('⚠️ غير مصرح - وحدة SQL معطلة', 'danger')
+            utils.flash_warning('غير مصرح - وحدة SQL معطلة', 'danger')
             _log_owner_action(
                 'db_sql_denied',
                 target='database_manager',
@@ -1417,16 +1417,16 @@ def database_manager():
             return redirect(url_for('security.database_manager', tab='browse'))
         sql_query = request.form.get('sql_query', '').strip()
         if not sql_query:
-            flash('⚠️ الرجاء إدخال استعلام SQL', 'warning')
+            utils.flash_warning("الرجاء إدخال استعلام SQL")
             return redirect(url_for('security.database_manager', tab='sql'))
         statements = [s.strip() for s in sql_query.split(";") if s.strip()]
         if len(statements) != 1:
-            flash('⛔ غير مسموح بتنفيذ عدة أوامر في نفس الطلب', 'danger')
+            utils.flash_error('غير مسموح بتنفيذ عدة أوامر في نفس الطلب', 'danger')
             return redirect(url_for('security.database_manager', tab='sql'))
         first_token = (statements[0].lstrip().split(None, 1) or [""])[0].upper()
         readonly_tokens = {"SELECT", "WITH", "EXPLAIN", "SHOW"}
         if (first_token not in readonly_tokens) and (not allow_sql_write):
-            flash('⛔ مسموح فقط باستعلامات القراءة (SELECT/WITH/EXPLAIN/SHOW)', 'danger')
+            utils.flash_error('مسموح فقط باستعلامات القراءة (SELECT/WITH/EXPLAIN/SHOW)', 'danger')
             _log_owner_action(
                 'db_sql_blocked_write',
                 target='database_manager',
@@ -1473,7 +1473,7 @@ def database_manager():
         is_production = (not bool(current_app.config.get("DEBUG", False))) and (app_env not in {"dev", "development", "local"})
         allow_python_console = str(os.environ.get("ENABLE_PYTHON_CONSOLE", "") or "").strip().lower() in {"1", "true", "yes", "y", "on"}
         if (is_production and not allow_python_console) or (not utils.is_super()):
-            flash('⚠️ غير مصرح - وحدة Python معطلة', 'danger')
+            utils.flash_warning('غير مصرح - وحدة Python معطلة', 'danger')
             _log_owner_action(
                 'db_python_denied',
                 target='database_manager',
@@ -1483,7 +1483,7 @@ def database_manager():
         
         python_code = request.form.get('python_code', '').strip()
         if not python_code:
-            flash('⚠️ الرجاء إدخال كود Python', 'warning')
+            utils.flash_warning("الرجاء إدخال كود Python")
             return redirect(url_for('security.database_manager', tab='python'))
         
         dangerous_keywords = [
@@ -1498,7 +1498,7 @@ def database_manager():
             'importlib', 'pkgutil', 'os.', 'sys.',
         ]
         if any(keyword in python_code for keyword in dangerous_keywords):
-            flash('⛔ كود خطر - يحتوي على عمليات محظورة', 'danger')
+            utils.flash_error('كود خطر - يحتوي على عمليات محظورة', 'danger')
             python_error = 'كود خطر محظور'
             _log_owner_action(
                 'db_python_blocked',
@@ -1656,12 +1656,12 @@ def users_center():
                     except Exception:
                         db.session.rollback()
                         current_app.logger.exception('commit error')
-                        return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
-                    flash(f'✅ تم حذف {deleted_count} مستخدم بنجاح', 'success')
+                        return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
+                    utils.flash_success(f'تم حذف {deleted_count} مستخدم بنجاح', 'success')
                 else:
-                    flash('⚠️ لم يتم حذف أي مستخدم (قد تكون حاولت حذف نفسك أو حساب محمي)', 'warning')
+                    utils.flash_warning("لم يتم حذف أي مستخدم (قد تكون حاولت حذف نفسك أو حساب محمي)")
             else:
-                flash('⚠️ الرجاء تحديد مستخدمين للحذف', 'warning')
+                utils.flash_warning("الرجاء تحديد مستخدمين للحذف")
                 
             return redirect(url_for('security.users_center', tab='users'))
 
@@ -1721,7 +1721,7 @@ def settings_center():
     if tab in ('branding', 'logos'):
         return redirect(url_for('security.owner_branding'))
     if tab not in allowed_tabs:
-        flash('⚠️ تبويب غير صالح، تم تحويلك للإعدادات العامة.', 'warning')
+        utils.flash_warning("تبويب غير صالح، تم تحويلك للإعدادات العامة.")
         return redirect(url_for('security.settings_center', tab='system'))
     
     if request.method == 'POST':
@@ -1734,9 +1734,9 @@ def settings_center():
             value = request.form.get('value')
             if key in ALLOWED_DIRECT_SETTINGS_KEYS:
                 SystemSettings.set_setting(key, value)
-                flash(f'✅ تم تحديث {key} بنجاح', 'success')
+                utils.flash_success(f'تم تحديث {key} بنجاح', 'success')
             else:
-                flash('⚠️ هذا الإعداد غير مسموح بتعديله مباشرة من هذه الشاشة.', 'warning')
+                utils.flash_warning("هذا الإعداد غير مسموح بتعديله مباشرة من هذه الشاشة.")
                 
         elif action == 'update_branding':
             flash('تم نقل الهوية إلى صفحة موحّدة.', 'info')
@@ -1747,7 +1747,7 @@ def settings_center():
             SystemSettings.set_setting('maintenance_mode', request.form.get('maintenance_mode') == 'on', data_type='boolean')
             SystemSettings.set_setting('registration_enabled', request.form.get('registration_enabled') == 'on', data_type='boolean')
             SystemSettings.set_setting('api_enabled', request.form.get('api_enabled') == 'on', data_type='boolean')
-            flash('✅ تم حفظ الإعدادات العامة بنجاح', 'success')
+            utils.flash_success("تم حفظ الإعدادات العامة بنجاح")
             
         elif active_tab == 'advanced':
             SystemSettings.set_setting('SESSION_TIMEOUT', request.form.get('session_timeout'), data_type='integer')
@@ -1759,7 +1759,7 @@ def settings_center():
             
             SystemSettings.set_setting('ENABLE_EMAIL_NOTIFICATIONS', request.form.get('enable_email_notifications') == 'on', data_type='boolean')
             SystemSettings.set_setting('ENABLE_SMS_NOTIFICATIONS', request.form.get('enable_sms_notifications') == 'on', data_type='boolean')
-            flash('✅ تم حفظ التكوينات المتقدمة بنجاح', 'success')
+            utils.flash_success("تم حفظ التكوينات المتقدمة بنجاح")
             
         elif active_tab == 'company':
             SystemSettings.set_setting('COMPANY_ADDRESS', request.form.get('company_address'))
@@ -1768,14 +1768,14 @@ def settings_center():
             SystemSettings.set_setting('TAX_NUMBER', request.form.get('tax_number'))
             SystemSettings.set_setting('CURRENCY_SYMBOL', request.form.get('currency_symbol'))
             SystemSettings.set_setting('TIMEZONE', request.form.get('timezone'))
-            flash('✅ تم حفظ بيانات الشركة بنجاح', 'success')
+            utils.flash_success("تم حفظ بيانات الشركة بنجاح")
         
         try:
             db.session.commit()
         except Exception:
             db.session.rollback()
             current_app.logger.exception('commit error')
-            flash('حدث خطأ أثناء الحفظ', 'danger')
+            utils.flash_error(utils.MSG_SAVE_FAILED)
         return redirect(url_for('security.settings_center', tab=tab))
     
     settings_list = SystemSettings.query.order_by(SystemSettings.key).limit(50).all()
@@ -2040,10 +2040,10 @@ def theme_editor():
                 try:
                     with open(filepath, 'w', encoding='utf-8') as f:
                         f.write(content)
-                    flash(f'✅ تم حفظ {filename} بنجاح!', 'success')
+                    utils.flash_success(f'تم حفظ {filename} بنجاح!', 'success')
                 except Exception as e:
                     current_app.logger.exception('internal error')
-                    flash('حدث خطأ داخلي', 'danger')
+                    utils.flash_error()
                     
         elif editor_type == 'html':
             # حفظ HTML Template
@@ -2057,10 +2057,10 @@ def theme_editor():
                     os.makedirs(os.path.dirname(full_path), exist_ok=True)
                     with open(full_path, 'w', encoding='utf-8') as f:
                         f.write(content)
-                    flash(f'✅ تم حفظ {filepath} بنجاح!', 'success')
+                    utils.flash_success(f'تم حفظ {filepath} بنجاح!', 'success')
                 except Exception as e:
                     current_app.logger.exception('internal error')
-                    flash('حدث خطأ داخلي', 'danger')
+                    utils.flash_error()
                     
         elif editor_type == 'text':
             # حفظ النصوص
@@ -2079,8 +2079,8 @@ def theme_editor():
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('commit error')
-                return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
-            flash(f'✅ تم تحديث {key}', 'success')
+                return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
+            utils.flash_success(f'تم تحديث {key}', 'success')
         
         return redirect(url_for('security.theme_editor', type=editor_type))
     
@@ -2244,7 +2244,7 @@ def permissions_manager():
             name = (request.form.get('name') or "").strip()
 
             if not code or not name:
-                flash('⚠️ يجب إدخال كود واسم للصلاحية.', 'warning')
+                utils.flash_warning("يجب إدخال كود واسم للصلاحية.")
                 return redirect(url_for('security.permissions_manager'))
 
             # تطبيع الكود: حروف صغيرة + شرطات سفلية
@@ -2253,7 +2253,7 @@ def permissions_manager():
             # منع التكرار
             existing = Permission.query.filter_by(code=normalized_code).first()
             if existing:
-                flash('⚠️ توجد صلاحية بنفس الكود بالفعل، يرجى اختيار كود مختلف.', 'warning')
+                utils.flash_warning("توجد صلاحية بنفس الكود بالفعل، يرجى اختيار كود مختلف.")
                 return redirect(url_for('security.permissions_manager'))
             
             perm = Permission(code=normalized_code, name=name)
@@ -2263,8 +2263,8 @@ def permissions_manager():
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('commit error')
-                return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
-            flash(f'✅ تم إنشاء صلاحية: {name}', 'success')
+                return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
+            utils.flash_success(f'تم إنشاء صلاحية: {name}', 'success')
         
         return redirect(url_for('security.permissions_manager'))
     
@@ -2280,7 +2280,7 @@ def permissions_manager():
 @permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
 def email_manager():
     """إدارة البريد - SMTP + قوالب (Deprecated -> Integrations)"""
-    flash('ℹ️ تم نقل إعدادات البريد إلى صفحة التكاملات الموحدة.', 'info')
+    utils.flash_info('تم نقل إعدادات البريد إلى صفحة التكاملات الموحدة.', 'info')
     return redirect(url_for('security.integrations'))
 
 
@@ -2312,7 +2312,7 @@ def owner_branding():
         except Exception:
             db.session.rollback()
             current_app.logger.exception('platform branding save failed')
-            flash('حدث خطأ أثناء الحفظ.', 'danger')
+            utils.flash_error(utils.MSG_SAVE_FAILED)
         return redirect(url_for('security.owner_branding'))
 
     profile = load_platform_branding_form()
@@ -2347,14 +2347,14 @@ def integrations():
                 _save_setting('stripe_public_key', request.form.get('stripe_public_key', ''))
                 _save_setting('stripe_secret_key', request.form.get('stripe_secret_key', ''))
                 _save_setting('stripe_webhook_secret', request.form.get('stripe_webhook_secret', ''))
-                flash('✅ تم حفظ إعدادات Stripe', 'success')
+                utils.flash_success("تم حفظ إعدادات Stripe")
             
             elif action == 'save_paypal':
                 _save_setting('paypal_enabled', request.form.get('paypal_enabled') == 'on')
                 _save_setting('paypal_mode', request.form.get('paypal_mode', 'sandbox'))
                 _save_setting('paypal_client_id', request.form.get('paypal_client_id', ''))
                 _save_setting('paypal_secret', request.form.get('paypal_secret', ''))
-                flash('✅ تم حفظ إعدادات PayPal', 'success')
+                utils.flash_success("تم حفظ إعدادات PayPal")
             
             elif action == 'save_sms':
                 _save_setting('sms_enabled', request.form.get('sms_enabled') == 'on')
@@ -2362,7 +2362,7 @@ def integrations():
                 _save_setting('twilio_auth_token', request.form.get('twilio_auth_token', ''))
                 _save_setting('twilio_phone_number', request.form.get('twilio_phone_number', ''))
                 _save_setting('twilio_whatsapp_number', request.form.get('twilio_whatsapp_number', ''))
-                flash('✅ تم حفظ إعدادات SMS/WhatsApp', 'success')
+                utils.flash_success("تم حفظ إعدادات SMS/WhatsApp")
 
             elif action == 'save_email':
                 _save_setting('MAIL_SERVER', request.form.get('MAIL_SERVER', ''))
@@ -2371,7 +2371,7 @@ def integrations():
                 _save_setting('MAIL_PASSWORD', request.form.get('MAIL_PASSWORD', ''))
                 _save_setting('MAIL_USE_TLS', request.form.get('MAIL_USE_TLS') == 'on')
                 _save_setting('MAIL_DEFAULT_SENDER', request.form.get('MAIL_DEFAULT_SENDER', ''))
-                flash('✅ تم حفظ إعدادات البريد الإلكتروني', 'success')
+                utils.flash_success("تم حفظ إعدادات البريد الإلكتروني")
             
             elif action == 'save_thermal_printer':
                 _save_setting('thermal_printer_enabled', request.form.get('thermal_printer_enabled') == 'on')
@@ -2381,7 +2381,7 @@ def integrations():
                 _save_setting('thermal_printer_usb_vendor', request.form.get('thermal_printer_usb_vendor', ''))
                 _save_setting('thermal_printer_usb_product', request.form.get('thermal_printer_usb_product', ''))
                 _save_setting('thermal_printer_width', request.form.get('thermal_printer_width', '80'))
-                flash('✅ تم حفظ إعدادات الطابعة الحرارية', 'success')
+                utils.flash_success("تم حفظ إعدادات الطابعة الحرارية")
             
             elif action == 'save_barcode_scanner':
                 _save_setting('barcode_scanner_enabled', request.form.get('barcode_scanner_enabled') == 'on')
@@ -2389,7 +2389,7 @@ def integrations():
                 _save_setting('barcode_scanner_device', request.form.get('barcode_scanner_device', ''))
                 _save_setting('barcode_auto_focus', request.form.get('barcode_auto_focus') == 'on')
                 _save_setting('barcode_beep_sound', request.form.get('barcode_beep_sound') == 'on')
-                flash('✅ تم حفظ إعدادات ماسح الباركود', 'success')
+                utils.flash_success("تم حفظ إعدادات ماسح الباركود")
             
             elif action == 'save_cloud_storage':
                 _save_setting('cloud_storage_enabled', request.form.get('cloud_storage_enabled') == 'on')
@@ -2397,14 +2397,14 @@ def integrations():
                 _save_setting('aws_secret_key', request.form.get('aws_secret_key', ''))
                 _save_setting('aws_region', request.form.get('aws_region', 'eu-west-1'))
                 _save_setting('aws_bucket', request.form.get('aws_bucket', ''))
-                flash('✅ تم حفظ إعدادات التخزين السحابي', 'success')
+                utils.flash_success("تم حفظ إعدادات التخزين السحابي")
             
             elif action == 'save_webhooks':
                 _save_setting('webhooks_enabled', request.form.get('webhooks_enabled') == 'on')
                 _save_setting('webhook_secret', request.form.get('webhook_secret', ''))
                 _save_setting('webhook_retry_count', request.form.get('webhook_retry_count', '3'))
                 _save_setting('webhook_timeout', request.form.get('webhook_timeout', '10'))
-                flash('✅ تم حفظ إعدادات Webhooks', 'success')
+                utils.flash_success("تم حفظ إعدادات Webhooks")
             
             elif action == 'save_local_gateways':
                 _save_setting('moyasar_enabled', request.form.get('moyasar_enabled') == 'on')
@@ -2414,7 +2414,7 @@ def integrations():
                 _save_setting('paytabs_enabled', request.form.get('paytabs_enabled') == 'on')
                 _save_setting('paytabs_profile_id', request.form.get('paytabs_profile_id', ''))
                 _save_setting('paytabs_server_key', request.form.get('paytabs_server_key', ''))
-                flash('✅ تم حفظ إعدادات بوابات الدفع المحلية', 'success')
+                utils.flash_success("تم حفظ إعدادات بوابات الدفع المحلية")
             
             elif action == 'save_pos_terminal':
                 _save_setting('pos_terminal_enabled', request.form.get('pos_terminal_enabled') == 'on')
@@ -2422,7 +2422,7 @@ def integrations():
                 _save_setting('pos_terminal_ip', request.form.get('pos_terminal_ip', ''))
                 _save_setting('pos_terminal_port', request.form.get('pos_terminal_port', '5000'))
                 _save_setting('pos_merchant_id', request.form.get('pos_merchant_id', ''))
-                flash('✅ تم حفظ إعدادات جهاز POS', 'success')
+                utils.flash_success("تم حفظ إعدادات جهاز POS")
             
             elif action == 'save_obd2_reader':
                 _save_setting('obd2_reader_enabled', request.form.get('obd2_reader_enabled') == 'on')
@@ -2430,14 +2430,14 @@ def integrations():
                 _save_setting('obd2_port', request.form.get('obd2_port', 'COM3'))
                 _save_setting('obd2_bluetooth_address', request.form.get('obd2_bluetooth_address', ''))
                 _save_setting('obd2_auto_scan', request.form.get('obd2_auto_scan') == 'on')
-                flash('✅ تم حفظ إعدادات كمبيوتر السيارة', 'success')
+                utils.flash_success("تم حفظ إعدادات كمبيوتر السيارة")
             
             elif action == 'save_digital_scale':
                 _save_setting('digital_scale_enabled', request.form.get('digital_scale_enabled') == 'on')
                 _save_setting('digital_scale_type', request.form.get('digital_scale_type', 'serial'))
                 _save_setting('digital_scale_port', request.form.get('digital_scale_port', 'COM4'))
                 _save_setting('digital_scale_baudrate', request.form.get('digital_scale_baudrate', '9600'))
-                flash('✅ تم حفظ إعدادات الميزان الإلكتروني', 'success')
+                utils.flash_success("تم حفظ إعدادات الميزان الإلكتروني")
             
             elif action == 'save_label_printer':
                 _save_setting('label_printer_enabled', request.form.get('label_printer_enabled') == 'on')
@@ -2446,14 +2446,14 @@ def integrations():
                 _save_setting('label_printer_ip', request.form.get('label_printer_ip', ''))
                 _save_setting('label_printer_port', request.form.get('label_printer_port', '9100'))
                 _save_setting('label_printer_width', request.form.get('label_printer_width', '4'))
-                flash('✅ تم حفظ إعدادات طابعة اللصاقات', 'success')
+                utils.flash_success("تم حفظ إعدادات طابعة اللصاقات")
             
             elif action == 'save_cash_drawer':
                 _save_setting('cash_drawer_enabled', request.form.get('cash_drawer_enabled') == 'on')
                 _save_setting('cash_drawer_connection', request.form.get('cash_drawer_connection', 'printer'))
                 _save_setting('cash_drawer_port', request.form.get('cash_drawer_port', 'COM1'))
                 _save_setting('cash_drawer_open_code', request.form.get('cash_drawer_open_code', '27,112,0,25,250'))
-                flash('✅ تم حفظ إعدادات درج النقدية', 'success')
+                utils.flash_success("تم حفظ إعدادات درج النقدية")
             
             elif action == 'save_customer_display':
                 _save_setting('customer_display_enabled', request.form.get('customer_display_enabled') == 'on')
@@ -2461,14 +2461,14 @@ def integrations():
                 _save_setting('customer_display_port', request.form.get('customer_display_port', 'COM2'))
                 _save_setting('customer_display_lines', request.form.get('customer_display_lines', '2'))
                 _save_setting('customer_display_chars', request.form.get('customer_display_chars', '20'))
-                flash('✅ تم حفظ إعدادات شاشة العميل', 'success')
+                utils.flash_success("تم حفظ إعدادات شاشة العميل")
             
             elif action == 'save_fingerprint_scanner':
                 _save_setting('fingerprint_scanner_enabled', request.form.get('fingerprint_scanner_enabled') == 'on')
                 _save_setting('fingerprint_scanner_type', request.form.get('fingerprint_scanner_type', 'usb'))
                 _save_setting('fingerprint_vendor_id', request.form.get('fingerprint_vendor_id', ''))
                 _save_setting('fingerprint_product_id', request.form.get('fingerprint_product_id', ''))
-                flash('✅ تم حفظ إعدادات قارئ البصمة', 'success')
+                utils.flash_success("تم حفظ إعدادات قارئ البصمة")
             
             elif action == 'save_cctv_system':
                 _save_setting('cctv_enabled', request.form.get('cctv_enabled') == 'on')
@@ -2477,67 +2477,67 @@ def integrations():
                 _save_setting('cctv_username', request.form.get('cctv_username', 'admin'))
                 _save_setting('cctv_password', request.form.get('cctv_password', ''))
                 _save_setting('cctv_recording', request.form.get('cctv_recording') == 'on')
-                flash('✅ تم حفظ إعدادات نظام المراقبة', 'success')
+                utils.flash_success("تم حفظ إعدادات نظام المراقبة")
             
             elif action == 'test_stripe':
                 result = _test_stripe()
                 if result['success']:
-                    flash(f'✅ Stripe متصل! Account: {result.get("account_id")}', 'success')
+                    utils.flash_success(f'Stripe متصل! Account: {result.get("account_id")}', 'success')
                 else:
-                    flash(f'❌ Stripe: {result.get("error")}', 'danger')
+                    utils.flash_error(f'Stripe: {result.get("error")}', 'danger')
             
             elif action == 'test_paypal':
                 result = _test_paypal()
                 if result['success']:
-                    flash('✅ PayPal متصل بنجاح!', 'success')
+                    utils.flash_success("PayPal متصل بنجاح!")
                 else:
-                    flash(f'❌ PayPal: {result.get("error")}', 'danger')
+                    utils.flash_error(f'PayPal: {result.get("error")}', 'danger')
             
             elif action == 'test_sms':
                 test_number = request.form.get('test_phone_number')
                 if test_number:
                     result = _test_sms(test_number)
                     if result['success']:
-                        flash(f'✅ تم إرسال SMS إلى {test_number}', 'success')
+                        utils.flash_success(f'تم إرسال SMS إلى {test_number}', 'success')
                     else:
-                        flash(f'❌ SMS: {result.get("error")}', 'danger')
+                        utils.flash_error(f'SMS: {result.get("error")}', 'danger')
                 else:
-                    flash('❌ أدخل رقم هاتف', 'warning')
+                    utils.flash_error("أدخل رقم هاتف")
             
             elif action == 'test_thermal_printer':
                 result = _test_thermal()
                 if result['success']:
-                    flash('✅ الطابعة تعمل!', 'success')
+                    utils.flash_success("الطابعة تعمل!")
                 else:
-                    flash(f'❌ الطابعة: {result.get("error")}', 'danger')
+                    utils.flash_error(f'الطابعة: {result.get("error")}', 'danger')
             
             elif action == 'test_pos_terminal':
                 result = _test_pos()
                 if result['success']:
-                    flash('✅ جهاز POS متصل!', 'success')
+                    utils.flash_success("جهاز POS متصل!")
                 else:
-                    flash(f'❌ POS: {result.get("error")}', 'danger')
+                    utils.flash_error(f'POS: {result.get("error")}', 'danger')
             
             elif action == 'test_obd2_reader':
                 result = _test_obd2()
                 if result['success']:
-                    flash(f'✅ OBD-II متصل! {result.get("vehicle_info", "")}', 'success')
+                    utils.flash_success(f'OBD-II متصل! {result.get("vehicle_info", "")}', 'success')
                 else:
-                    flash(f'❌ OBD-II: {result.get("error")}', 'danger')
+                    utils.flash_error(f'OBD-II: {result.get("error")}', 'danger')
             
             elif action == 'test_digital_scale':
                 result = _test_scale()
                 if result['success']:
-                    flash(f'✅ الميزان يعمل! القراءة: {result.get("weight", "0")} kg', 'success')
+                    utils.flash_success(f'الميزان يعمل! القراءة: {result.get("weight", "0")} kg', 'success')
                 else:
-                    flash(f'❌ الميزان: {result.get("error")}', 'danger')
+                    utils.flash_error(f'الميزان: {result.get("error")}', 'danger')
             
             elif action == 'test_cctv':
                 result = _test_cctv()
                 if result['success']:
-                    flash(f'✅ نظام المراقبة متصل! الكاميرات: {result.get("cameras", 0)}', 'success')
+                    utils.flash_success(f'نظام المراقبة متصل! الكاميرات: {result.get("cameras", 0)}', 'success')
                 else:
-                    flash(f'❌ CCTV: {result.get("error")}', 'danger')
+                    utils.flash_error(f'CCTV: {result.get("error")}', 'danger')
             
             db.session.commit()
             return redirect(url_for('security.integrations'))
@@ -2545,7 +2545,7 @@ def integrations():
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     # GET - جلب الإعدادات
     integrations_data = {
@@ -2848,7 +2848,7 @@ def _test_stripe():
         account = stripe.Account.retrieve()
         return {'success': True, 'account_id': account.id, 'email': account.email}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def _test_paypal():
@@ -2865,7 +2865,7 @@ def _test_paypal():
     except paypalrestsdk.ResourceNotFound:
         return {'success': True}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def _test_sms(phone_number):
@@ -2881,7 +2881,7 @@ def _test_sms(phone_number):
         message = client.messages.create(body='اختبار من نظام الكراج ✅', from_=from_num, to=phone_number)
         return {'success': True, 'sid': message.sid}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def _test_thermal():
@@ -2911,7 +2911,7 @@ def _test_thermal():
     except ImportError:
         return {'success': False, 'error': 'pip install python-escpos'}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def _test_pos():
@@ -2934,7 +2934,7 @@ def _test_pos():
         else:
             return {'success': False, 'error': 'لا يمكن الاتصال بالجهاز'}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def _test_obd2():
@@ -2964,7 +2964,7 @@ def _test_obd2():
     except ImportError:
         return {'success': False, 'error': 'pip install obd'}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def _test_scale():
@@ -2987,7 +2987,7 @@ def _test_scale():
     except ImportError:
         return {'success': False, 'error': 'pip install pyserial'}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def _test_cctv():
@@ -3027,7 +3027,7 @@ def _test_cctv():
     except ImportError:
         return {'success': False, 'error': 'requests مثبتة مسبقاً'}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 # ==================== خدمات التكامل الفعلية ====================
@@ -3077,7 +3077,7 @@ def send_sms(to, message):
         )
         return {'success': True, 'sid': msg.sid}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def send_whatsapp(to, message):
@@ -3097,7 +3097,7 @@ def send_whatsapp(to, message):
         )
         return {'success': True, 'sid': msg.sid}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def print_thermal_invoice(sale):
@@ -3162,7 +3162,7 @@ def print_thermal_invoice(sale):
     except ImportError:
         return {'success': False, 'error': 'pip install python-escpos'}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def upload_to_s3(file, folder='uploads'):
@@ -3192,7 +3192,7 @@ def upload_to_s3(file, folder='uploads'):
     except ImportError:
         return {'success': False, 'error': 'pip install boto3'}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def trigger_webhook(event_name, data):
@@ -3283,7 +3283,7 @@ def process_card_payment(amount, currency='ILS'):
         return result
         
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def scan_vehicle_obd2():
@@ -3360,7 +3360,7 @@ def scan_vehicle_obd2():
     except ImportError:
         return {'success': False, 'error': 'pip install obd'}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def read_weight_from_scale():
@@ -3386,7 +3386,7 @@ def read_weight_from_scale():
     except ImportError:
         return {'success': False, 'error': 'pip install pyserial'}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def print_product_label(product):
@@ -3425,7 +3425,7 @@ def print_product_label(product):
     except ImportError:
         return {'success': False, 'error': 'pip install zebra'}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def open_cash_drawer():
@@ -3467,7 +3467,7 @@ def open_cash_drawer():
             return {'success': True}
             
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def update_customer_display(line1, line2=''):
@@ -3504,7 +3504,7 @@ def update_customer_display(line1, line2=''):
     except ImportError:
         return {'success': False, 'error': 'pip install pyserial'}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def verify_fingerprint(user_id):
@@ -3523,7 +3523,7 @@ def verify_fingerprint(user_id):
         return {'success': False, 'error': 'قيد التطوير - يحتاج SDK خاص بالقارئ'}
         
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def capture_cctv_snapshot(camera_id=1):
@@ -3560,7 +3560,7 @@ def capture_cctv_snapshot(camera_id=1):
         return {'success': False, 'error': 'نوع غير مدعوم'}
         
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 @security_bp.route('/save-integration', methods=['POST'])
@@ -3844,7 +3844,7 @@ def impersonate_user(user_id):
     
     # منع التسجيل كنفس المستخدم
     if target_user.id == current_user.id:
-        flash('⚠️ أنت بالفعل هذا المستخدم!', 'warning')
+        utils.flash_warning("أنت بالفعل هذا المستخدم!")
         return redirect(url_for('security.user_control'))
     
     # حفظ المستخدم الأصلي
@@ -3909,7 +3909,7 @@ def force_reset_password(user_id):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
+        return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
     
     flash(f'تم إعادة تعيين كلمة مرور {user.username}', 'success')
     return redirect(url_for('security.user_control'))
@@ -3937,7 +3937,7 @@ def toggle_user_status(user_id):
     
     # حماية من تعطيل المالك لنفسه
     if user.id == current_user.id:
-        flash('⚠️ لا يمكنك تعطيل حسابك الخاص!', 'warning')
+        utils.flash_warning("لا يمكنك تعطيل حسابك الخاص!")
         return redirect(url_for('security.user_control'))
     
     old_status = user.is_active
@@ -3966,11 +3966,11 @@ def toggle_user_status(user_id):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
         return redirect(url_for('security.user_control'))
     
     status = 'مفعل' if user.is_active else 'معطل'
-    flash(f'✅ المستخدم {user.username} الآن {status}', 'success')
+    utils.flash_success(f'المستخدم {user.username} الآن {status}', 'success')
     return redirect(url_for('security.user_control'))
 
 
@@ -4000,7 +4000,7 @@ def delete_user(user_id):
     
     # حماية من الحذف الذاتي
     if user.id == current_user.id:
-        flash('⚠️ لا يمكنك حذف حسابك الخاص!', 'danger')
+        utils.flash_warning('لا يمكنك حذف حسابك الخاص!', 'danger')
         return redirect(url_for('security.user_control'))
     
     # حماية حسابات النظام
@@ -4034,11 +4034,11 @@ def delete_user(user_id):
     try:
         db.session.delete(user)
         db.session.commit()
-        flash(f'✅ تم حذف المستخدم {username} نهائياً', 'success')
+        utils.flash_success(f'تم حذف المستخدم {username} نهائياً', 'success')
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
     
     return redirect(url_for('security.user_control'))
 
@@ -4150,7 +4150,7 @@ def api_user_details(user_id):
         
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @security_bp.route('/api/users/bulk-operation', methods=['POST'])
@@ -4229,7 +4229,7 @@ def api_users_bulk_operation():
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @security_bp.route('/api/users/<int:user_id>/activity-history')
@@ -4275,7 +4275,7 @@ def api_user_activity_history(user_id):
         
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @security_bp.route('/create-user', methods=['POST'])
@@ -4307,7 +4307,7 @@ def create_user():
         is_active = request.form.get('is_active') == '1'
         
         if not username or not email:
-            flash('❌ اسم المستخدم والبريد مطلوبان', 'danger')
+            utils.flash_error("اسم المستخدم والبريد مطلوبان")
             return redirect(url_for('security.user_control'))
         
         # التحقق من عدم التكرار
@@ -4316,7 +4316,7 @@ def create_user():
         ).first()
         
         if existing:
-            flash('❌ اسم المستخدم أو البريد موجود بالفعل', 'danger')
+            utils.flash_error("اسم المستخدم أو البريد موجود بالفعل")
             return redirect(url_for('security.user_control'))
         
         # إنشاء المستخدم
@@ -4350,12 +4350,12 @@ def create_user():
         db.session.add(log)
         db.session.commit()
         
-        flash(f'✅ تم إنشاء المستخدم {username} بنجاح', 'success')
+        utils.flash_success(f'تم إنشاء المستخدم {username} بنجاح', 'success')
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
     
     return redirect(url_for('security.user_control'))
 
@@ -4414,8 +4414,8 @@ def update_user_role(user_id):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
-    flash(f'✅ تم تحديث دور {user.username}', 'success')
+        return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
+    utils.flash_success(f'تم تحديث دور {user.username}', 'success')
     return redirect(url_for('security.user_control'))
 
 
@@ -4448,7 +4448,7 @@ def update_user_extra_permissions(user_id):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
     
     utils.clear_user_permission_cache(user.id)
     
@@ -4496,7 +4496,7 @@ def system_settings():
             }
             for key, value in settings.items():
                 _set_system_setting(key, value)
-            flash('✅ تم حفظ الإعدادات العامة', 'success')
+            utils.flash_success("تم حفظ الإعدادات العامة")
             
         elif tab == 'advanced':
             # حفظ التكوينات المتقدمة
@@ -4511,7 +4511,7 @@ def system_settings():
             }
             for key, value in config.items():
                 _set_system_setting(key, value)
-            flash('✅ تم تحديث التكوين المتقدم', 'success')
+            utils.flash_success("تم تحديث التكوين المتقدم")
             
         elif tab == 'company':
             # حفظ بيانات الشركة
@@ -4529,7 +4529,7 @@ def system_settings():
             for key, value in constants.items():
                 if value:
                     _set_system_setting(key, value)
-            flash('✅ تم تحديث بيانات الشركة', 'success')
+            utils.flash_success("تم تحديث بيانات الشركة")
             
         elif tab == 'branding':
             return redirect(url_for('security.owner_branding'))
@@ -4635,12 +4635,12 @@ def system_settings():
                                                'مدة التجريبي', 'number')
                 
                 db.session.commit()
-                flash('✅ تم حفظ ثوابت الأعمال', 'success')
+                utils.flash_success("تم حفظ ثوابت الأعمال")
                 
             except Exception as e:
                 db.session.rollback()
                 current_app.logger.exception('internal error')
-                flash('حدث خطأ داخلي', 'danger')
+                utils.flash_error()
         
         return redirect(url_for('security.system_settings', tab=tab))
     
@@ -4954,13 +4954,13 @@ def db_delete_row(table_name, row_id):
         
         # حذف الصف
         if not _is_safe_identifier(primary_key):
-            flash('❌ مفتاح أساسي غير صالح', 'danger')
+            utils.flash_error("مفتاح أساسي غير صالح")
             return redirect(url_for('security.database_manager', tab='edit', table=table_name))
         sql = text(f"DELETE FROM {table_name} WHERE {primary_key} = :row_id")
         
         result = db.session.execute(sql, {'row_id': row_id})
         db.session.commit()
-        flash(f'✅ تم حذف الصف #{row_id} بنجاح', 'success')
+        utils.flash_success(f'تم حذف الصف #{row_id} بنجاح', 'success')
     except Exception as e:
         db.session.rollback()
         current_app.logger.error("DB delete row error: %s", e)
@@ -4977,23 +4977,23 @@ def db_delete_column(table_name):
     column_name = request.form.get('column_name', '').strip()
     
     if not column_name:
-        flash('❌ اسم العمود مطلوب', 'danger')
+        utils.flash_error("اسم العمود مطلوب")
         return redirect(url_for('security.database_manager', tab='edit', table=table_name))
     
     # حماية من حذف الأعمدة الحرجة
     protected_columns = ['id', 'created_at', 'updated_at']
     if (column_name.lower() in protected_columns) or (not _is_safe_identifier(column_name)):
-        flash(f'❌ لا يمكن حذف العمود {column_name} (محمي)', 'danger')
+        utils.flash_error(f'لا يمكن حذف العمود {column_name} (محمي)', 'danger')
         return redirect(url_for('security.database_manager', tab='edit', table=table_name))
     
     try:
         cols = _get_table_columns_safe(table_name)
         if column_name not in cols:
-            flash('❌ عمود غير موجود', 'danger')
+            utils.flash_error("عمود غير موجود")
             return redirect(url_for('security.database_manager', tab='edit', table=table_name))
         db.session.execute(text(f"ALTER TABLE {table_name} DROP COLUMN {column_name}"))
         db.session.commit()
-        flash(f'✅ تم حذف العمود {column_name} بنجاح', 'success')
+        utils.flash_success(f'تم حذف العمود {column_name} بنجاح', 'success')
     except Exception as e:
         db.session.rollback()
         current_app.logger.error("DB delete column error: %s", e)
@@ -5035,7 +5035,7 @@ def db_add_row(table_name):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
     
     return redirect(url_for('security.database_manager', tab='edit', table=table_name))
 
@@ -5165,7 +5165,7 @@ def _block_ip(ip, reason, duration):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
 
 def _unblock_ip(ip):
     """إلغاء حظر IP"""
@@ -5557,7 +5557,7 @@ def _decrypt_data(encrypted_data, decrypt_type):
                     continue
     
     except Exception as e:
-        result['error'] = 'حدث خطأ داخلي'
+        result['error'] = 'تعذر تنفيذ العملية. حاول مرة أخرى.'
     
     return result
 
@@ -5608,7 +5608,7 @@ def _kill_all_user_sessions():
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
 
 
 def _get_system_setting(key, default=None):
@@ -5652,7 +5652,7 @@ def _set_system_setting(key, value):
         except Exception:
             pass
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
 
 
 def _get_db_size():
@@ -5806,7 +5806,7 @@ def _test_integration_connection(integration_type):
     except smtplib.SMTPException as e:
         return {'success': False, 'error': 'خطأ في البريد'}
     except Exception as e:
-        return {'success': False, 'error': 'حدث خطأ داخلي'}
+        return {'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
 
 
 def _send_test_message(integration_type):
@@ -6051,7 +6051,7 @@ def dark_mode_settings():
     """إعدادات الوضع الليلي (Dark Mode)"""
     if request.method == 'POST':
         # حفظ الإعدادات
-        flash('✅ تم حفظ إعدادات الوضع الليلي', 'success')
+        utils.flash_success("تم حفظ إعدادات الوضع الليلي")
         return redirect(url_for('security.dark_mode_settings'))
     
     return render_template('security/dark_mode_settings.html',
@@ -6178,7 +6178,7 @@ def api_create_index():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': '❌ حدث خطأ داخلي'
+            'message': '❌ تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -6207,7 +6207,7 @@ def api_drop_index():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': '❌ حدث خطأ داخلي'
+            'message': '❌ تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -6319,7 +6319,7 @@ def api_auto_optimize_indexes():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': '❌ حدث خطأ داخلي'
+            'message': '❌ تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -6425,7 +6425,7 @@ def api_clean_rebuild_indexes():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': '❌ حدث خطأ داخلي'
+            'message': '❌ تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -6508,7 +6508,7 @@ def api_analyze_table():
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': '❌ حدث خطأ داخلي'
+            'message': '❌ تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -6555,7 +6555,7 @@ def api_batch_create_indexes():
                 created.append(index_name)
             except Exception as e:
                 db.session.rollback()
-                failed.append({'index': index_name, 'reason': 'حدث خطأ داخلي'})
+                failed.append({'index': index_name, 'reason': 'تعذر تنفيذ العملية. حاول مرة أخرى.'})
         
         return jsonify({
             'success': True,
@@ -6567,7 +6567,7 @@ def api_batch_create_indexes():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': '❌ حدث خطأ داخلي'
+            'message': '❌ تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -6599,7 +6599,7 @@ def api_maintenance_vacuum():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': '❌ حدث خطأ داخلي'
+            'message': '❌ تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -6618,7 +6618,7 @@ def api_maintenance_analyze():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': '❌ حدث خطأ داخلي'
+            'message': '❌ تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -6647,7 +6647,7 @@ def api_maintenance_checkpoint():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': '❌ حدث خطأ داخلي'
+            'message': '❌ تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -6679,7 +6679,7 @@ def api_maintenance_db_info():
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': '❌ حدث خطأ داخلي'
+            'message': '❌ تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -6859,13 +6859,13 @@ def data_quality_center():
         utils.log_audit("System", None, "DATA_QUALITY_FIX", 
                        details=f"تم إصلاح {fixed_count} مشكلة")
         
-        flash(f'✅ تم إصلاح {fixed_count} مشكلة بنجاح!', 'success')
+        utils.flash_success(f'تم إصلاح {fixed_count} مشكلة بنجاح!', 'success')
         return redirect(url_for('security.data_quality_center'))
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('security.data_quality_center'))
 
 
@@ -7012,16 +7012,16 @@ def advanced_check_linking():
         utils.log_audit("System", None, "ADVANCED_CHECK_LINKING", 
                        details=f"تم ربط {fixed_count} شيك")
         
-        flash(f'✅ تم ربط {fixed_count} شيك بنجاح!', 'success')
+        utils.flash_success(f'تم ربط {fixed_count} شيك بنجاح!', 'success')
         if errors:
-            flash(f'⚠️ فشل ربط {len(errors)} شيك', 'warning')
+            utils.flash_warning(f'فشل ربط {len(errors)} شيك', 'warning')
         
         return redirect(url_for('security.advanced_check_linking'))
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('security.advanced_check_linking'))
 
 
@@ -7108,7 +7108,7 @@ def api_system_constants():
         current_app.logger.error(f"⚠️ فشل جلب الثوابت: {e}")
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 
@@ -7170,7 +7170,7 @@ def update_constants():
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
 
     return redirect(request.referrer or url_for('security.settings_center', tab='constants'))
 
@@ -7634,7 +7634,7 @@ def _vat_backfill_sales_for_period(period: str) -> dict:
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
 
     msg = f"✅ تم إنشاء {created_count} سجل VAT للفترة {period}."
     if missing_vat_count:
@@ -7668,7 +7668,7 @@ def reconcile_tax_report(period):
         result = _vat_backfill_sales_for_period(period)
     except ValueError:
         valid_period = datetime.now().strftime("%Y-%m")
-        flash("❌ فترة غير صالحة.", "danger")
+        utils.flash_error("فترة غير صالحة.")
         return redirect(url_for("security.tax_reports", period=valid_period))
     except Exception as e:
         try:
@@ -7676,7 +7676,7 @@ def reconcile_tax_report(period):
         except Exception:
             current_app.logger.warning('rollback after error failed silently in security.py', exc_info=True)
         current_app.logger.exception('internal error')
-        flash('❌ فشل تصحيح VAT', 'danger')
+        utils.flash_error("فشل تصحيح VAT")
         return redirect(url_for("security.tax_reports", period=period))
 
     flash(result.get("message") or "تمت العملية.", result.get("message_level") or "success")
@@ -8049,7 +8049,7 @@ def security_audit_report():
             report = {
                 'summary': {},
                 'top_failed_ips': [],
-                'error': 'حدث خطأ داخلي',
+                'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.',
                 'generated_at': datetime.now(timezone.utc).isoformat()
             }
     else:
@@ -8104,7 +8104,7 @@ def api_chart_data():
         })
     except Exception as e:
         current_app.logger.error(f"chart-data error: {str(e)}")
-        return jsonify({'error': 'حدث خطأ داخلي'}), 500
+        return jsonify({'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
 
 
 @security_bp.route('/mobile/update-version', methods=['POST'])
@@ -8130,7 +8130,7 @@ def mobile_update_version():
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
 
     return redirect(request.referrer or url_for('security.settings_center'))
 
@@ -8157,7 +8157,7 @@ def api_mobile_push():
         })
     except Exception as e:
         current_app.logger.error(f"mobile push error: {str(e)}")
-        return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
+        return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
 
 
 @security_bp.route('/api/mobile/tokens/<int:token_id>/revoke', methods=['POST'])
@@ -8173,7 +8173,7 @@ def api_mobile_revoke_token(token_id):
         })
     except Exception as e:
         current_app.logger.error(f"mobile token revoke error: {str(e)}")
-        return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
+        return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
 
 
 @security_bp.route('/api/security-audit/stats', methods=['GET'])
@@ -8209,5 +8209,5 @@ def api_security_audit_stats():
         current_app.logger.exception('security audit stats error')
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500

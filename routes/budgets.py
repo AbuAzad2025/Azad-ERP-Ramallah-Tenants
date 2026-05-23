@@ -99,7 +99,7 @@ def add():
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     accounts = Account.query.filter_by(type='EXPENSE', is_active=True).all()
     branches = Branch.query.filter_by(is_active=True).all()
@@ -140,7 +140,7 @@ def edit(id):
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     accounts = Account.query.filter_by(type='EXPENSE', is_active=True).all()
     branches = Branch.query.filter_by(is_active=True).all()

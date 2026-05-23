@@ -292,7 +292,7 @@ def suppliers_recalculate_balances():
     except Exception as e:
         if request.accept_mimetypes.best == "application/json":
             current_app.logger.exception('API error')
-            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+            return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
         flash("حدث خطأ أثناء تحديث أرصدة الموردين.", "danger")
         return redirect(url_for("vendors_bp.suppliers_list"))
 
@@ -308,14 +308,14 @@ def suppliers_create():
             db.session.commit()
             if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("modal") == "1":
                 return jsonify({"success": True, "id": supplier.id, "name": supplier.name})
-            flash("✅ تم إضافة المورد بنجاح", "success")
+            utils.flash_success("تم إضافة المورد بنجاح")
             return redirect(url_for("vendors_bp.suppliers_list"))
         except SQLAlchemyError as e:
             db.session.rollback()
             if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("modal") == "1":
                 current_app.logger.exception('API error')
-                return jsonify({"success": False, "errors": {"__all__": ["حدث خطأ داخلي"]}}), 400
-            flash("❌ خطأ أثناء إضافة المورد", "danger")
+                return jsonify({"success": False, "errors": {"__all__": ["تعذر تنفيذ العملية. حاول مرة أخرى."]}}), 400
+            utils.flash_error("خطأ أثناء إضافة المورد")
     else:
         if request.method == "POST":
             for field, errors in form.errors.items():
@@ -337,12 +337,12 @@ def suppliers_edit(id):
         form.apply_to(supplier)
         try:
             db.session.commit()
-            flash("✅ تم تحديث المورد بنجاح", "success")
+            utils.flash_success("تم تحديث المورد بنجاح")
             return redirect(url_for("vendors_bp.suppliers_list"))
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('❌ خطأ أثناء تحديث المورد', 'danger')
+            utils.flash_error("خطأ أثناء تحديث المورد")
     return render_template("vendors/suppliers/form.html", form=form, supplier=supplier)
 
 
@@ -2260,7 +2260,7 @@ def partners_recalculate_balances():
     except Exception as e:
         if request.accept_mimetypes.best == "application/json":
             current_app.logger.exception('API error')
-            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+            return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
         flash("حدث خطأ أثناء تحديث أرصدة الشركاء.", "danger")
         return redirect(url_for("vendors_bp.partners_list"))
 
@@ -3504,14 +3504,14 @@ def partners_create():
             db.session.commit()
             if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("modal") == "1":
                 return jsonify({"success": True, "id": partner.id, "name": partner.name})
-            flash("✅ تم إضافة الشريك بنجاح", "success")
+            utils.flash_success("تم إضافة الشريك بنجاح")
             return redirect(url_for("vendors_bp.partners_list"))
         except SQLAlchemyError as e:
             db.session.rollback()
             if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("modal") == "1":
                 current_app.logger.exception('API error')
-                return jsonify({"success": False, "errors": {"__all__": ["حدث خطأ داخلي"]}}), 400
-            flash("❌ خطأ أثناء إضافة الشريك", "danger")
+                return jsonify({"success": False, "errors": {"__all__": ["تعذر تنفيذ العملية. حاول مرة أخرى."]}}), 400
+            utils.flash_error("خطأ أثناء إضافة الشريك")
     else:
         if request.method == "POST":
             current_app.logger.warning(f"[WARNING] Partner Form validation errors: {form.errors}")
@@ -3533,12 +3533,12 @@ def partners_edit(id):
         form.apply_to(partner)
         try:
             db.session.commit()
-            flash("✅ تم تحديث الشريك بنجاح", "success")
+            utils.flash_success("تم تحديث الشريك بنجاح")
             return redirect(url_for("vendors_bp.partners_list"))
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('❌ خطأ أثناء تحديث الشريك', 'danger')
+            utils.flash_error("خطأ أثناء تحديث الشريك")
     return render_template("vendors/partners/form.html", form=form, partner=partner)
 
 @vendors_bp.route("/partners/<int:id>/delete", methods=["POST"], endpoint="partners_delete")
@@ -3563,21 +3563,21 @@ def partners_delete(id):
                 return jsonify({"success": False, "error": "has_partner_warehouses", "detail": msg, "warehouses": details}), 400
             else:
                 names = "، ".join(f"#{w['id']} - {w['name']}" for w in details)
-                flash(f"❌ {msg} المستودعات: {names}", "danger")
+                utils.flash_error(f"{msg} المستودعات: {names}", "danger")
                 return redirect(url_for("vendors_bp.partners_list"))
         db.session.delete(partner)
         db.session.commit()
         if is_ajax:
             return jsonify({"success": True}), 200
-        flash("✅ تم حذف الشريك بنجاح", "success")
+        utils.flash_success("تم حذف الشريك بنجاح")
         return redirect(url_for("vendors_bp.partners_list"))
     except Exception as e:
         db.session.rollback()
         if is_ajax:
             current_app.logger.exception('API error')
-            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+            return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
         current_app.logger.exception('internal error')
-        flash('❌ خطأ أثناء حذف الشريك', 'danger')
+        utils.flash_error("خطأ أثناء حذف الشريك")
         return redirect(url_for("vendors_bp.partners_list"))
 
 
@@ -3886,10 +3886,10 @@ def archive_supplier(supplier_id):
         db.session.rollback()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             current_app.logger.exception('API error')
-            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+            return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
             
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'error')
+        utils.flash_error()
         return redirect(url_for('vendors_bp.suppliers_list'))
 
 @vendors_bp.route("/partners/archive/<int:partner_id>", methods=["POST"])
@@ -3917,10 +3917,10 @@ def archive_partner(partner_id):
         db.session.rollback()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             current_app.logger.exception('API error')
-            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+            return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
             
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'error')
+        utils.flash_error()
         return redirect(url_for('vendors_bp.partners_list'))
 
 @vendors_bp.route("/suppliers/restore/<int:supplier_id>", methods=["POST"])
@@ -3963,10 +3963,10 @@ def restore_supplier(supplier_id):
         db.session.rollback()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             current_app.logger.exception('API error')
-            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+            return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
             
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'error')
+        utils.flash_error()
         return redirect(url_for('vendors_bp.suppliers_list'))
 
 @vendors_bp.route("/partners/restore/<int:partner_id>", methods=["POST"])
@@ -4009,10 +4009,10 @@ def restore_partner(partner_id):
         db.session.rollback()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             current_app.logger.exception('API error')
-            return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+            return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
             
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'error')
+        utils.flash_error()
         return redirect(url_for('vendors_bp.partners_list'))
 def _utcnow_naive():
     return datetime.now(timezone.utc).replace(tzinfo=None)

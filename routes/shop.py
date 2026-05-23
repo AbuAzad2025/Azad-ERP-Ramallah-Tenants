@@ -54,7 +54,7 @@ def restrict_shop_access():
         from utils.dashboard_routing import preferred_dashboard_endpoint
 
         if not is_platform_owner_role(current_user):
-            flash('⛔ غير مصرح لك بإدارة المتجر (تتطلب صلاحيات المالك)', 'danger')
+            utils.flash_error('غير مصرح لك بإدارة المتجر (تتطلب صلاحيات المالك)', 'danger')
             return redirect(url_for(preferred_dashboard_endpoint(current_user, None)))
 
 @shop_bp.app_context_processor
@@ -442,7 +442,7 @@ class BlooprintAdapter(GatewayAdapter):
         except Exception:
             db.session.rollback()
             current_app.logger.exception('commit error')
-            return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
+            return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
         return {"ok": True, "payment_id": op.id, "status": op.status}
 
 _GATEWAYS = {"blooprint": BlooprintAdapter()}
@@ -679,7 +679,7 @@ def api_products():
         return jsonify({"data": data})
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @shop_bp.get("/api/product/<int:pid>")
 def api_product_detail(pid: int):
@@ -702,7 +702,7 @@ def api_product_detail(pid: int):
         })
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @shop_bp.route("/order", methods=["POST"], endpoint="place_order")
 @online_customer_required
@@ -1291,7 +1291,7 @@ def admin_product_new():
                 db.session.add(stock)
         try:
             db.session.commit()
-            flash("✅ تم تحديث المنتج الموجود" if existing else "✅ تم إضافة المنتج", "success")
+            utils.flash_success("تم تحديث المنتج الموجود" if existing else "✅ تم إضافة المنتج", "success")
             return redirect(url_for("shop.admin_products"))
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1370,7 +1370,7 @@ def admin_product_edit(pid):
                         kwargs["reserved_quantity"] = 0
                     db.session.add(StockLevel(**kwargs))
             db.session.commit()
-            flash("✅ تم التحديث", "success")
+            utils.flash_success("تم التحديث")
             return redirect(url_for("shop.admin_products"))
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1481,7 +1481,7 @@ def admin_product_delete(pid):
         (product.service_parts and len(product.service_parts) > 0)
     )
     if has_links:
-        flash("❌ لا يمكن حذف المنتج لأنه مرتبط بسجلات أخرى.", "danger")
+        utils.flash_error("لا يمكن حذف المنتج لأنه مرتبط بسجلات أخرى.")
         return redirect(url_for("shop.admin_products"))
     for sl in list(product.stock_levels or []):
         db.session.delete(sl)
@@ -1542,5 +1542,5 @@ def archive_preorder(preorder_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'error')
+        utils.flash_error()
         return redirect(url_for('shop.admin_preorders'))

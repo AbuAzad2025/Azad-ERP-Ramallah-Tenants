@@ -48,7 +48,7 @@ def security_control():
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception('commit error')
-                return jsonify({'success': False, 'error': 'حدث خطأ داخلي'}), 500
+                return jsonify({'success': False, 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}), 500
             
             flash('تم حفظ إعدادات الأمان بنجاح', 'success')
             return redirect(url_for('security_control.security_control'))

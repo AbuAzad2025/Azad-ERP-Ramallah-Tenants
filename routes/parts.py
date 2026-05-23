@@ -117,7 +117,7 @@ def parts_create():
             db.session.rollback()
             if _wants_json():
                 current_app.logger.exception('API error')
-                return jsonify({"error": "حدث خطأ داخلي"}), 500
+                return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
             current_app.logger.exception('internal error')
             flash('فشل تحديث القطعة', 'danger')
         return redirect(url_for("parts_bp.parts_list"))
@@ -143,7 +143,7 @@ def parts_create():
         db.session.rollback()
         if _wants_json():
             current_app.logger.exception('API error')
-            return jsonify({"error": "حدث خطأ داخلي"}), 500
+            return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
         current_app.logger.exception('internal error')
         flash('فشل إنشاء القطعة', 'danger')
     return redirect(url_for("parts_bp.parts_list"))
@@ -194,7 +194,7 @@ def parts_edit(id):
         db.session.rollback()
         if _wants_json():
             current_app.logger.exception('API error')
-            return jsonify({"error": "حدث خطأ داخلي"}), 500
+            return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
         current_app.logger.exception('internal error')
         flash('فشل التحديث', 'danger')
     return redirect(url_for("parts_bp.parts_list"))
@@ -234,7 +234,7 @@ def parts_delete(id):
         db.session.rollback()
         if _wants_json():
             current_app.logger.exception('API error')
-            return jsonify({"error": "حدث خطأ داخلي"}), 500
+            return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
         current_app.logger.exception('internal error')
         flash('فشل الحذف', 'danger')
     return redirect(url_for("parts_bp.parts_list"))
@@ -270,11 +270,11 @@ def update_part_cost():
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @parts_bp.post("/update-multiple-costs")
@@ -322,8 +322,8 @@ def update_multiple_costs():
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500

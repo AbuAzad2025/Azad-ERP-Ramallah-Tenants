@@ -118,7 +118,7 @@ def add():
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     categories = FixedAssetCategory.query.filter_by(is_active=True).all()
     branches = Branch.query.filter_by(is_active=True).all()

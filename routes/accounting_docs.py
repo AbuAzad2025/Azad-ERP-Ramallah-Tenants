@@ -81,7 +81,7 @@ def chart_of_accounts():
     except Exception as e:
         current_app.logger.error(f"خطأ في دليل الحسابات: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @accounting_docs_bp.route('/accounting-standards')
 @permission_required(SystemPermissions.MANAGE_ACCOUNTING_DOCS)
@@ -136,7 +136,7 @@ def accounting_standards():
     except Exception as e:
         current_app.logger.error(f"خطأ في معايير المحاسبة: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @accounting_docs_bp.route('/audit-policies')
 @permission_required(SystemPermissions.MANAGE_ACCOUNTING_DOCS)
@@ -215,7 +215,7 @@ def audit_policies():
     except Exception as e:
         current_app.logger.error(f"خطأ في سياسات المراجعة: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @accounting_docs_bp.route('/correction-procedures')
 @permission_required(SystemPermissions.MANAGE_ACCOUNTING_DOCS)
@@ -278,7 +278,7 @@ def correction_procedures():
     except Exception as e:
         current_app.logger.error(f"خطأ في إجراءات التصحيح: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @accounting_docs_bp.route('/gl-accounts-reference')
 @permission_required(SystemPermissions.MANAGE_ACCOUNTING_DOCS)
@@ -338,7 +338,7 @@ def gl_accounts_reference():
     except Exception as e:
         current_app.logger.error(f"خطأ في مرجع حسابات GL: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 @accounting_docs_bp.route('/system-health-guide')
 @permission_required(SystemPermissions.MANAGE_ACCOUNTING_DOCS)
@@ -409,4 +409,4 @@ def system_health_guide():
     except Exception as e:
         current_app.logger.error(f"خطأ في دليل صحة النظام: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500

@@ -23,6 +23,9 @@ MSG_DELETED = "تم الحذف بنجاح."
 MSG_UPDATED = "تم التحديث بنجاح."
 MSG_CREATED = "تم الإنشاء بنجاح."
 MSG_INTERNAL_ERROR = "حدث خطأ غير متوقع. حاول مرة أخرى أو تواصل مع الدعم."
+MSG_SAVE_FAILED = "تعذر الحفظ. تحقق من البيانات وحاول مرة أخرى."
+MSG_DELETE_FAILED = "تعذر الحذف. قد يكون السجل مرتبطاً ببيانات أخرى."
+MSG_NOT_ALLOWED = "ليس لديك صلاحية لتنفيذ هذا الإجراء."
 MSG_VALIDATION = "تحقق من الحقول المطلوبة وأعد المحاولة."
 MSG_NOT_FOUND = "العنصر المطلوب غير موجود."
 MSG_FORBIDDEN = "ليس لديك صلاحية لهذا الإجراء."
@@ -45,20 +48,20 @@ def flash_user(message: str, category: str = "info") -> None:
     flash(text, normalize_flash_category(category))
 
 
-def flash_success(message: str | None = None) -> None:
-    flash_user(message or MSG_SAVED, "success")
+def flash_success(message: str | None = None, category: str | None = None) -> None:
+    flash_user(message or MSG_SAVED, category or "success")
 
 
-def flash_error(message: str | None = None) -> None:
-    flash_user(message or MSG_INTERNAL_ERROR, "danger")
+def flash_error(message: str | None = None, category: str | None = None) -> None:
+    flash_user(message or MSG_INTERNAL_ERROR, category or "danger")
 
 
-def flash_warning(message: str) -> None:
-    flash_user(message, "warning")
+def flash_warning(message: str, category: str | None = None) -> None:
+    flash_user(message, category or "warning")
 
 
-def flash_info(message: str) -> None:
-    flash_user(message, "info")
+def flash_info(message: str, category: str | None = None) -> None:
+    flash_user(message, category or "info")
 
 
 def user_friendly_error(exc: Exception | str | None, *, fallback: str | None = None) -> str:

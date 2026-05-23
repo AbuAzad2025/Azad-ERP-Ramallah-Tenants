@@ -5,6 +5,7 @@ from models import RecurringInvoiceTemplate, RecurringInvoiceSchedule, Invoice, 
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from sqlalchemy import or_
+import utils
 
 recurring_bp = Blueprint('recurring', __name__, url_prefix='/recurring')
 
@@ -22,7 +23,7 @@ def index():
     from permissions_config.role_policy import is_platform_owner_role
 
     if not is_platform_owner_role(current_user):
-        flash('⛔ غير مصرح لك بالوصول لهذه الصفحة (تتطلب صلاحيات المالك)', 'danger')
+        utils.flash_error('غير مصرح لك بالوصول لهذه الصفحة (تتطلب صلاحيات المالك)', 'danger')
         return redirect(url_for('main.dashboard'))
 
     page = request.args.get('page', 1, type=int)
@@ -124,7 +125,7 @@ def add_template():
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
             return redirect(url_for('recurring.add_template'))
     
     customers = Customer.query.filter_by(is_active=True).order_by(Customer.name).all()
@@ -180,7 +181,7 @@ def edit_template(template_id):
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     customers = Customer.query.filter_by(is_active=True).order_by(Customer.name).all()
     branches = Branch.query.order_by(Branch.name).all()
@@ -228,7 +229,7 @@ def delete_template(template_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
 
 
 @recurring_bp.route('/schedules/<int:template_id>')
@@ -415,4 +416,4 @@ def generate_now(template_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400

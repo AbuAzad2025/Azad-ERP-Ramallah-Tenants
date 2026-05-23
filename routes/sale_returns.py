@@ -285,7 +285,7 @@ def create_return(sale_id=None):
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     # تحضير choices للـ template
     products = Product.query.filter_by(is_active=True).order_by(Product.name).limit(500).all()
@@ -505,7 +505,7 @@ def edit_return(return_id):
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     # تحضير choices للـ template
     products = Product.query.filter_by(is_active=True).order_by(Product.name).limit(500).all()
@@ -566,7 +566,7 @@ def confirm_return(return_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
     
     return redirect(url_for('returns.view_return', return_id=return_id))
 
@@ -612,7 +612,7 @@ def cancel_return(return_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
     
     return redirect(url_for('returns.view_return', return_id=return_id))
 
@@ -653,7 +653,7 @@ def delete_return(return_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
-        flash('حدث خطأ داخلي', 'danger')
+        utils.flash_error()
         return redirect(url_for('returns.view_return', return_id=return_id))
 
 
@@ -718,7 +718,7 @@ def get_sale_items(sale_id):
     except Exception as e:
         
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @returns_bp.route('/api/customer/<int:customer_id>/sales')
@@ -750,4 +750,4 @@ def get_customer_sales(customer_id: int):
     except Exception as e:
         
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500

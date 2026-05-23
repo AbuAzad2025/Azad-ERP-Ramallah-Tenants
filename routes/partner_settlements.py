@@ -240,7 +240,7 @@ def create(partner_id):
             })))
     except SQLAlchemyError as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
     direction = _due_direction(due)
     amount_str = f"{abs(due):.2f}"
     pay_url = url_for(
@@ -278,7 +278,7 @@ def confirm(settlement_id):
             })))
     except SQLAlchemyError as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
     return jsonify({"success": True, "id": ps.id, "code": ps.code})
 
 @partner_settlements_bp.route("/settlements/<int:settlement_id>", methods=["GET"])
@@ -329,7 +329,7 @@ def show(settlement_id):
         )
     except Exception as e:
         current_app.logger.exception('API error')
-        return jsonify({"error": "حدث خطأ داخلي"}), 500
+        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 
@@ -2858,14 +2858,14 @@ def approve_settlement(partner_id):
     date_to = request.form.get("date_to")
     
     if not date_from or not date_to:
-        flash("يجب تحديد الفترة الزمنية", "error")
+        utils.flash_error("يجب تحديد الفترة الزمنية")
         return redirect(url_for("partner_settlements_bp.partner_settlement", partner_id=partner_id))
     
     try:
         date_from_dt = datetime.fromisoformat(date_from.replace("Z", "+00:00")) if isinstance(date_from, str) else date_from
         date_to_dt = datetime.fromisoformat(date_to.replace("Z", "+00:00")) if isinstance(date_to, str) else date_to
     except Exception:
-        flash("تنسيق التاريخ غير صحيح", "error")
+        utils.flash_error("تنسيق التاريخ غير صحيح")
         return redirect(url_for("partner_settlements_bp.partner_settlement", partner_id=partner_id))
     
     balance_data = _calculate_smart_partner_balance(partner_id, date_from_dt, date_to_dt)
@@ -2978,7 +2978,7 @@ def approve_settlement(partner_id):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
 
     try:
         import utils

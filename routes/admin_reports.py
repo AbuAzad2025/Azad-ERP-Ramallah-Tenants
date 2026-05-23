@@ -425,7 +425,7 @@ def api_stats():
         current_app.logger.exception('API error')
         return jsonify({
             'success': False,
-            'error': 'حدث خطأ داخلي'
+            'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'
         }), 500
 
 @admin_reports_bp.route("/download-backup", methods=["GET"])

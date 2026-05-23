@@ -218,7 +218,7 @@ def create(supplier_id):
             })))
     except SQLAlchemyError as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
     direction = _due_direction(due)
     amount_str = f"{abs(due):.2f}"
     pay_url = url_for(
@@ -261,7 +261,7 @@ def confirm(settlement_id):
         update_supplier_balance_components(ss.supplier_id)
     except SQLAlchemyError as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
     return jsonify({"success": True, "id": ss.id, "code": ss.code})
 
 @supplier_settlements_bp.route("/settlements/<int:settlement_id>/void", methods=["POST"])
@@ -279,7 +279,7 @@ def void(settlement_id):
             db.session.add(AuditLog(model_name="SupplierSettlement", record_id=settlement_id, action="VOID", old_data=None, new_data=None))
     except SQLAlchemyError as e:
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 400
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 400
     return jsonify({"success": True})
 
 @supplier_settlements_bp.route("/settlements/<int:settlement_id>", methods=["GET"])
@@ -345,7 +345,7 @@ def update_exchange_transaction_price(tx_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
 @supplier_settlements_bp.route("/<int:supplier_id>/settlement", methods=["GET"], endpoint="supplier_settlement")
@@ -2342,14 +2342,14 @@ def approve_settlement(supplier_id):
     date_to = request.form.get("date_to")
     
     if not date_from or not date_to:
-        flash("يجب تحديد الفترة الزمنية", "error")
+        utils.flash_error("يجب تحديد الفترة الزمنية")
         return redirect(url_for("supplier_settlements_bp.supplier_settlement", supplier_id=supplier_id))
     
     try:
         date_from_dt = datetime.fromisoformat(date_from.replace("Z", "+00:00")) if isinstance(date_from, str) else date_from
         date_to_dt = datetime.fromisoformat(date_to.replace("Z", "+00:00")) if isinstance(date_to, str) else date_to
     except Exception:
-        flash("تنسيق التاريخ غير صحيح", "error")
+        utils.flash_error("تنسيق التاريخ غير صحيح")
         return redirect(url_for("supplier_settlements_bp.supplier_settlement", supplier_id=supplier_id))
     
     balance_data = _calculate_smart_supplier_balance(supplier_id, date_from_dt, date_to_dt)
@@ -2435,7 +2435,7 @@ def approve_settlement(supplier_id):
     except Exception:
         db.session.rollback()
         current_app.logger.exception('commit error')
-        flash('حدث خطأ أثناء الحفظ', 'danger')
+        utils.flash_error(utils.MSG_SAVE_FAILED)
         return redirect(url_for("supplier_settlements_bp.supplier_settlement", supplier_id=supplier_id))
     
     from utils.supplier_balance_updater import update_supplier_balance_components

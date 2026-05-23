@@ -19,7 +19,7 @@ def restrict_engineering_access():
     from permissions_config.role_policy import is_platform_owner_role
 
     if not is_platform_owner_role(current_user):
-        flash('⛔ غير مصرح لك بالوصول للإدارة الهندسية', 'danger')
+        utils.flash_error('غير مصرح لك بالوصول للإدارة الهندسية', 'danger')
         return redirect(url_for('main.dashboard'))
 
 
@@ -148,13 +148,13 @@ def add_team():
             db.session.add(team)
             db.session.commit()
             
-            flash(f'✅ تم إضافة الفريق {code} - {name} بنجاح', 'success')
+            utils.flash_success(f'تم إضافة الفريق {code} - {name} بنجاح', 'success')
             return redirect(url_for('engineering.teams'))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     employees = Employee.query.order_by(Employee.name).all()
     cost_centers = CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all()
@@ -260,13 +260,13 @@ def add_task():
             db.session.add(task)
             db.session.commit()
             
-            flash(f'✅ تم إضافة المهمة {task_number} - {title} بنجاح', 'success')
+            utils.flash_success(f'تم إضافة المهمة {task_number} - {title} بنجاح', 'success')
             return redirect(url_for('engineering.tasks'))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     teams = EngineeringTeam.query.filter_by(is_active=True).order_by(EngineeringTeam.name).all()
     employees = Employee.query.order_by(Employee.name).all()
@@ -365,13 +365,13 @@ def add_timesheet():
             db.session.add(timesheet)
             db.session.commit()
             
-            flash(f'✅ تم تسجيل ساعات العمل بنجاح', 'success')
+            utils.flash_success(f'تم تسجيل ساعات العمل بنجاح', 'success')
             return redirect(url_for('engineering.timesheets'))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('internal error')
-            flash('حدث خطأ داخلي', 'danger')
+            utils.flash_error()
     
     employees = Employee.query.order_by(Employee.name).all()
     tasks = EngineeringTask.query.filter(
