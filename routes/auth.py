@@ -279,6 +279,12 @@ def login():
         remember = bool(getattr(form, "remember_me", None) and getattr(form.remember_me, "data", False))
         _secure_login_user(user, remember=remember, fresh=True)
         try:
+            from utils.branch_context import sync_login_branch_session
+
+            sync_login_branch_session(user)
+        except Exception:
+            pass
+        try:
             user.last_login = datetime.now(timezone.utc)
             user.last_login_ip = ip
             user.login_count = (user.login_count or 0) + 1
@@ -309,6 +315,12 @@ def login():
 @auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
+    try:
+        from utils.branch_context import clear_branch_session
+
+        clear_branch_session()
+    except Exception:
+        pass
     from flask import session
     utils._audit("logout", ok=True, user_id=getattr(current_user, "id", None))
     logout_user()

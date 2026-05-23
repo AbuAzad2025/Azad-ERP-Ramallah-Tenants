@@ -3,7 +3,7 @@
 """
 from __future__ import annotations
 
-from permissions_config.endpoint_access import permission_for_endpoint
+from permissions_config.endpoint_access import permission_for_endpoint, permissions_for_endpoint
 from permissions_config.enums import SystemPermissions as SP
 from permissions_config.role_policy import (
     PLATFORM_ROLE_HOME,
@@ -13,14 +13,19 @@ from permissions_config.role_policy import (
 
 # ترتيب احتياطي حسب الصلاحية (بعد دور المستخدم)
 _PERMISSION_HOME_CHAIN: tuple[tuple[str, str], ...] = (
-    (SP.ACCESS_OWNER_DASHBOARD.value, "security.index"),
-    (SP.ACCESS_TENANT_CONSOLE.value, "tenant_console.index"),
+    (SP.ACCESS_OWNER_DASHBOARD.value, "security.control_center"),
+    (SP.ACCESS_TENANT_CONSOLE.value, "tenant_console.control"),
     (SP.ACCESS_DASHBOARD.value, "main.dashboard"),
+    (SP.VIEW_LEDGER.value, "ledger_control.index"),
     (SP.MANAGE_LEDGER.value, "ledger_control.index"),
     (SP.VALIDATE_ACCOUNTING.value, "accounting_validation.index"),
+    (SP.VIEW_SALES.value, "sales_bp.list_sales"),
     (SP.MANAGE_SALES.value, "sales_bp.list_sales"),
+    (SP.VIEW_SERVICE.value, "service.list_requests"),
     (SP.MANAGE_SERVICE.value, "service.list_requests"),
+    (SP.VIEW_CUSTOMERS.value, "customers_bp.list_customers"),
     (SP.MANAGE_CUSTOMERS.value, "customers_bp.list_customers"),
+    (SP.VIEW_PAYMENTS.value, "payments.index"),
     (SP.MANAGE_PAYMENTS.value, "payments.index"),
     (SP.MANAGE_EXPENSES.value, "expenses_bp.list_expenses"),
     (SP.VIEW_WAREHOUSES.value, "warehouse_bp.list"),
@@ -63,9 +68,9 @@ def user_can_access_endpoint(user, endpoint: str) -> bool:
     if not _endpoint_exists(endpoint):
         return False
 
-    needed = permission_for_endpoint(endpoint)
+    needed = permissions_for_endpoint(endpoint)
     if needed:
-        return _user_has(user, needed)
+        return any(_user_has(user, p) for p in needed)
 
     if endpoint.startswith("shop."):
         return not hasattr(user, "has_permission")
@@ -92,9 +97,9 @@ def preferred_dashboard_endpoint(user, tenant_slug: str | None = None) -> str:
             return ep
 
     for _perm, ep in _PERMISSION_HOME_CHAIN:
-        if slug and ep == "security.index":
+        if slug and ep in ("security.index", "security.control_center"):
             continue
-        if not slug and ep == "tenant_console.index":
+        if not slug and ep in ("tenant_console.index", "tenant_console.control"):
             continue
         if _user_has(user, _perm) and user_can_access_endpoint(user, ep):
             return ep
@@ -117,12 +122,14 @@ def dashboard_label_for_user(user, tenant_slug: str | None = None) -> str:
     ep = preferred_dashboard_endpoint(user, tenant_slug)
     labels = {
         "security.index": "لوحة مالك المنصة",
+        "security.control_center": "مركز تحكم المنصة",
         "tenant_console.index": "لوحة مالك التينانت",
+        "tenant_console.control": "مركز تحكم التينانت",
         "main.dashboard": "لوحة التشغيل",
         "ledger_control.index": "دفتر الأستاذ",
         "service.list_requests": "الصيانة",
         "sales_bp.list_sales": "المبيعات",
-        "customers_bp.list_customers": "العملاء",
+        "customers_bp.list_customers": "الزبائن",
         "warehouse_bp.list": "المستودعات",
         "payments.index": "الدفعات",
         "financial_reports.index": "التقارير المالية",
@@ -152,7 +159,7 @@ def dashboard_widgets_for_user(user) -> dict[str, bool]:
         "warehouses": _user_has(user, SP.MANAGE_WAREHOUSES.value) or _user_has(user, SP.VIEW_WAREHOUSES.value),
         "shipments": _user_has(user, SP.MANAGE_SHIPMENTS.value),
         "payments": _user_has(user, SP.MANAGE_PAYMENTS.value) or _user_has(user, SP.VIEW_PAYMENTS.value),
-        "ledger": _user_has(user, SP.MANAGE_LEDGER.value) or _user_has(user, SP.VIEW_LEDGER.value),
+        "ledger": _user_has(user, SP.VIEW_LEDGER.value) or _user_has(user, SP.MANAGE_LEDGER.value),
         "expenses": _user_has(user, SP.MANAGE_EXPENSES.value) or _user_has(user, SP.VIEW_EXPENSES.value),
         "reports": _user_has(user, SP.VIEW_REPORTS.value) or _user_has(user, SP.MANAGE_REPORTS.value),
         "checks": _user_has(user, SP.MANAGE_PAYMENTS.value),

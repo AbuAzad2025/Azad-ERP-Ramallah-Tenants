@@ -718,7 +718,7 @@
       .fail((xhr) => {
         const status = xhr && typeof xhr.status === 'number' ? xhr.status : 0;
         if (status === 401 || status === 403) {
-          $container.html('<div class="list-group-item text-muted text-center py-3">يجب تسجيل الدخول أو لا تملك صلاحية</div>');
+          $container.html('<div class="list-group-item text-warning text-center py-3"><i class="fas fa-lock ml-1"></i> ليس لديك صلاحية لهذا البحث — تواصل مع المسؤول إن احتجت وصولاً.</div>');
           return;
         }
         if (status === 404) {

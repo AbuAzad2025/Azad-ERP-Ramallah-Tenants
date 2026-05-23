@@ -1,9 +1,9 @@
 {% extends 'reports/_base.html' %}
-{% block title %}تقارير العملاء{% endblock %}
-{% block page_title %}تقارير العملاء{% endblock %}
+{% block title %}تقارير الزبائن{% endblock %}
+{% block page_title %}تقارير الزبائن{% endblock %}
 
 {% block reports_breadcrumb_extra %}
-<li class="breadcrumb-item active">{{ FIELD_LABELS.get("customers", "العملاء") }}</li>
+<li class="breadcrumb-item active">{{ FIELD_LABELS.get("customers", "الزبائن") }}</li>
 <li class="ms-auto">
     <div class="btn-group shadow-sm rounded-pill overflow-hidden bg-white">
         <button onclick="window.history.back()" class="btn btn-sm text-primary fw-bold border-end" title="رجوع">
@@ -20,7 +20,7 @@
 <div class="container-fluid" dir="rtl">
 
   <div class="mb-3">
-    <h4 class="fw-bold m-0"><i class="fas fa-user-friends"></i> {{ FIELD_LABELS.get("customers", "تقرير العملاء") }}</h4>
+    <h4 class="fw-bold m-0"><i class="fas fa-user-friends"></i> {{ FIELD_LABELS.get("customers", "تقرير الزبائن") }}</h4>
   </div>
 
   
@@ -99,7 +99,7 @@
         <div class="card-body text-center">
           <div class="text-info mb-2"><i class="fas fa-users fa-2x"></i></div>
           <h5 class="text-info mb-0">{{ _n }}</h5>
-          <small class="text-muted">عدد العملاء</small>
+          <small class="text-muted">عدد الزبائن</small>
         </div>
       </div>
     </div>

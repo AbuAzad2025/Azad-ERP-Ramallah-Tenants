@@ -8,7 +8,7 @@ from typing import Any
 
 from sqlalchemy import func
 
-from models import Branch, Site, User, UserBranch, Warehouse, WarehouseType
+from models import Branch, Company, Site, User, UserBranch, Warehouse, WarehouseType
 
 DEFAULT_BRANCH_CODE = "MAIN"
 DEFAULT_SITE_CODE = "HQ"
@@ -61,6 +61,7 @@ def ensure_tenant_org_structure(
     - ربط مالك التينانت بالفرع (UserBranch)
     """
     stats: dict[str, Any] = {
+        "company_created": False,
         "branch_created": False,
         "site_created": False,
         "warehouses_created": [],
@@ -68,10 +69,26 @@ def ensure_tenant_org_structure(
         "user_branch_linked": False,
     }
 
+    label = (company_name or tenant_slug or "الشركة").strip() or "الشركة"
+    company = session.query(Company).filter(func.upper(Company.code) == "DEFAULT").first()
+    if not company:
+        company = session.query(Company).order_by(Company.id.asc()).first()
+    if not company:
+        company = Company(
+            name=label,
+            code="DEFAULT",
+            legal_name=label,
+            currency="ILS",
+            is_active=True,
+        )
+        session.add(company)
+        session.flush()
+        stats["company_created"] = True
+
     branch = get_main_branch(session)
     if not branch:
-        label = (company_name or tenant_slug or "الشركة").strip() or "الشركة"
         branch = Branch(
+            company_id=company.id,
             name=f"الفرع الرئيسي — {label}",
             code=DEFAULT_BRANCH_CODE,
             is_active=True,
@@ -80,6 +97,8 @@ def ensure_tenant_org_structure(
         session.add(branch)
         session.flush()
         stats["branch_created"] = True
+    elif not branch.company_id:
+        branch.company_id = company.id
 
     site = (
         session.query(Site)

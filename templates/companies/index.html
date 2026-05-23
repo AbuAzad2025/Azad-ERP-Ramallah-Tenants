@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}الشركات{% endblock %}
+{% block content %}
+<div class="container-fluid py-3" dir="rtl">
+  <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+    <h4><i class="fas fa-building"></i> الشركات (كيان قانوني)</h4>
+    <a href="{{ url_for('companies_bp.add') }}" class="btn btn-primary btn-sm"><i class="fas fa-plus ml-1"></i> إضافة شركة</a>
+  </div>
+  <div class="table-responsive gm-ledger-scroll">
+    <table class="table table-bordered table-sm no-mobile-cards">
+      <thead class="table-light">
+        <tr><th>الرمز</th><th>الاسم</th><th>ضريبة</th><th>فروع</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for c in companies %}
+        <tr>
+          <td><code>{{ c.code }}</code></td>
+          <td>{{ c.name }}</td>
+          <td>{{ c.tax_id or '—' }}</td>
+          <td>{{ c.branches_count }}</td>
+          <td><a href="{{ url_for('companies_bp.edit', id=c.id) }}" class="btn btn-sm btn-outline-primary">تعديل</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-4">لا توجد شركات — أضف شركة ثم اربط الفروع بها</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

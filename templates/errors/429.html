@@ -39,7 +39,7 @@
     <p class="hint mono">الحد المسموح: 10 طلبات/دقيقة، 100 طلبات/ساعة، 1000 طلبات/يوم</p>
     <div class="row">
       <a class="btn btn-primary" href="{{ url_for('main.dashboard') }}">الانتقال إلى اللوحة</a>
-      <a class="btn btn-ghost" href="/" rel="home">الصفحة الرئيسية</a>
+      <a class="btn btn-ghost" href="{{ gm_path('/') }}" rel="home">الصفحة الرئيسية</a>
       <button class="btn btn-ghost" type="button" onclick="location.reload()">إعادة المحاولة</button>
     </div>
     <div class="footer">

@@ -6,7 +6,7 @@
   
   <!-- رأس الطباعة -->
   <div class="print-header d-none d-print-block">
-    <h2>نظام أزاد لإدارة الكراج</h2>
+    <h2>{{ system_settings.company_name or system_settings.system_name }}</h2>
     <div class="company-info">
       رام الله - فلسطين 🇵🇸 | تاريخ الطباعة: {{ "now"|format_datetime("%Y-%m-%d") }}
     </div>

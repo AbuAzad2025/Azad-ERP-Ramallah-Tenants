@@ -1,0 +1,45 @@
+name: ERP Audit
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      FLASK_APP: app.py
+      SKIP_SYSTEM_INTEGRITY: "0"
+      DATABASE_URL: sqlite:////tmp/azad_ci_garage.db
+      SECRET_KEY: ci-audit-secret-key-not-for-production
+      WTF_CSRF_ENABLED: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Database migrate
+        run: python -m flask db upgrade
+
+      - name: Comprehensive audit
+        run: python -m flask comprehensive-audit
+
+      - name: Integration audit
+        run: python -m flask integration-audit
+
+      - name: Balance integrity sample
+        run: python -m flask audit-integrity --scope balances --limit 30

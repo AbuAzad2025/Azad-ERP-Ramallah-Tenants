@@ -302,7 +302,9 @@ def list_users():
 @users_bp.route("/registered-customers", methods=["GET"], endpoint="registered_customers")
 @login_required
 def registered_customers():
-    q = Customer.query
+    from utils.company_scope import filter_customers_query
+
+    q = filter_customers_query(Customer.query)
     q = q.filter(Customer.is_online == True)
     term = (request.args.get("search") or "").strip()
     if term:
@@ -430,6 +432,13 @@ def create_user():
             db.session.add(user)
             db.session.flush()
 
+            from utils.branch_context import sync_user_branches
+
+            branch_ids = [int(x) for x in (form.branch_ids.data or []) if x]
+            primary = int(form.primary_branch_id.data or 0) or None
+            if branch_ids:
+                sync_user_branches(user.id, branch_ids, primary_branch_id=primary)
+
             if selected_perm_ids:
                 user.extra_permissions = Permission.query.filter(
                     Permission.id.in_(selected_perm_ids)
@@ -518,8 +527,13 @@ def edit_user(user_id):
     selected_perm_ids = [p.id for p in user.extra_permissions.all()]
 
     if request.method == "GET":
+        from utils.branch_context import get_branch_ids_for_user, get_primary_branch_id
+
         form.role_id.data = user.role_id
         form.is_active.data = bool(user.is_active)
+        form.branch_ids.data = get_branch_ids_for_user(user.id)
+        pb = get_primary_branch_id(user.id)
+        form.primary_branch_id.data = pb or 0
 
     if form.validate_on_submit():
         try:
@@ -549,6 +563,15 @@ def edit_user(user_id):
             user.extra_permissions = Permission.query.filter(
                 Permission.id.in_(selected_perm_ids)
             ).all() if selected_perm_ids else []
+
+            from utils.branch_context import sync_user_branches
+
+            branch_ids = [int(x) for x in (form.branch_ids.data or []) if x]
+            primary = int(form.primary_branch_id.data or 0) or None
+            if branch_ids:
+                sync_user_branches(user.id, branch_ids, primary_branch_id=primary)
+            else:
+                sync_user_branches(user.id, [])
 
             db.session.add(AuditLog(
                 model_name="User",

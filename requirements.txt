@@ -105,6 +105,8 @@ peewee==3.19.0
 pendulum==3.2.0
 pgdumplib==3.1.0
 pillow==10.4.0
+arabic-reshaper==3.0.0
+python-bidi==0.4.2
 platformdirs==4.5.1
 pluggy==1.6.0
 prometheus_client==0.23.1

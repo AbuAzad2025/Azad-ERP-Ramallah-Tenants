@@ -43,7 +43,7 @@
     <div class="d-flex align-items-center">
       <i class="fas fa-repeat fa-2x ml-3"></i>
       <div>
-        <strong>الفواتير المتكررة:</strong> قوالب لإنشاء فواتير تلقائية للعملاء بشكل دوري
+        <strong>الفواتير المتكررة:</strong> قوالب لإنشاء فواتير تلقائية للزبائن بشكل دوري
         <br><small>مثال: عقود صيانة شهرية، إيجارات، خدمات دورية</small>
       </div>
     </div>
@@ -79,7 +79,9 @@
   <div class="card recurring-card shadow">
     <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center">
       <h5 class="mb-0"><i class="fas fa-list"></i> قائمة القوالب</h5>
+      {% if has_perm('access_owner_dashboard') %}
       <a href="{{ url_for('recurring.add_template') }}" class="btn btn-light"><i class="fas fa-plus"></i> قالب جديد</a>
+      {% endif %}
     </div>
     <div class="card-body p-0">
       <div class="table-responsive">
@@ -87,7 +89,7 @@
           <thead class="bg-light">
             <tr>
               <th>اسم القالب</th>
-              <th>العميل</th>
+              <th>الزبون</th>
               <th>المبلغ</th>
               <th>التكرار</th>
               <th>التاريخ القادم</th>
@@ -122,6 +124,7 @@
                   {% endif %}
                 </td>
                 <td onclick="event.stopPropagation();">
+                  {% if has_perm('access_owner_dashboard') %}
                   <button class="btn btn-sm btn-primary" onclick="generateNow({{ tmpl.id }})" title="توليد فاتورة الآن">
                     <i class="fas fa-play"></i>
                   </button>
@@ -131,6 +134,7 @@
                   <button class="btn btn-sm btn-danger" onclick="deleteTemplate({{ tmpl.id }})" title="حذف">
                     <i class="fas fa-trash"></i>
                   </button>
+                  {% endif %}
                 </td>
               </tr>
               {% endfor %}
@@ -139,9 +143,11 @@
                 <td colspan="7" class="text-center text-muted py-5">
                   <i class="fas fa-inbox fa-3x mb-3"></i>
                   <p>لا توجد قوالب</p>
+                  {% if has_perm('access_owner_dashboard') %}
                   <a href="{{ url_for('recurring.add_template') }}" class="btn btn-primary mt-2">
                     <i class="fas fa-plus"></i> إنشاء أول قالب
                   </a>
+                  {% endif %}
                 </td>
               </tr>
             {% endif %}
@@ -186,7 +192,7 @@ function generateNow(templateId) {
   if (!confirm('هل تريد توليد الفاتورة الآن؟')) return;
   
   $.ajax({
-    url: `/recurring/generate-now/${templateId}`,
+    url: (window.gmPath||window.gmU||function(p){return p;})(`/recurring/generate-now/${templateId}`),
     method: 'POST',
     headers: {'X-CSRFToken': '{{ csrf_token() }}'},
     success: function(data) {
@@ -204,9 +210,10 @@ function generateNow(templateId) {
 }
 
 function deleteTemplate(templateId) {
+  if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('access_owner_dashboard')) return;
   if (!confirm('هل أنت متأكد من حذف القالب؟')) return;
   
-  window.location.href = `/recurring/delete/${templateId}`;
+  window.location.href = (window.gmPath||window.gmU||function(p){return p;})(`/recurring/delete/${templateId}`);
 }
 </script>
 {% endblock %}

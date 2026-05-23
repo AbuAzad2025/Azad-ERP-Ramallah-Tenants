@@ -120,10 +120,15 @@ def add():
             current_app.logger.exception('internal error')
             utils.flash_error()
     
+    from utils.branch_context import accessible_branches_query
+    from utils.company_scope import filter_partners_query
+
     categories = FixedAssetCategory.query.filter_by(is_active=True).all()
-    branches = Branch.query.filter_by(is_active=True).all()
+    branches = accessible_branches_query().filter_by(is_active=True).all()
     sites = Site.query.filter_by(is_active=True).all()
-    suppliers = Partner.query.filter(Partner.is_archived.is_(False)).order_by(Partner.id.asc()).all()
+    suppliers = filter_partners_query(
+        Partner.query.filter(Partner.is_archived.is_(False))
+    ).order_by(Partner.id.asc()).all()
     
     return render_template('assets/form.html',
                          categories=categories,

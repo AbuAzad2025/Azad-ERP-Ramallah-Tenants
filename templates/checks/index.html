@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}إدارة الشيكات{% endblock %}
 
@@ -292,7 +292,9 @@
 </style>
 {% endblock %}
 
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
+{{ readonly_banner('view_payments', 'manage_payments', 'الشيكات') }}
     <div id="overdue-alert" style="display: none;" class="alert alert-dismissible simple-card mb-4" role="alert">
                 <div class="d-flex align-items-center">
                     <div class="mr-3 alert-icon">
@@ -386,9 +388,11 @@
             <div class="row mb-3">
                 <div class="col-md-12 d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <div class="btn-group">
+                        {% if has_perm('manage_payments') %}
                         <button type="button" class="btn btn-primary" onclick="window.location.href={{ checks_new_url|tojson }}">
                             <i class="fas fa-plus"></i> إضافة شيك يدوي
                         </button>
+                        {% endif %}
                         <button type="button" class="btn btn-success" onclick="refreshAll()">
                             <i class="fas fa-sync-alt"></i> تحديث
                         </button>

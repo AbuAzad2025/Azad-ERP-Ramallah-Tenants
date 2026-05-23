@@ -75,7 +75,7 @@ def analyze_recent_interactions(count=100):
                 weak_areas.append("invoices")
             elif "صيانة" in question_keywords:
                 weak_areas.append("services")
-            elif "عميل" in question_keywords or "زبون" in question_keywords:
+            elif "زبون" in question_keywords or "زبون" in question_keywords:
                 weak_areas.append("customers")
             elif "مخزون" in question_keywords or "منتج" in question_keywords:
                 weak_areas.append("inventory")

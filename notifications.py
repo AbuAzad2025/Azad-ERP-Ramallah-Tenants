@@ -208,7 +208,7 @@ class NotificationManager:
         """تذكير صيانة"""
         Notification.create_notification(
             title="تذكير صيانة",
-            message=f"موعد صيانة للعميل {customer_name} - {vehicle_info}",
+            message=f"موعد صيانة للزبون {customer_name} - {vehicle_info}",
             notification_type=NotificationType.MAINTENANCE,
             priority=NotificationPriority.MEDIUM,
             data={

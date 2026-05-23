@@ -558,9 +558,13 @@ def new_reconciliation():
 def view_reconciliation(id):
     reconciliation = db.get_or_404(BankReconciliation, id)
     
-    book_transactions = Payment.query.filter(
-        Payment.method.in_(["bank", "cheque"]),
-        Payment.payment_date.between(reconciliation.period_start, reconciliation.period_end)
+    from utils.company_scope import filter_payments_query
+
+    book_transactions = filter_payments_query(
+        Payment.query.filter(
+            Payment.method.in_(["bank", "cheque"]),
+            Payment.payment_date.between(reconciliation.period_start, reconciliation.period_end),
+        )
     ).all()
     
     bank_transactions = BankTransaction.query.filter(
@@ -793,9 +797,13 @@ def auto_match(bank_account_id):
             matched=False
         ).all()
         
-        unmatched_book = Payment.query.filter(
-            Payment.payment_method.in_(['bank_transfer', 'check']),
-            Payment.bank_account_id == bank_account_id
+        from utils.company_scope import filter_payments_query
+
+        unmatched_book = filter_payments_query(
+            Payment.query.filter(
+                Payment.payment_method.in_(['bank_transfer', 'check']),
+                Payment.bank_account_id == bank_account_id,
+            )
         ).all()
         
         matched_count = 0

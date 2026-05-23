@@ -1,0 +1,165 @@
+/**
+ * دفتر الأستاذ والتقارير المالية — جداول أفقية داخل بطاقة (موبايل/تابلت)
+ */
+:root {
+  --gm-fin-radius: 14px;
+  --gm-fin-border: #e2e8f0;
+  --gm-fin-bg: #f8fafc;
+  --gm-fin-accent: #4f46e5;
+  --gm-fin-shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
+}
+
+@media (max-width: 991.98px) {
+  html:not([data-ui-mode="desktop"]) .gm-financial-card,
+  html[data-ui-mode="mobile"] .gm-financial-card,
+  html[data-ui-mode="tablet"] .gm-financial-card {
+    border-radius: var(--gm-fin-radius);
+    border: 1px solid var(--gm-fin-border);
+    box-shadow: var(--gm-fin-shadow);
+    background: #fff;
+    overflow: hidden;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-financial-card__head,
+  html[data-ui-mode="mobile"] .gm-financial-card__head,
+  html[data-ui-mode="tablet"] .gm-financial-card__head {
+    padding: 0.65rem 0.85rem;
+    background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);
+    border-bottom: 1px solid var(--gm-fin-border);
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-hscroll,
+  html[data-ui-mode="mobile"] .gm-hscroll,
+  html[data-ui-mode="tablet"] .gm-hscroll {
+    position: relative;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-hscroll__track,
+  html[data-ui-mode="mobile"] .gm-hscroll__track,
+  html[data-ui-mode="tablet"] .gm-hscroll__track {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    padding: 0.5rem 0.65rem 0.75rem;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-hscroll__track .table,
+  html[data-ui-mode="mobile"] .gm-hscroll__track .table,
+  html[data-ui-mode="tablet"] .gm-hscroll__track .table {
+    margin-bottom: 0;
+    min-width: max(100%, 720px);
+    font-size: 0.78rem;
+  }
+
+  html:not([data-ui-mode="desktop"]) body.ledger-page #ledger-table,
+  html[data-ui-mode="mobile"] body.ledger-page #ledger-table,
+  html[data-ui-mode="tablet"] body.ledger-page #ledger-table {
+    min-width: 880px !important;
+    width: max-content !important;
+    font-size: 0.78rem;
+    transform: none !important;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-hscroll__track thead th,
+  html[data-ui-mode="mobile"] .gm-hscroll__track thead th,
+  html[data-ui-mode="tablet"] .gm-hscroll__track thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #1e293b !important;
+    color: #fff !important;
+    white-space: nowrap;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-hscroll__track .text-end,
+  html[data-ui-mode="mobile"] .gm-hscroll__track .text-end,
+  html[data-ui-mode="tablet"] .gm-hscroll__track .text-end {
+    font-variant-numeric: tabular-nums;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-hscroll__fade,
+  html[data-ui-mode="mobile"] .gm-hscroll__fade,
+  html[data-ui-mode="tablet"] .gm-hscroll__fade {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 28px;
+    pointer-events: none;
+    z-index: 3;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-hscroll__fade--start,
+  html[data-ui-mode="mobile"] .gm-hscroll__fade--start,
+  html[data-ui-mode="tablet"] .gm-hscroll__fade--start {
+    right: auto;
+    left: 0;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), transparent);
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-hscroll__fade--end,
+  html[data-ui-mode="mobile"] .gm-hscroll__fade--end,
+  html[data-ui-mode="tablet"] .gm-hscroll__fade--end {
+    right: 0;
+    left: auto;
+    background: linear-gradient(270deg, rgba(255, 255, 255, 0.95), transparent);
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-hscroll.is-scrollable .gm-hscroll__fade--end,
+  html[data-ui-mode="mobile"] .gm-hscroll.is-scrollable .gm-hscroll__fade--end,
+  html[data-ui-mode="tablet"] .gm-hscroll.is-scrollable .gm-hscroll__fade--end {
+    opacity: 1;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-hscroll.is-scrolled .gm-hscroll__fade--start,
+  html[data-ui-mode="mobile"] .gm-hscroll.is-scrolled .gm-hscroll__fade--start,
+  html[data-ui-mode="tablet"] .gm-hscroll.is-scrolled .gm-hscroll__fade--start {
+    opacity: 1;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-hscroll.is-at-end .gm-hscroll__fade--end,
+  html[data-ui-mode="mobile"] .gm-hscroll.is-at-end .gm-hscroll__fade--end,
+  html[data-ui-mode="tablet"] .gm-hscroll.is-at-end .gm-hscroll__fade--end {
+    opacity: 0;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-hscroll__hint,
+  html[data-ui-mode="mobile"] .gm-hscroll__hint,
+  html[data-ui-mode="tablet"] .gm-hscroll__hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.65rem 0.55rem;
+    font-size: 0.72rem;
+    color: #64748b;
+    border-top: 1px dashed var(--gm-fin-border);
+    background: var(--gm-fin-bg);
+  }
+
+  html:not([data-ui-mode="desktop"]) body.gm-financial-report .content,
+  html[data-ui-mode="mobile"] body.gm-financial-report .content,
+  html[data-ui-mode="tablet"] body.gm-financial-report .content {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (min-width: 992px) {
+  .gm-hscroll__hint,
+  .gm-hscroll__fade {
+    display: none !important;
+  }
+  .gm-financial-card__head--compact-only {
+    display: none;
+  }
+}

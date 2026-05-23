@@ -384,7 +384,7 @@ def api_saas_create_subscription():
             return jsonify({'success': False, 'error': 'حقول مطلوبة ناقصة'}), 400
         customer = db.session.get(Customer, customer_id)
         if not customer:
-            return jsonify({'success': False, 'error': 'العميل غير موجود'}), 404
+            return jsonify({'success': False, 'error': 'الزبون غير موجود'}), 404
         plan = db.session.get(SaaSPlan, plan_id)
         if not plan:
             return jsonify({'success': False, 'error': 'الباقة غير موجودة'}), 404
@@ -580,7 +580,7 @@ def api_saas_send_reminder(invoice_id):
         
         customer = db.session.get(Customer, subscription.customer_id)
         if not customer or not customer.email:
-            return jsonify({'success': False, 'error': 'لا يوجد بريد إلكتروني للعميل'}), 400
+            return jsonify({'success': False, 'error': 'لا يوجد بريد إلكتروني للزبون'}), 400
         html_body = f"""
         <h3>تذكير بالدفع</h3>
         <p>عزيزنا {customer.name}</p>
@@ -604,7 +604,7 @@ def api_saas_send_reminder(invoice_id):
 @security_bp.route('/api/customers', methods=['GET'])
 @login_required
 def api_get_customers():
-    """API: جلب قائمة العملاء"""
+    """API: جلب قائمة الزبائن"""
     from models import Customer
     
     try:
@@ -643,7 +643,7 @@ def api_saas_get_subscription(sub_id):
             'subscription': {
                 'id': sub.id,
                 'customer_id': sub.customer_id,
-                'customer_name': customer.name if customer else 'عميل محذوف',
+                'customer_name': customer.name if customer else 'زبون محذوف',
                 'plan_id': sub.plan_id,
                 'plan_name': sub.plan.name if sub.plan else 'باقة محذوفة',
                 'price': float(sub.plan.price_monthly) if sub.plan else 0,
@@ -722,7 +722,7 @@ def api_saas_invoice_pdf(invoice_id):
             </div>
             
             <div class="info">
-                <p><strong>العميل:</strong> {customer.name if customer else 'غير محدد'}</p>
+                <p><strong>الزبون:</strong> {customer.name if customer else 'غير محدد'}</p>
                 <p><strong>البريد:</strong> {customer.email if customer else '-'}</p>
                 <p><strong>الباقة:</strong> {subscription.plan.name if subscription and subscription.plan else '-'}</p>
                 <p><strong>تاريخ الإصدار:</strong> {invoice.created_at.strftime('%Y-%m-%d')}</p>
@@ -783,12 +783,90 @@ def index():
     from utils.tenant_permissions import filter_platform_hub_sections
 
     hub_sections = filter_platform_hub_sections(PLATFORM_HUB_SECTIONS, current_user)
+    from utils.tenant_owner_dashboard import get_platform_saas_snapshot
+
     return render_template(
         'security/index.html',
         stats=get_cached_security_stats(),
         recent=get_recent_suspicious_activities(),
         hub_sections=hub_sections,
         hub_tagline=PLATFORM_OWNER_TAGLINE,
+        saas_snapshot=get_platform_saas_snapshot(),
+        control_url=url_for('security.control_center'),
+    )
+
+
+@security_bp.route('/control-center', methods=['GET', 'POST'], endpoint='control_center')
+@permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
+def control_center():
+    """مركز تحكم مالك المنصة — SaaS، صيانة، تينانتات، كاش."""
+    from utils.owner_hubs import PLATFORM_OWNER_TAGLINE
+    from utils.owner_control_service import (
+        clear_application_cache,
+        clear_rbac_caches,
+        get_maintenance_mode,
+        get_platform_tenants_control_rows,
+        run_integration_audit_report,
+        set_maintenance_mode,
+        toggle_platform_tenant_active,
+    )
+
+    control_result = None
+    last_action = None
+
+    if request.method == 'POST':
+        last_action = (request.form.get('control_action') or '').strip()
+        try:
+            if last_action == 'maintenance_on':
+                control_result = set_maintenance_mode(True)
+                flash('تم تفعيل وضع الصيانة.', 'warning')
+            elif last_action == 'maintenance_off':
+                control_result = set_maintenance_mode(False)
+                flash('تم إيقاف وضع الصيانة.', 'success')
+            elif last_action == 'clear_cache':
+                control_result = clear_application_cache()
+                flash('تم مسح الكاش.', 'success')
+            elif last_action == 'clear_rbac':
+                control_result = clear_rbac_caches()
+                flash('تم مسح كاش الصلاحيات.', 'success')
+            elif last_action == 'integration_audit':
+                control_result = run_integration_audit_report()
+            elif last_action == 'tenant_toggle':
+                slug = (request.form.get('tenant_slug') or '').strip()
+                control_result = toggle_platform_tenant_active(slug)
+                if control_result.get('ok'):
+                    st = 'مفعّل' if control_result.get('is_active') else 'موقوف'
+                    flash(f'التينانت {slug}: {st}', 'success')
+                else:
+                    flash(control_result.get('error', 'فشل'), 'danger')
+            elif last_action == 'kill_sessions':
+                _kill_all_user_sessions()
+                control_result = {'ok': True}
+                flash('تم إنهاء الجلسات.', 'warning')
+            else:
+                control_result = {'ok': False, 'error': 'إجراء غير معروف'}
+                flash(control_result['error'], 'danger')
+
+            if control_result and last_action not in ('maintenance_on', 'maintenance_off', 'clear_cache', 'clear_rbac', 'tenant_toggle', 'kill_sessions'):
+                if control_result.get('ok'):
+                    flash('اكتمل الفحص — راجع التفاصيل.', 'info')
+                else:
+                    flash('يوجد ملاحظات حرجة.', 'warning')
+
+            _log_owner_action(f'platform_control.{last_action}', None, control_result)
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception('platform control failed: %s', last_action)
+            flash('فشل تنفيذ الإجراء.', 'danger')
+
+    return render_template(
+        'security/control_center.html',
+        hub_tagline=PLATFORM_OWNER_TAGLINE,
+        maintenance_mode=get_maintenance_mode(),
+        tenants=get_platform_tenants_control_rows(),
+        control_result=control_result,
+        last_action=last_action,
+        stats=get_cached_security_stats(),
     )
 
 
@@ -920,17 +998,15 @@ def system_cleanup():
     - تنظيف جداول النظام (Format/Reset)
     """
     
-    # Calculate maintenance stats
-    cleanup_stats = {
-        'temp_files_count': 0, # Placeholder
-        'logs_size': '0 MB',   # Placeholder
-        'cache_items': 0       # Placeholder
-    }
-    try:
-        # cleanup_stats['cache_items'] = len(cache.cache._cache) if hasattr(cache.cache, '_cache') else 0
-        pass
-    except Exception:
-        current_app.logger.warning('cache operation failed silently in security.py', exc_info=True)
+    from utils.system_maintenance import (
+        clear_application_cache,
+        cleanup_temp_files,
+        collect_maintenance_stats,
+        optimize_database,
+        purge_old_logs,
+    )
+
+    cleanup_stats = collect_maintenance_stats(current_app, cache=cache)
 
     if request.method == 'POST':
         action = (request.form.get('action') or "").strip()
@@ -939,19 +1015,23 @@ def system_cleanup():
 
         # 1. Handle Maintenance Actions (آمنة – بدون حذف بيانات أعمال)
         if action in {'clear_cache', 'cleanup_temp', 'purge_logs', 'optimize_db'}:
-            if action == 'clear_cache':
-                try:
-                    cache.clear()
-                    flash('تم مسح ذاكرة التخزين المؤقت بنجاح.', 'success')
-                except Exception as e:
-                    current_app.logger.exception('internal error')
-                    flash('فشل مسح الكاش', 'danger')
-            elif action == 'cleanup_temp':
-                flash('تم تنظيف الملفات المؤقتة (محاكاة).', 'success')
-            elif action == 'purge_logs':
-                flash('تم حذف السجلات القديمة (محاكاة).', 'success')
-            elif action == 'optimize_db':
-                flash('تم تحسين قاعدة البيانات (محاكاة).', 'success')
+            try:
+                if action == 'clear_cache':
+                    result = clear_application_cache(cache)
+                elif action == 'cleanup_temp':
+                    result = cleanup_temp_files(current_app)
+                elif action == 'purge_logs':
+                    days = int(request.form.get('purge_days') or 30)
+                    result = purge_old_logs(current_app, days=days)
+                else:
+                    result = optimize_database(current_app)
+                if result.get('ok'):
+                    flash(result.get('message', 'تم التنفيذ.'), 'success')
+                else:
+                    flash(result.get('message', 'تعذر التنفيذ.'), 'warning')
+            except Exception:
+                current_app.logger.exception('maintenance action %s failed', action)
+                flash('فشل تنفيذ العملية. راجع سجل الخادم.', 'danger')
 
             return redirect(url_for('security.system_cleanup', tab='maintenance'))
 
@@ -1054,7 +1134,7 @@ def system_cleanup():
     }
     category_descriptions = {
         'المستخدمين والأدوار': 'حسابات الدخول والأذونات المرتبطة بها.',
-        'الجهات': 'العملاء والموردون والشركاء والموظفون.',
+        'الجهات': 'الزبائن والموردون والشركاء والموظفون.',
         'العمليات المالية': 'المدفوعات والشيكات والمصاريف.',
         'العمليات المحاسبية': 'دفعات القيود والحسابات العامة.',
         'المبيعات والصيانة': 'المبيعات، الفواتير وطلبات الصيانة.',
@@ -1787,7 +1867,7 @@ def settings_center():
     }
     
     branding_settings = {
-        'system_name': _get_setting('system_name', 'نظام الحازم'),
+        'system_name': _get_setting('system_name', 'منصة أزاد ERP'),
         'company_name': _get_setting('company_name', 'اسم الشركة'),
         'company_logo': _get_setting('custom_logo', ''),
         'custom_favicon': _get_setting('custom_favicon', ''),
@@ -1923,10 +2003,10 @@ def tools_center():
     
     export_links = [
         {
-            'name': 'أعمار الذمم (عملاء)',
+            'name': 'أعمار الذمم (زبائن)',
             'format': 'CSV',
             'icon': 'fas fa-user-clock',
-            'description': 'كشف الرصيد المجمع لكل عميل حسب الفترات الزمنية.',
+            'description': 'كشف الرصيد المجمع لكل زبون حسب الفترات الزمنية.',
             'url': url_for('reports_bp.export_ar_aging_csv'),
         },
         {
@@ -1941,7 +2021,7 @@ def tools_center():
         {'value': 'Sale', 'label': 'المبيعات'},
         {'value': 'Invoice', 'label': 'الفواتير'},
         {'value': 'Payment', 'label': 'المدفوعات'},
-        {'value': 'Customer', 'label': 'العملاء'},
+        {'value': 'Customer', 'label': 'الزبائن'},
         {'value': 'Supplier', 'label': 'الموردون'},
     ]
     
@@ -2461,7 +2541,7 @@ def integrations():
                 _save_setting('customer_display_port', request.form.get('customer_display_port', 'COM2'))
                 _save_setting('customer_display_lines', request.form.get('customer_display_lines', '2'))
                 _save_setting('customer_display_chars', request.form.get('customer_display_chars', '20'))
-                utils.flash_success("تم حفظ إعدادات شاشة العميل")
+                utils.flash_success("تم حفظ إعدادات شاشة الزبون")
             
             elif action == 'save_fingerprint_scanner':
                 _save_setting('fingerprint_scanner_enabled', request.form.get('fingerprint_scanner_enabled') == 'on')
@@ -3129,7 +3209,7 @@ def print_thermal_invoice(sale):
         printer.text("─" * 32 + "\n")
         
         printer.set(align='right')
-        printer.text(f"العميل: {sale.customer.name}\n")
+        printer.text(f"الزبون: {sale.customer.name}\n")
         printer.text(f"التاريخ: {sale.sale_date.strftime('%Y-%m-%d %H:%M')}\n")
         printer.text("─" * 32 + "\n\n")
         
@@ -3471,9 +3551,9 @@ def open_cash_drawer():
 
 
 def update_customer_display(line1, line2=''):
-    """تحديث شاشة العميل"""
+    """تحديث شاشة الزبون"""
     if not _get_setting('customer_display_enabled', False):
-        return {'success': False, 'error': 'شاشة العميل غير مفعّلة'}
+        return {'success': False, 'error': 'شاشة الزبون غير مفعّلة'}
     
     try:
         import serial
@@ -4712,8 +4792,8 @@ def system_settings():
             'trial_period_days': SystemSettings.get_setting('trial_period_days', 30),
         },
         'branding': {
-            'system_name': _get_system_setting('system_name', 'نظام الحازم'),
-            'company_name': _get_system_setting('company_name', 'شركة الحازم للأنظمة الذكية'),
+            'system_name': _get_system_setting('system_name', 'منصة أزاد ERP'),
+            'company_name': _get_system_setting('company_name', 'شركة أزاد للأنظمة الذكية'),
             'company_logo': _get_system_setting('custom_logo', ''),
         }
     }
@@ -5270,7 +5350,7 @@ def _get_cleanable_tables():
         """توليد اسم عربي للجدول"""
         # قاموس الترجمات
         translations = {
-            'users': 'المستخدمين', 'roles': 'الأدوار', 'customers': 'العملاء',
+            'users': 'المستخدمين', 'roles': 'الأدوار', 'customers': 'الزبائن',
             'suppliers': 'الموردين', 'partners': 'الشركاء', 'employees': 'الموظفين',
             'payments': 'المدفوعات', 'checks': 'الشيكات', 'expenses': 'المصاريف',
             'sales': 'المبيعات', 'invoices': 'الفواتير', 'products': 'المنتجات',

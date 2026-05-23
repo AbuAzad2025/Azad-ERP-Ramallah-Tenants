@@ -176,7 +176,7 @@ class IntegratedIntelligence:
         try:
             search_results = context.get("search_results", {})
             if search_results.get("customers"):
-                response_parts.append("📊 أرصدة العملاء حسب البيانات المقروءة:")
+                response_parts.append("📊 أرصدة الزبائن حسب البيانات المقروءة:")
                 total_balance = 0.0
                 for cust in search_results["customers"][:5]:
                     name = cust.get("name", "")
@@ -184,7 +184,7 @@ class IntegratedIntelligence:
                     total_balance += balance
                     response_parts.append(f"  • {name}: {balance:.2f} {cust.get('currency') or 'ILS'}")
                 response_parts.append(f"\n💰 مجموع الأرصدة المعروضة: {total_balance:.2f}")
-                response_parts.append("\nملاحظة: تفسير الموجب/السالب يعتمد على سياسة رصيد العميل في النظام وليس قاعدة ثابتة داخل المساعد.")
+                response_parts.append("\nملاحظة: تفسير الموجب/السالب يعتمد على سياسة رصيد الزبون في النظام وليس قاعدة ثابتة داخل المساعد.")
                 sources.append("Database")
                 return True, 0.85
             if search_results.get("suppliers"):
@@ -244,7 +244,7 @@ class IntegratedIntelligence:
 
     def _parse_action_from_query(self, query: str, context: Dict) -> Tuple[Optional[str], Optional[Dict]]:
         q_lower = str(query or "").lower()
-        if "أضف عميل" in q_lower or "اضف عميل" in q_lower or "add customer" in q_lower:
+        if "أضف زبون" in q_lower or "اضف زبون" in q_lower or "add customer" in q_lower:
             return "add_customer", {"name": self._extract_name(query), "phone": self._extract_phone(query)}
         if "أضف منتج" in q_lower or "اضف منتج" in q_lower or "add product" in q_lower:
             return "add_product", {"name": self._extract_name(query), "price": self._extract_price(query, "sell"), "purchase_price": self._extract_price(query, "cost")}
@@ -278,13 +278,13 @@ class IntegratedIntelligence:
 
     def _fallback_response(self, query: str) -> str:
         q_lower = str(query or "").lower()
-        if "عميل" in q_lower or "customer" in q_lower:
-            return f"العملاء: {_route_for_keyword('customers') or 'غير مفهرس حالياً'}"
+        if "زبون" in q_lower or "customer" in q_lower:
+            return f"الزبائن: {_route_for_keyword('customers') or 'غير مفهرس حالياً'}"
         if "بيع" in q_lower or "sale" in q_lower:
             return f"المبيعات: {_route_for_keyword('sales') or 'غير مفهرس حالياً'}"
         if "منتج" in q_lower or "product" in q_lower:
             return f"المنتجات: {_route_for_keyword('products') or 'غير مفهرس حالياً'}"
-        return "يمكنني مساعدتك في: العملاء، المبيعات، المنتجات، المحاسبة، الصيانة. سأستخدم المسارات والبيانات المفهرسة فقط."
+        return "يمكنني مساعدتك في: الزبائن، المبيعات، المنتجات، المحاسبة، الصيانة. سأستخدم المسارات والبيانات المفهرسة فقط."
 
 
 _integrated_intelligence = None

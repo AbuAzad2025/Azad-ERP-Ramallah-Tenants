@@ -6,7 +6,7 @@
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb bg-white px-3 py-2 rounded mb-4">
     <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">الرئيسية</a></li>
-    <li class="breadcrumb-item"><a href="{{ url_for('customers_bp.list_customers') }}">العملاء</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('customers_bp.list_customers') }}">الزبائن</a></li>
     <li class="breadcrumb-item active">تصدير جهات الاتصال</li>
   </ol>
 </nav>
@@ -31,9 +31,9 @@
         {{ form.hidden_tag() }}
 
         <div class="row g-3">
-          <!-- اختيار العملاء -->
+          <!-- اختيار الزبائن -->
           <div class="col-md-6">
-            <label class="form-label fw-bold">{{ form.customer_ids.label.text if form.customer_ids.label else 'العملاء' }}</label>
+            <label class="form-label fw-bold">{{ form.customer_ids.label.text if form.customer_ids.label else 'الزبائن' }}</label>
             {{ form.customer_ids(class="custom-select custom-select-sm", multiple=True, size=10) }}
             {% for e in form.customer_ids.errors %}<small class="text-danger d-block">{{ e }}</small>{% endfor %}
             <small class="text-muted">اضغط Ctrl أو ⌘ للاختيار المتعدد.</small>

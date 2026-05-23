@@ -147,7 +147,7 @@ class SelfEvolutionEngine:
         query_lower = str(query or "").lower()
         if any(word in query_lower for word in ["رصيد", "حساب", "مبلغ", "balance"]):
             return "accounting_error"
-        if any(word in query_lower for word in ["عميل", "مورد", "شريك", "customer", "supplier"]):
+        if any(word in query_lower for word in ["زبون", "مورد", "شريك", "customer", "supplier"]):
             return "entity_error"
         if any(word in query_lower for word in ["مخزون", "منتج", "قطعة", "stock", "product"]):
             return "inventory_error"

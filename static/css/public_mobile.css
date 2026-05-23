@@ -27,7 +27,7 @@ body.public-page * {
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
 }
 
-body.public-page img:not(.auth-logo):not(.brand-logo) {
+body.public-page img:not(.auth-logo):not(.brand-logo):not(.footer-logo):not(.gm-brand-mark) {
   max-width: 100%;
   height: auto;
 }

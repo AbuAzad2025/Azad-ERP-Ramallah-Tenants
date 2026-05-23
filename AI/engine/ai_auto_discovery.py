@@ -21,8 +21,8 @@ DISCOVERY_MAX_AGE_HOURS = 24
 
 ROUTE_SYNONYMS = {
     "صيانة": ["service", "repair", "maintenance"],
-    "عملاء": ["customers", "customer", "client"],
-    "عميل": ["customers", "customer", "client"],
+    "زبائن": ["customers", "customer", "client"],
+    "زبون": ["customers", "customer", "client"],
     "مبيعات": ["sales", "sale", "invoice"],
     "نفقات": ["expenses", "expense"],
     "مصروف": ["expenses", "expense"],

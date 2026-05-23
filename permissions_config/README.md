@@ -16,7 +16,7 @@
 
 ## تجنّب التناقض
 
-1. **صلاحية واحدة لكل مجال**: مثلاً إدارة العملاء = `MANAGE_CUSTOMERS` في كل من الـ blueprint والـ routes والـ templates. لا تستخدم `VIEW_CUSTOMERS` في route والـ blueprint يستخدم `MANAGE_CUSTOMERS` للقراءة إلا إذا كان المقصود فعلاً تخفيف الصلاحية على مستوى الـ blueprint.
+1. **صلاحية واحدة لكل مجال**: مثلاً إدارة الزبائن = `MANAGE_CUSTOMERS` في كل من الـ blueprint والـ routes والـ templates. لا تستخدم `VIEW_CUSTOMERS` في route والـ blueprint يستخدم `MANAGE_CUSTOMERS` للقراءة إلا إذا كان المقصود فعلاً تخفيف الصلاحية على مستوى الـ blueprint.
 2. **التوسعة (aliases)** في `utils._PERMISSION_ALIASES`: تُستخدم لربط أسماء قديمة أو مرادفات (مثل `add_customer` → `manage_customers`). لا تضف فيها صلاحيات جديدة غير موجودة في `enums.SystemPermissions`.
 3. **إضافة صلاحية جديدة**: أضفها في `enums.SystemPermissions` فقط، ثم أضف التسمية العربية في `permissions_config/permissions.py` إن لزم، واستخدمها في الـ guards أو الـ routes من خلال الـ enum فقط.
 

@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import shutil
@@ -33,6 +34,7 @@ ASSET_AUTH = "auth"
 LOGO_PRIMARY = "primary.png"
 LOGO_EMBLEM = "emblem.png"
 LOGO_WHITE = "white.png"
+PLATFORM_LOGO_ALIASES = (LOGO_PRIMARY, "azad_logo.png")
 LOGO_SECONDARY = "secondary.png"
 FAVICON_FILE = "favicon.png"
 HEADER_LETTERHEAD = "letterhead.png"
@@ -210,45 +212,403 @@ def ensure_branding_tree(app=None, *, tenant_slugs: list[str] | None = None) -> 
 def _copy_if_exists(src: Path, dst: Path) -> bool:
     if not src.is_file():
         return False
+    try:
+        if src.resolve() == dst.resolve():
+            return dst.is_file()
+    except OSError:
+        pass
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dst)
     return True
 
 
 def ensure_legacy_img_aliases(app=None) -> list[str]:
-    """
-    ضمان وجود الملفات القديمة في static/img (مثل azad_logo.png) من شجرة branding.
-    يُستدعى عند التشغيل لتفادي روابط مكسورة في القوالب القديمة.
-    """
+    """مرآة favicon.ico فقط — لا ننسخ شعارات ضخمة إلى static/img."""
     root = static_root(app)
-    img_dir = root / "img"
-    img_dir.mkdir(parents=True, exist_ok=True)
     linked: list[str] = []
-    pairs = (
-        ("azad_logo.png", rel_path_platform(ASSET_LOGOS, LOGO_PRIMARY)),
-        ("logo_main.png", rel_path_platform(ASSET_LOGOS, LOGO_PRIMARY)),
-        ("favicon.png", rel_path_platform(ASSET_FAVICONS, FAVICON_FILE)),
-        ("azad_favicon.png", rel_path_platform(ASSET_AUTH, AUTH_FAVICON_ALT)),
-    )
-    for legacy_name, rel in pairs:
-        src = abs_path(app, rel)
-        dst = img_dir / legacy_name
-        if not src.is_file():
-            continue
+    fav = abs_path(app, rel_path_platform(ASSET_FAVICONS, FAVICON_FILE))
+    if fav.is_file():
+        ico = root / "favicon.ico"
         try:
-            needs = (not dst.is_file()) or (dst.stat().st_mtime < src.stat().st_mtime)
+            needs = (not ico.is_file()) or (ico.stat().st_mtime < fav.stat().st_mtime)
         except OSError:
             needs = True
-        if needs and _copy_if_exists(src, dst):
-            linked.append(legacy_name)
+        if needs and _copy_if_exists(fav, ico):
+            linked.append("favicon.ico")
     return linked
 
 
+def _file_md5(path: Path) -> str:
+    h = hashlib.md5()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _asset_role(rel: str) -> str:
+    r = rel.replace("\\", "/").lower()
+    if f"/{ASSET_LOGOS}/" in r:
+        return "logo"
+    if f"/{ASSET_FAVICONS}/" in r:
+        return "favicon"
+    if f"/{ASSET_HEADERS}/" in r:
+        return "header"
+    if f"/{ASSET_AUTH}/" in r:
+        return "auth"
+    return "other"
+
+
+def _asset_keep_priority(rel: str) -> int:
+    r = rel.replace("\\", "/").lower()
+    if r.endswith(f"/{ASSET_LOGOS}/{LOGO_PRIMARY}"):
+        return 0
+    if f"/{ASSET_FAVICONS}/{FAVICON_FILE}" in r:
+        return 1
+    if r.endswith(f"/{ASSET_LOGOS}/{LOGO_EMBLEM}"):
+        return 2
+    if r.endswith(f"/{ASSET_HEADERS}/{HEADER_LETTERHEAD}"):
+        return 3
+    if r.endswith(f"/{ASSET_LOGOS}/{LOGO_WHITE}"):
+        return 4
+    if r.endswith(f"/{ASSET_AUTH}/{LOGIN_BG_FILE}"):
+        return 5
+    if r.endswith(f"/{ASSET_LOGOS}/{LOGO_SECONDARY}"):
+        return 6
+    if r.endswith(f"/{ASSET_HEADERS}/{HEADER_BANNER}"):
+        return 20
+    if "azad_logo" in r or r.endswith(f"/{AUTH_FAVICON_ALT}"):
+        return 25
+    return 10
+
+
+def prune_branding_redundancy(app=None, *, dry_run: bool = False) -> dict[str, Any]:
+    """
+    تنظيف المكررات: نسخ img القديمة، ملفات متطابقة الحجم، بانرات غير مستخدمة، كاش القوالب.
+    """
+    from utils.branding_generate import cleanup_redundant_copies
+    from utils.print_branding import invalidate_branding_caches
+
+    root = static_root(app)
+    report: dict[str, Any] = {
+        "archived_img": [],
+        "removed_files": [],
+        "removed_dirs": [],
+        "cache_cleared": False,
+        "assets_version": None,
+    }
+
+    report["archived_img"] = archive_img_duplicates(app, dry_run=dry_run)
+    if not dry_run:
+        report["archived_img"].extend(cleanup_redundant_copies(app))
+
+    branding_root = root / BRANDING_ROOT
+    if branding_root.is_dir():
+        by_hash: dict[str, tuple[int, str, Path]] = {}
+        for f in branding_root.rglob("*"):
+            if not f.is_file():
+                continue
+            rel = str(f.relative_to(root)).replace("\\", "/")
+            if rel.lower().endswith(".md"):
+                continue
+            try:
+                digest = _file_md5(f)
+            except OSError:
+                continue
+            pri = _asset_keep_priority(rel)
+            prev = by_hash.get(digest)
+            if prev is None:
+                by_hash[digest] = (pri, rel, f)
+                continue
+            # لا نحذف أدوار مختلفة (emblem/favicon) إن كانت الملف الوحيد لهذا الدور
+            if _asset_role(rel) != _asset_role(prev[1]):
+                continue
+            if pri < prev[0]:
+                drop = prev[2]
+                by_hash[digest] = (pri, rel, f)
+            elif pri > prev[0]:
+                drop = f
+            else:
+                drop = f if len(rel) >= len(prev[1]) else prev[2]
+                if drop is f:
+                    by_hash[digest] = (prev[0], prev[1], prev[2])
+                else:
+                    by_hash[digest] = (pri, rel, f)
+            drop_rel = str(drop.relative_to(root)).replace("\\", "/")
+            if dry_run:
+                report["removed_files"].append(drop_rel)
+            else:
+                try:
+                    drop.unlink()
+                    report["removed_files"].append(drop_rel)
+                except OSError:
+                    pass
+
+        for rel_banner in list(branding_root.rglob(HEADER_BANNER)):
+            if not rel_banner.is_file():
+                continue
+            rel = str(rel_banner.relative_to(root)).replace("\\", "/")
+            if dry_run:
+                report["removed_files"].append(rel)
+            else:
+                try:
+                    rel_banner.unlink()
+                    report["removed_files"].append(rel)
+                except OSError:
+                    pass
+
+    tenants_root = branding_root / TENANTS_DIR
+    if tenants_root.is_dir():
+        from models import TenantRegistry
+
+        active = set()
+        try:
+            active = {r.slug for r in TenantRegistry.query.filter_by(is_active=True).all() if r.slug}
+        except Exception:
+            active = set()
+        for slug_dir in tenants_root.iterdir():
+            if not slug_dir.is_dir():
+                continue
+            if slug_dir.name not in active and not any(slug_dir.rglob("*")):
+                rel = str(slug_dir.relative_to(root)).replace("\\", "/")
+                if dry_run:
+                    report["removed_dirs"].append(rel)
+                else:
+                    shutil.rmtree(slug_dir, ignore_errors=True)
+                    report["removed_dirs"].append(rel)
+
+    loose = root / "img"
+    for name in IMG_DUPLICATE_CANDIDATES:
+        p = loose / name
+        if p.is_file():
+            rel = f"img/{name}"
+            if dry_run:
+                report["removed_files"].append(rel)
+            else:
+                try:
+                    p.unlink()
+                    report["removed_files"].append(rel)
+                except OSError:
+                    pass
+
+    dep_logos = loose / "_deprecated" / "logos"
+    if dep_logos.is_dir():
+        rel = "img/_deprecated/logos"
+        if dry_run:
+            for f in dep_logos.rglob("*"):
+                if f.is_file():
+                    report["removed_files"].append(str(f.relative_to(root)).replace("\\", "/"))
+        else:
+            shutil.rmtree(dep_logos, ignore_errors=True)
+            report["removed_dirs"].append(rel)
+
+    fav_alt = abs_path(app, rel_path_platform(ASSET_AUTH, AUTH_FAVICON_ALT))
+    if fav_alt.is_file():
+        rel = str(fav_alt.relative_to(root)).replace("\\", "/")
+        if dry_run:
+            report["removed_files"].append(rel)
+        else:
+            try:
+                fav_alt.unlink()
+                report["removed_files"].append(rel)
+            except OSError:
+                pass
+
+    try:
+        from models import SystemSettings
+
+        db_secondary = {
+            str(r.key or "")
+            for r in SystemSettings.query.filter(SystemSettings.key.like("%_logo_secondary%")).all()
+            if r.value
+        }
+    except Exception:
+        db_secondary = set()
+    if branding_root.is_dir():
+        for sec in branding_root.rglob(LOGO_SECONDARY):
+            if not sec.is_file():
+                continue
+            slug = ""
+            parts = sec.parts
+            if TENANTS_DIR in parts:
+                try:
+                    idx = parts.index(TENANTS_DIR)
+                    slug = parts[idx + 1]
+                except (ValueError, IndexError):
+                    pass
+            key = f"tenant_{slug}_logo_secondary" if slug else "custom_logo_secondary"
+            if key in db_secondary:
+                continue
+            rel = str(sec.relative_to(root)).replace("\\", "/")
+            if dry_run:
+                report["removed_files"].append(rel)
+            else:
+                try:
+                    sec.unlink()
+                    report["removed_files"].append(rel)
+                except OSError:
+                    pass
+
+    dev_artifacts = [
+        root.parent / "instance" / "audit_endpoints_report.json",
+    ]
+    for art in dev_artifacts:
+        if art.is_file():
+            rel = str(art.relative_to(root.parent)).replace("\\", "/")
+            if dry_run:
+                report["removed_files"].append(rel)
+            else:
+                try:
+                    art.unlink()
+                    report["removed_files"].append(rel)
+                except OSError:
+                    pass
+
+    if not dry_run:
+        try:
+            invalidate_branding_caches()
+            from extensions import cache
+
+            cache.delete("system_settings:template_settings:v1")
+            report["cache_cleared"] = True
+        except Exception:
+            pass
+        try:
+            from extensions import db
+
+            report["assets_version"] = bump_assets_version(db.session)
+            db.session.flush()
+        except Exception:
+            pass
+
+    return report
+
+
+def _platform_logo_source_path(app=None) -> Path | None:
+    root = static_root(app)
+    candidates = [
+        root / BRANDING_ROOT / PLATFORM_SLUG / ASSET_LOGOS / LOGO_PRIMARY,
+        root / BRANDING_ROOT / PLATFORM_SLUG / ASSET_LOGOS / "azad_logo.png",
+        root / BRANDING_ROOT / PLATFORM_SLUG / ASSET_AUTH / "azad_logo.png",
+        root / BRANDING_ROOT / PLATFORM_SLUG / ASSET_AUTH / LOGO_PRIMARY,
+        root / "img" / "logo_main.png",
+        root / "img" / "azad_logo.png",
+    ]
+    for p in candidates:
+        if p.is_file():
+            return p
+    return None
+
+
+def ensure_branding_canonical_files(app=None) -> dict[str, Any]:
+    """
+    توحيد أسماء الملفات (primary/emblem/favicon) من أي صورة وضعها المستخدم.
+    لا يكرر إن كان الملف القياسي موجوداً ومحدّثاً.
+    """
+    report: dict[str, Any] = {"platform": {}, "tenants": {}}
+    src = _platform_logo_source_path(app)
+    if src:
+        from utils.branding_generate import (
+            generate_emblem_from_logo,
+            generate_favicon_from_logo,
+            generate_white_logo_from_primary,
+        )
+
+        primary_rel = rel_path_platform(ASSET_LOGOS, LOGO_PRIMARY)
+        primary_p = abs_path(app, primary_rel)
+        _copy_if_exists(src, primary_p)
+        generate_emblem_from_logo(primary_p, abs_path(app, rel_path_platform(ASSET_LOGOS, LOGO_EMBLEM)))
+        generate_white_logo_from_primary(primary_p, abs_path(app, rel_path_platform(ASSET_LOGOS, LOGO_WHITE)))
+        generate_favicon_from_logo(primary_p, abs_path(app, rel_path_platform(ASSET_FAVICONS, FAVICON_FILE)))
+        report["platform"]["logo"] = primary_rel
+
+    from models import TenantRegistry
+
+    try:
+        slugs = [r.slug for r in TenantRegistry.query.filter_by(is_active=True).all() if r.slug]
+    except Exception:
+        slugs = ["alhazem", "nasrallah"]
+
+    for slug in slugs:
+        slug = _safe_slug(slug)
+        primary = abs_path(app, rel_path_tenant(slug, ASSET_LOGOS, LOGO_PRIMARY))
+        if not primary.is_file():
+            for alt in ("azad_logo.png", LOGO_EMBLEM, LOGO_SECONDARY):
+                alt_p = abs_path(app, rel_path_tenant(slug, ASSET_LOGOS, alt))
+                if alt_p.is_file():
+                    _copy_if_exists(alt_p, primary)
+                    break
+        if primary.is_file():
+            from utils.branding_generate import generate_emblem_from_logo, generate_favicon_from_logo
+
+            generate_emblem_from_logo(primary, abs_path(app, rel_path_tenant(slug, ASSET_LOGOS, LOGO_EMBLEM)))
+            generate_favicon_from_logo(primary, abs_path(app, rel_path_tenant(slug, ASSET_FAVICONS, FAVICON_FILE)))
+            report["tenants"][slug] = rel_path_tenant(slug, ASSET_LOGOS, LOGO_PRIMARY)
+    return report
+
+
+def wire_database_branding_paths(session, *, app=None) -> dict[str, str]:
+    """ربط مفاتيح system_settings بمسارات الملفات الموجودة فعلياً."""
+    from models import SystemSettings, TenantRegistry
+    from utils.branding_scope import PLATFORM_DEFAULT_COMPANY_NAME, PLATFORM_DEFAULT_SYSTEM_NAME, TENANT_KNOWN_PROFILES
+
+    changes: dict[str, str] = {}
+    primary = rel_path_platform(ASSET_LOGOS, LOGO_PRIMARY)
+    if file_exists(primary, app):
+        SystemSettings.set_setting("custom_logo", primary, commit=False)
+        changes["custom_logo"] = primary
+    if file_exists(rel_path_platform(ASSET_FAVICONS, FAVICON_FILE), app):
+        SystemSettings.set_setting("custom_favicon", rel_path_platform(ASSET_FAVICONS, FAVICON_FILE), commit=False)
+        changes["custom_favicon"] = rel_path_platform(ASSET_FAVICONS, FAVICON_FILE)
+
+    polluted_system = {
+        "نظام الحازم",
+        "المهندس الفلسطيني للمعدات الثقيلة",
+        "الحازم لقطع السيارات",
+        "أزاد لإدارة الكراج",
+        "نظام أزاد لإدارة الكراج",
+        "أزاد ERP رم الله",
+    }
+    cur_sys = str(SystemSettings.get_setting("system_name", "") or "").strip()
+    if not cur_sys or cur_sys in polluted_system:
+        SystemSettings.set_setting("system_name", PLATFORM_DEFAULT_SYSTEM_NAME, commit=False)
+        changes["system_name"] = PLATFORM_DEFAULT_SYSTEM_NAME
+    cur_co = str(SystemSettings.get_setting("company_name", "") or "").strip()
+    if not cur_co or cur_co in {"الحازم لقطع السيارات", "شركة الحازم للأنظمة الذكية"}:
+        SystemSettings.set_setting("company_name", PLATFORM_DEFAULT_COMPANY_NAME, commit=False)
+        changes["company_name"] = PLATFORM_DEFAULT_COMPANY_NAME
+
+    for row in TenantRegistry.query.filter_by(is_active=True).all():
+        slug = _safe_slug(row.slug or "")
+        if not slug:
+            continue
+        tlogo = rel_path_tenant(slug, ASSET_LOGOS, LOGO_PRIMARY)
+        if file_exists(tlogo, app):
+            SystemSettings.set_setting(f"tenant_{slug}_logo", tlogo, commit=False)
+            changes[f"tenant_{slug}_logo"] = tlogo
+        thdr = rel_path_tenant(slug, ASSET_HEADERS, HEADER_LETTERHEAD)
+        if file_exists(thdr, app):
+            SystemSettings.set_setting(f"tenant_{slug}_header", thdr, commit=False)
+            changes[f"tenant_{slug}_header"] = thdr
+        prof = TENANT_KNOWN_PROFILES.get(slug, {})
+        if prof.get("company_name"):
+            SystemSettings.set_setting(f"tenant_{slug}_company_name", prof["company_name"], commit=False)
+            changes[f"tenant_{slug}_company_name"] = prof["company_name"]
+        if prof.get("system_name"):
+            SystemSettings.set_setting(f"tenant_{slug}_system_name", prof["system_name"], commit=False)
+
+    session.flush()
+    return changes
+
+
 def init_platform_from_legacy(app=None) -> dict[str, str]:
+    ensure_branding_canonical_files(app)
     root = static_root(app)
     mapping = {
         rel_path_platform(ASSET_LOGOS, LOGO_PRIMARY): [
             root / BRANDING_ROOT / PLATFORM_SLUG / ASSET_LOGOS / LOGO_PRIMARY,
+            root / BRANDING_ROOT / PLATFORM_SLUG / ASSET_LOGOS / "azad_logo.png",
+            root / BRANDING_ROOT / PLATFORM_SLUG / ASSET_AUTH / "azad_logo.png",
             root / "img" / "logo_main.png",
             root / "img" / "azad_logo.png",
         ],
@@ -469,6 +829,7 @@ def save_branding_upload(
 
 def apply_platform_settings(session, paths: dict[str, str] | None = None) -> None:
     from models import SystemSettings
+    from utils.branding_scope import PLATFORM_DEFAULT_COMPANY_NAME, PLATFORM_DEFAULT_SYSTEM_NAME
 
     defaults = {
         "custom_logo": rel_path_platform(ASSET_LOGOS, LOGO_PRIMARY),
@@ -485,7 +846,51 @@ def apply_platform_settings(session, paths: dict[str, str] | None = None) -> Non
         row.value = str(val)
         row.data_type = "string"
     SystemSettings.set_setting("multi_tenancy_enabled", True, data_type="boolean", commit=False)
+    if not SystemSettings.query.filter_by(key="system_name").first():
+        SystemSettings.set_setting(
+            "system_name", PLATFORM_DEFAULT_SYSTEM_NAME, description="اسم المنصة (أزاد)", commit=False
+        )
+    if not SystemSettings.query.filter_by(key="company_name").first():
+        SystemSettings.set_setting(
+            "company_name", PLATFORM_DEFAULT_COMPANY_NAME, description="مالك المنصة (أزاد)", commit=False
+        )
     session.flush()
+
+
+def repair_platform_identity_settings(session) -> dict[str, str]:
+    """تصحيح أسماء المنصة إذا خُلِطت مع تينانت أو نصوص «إدارة الكراج»."""
+    from models import SystemSettings
+    from utils.branding_scope import PLATFORM_DEFAULT_COMPANY_NAME, PLATFORM_DEFAULT_SYSTEM_NAME
+
+    polluted_system = {
+        "نظام الحازم",
+        "المهندس الفلسطيني للمعدات الثقيلة",
+        "الحازم لقطع السيارات",
+        "أزاد لإدارة الكراج",
+        "نظام أزاد لإدارة الكراج",
+        "نظام أزاد لإدارة الكراج والمحاسبة",
+        "نظام إدارة الكراج",
+        "أزاد ERP رم الله",
+    }
+    polluted_company = {
+        "شركة الحازم للأنظمة الذكية",
+        "الحازم لقطع السيارات",
+        "شركة أزاد للأنظمة الذكية — رم الله",
+    }
+    changed: dict[str, str] = {}
+    row = SystemSettings.query.filter_by(key="system_name").first()
+    cur = str((row.value if row else "") or "").strip()
+    if not cur or cur in polluted_system:
+        SystemSettings.set_setting("system_name", PLATFORM_DEFAULT_SYSTEM_NAME, commit=False)
+        changed["system_name"] = PLATFORM_DEFAULT_SYSTEM_NAME
+    row = SystemSettings.query.filter_by(key="company_name").first()
+    cur = str((row.value if row else "") or "").strip()
+    if not cur or cur in polluted_company:
+        SystemSettings.set_setting("company_name", PLATFORM_DEFAULT_COMPANY_NAME, commit=False)
+        changed["company_name"] = PLATFORM_DEFAULT_COMPANY_NAME
+    if changed:
+        session.flush()
+    return changed
 
 
 def apply_tenant_settings(
@@ -538,6 +943,53 @@ def build_static_url(rel: str, *, assets_version: str = "") -> str:
     return url
 
 
+def _resolve_emblem_rel(
+    *,
+    slug: str,
+    logo_rel: str,
+    raw: dict,
+    app=None,
+) -> str:
+    """شعار واجهة مضغوط — emblem أولاً، ثم favicon، وليس primary (بطاقة عمل كاملة)."""
+    candidates: list[str] = []
+    if slug and slug != PLATFORM_SLUG:
+        candidates.append(normalize_rel_path(raw.get(f"tenant_{slug}_logo_emblem") or ""))
+        try:
+            from models import SystemSettings
+
+            candidates.append(
+                normalize_rel_path(SystemSettings.get_setting(f"tenant_{slug}_logo_emblem", "") or "")
+            )
+        except Exception:
+            pass
+        if logo_rel:
+            base = logo_rel.rsplit("/", 1)[0]
+            candidates.append(normalize_rel_path(f"{base}/{LOGO_EMBLEM}"))
+    else:
+        candidates.append(normalize_rel_path(raw.get("custom_logo_emblem") or ""))
+        candidates.append(rel_path_platform(ASSET_LOGOS, LOGO_EMBLEM))
+    for rel in candidates:
+        if rel and file_exists(rel, app):
+            return rel
+    return ""
+
+
+def _resolve_ui_logo_rel(
+    *,
+    slug: str,
+    logo_rel: str,
+    favicon_rel: str,
+    raw: dict,
+    app=None,
+) -> str:
+    emblem = _resolve_emblem_rel(slug=slug, logo_rel=logo_rel, raw=raw, app=app)
+    if emblem:
+        return emblem
+    if favicon_rel and file_exists(favicon_rel, app):
+        return favicon_rel
+    return logo_rel
+
+
 def resolve_active_branding(
     *,
     tenant_slug: str | None = None,
@@ -583,14 +1035,26 @@ def resolve_active_branding(
         if t_hdr and file_exists(t_hdr, app):
             header_rel = t_hdr
 
-    scope = "tenant" if slug and logo_rel != platform_logo else "platform"
+    from utils.branding_scope import SCOPE_PLATFORM, SCOPE_TENANT
+
+    emblem_rel = _resolve_emblem_rel(slug=slug, logo_rel=logo_rel, raw=raw, app=app)
+    ui_logo_rel = _resolve_ui_logo_rel(
+        slug=slug, logo_rel=logo_rel, favicon_rel=favicon_rel, raw=raw, app=app
+    )
+
+    # النطاق يُحدَّد من سياق الطلب (slug التينانت)، وليس بمقارنة مسار الشعار
+    scope = SCOPE_TENANT if slug else SCOPE_PLATFORM
     return {
         "scope": scope,
         "tenant_slug": slug or None,
         "logo_rel": logo_rel,
+        "logo_emblem_rel": emblem_rel,
+        "logo_ui_rel": ui_logo_rel,
         "favicon_rel": favicon_rel,
         "header_rel": header_rel,
-        "logo_url": build_static_url(logo_rel, assets_version=assets_version),
+        "logo_url": build_static_url(ui_logo_rel, assets_version=assets_version),
+        "logo_primary_url": build_static_url(logo_rel, assets_version=assets_version),
+        "logo_emblem_url": build_static_url(emblem_rel, assets_version=assets_version) if emblem_rel else "",
         "favicon_url": build_static_url(favicon_rel, assets_version=assets_version),
         "header_url": build_static_url(header_rel, assets_version=assets_version) if header_rel else "",
         "platform_logo_url": build_static_url(platform_logo, assets_version=assets_version),
@@ -655,7 +1119,9 @@ def reorganize_and_wire(session, *, app=None, archive_dupes: bool = True) -> dic
     app = app or current_app._get_current_object()
     slugs = [r.slug for r in TenantRegistry.query.filter_by(is_active=True).all() if r.slug]
     ensure_branding_tree(app, tenant_slugs=slugs)
+    ensure_branding_canonical_files(app)
     platform_paths = init_platform_from_legacy(app)
+    wire_database_branding_paths(session, app=app)
     moved = archive_img_duplicates(app) if archive_dupes else []
     normalized = normalize_branding_settings(session)
     apply_platform_settings(session, platform_paths)
@@ -681,28 +1147,22 @@ def bootstrap_dev_branding(session, *, alhazem_source: str | Path | None = None,
     src = alhazem_source or os.environ.get("ALHAZEM_BRANDING_SOURCE", r"C:\Users\azad1\OneDrive\Desktop\انس")
     if Path(src).is_dir():
         imp = sync_tenant_from_source_folder("alhazem", src, app=app)
+        from utils.branding_scope import TENANT_KNOWN_PROFILES
+
+        prof = TENANT_KNOWN_PROFILES.get("alhazem", {})
         apply_tenant_settings(
             session,
             "alhazem",
             app=app,
-            company_name="الحازم لقطع السيارات",
-            system_name="نظام الحازم",
+            company_name=prof.get("company_name", "شركة الحازم لقطع السيارات"),
+            system_name=prof.get("system_name", "نظام الحازم"),
             domain="alhazem.local",
             imported=imp,
         )
         report.setdefault("tenants", {})["alhazem"] = imp
 
     seed_saas_platform_defaults(session)
-
-    ensure_tenant_registry_row(session, slug="ramallah", schema_name="public", display_name="رم الله — المنصة الرئيسية", domain="localhost")
-    apply_tenant_settings(
-        session,
-        "ramallah",
-        app=app,
-        company_name="شركة أزاد للأنظمة الذكية — رم الله",
-        system_name="أزاد ERP رم الله",
-        imported={rel_path_platform(ASSET_LOGOS, LOGO_PRIMARY): rel_path_platform(ASSET_LOGOS, LOGO_PRIMARY)},
-    )
+    repair_platform_identity_settings(session)
 
     nasr_legacy = static_root(app) / "img" / "logo.png"
     if nasr_legacy.is_file():
@@ -723,12 +1183,15 @@ def bootstrap_dev_branding(session, *, alhazem_source: str | Path | None = None,
                 "nasrallah", ASSET_LOGOS, LOGO_PRIMARY
             )
     if imp_n:
+        from utils.branding_scope import TENANT_KNOWN_PROFILES
+
+        prof = TENANT_KNOWN_PROFILES.get("nasrallah", {})
         apply_tenant_settings(
             session,
             "nasrallah",
             app=app,
-            company_name="المهندس الفلسطيني للمعدات الثقيلة",
-            system_name="نظام المهندس الفلسطيني",
+            company_name=prof.get("company_name", "شركة المهندس الفلسطيني للمعدات الثقيلة"),
+            system_name=prof.get("system_name", "نظام المهندس الفلسطيني"),
             domain="nasrallah.local",
             imported=imp_n,
         )

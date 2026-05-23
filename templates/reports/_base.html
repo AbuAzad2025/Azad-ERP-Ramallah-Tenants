@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{% block page_title %}التقارير{% endblock %}{% endblock %}
 
@@ -8,7 +8,9 @@
 {% block reports_breadcrumb_extra %}{% endblock %}
 {% endblock %}
 
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
+{{ readonly_banner('view_reports', 'manage_reports', 'التقارير') }}
 <div class="card card-primary card-outline">
   <div class="card-header">
     <h3 class="card-title">

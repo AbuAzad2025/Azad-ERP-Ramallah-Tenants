@@ -1,3 +1,4 @@
+/* Scoped: لا يُطبَّق على gm-pro-ui — الثيم من gm-design-system */
 /**
  * ═══════════════════════════════════════════════════════════════════
  * 🌙 Dark Mode للوحدة السرية
@@ -6,207 +7,207 @@
 
 /* يتم تطبيق Dark Mode عند وجود class="dark-mode" على body */
 
-body.dark-mode {
+body.dark-mode:not(.gm-pro-ui) {
   background-color: #1a1a2e !important;
   color: #e0e0e0 !important;
 }
 
 /* ═══ الخلفيات ═══ */
-body.dark-mode .content-wrapper {
+body.dark-mode:not(.gm-pro-ui) .content-wrapper {
   background-color: #16213e !important;
 }
 
-body.dark-mode .card {
+body.dark-mode:not(.gm-pro-ui) .card {
   background-color: #0f3460 !important;
   color: #e0e0e0 !important;
   border-color: #1a2942 !important;
 }
 
-body.dark-mode .alert {
+body.dark-mode:not(.gm-pro-ui) .alert {
   background-color: #1a2942 !important;
   color: #e0e0e0 !important;
   border-color: #253757 !important;
 }
 
-body.dark-mode .small-box {
+body.dark-mode:not(.gm-pro-ui) .small-box {
   background: linear-gradient(135deg, #0f3460 0%, #1a2942 100%) !important;
   color: #e0e0e0 !important;
 }
 
 /* ═══ النصوص ═══ */
-body.dark-mode h1,
-body.dark-mode h2,
-body.dark-mode h3,
-body.dark-mode h4,
-body.dark-mode h5,
-body.dark-mode h6 {
+body.dark-mode:not(.gm-pro-ui) h1,
+body.dark-mode:not(.gm-pro-ui) h2,
+body.dark-mode:not(.gm-pro-ui) h3,
+body.dark-mode:not(.gm-pro-ui) h4,
+body.dark-mode:not(.gm-pro-ui) h5,
+body.dark-mode:not(.gm-pro-ui) h6 {
   color: #f0f0f0 !important;
 }
 
-body.dark-mode p,
-body.dark-mode span,
-body.dark-mode div {
+body.dark-mode:not(.gm-pro-ui) p,
+body.dark-mode:not(.gm-pro-ui) span,
+body.dark-mode:not(.gm-pro-ui) div {
   color: #e0e0e0 !important;
 }
 
-body.dark-mode .text-muted {
+body.dark-mode:not(.gm-pro-ui) .text-muted {
   color: #adb5bd !important;
 }
 
-body.dark-mode small {
+body.dark-mode:not(.gm-pro-ui) small {
   color: #b0b0b0 !important;
 }
 
 /* ═══ الروابط ═══ */
-body.dark-mode a {
+body.dark-mode:not(.gm-pro-ui) a {
   color: #667eea !important;
 }
 
-body.dark-mode a:hover {
+body.dark-mode:not(.gm-pro-ui) a:hover {
   color: #8899ff !important;
 }
 
 /* ═══ الأزرار ═══ */
-body.dark-mode .btn-light {
+body.dark-mode:not(.gm-pro-ui) .btn-light {
   background-color: #253757 !important;
   color: #e0e0e0 !important;
   border-color: #1a2942 !important;
 }
 
-body.dark-mode .btn-light:hover {
+body.dark-mode:not(.gm-pro-ui) .btn-light:hover {
   background-color: #2f4568 !important;
 }
 
-body.dark-mode .btn-outline-primary,
-body.dark-mode .btn-outline-secondary,
-body.dark-mode .btn-outline-success,
-body.dark-mode .btn-outline-info,
-body.dark-mode .btn-outline-warning,
-body.dark-mode .btn-outline-danger {
+body.dark-mode:not(.gm-pro-ui) .btn-outline-primary,
+body.dark-mode:not(.gm-pro-ui) .btn-outline-secondary,
+body.dark-mode:not(.gm-pro-ui) .btn-outline-success,
+body.dark-mode:not(.gm-pro-ui) .btn-outline-info,
+body.dark-mode:not(.gm-pro-ui) .btn-outline-warning,
+body.dark-mode:not(.gm-pro-ui) .btn-outline-danger {
   color: #e0e0e0 !important;
   border-color: currentColor !important;
 }
 
 /* ═══ Forms ═══ */
-body.dark-mode .form-control,
-body.dark-mode .form-select {
+body.dark-mode:not(.gm-pro-ui) .form-control,
+body.dark-mode:not(.gm-pro-ui) .form-select {
   background-color: #253757 !important;
   color: #e0e0e0 !important;
   border-color: #1a2942 !important;
 }
 
-body.dark-mode .form-control:focus,
-body.dark-mode .form-select:focus {
+body.dark-mode:not(.gm-pro-ui) .form-control:focus,
+body.dark-mode:not(.gm-pro-ui) .form-select:focus {
   background-color: #2f4568 !important;
   border-color: #667eea !important;
   box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
 }
 
-body.dark-mode .input-group-text {
+body.dark-mode:not(.gm-pro-ui) .input-group-text {
   background-color: #253757 !important;
   color: #e0e0e0 !important;
   border-color: #1a2942 !important;
 }
 
 /* ═══ Tables ═══ */
-body.dark-mode .table {
+body.dark-mode:not(.gm-pro-ui) .table {
   color: #e0e0e0 !important;
 }
 
-body.dark-mode .table thead th {
+body.dark-mode:not(.gm-pro-ui) .table thead th {
   background-color: #0f3460 !important;
   color: #e0e0e0 !important;
   border-color: #1a2942 !important;
 }
 
-body.dark-mode .table tbody tr {
+body.dark-mode:not(.gm-pro-ui) .table tbody tr {
   background-color: #16213e !important;
   border-color: #1a2942 !important;
 }
 
-body.dark-mode .table tbody tr:hover {
+body.dark-mode:not(.gm-pro-ui) .table tbody tr:hover {
   background-color: #1a2942 !important;
 }
 
-body.dark-mode .table-striped tbody tr:nth-of-type(odd) {
+body.dark-mode:not(.gm-pro-ui) .table-striped tbody tr:nth-of-type(odd) {
   background-color: #1a2942 !important;
 }
 
 /* ═══ Breadcrumbs ═══ */
-body.dark-mode .breadcrumb {
+body.dark-mode:not(.gm-pro-ui) .breadcrumb {
   background-color: #0f3460 !important;
 }
 
-body.dark-mode .breadcrumb-item a {
+body.dark-mode:not(.gm-pro-ui) .breadcrumb-item a {
   color: #667eea !important;
 }
 
-body.dark-mode .breadcrumb-item.active {
+body.dark-mode:not(.gm-pro-ui) .breadcrumb-item.active {
   color: #adb5bd !important;
 }
 
 /* ═══ Badges ═══ */
-body.dark-mode .badge {
+body.dark-mode:not(.gm-pro-ui) .badge {
   color: #fff !important;
 }
 
 /* ═══ Dropdown ═══ */
-body.dark-mode .dropdown-menu {
+body.dark-mode:not(.gm-pro-ui) .dropdown-menu {
   background-color: #0f3460 !important;
   border-color: #1a2942 !important;
 }
 
-body.dark-mode .dropdown-item {
+body.dark-mode:not(.gm-pro-ui) .dropdown-item {
   color: #e0e0e0 !important;
 }
 
-body.dark-mode .dropdown-item:hover {
+body.dark-mode:not(.gm-pro-ui) .dropdown-item:hover {
   background-color: #1a2942 !important;
 }
 
 /* ═══ Modal ═══ */
-body.dark-mode .modal-content {
+body.dark-mode:not(.gm-pro-ui) .modal-content {
   background-color: #0f3460 !important;
   color: #e0e0e0 !important;
 }
 
-body.dark-mode .modal-header {
+body.dark-mode:not(.gm-pro-ui) .modal-header {
   border-bottom-color: #1a2942 !important;
 }
 
-body.dark-mode .modal-footer {
+body.dark-mode:not(.gm-pro-ui) .modal-footer {
   border-top-color: #1a2942 !important;
 }
 
 /* ═══ Navbar ═══ */
-body.dark-mode .main-header {
+body.dark-mode:not(.gm-pro-ui) .main-header {
   background-color: #0f3460 !important;
   border-bottom-color: #1a2942 !important;
 }
 
-body.dark-mode .navbar {
+body.dark-mode:not(.gm-pro-ui) .navbar {
   background-color: #0f3460 !important;
 }
 
 /* ═══ Sidebar ═══ */
-body.dark-mode .main-sidebar {
+body.dark-mode:not(.gm-pro-ui) .main-sidebar {
   background-color: #0a1128 !important;
 }
 
-body.dark-mode .sidebar {
+body.dark-mode:not(.gm-pro-ui) .sidebar {
   background-color: #0a1128 !important;
 }
 
-body.dark-mode .nav-sidebar .nav-link {
+body.dark-mode:not(.gm-pro-ui) .nav-sidebar .nav-link {
   color: #adb5bd !important;
 }
 
-body.dark-mode .nav-sidebar .nav-link:hover {
+body.dark-mode:not(.gm-pro-ui) .nav-sidebar .nav-link:hover {
   background-color: #1a2942 !important;
   color: #fff !important;
 }
 
-body.dark-mode .nav-sidebar .nav-link.active {
+body.dark-mode:not(.gm-pro-ui) .nav-sidebar .nav-link.active {
   background-color: #667eea !important;
   color: #fff !important;
 }
@@ -214,33 +215,33 @@ body.dark-mode .nav-sidebar .nav-link.active {
 /* ═══ تحسينات خاصة بالوحدة السرية ═══ */
 
 /* البطاقات الملونة (المراكز الموحدة) */
-body.dark-mode .card[style*="gradient"] {
+body.dark-mode:not(.gm-pro-ui) .card[style*="gradient"] {
   opacity: 0.95;
 }
 
-body.dark-mode .card[style*="gradient"]:hover {
+body.dark-mode:not(.gm-pro-ui) .card[style*="gradient"]:hover {
   opacity: 1;
 }
 
 /* Shadows في Dark Mode */
-body.dark-mode .shadow,
-body.dark-mode .shadow-sm,
-body.dark-mode .shadow-lg {
+body.dark-mode:not(.gm-pro-ui) .shadow,
+body.dark-mode:not(.gm-pro-ui) .shadow-sm,
+body.dark-mode:not(.gm-pro-ui) .shadow-lg {
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Border للبحث */
-body.dark-mode .border-primary {
+body.dark-mode:not(.gm-pro-ui) .border-primary {
   border-color: #667eea !important;
 }
 
 /* الأيقونات */
-body.dark-mode .icon i {
+body.dark-mode:not(.gm-pro-ui) .icon i {
   opacity: 0.7;
 }
 
 /* Timeline */
-body.dark-mode .timeline-item {
+body.dark-mode:not(.gm-pro-ui) .timeline-item {
   border-bottom-color: #1a2942 !important;
 }
 
@@ -271,7 +272,7 @@ body.dark-mode .timeline-item {
   transition: transform 0.3s ease;
 }
 
-body.dark-mode .dark-mode-toggle {
+body.dark-mode:not(.gm-pro-ui) .dark-mode-toggle {
   background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
 }
 

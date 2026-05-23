@@ -21,7 +21,7 @@ LEARNING_LOG_FILE = "ai_learning_log.json"
 SCHEMA_MAX_AGE_DAYS = 7
 
 MODEL_SYNONYMS = {
-    "عميل": ["customer", "client"], "عملاء": ["customer", "client"], "مورد": ["supplier", "vendor", "partner"], "منتج": ["product", "part"], "صيانة": ["service", "servicerequest", "repair"], "فاتورة": ["invoice", "sale"], "دفعة": ["payment"], "دفع": ["payment"], "مخزن": ["warehouse", "stock", "inventory"], "مستخدم": ["user"], "دور": ["role"], "صلاحية": ["permission"], "نفقة": ["expense"], "مصروف": ["expense"], "شيك": ["check"], "ملاحظة": ["note"], "شحنة": ["shipment"], "عملة": ["currency", "exchange", "exchangerate"], "حساب": ["account", "ledger", "gl"],
+    "زبون": ["customer", "client"], "زبائن": ["customer", "client"], "مورد": ["supplier", "vendor", "partner"], "منتج": ["product", "part"], "صيانة": ["service", "servicerequest", "repair"], "فاتورة": ["invoice", "sale"], "دفعة": ["payment"], "دفع": ["payment"], "مخزن": ["warehouse", "stock", "inventory"], "مستخدم": ["user"], "دور": ["role"], "صلاحية": ["permission"], "نفقة": ["expense"], "مصروف": ["expense"], "شيك": ["check"], "ملاحظة": ["note"], "شحنة": ["shipment"], "عملة": ["currency", "exchange", "exchangerate"], "حساب": ["account", "ledger", "gl"],
 }
 
 
@@ -74,7 +74,7 @@ def build_functional_mapping() -> Dict[str, Dict[str, Any]]:
         "المحاسبة": {"models": ["Account", "GLBatch", "GLEntry"], "purpose": "إدارة دفتر الأستاذ والحسابات", "keywords": ["دفتر", "حساب", "محاسبة", "ledger", "accounting", "gl"]},
         "المتجر": {"models": ["Product", "OnlineCart", "PreOrder", "ProductRating"], "purpose": "المبيعات والمتجر الإلكتروني", "keywords": ["متجر", "منتج", "طلب", "سلة", "shop", "store", "product"]},
         "المبيعات": {"models": ["Sale", "SaleLine", "Invoice", "Payment"], "purpose": "إدارة المبيعات والفواتير والمدفوعات", "keywords": ["فاتورة", "دفع", "مبيعات", "invoice", "payment", "sales"]},
-        "العملاء": {"models": ["Customer"], "purpose": "إدارة بيانات العملاء", "keywords": ["عميل", "زبون", "customer", "client"]},
+        "الزبائن": {"models": ["Customer"], "purpose": "إدارة بيانات الزبائن", "keywords": ["زبون", "زبون", "customer", "client"]},
         "الموردين": {"models": ["Supplier", "SupplierSettlement"], "purpose": "إدارة الموردين والمشتريات", "keywords": ["مورد", "شراء", "supplier", "vendor"]},
         "المخازن": {"models": ["Warehouse", "StockLevel", "Shipment"], "purpose": "إدارة المخزون والشحنات", "keywords": ["مخزن", "مخزون", "شحنة", "warehouse", "stock", "inventory"]},
         "الشركاء": {"models": ["Partner", "PartnerSettlement"], "purpose": "إدارة الشراكات والتسويات", "keywords": ["شريك", "شراكة", "تسوية", "partner", "settlement"]},
@@ -92,7 +92,7 @@ def build_functional_mapping() -> Dict[str, Dict[str, Any]]:
 
 
 def build_language_mapping() -> Dict[str, List[str]]:
-    return {"مبيعات": ["sales", "sale", "invoice", "payment"], "دفتر": ["ledger", "account", "gl"], "نفقات": ["expense", "expenses"], "ضرائب": ["tax", "vat", "systemsettings"], "سعر الدولار": ["exchange", "exchangerate", "usd", "ils"], "عملاء": ["customer", "client"], "موردين": ["supplier", "vendor"], "متجر": ["shop", "store", "product"], "صيانة": ["service", "workshop", "repair"], "مخازن": ["warehouse", "inventory", "stock"], "شركاء": ["partner", "partnership"]}
+    return {"مبيعات": ["sales", "sale", "invoice", "payment"], "دفتر": ["ledger", "account", "gl"], "نفقات": ["expense", "expenses"], "ضرائب": ["tax", "vat", "systemsettings"], "سعر الدولار": ["exchange", "exchangerate", "usd", "ils"], "زبائن": ["customer", "client"], "موردين": ["supplier", "vendor"], "متجر": ["shop", "store", "product"], "صيانة": ["service", "workshop", "repair"], "مخازن": ["warehouse", "inventory", "stock"], "شركاء": ["partner", "partnership"]}
 
 
 def build_data_schema() -> Dict[str, Any]:

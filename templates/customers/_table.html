@@ -112,19 +112,24 @@
             <a href="{{ url_for('customers_bp.customer_detail', customer_id=customer.id) }}" class="btn btn-action-view btn-action-sm" title="عرض">
               <i class="fas fa-eye"></i>
             </a>
+            {% if has_perm('manage_customers') %}
             <a href="{{ url_for('customers_bp.edit_customer', customer_id=customer.id) }}" class="btn btn-action-edit btn-action-sm" title="تعديل">
               <i class="fas fa-edit"></i>
             </a>
+            {% endif %}
+            {% if has_perm('manage_payments') %}
             <a href="{{ url_for('payments.create_payment') }}?entity_type=CUSTOMER&entity_id={{ customer.id }}&entity_name={{ customer.name|urlencode }}" 
                class="btn btn-action-primary btn-action-sm" title="إضافة دفعة">
               <i class="fas fa-money-bill-wave"></i>
             </a>
+            {% endif %}
             <a href="{{ url_for('customers_bp.account_statement', customer_id=customer.id) }}" class="btn btn-action-report btn-action-sm" title="كشف">
               <i class="fas fa-file-invoice"></i>
             </a>
             <a href="{{ url_for('customers_bp.customer_whatsapp', customer_id=customer.id) }}" class="btn btn-success btn-action-sm" title="واتساب">
               <i class="fab fa-whatsapp"></i>
             </a>
+            {% if has_perm('manage_customers') %}
             {% if customer.is_archived %}
             <button type="button" class="btn btn-action-restore btn-action-sm restore-btn"
                     data-id="{{ customer.id }}"
@@ -144,6 +149,7 @@
                     title="حذف عادي">
               <i class="fas fa-trash"></i>
             </button>
+            {% endif %}
           </div>
         </td>
         {% endif %}

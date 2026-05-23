@@ -17,9 +17,11 @@
 
 <div class="row mb-3">
     <div class="col-12">
+        {% if has_perm('manage_engineering') %}
         <a href="{{ url_for('engineering.add_team') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> إضافة فريق
         </a>
+        {% endif %}
         <a href="{{ url_for('engineering.dashboard') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left"></i> لوحة التحكم
         </a>

@@ -46,20 +46,33 @@ def index():
     
     entries_year = GLEntry.query.join(GLBatch).filter(GLBatch.posted_at >= year_start).count()
     
+    from utils.company_scope import (
+        filter_checks_query,
+        filter_customers_query,
+        filter_partners_query,
+        filter_payments_query,
+        filter_sales_query,
+        filter_suppliers_query,
+    )
+
     # إحصائيات الشيكات
-    pending_checks = Check.query.filter_by(status='PENDING').count()
-    bounced_checks = Check.query.filter_by(status='BOUNCED').count()
-    cashed_checks = Check.query.filter_by(status='CASHED').count()
-    
+    pending_checks = filter_checks_query(Check.query.filter_by(status='PENDING')).count()
+    bounced_checks = filter_checks_query(Check.query.filter_by(status='BOUNCED')).count()
+    cashed_checks = filter_checks_query(Check.query.filter_by(status='CASHED')).count()
+
     # إحصائيات المدفوعات
-    pending_payments = Payment.query.filter_by(status='PENDING').count()
-    completed_payments = Payment.query.filter_by(status='COMPLETED').count()
-    failed_payments = Payment.query.filter_by(status='FAILED').count()
+    pending_payments = filter_payments_query(Payment.query.filter_by(status='PENDING')).count()
+    completed_payments = filter_payments_query(Payment.query.filter_by(status='COMPLETED')).count()
+    failed_payments = filter_payments_query(Payment.query.filter_by(status='FAILED')).count()
     
-    # أرصدة العملاء والموردين والشركاء
-    customers_count = Customer.query.count()
-    suppliers_count = Supplier.query.count()
-    partners_count = Partner.query.count()
+    # أرصدة الزبائن والموردين والشركاء (ضمن نطاق الفروع)
+
+    cust_q = filter_customers_query(Customer.query)
+    supp_q = filter_suppliers_query(Supplier.query)
+    part_q = filter_partners_query(Partner.query)
+    customers_count = cust_q.count()
+    suppliers_count = supp_q.count()
+    partners_count = part_q.count()
     
     from extensions import cache
     cache_key_cust = "ledger_total_customer_balance"
@@ -68,17 +81,23 @@ def index():
     
     total_customer_balance = cache.get(cache_key_cust)
     if total_customer_balance is None:
-        total_customer_balance = db.session.query(func.coalesce(func.sum(Customer.current_balance), 0)).scalar() or 0
+        total_customer_balance = (
+            cust_q.with_entities(func.coalesce(func.sum(Customer.current_balance), 0)).scalar() or 0
+        )
         cache.set(cache_key_cust, float(total_customer_balance or 0), timeout=300)
     
     total_supplier_balance = cache.get(cache_key_supp)
     if total_supplier_balance is None:
-        total_supplier_balance = db.session.query(func.coalesce(func.sum(Supplier.current_balance), 0)).scalar() or 0
+        total_supplier_balance = (
+            supp_q.with_entities(func.coalesce(func.sum(Supplier.current_balance), 0)).scalar() or 0
+        )
         cache.set(cache_key_supp, float(total_supplier_balance or 0), timeout=300)
     
     total_partner_balance = cache.get(cache_key_part)
     if total_partner_balance is None:
-        total_partner_balance = db.session.query(func.coalesce(func.sum(Partner.current_balance), 0)).scalar() or 0
+        total_partner_balance = (
+            part_q.with_entities(func.coalesce(func.sum(Partner.current_balance), 0)).scalar() or 0
+        )
         cache.set(cache_key_part, float(total_partner_balance or 0), timeout=300)
     
     stats = {
@@ -370,20 +389,32 @@ def reports_management():
         month_start = today_start.replace(day=1)
         year_start = today_start.replace(month=1, day=1)
         
+        from utils.company_scope import filter_payments_query, filter_sales_query
+
         # تقرير المبيعات
-        sales_today = Sale.query.filter(Sale.sale_date >= today_start).count()
-        sales_month = Sale.query.filter(Sale.sale_date >= month_start).count()
-        sales_year = Sale.query.filter(Sale.sale_date >= year_start).count()
+        sales_today = filter_sales_query(Sale.query.filter(Sale.sale_date >= today_start)).count()
+        sales_month = filter_sales_query(Sale.query.filter(Sale.sale_date >= month_start)).count()
+        sales_year = filter_sales_query(Sale.query.filter(Sale.sale_date >= year_start)).count()
         
         # تقرير المدفوعات
-        payments_today = Payment.query.filter(Payment.payment_date >= today_start).count()
-        payments_month = Payment.query.filter(Payment.payment_date >= month_start).count()
-        payments_year = Payment.query.filter(Payment.payment_date >= year_start).count()
+        from utils.company_scope import filter_checks_query
+
+        payments_today = filter_payments_query(
+            Payment.query.filter(Payment.payment_date >= today_start)
+        ).count()
+        payments_month = filter_payments_query(
+            Payment.query.filter(Payment.payment_date >= month_start)
+        ).count()
+        payments_year = filter_payments_query(
+            Payment.query.filter(Payment.payment_date >= year_start)
+        ).count()
         
         # تقرير الشيكات
         checks_by_status = {}
         for status in ['PENDING', 'CASHED', 'BOUNCED', 'RETURNED']:
-            checks_by_status[status] = Check.query.filter_by(status=status).count()
+            checks_by_status[status] = filter_checks_query(
+                Check.query.filter_by(status=status)
+            ).count()
         
         reports_data = {
             'sales': {
@@ -683,7 +714,7 @@ def health_check():
             health_status['checks'].append({
                 'name': 'تطابق أرصدة الجهات',
                 'status': 'WARNING',
-                'message': f'عدم تطابق: عملاء {int(customers_mismatch_count)} | موردين {int(suppliers_mismatch_count)} | شركاء {int(partners_mismatch_count)} | مجموع الفرق {round(total_abs, 2)}'
+                'message': f'عدم تطابق: زبائن {int(customers_mismatch_count)} | موردين {int(suppliers_mismatch_count)} | شركاء {int(partners_mismatch_count)} | مجموع الفرق {round(total_abs, 2)}'
             })
             if health_status['overall'] == 'HEALTHY':
                 health_status['overall'] = 'WARNING'
@@ -1172,7 +1203,13 @@ def recalculate_all_balances():
             'suppliers': 0
         }
         
-        customers = Customer.query.limit(10000).all()
+        from utils.company_scope import (
+            filter_customers_query,
+            filter_partners_query,
+            filter_suppliers_query,
+        )
+
+        customers = filter_customers_query(Customer.query).limit(10000).all()
         for customer in customers:
             try:
                 from utils.customer_balance_updater import update_customer_balance_components
@@ -1181,7 +1218,7 @@ def recalculate_all_balances():
             except Exception:
                 current_app.logger.warning(f'Failed to update customer balance')
         
-        partners = Partner.query.limit(10000).all()
+        partners = filter_partners_query(Partner.query).limit(10000).all()
         for partner in partners:
             try:
                 from models import update_partner_balance
@@ -1190,7 +1227,7 @@ def recalculate_all_balances():
             except Exception:
                 current_app.logger.warning(f'Failed to update partner balance')
         
-        suppliers = Supplier.query.limit(10000).all()
+        suppliers = filter_suppliers_query(Supplier.query).limit(10000).all()
         for supplier in suppliers:
             try:
                 update_supplier_balance_components(supplier.id)
@@ -1205,7 +1242,7 @@ def recalculate_all_balances():
         return jsonify({
             'success': True,
             'recalculated': recalculated,
-            'message': f"تم: {recalculated['customers']} عميل، {recalculated['partners']} شريك، {recalculated['suppliers']} مورد"
+            'message': f"تم: {recalculated['customers']} زبون، {recalculated['partners']} شريك، {recalculated['suppliers']} مورد"
         })
     except Exception as e:
         db.session.rollback()
@@ -1217,7 +1254,7 @@ def recalculate_all_balances():
 @ledger_control_bp.route('/fix-cashed-checks-balance', methods=['POST'])
 @permission_required(SystemPermissions.MANAGE_ADVANCED_ACCOUNTING)
 def fix_cashed_checks_balance():
-    """تصحيح أرصدة العملاء المتأثرين بالشيكات المسوية والمرتدة"""
+    """تصحيح أرصدة الزبائن المتأثرين بالشيكات المسوية والمرتدة"""
     try:
         from decimal import Decimal
         from models import Customer, Payment, Check, PaymentSplit, CheckStatus
@@ -1298,12 +1335,12 @@ def fix_cashed_checks_balance():
                     })
                     fixed_count += 1
                 except Exception as e:
-                    current_app.logger.error(f"❌ خطأ في تحديث رصيد العميل #{customer_id}: {e}")
+                    current_app.logger.error(f"❌ خطأ في تحديث رصيد الزبون #{customer_id}: {e}")
                     db.session.rollback()
             
             return jsonify({
                 'success': True,
-                'message': f'تم تصحيح أرصدة {fixed_count} عميل',
+                'message': f'تم تصحيح أرصدة {fixed_count} زبون',
                 'total_checks': len(all_checks),
                 'issues_found': len(issues_found),
                 'affected_customers': len(affected_customers),
@@ -1333,16 +1370,22 @@ def sync_payments_checks():
     try:
         synced = 0
         created = 0
-        payments = Payment.query.filter(
-            or_(
-                Payment.method == PaymentMethod.CHEQUE.value,
-                Payment.method.ilike('%check%')
+        from utils.company_scope import filter_checks_query, filter_payments_query
+
+        payments = filter_payments_query(
+            Payment.query.filter(
+                or_(
+                    Payment.method == PaymentMethod.CHEQUE.value,
+                    Payment.method.ilike('%check%'),
+                )
             )
         ).all()
         for payment in payments:
             if not payment.check_number or not payment.check_bank:
                 continue
-            existing = Check.query.filter_by(payment_id=payment.id, check_number=payment.check_number).first()
+            existing = filter_checks_query(
+                Check.query.filter_by(payment_id=payment.id, check_number=payment.check_number)
+            ).first()
             if existing:
                 synced += 1
                 continue
@@ -1413,15 +1456,21 @@ def get_advanced_statistics():
         except Exception as e:
             current_app.logger.warning(f"⚠️ خطأ في فحص التوازن: {str(e)}")
         
+        from utils.company_scope import filter_checks_query, filter_payments_query
+
         # إحصائيات الدفعات
-        total_payments = Payment.query.count()
-        completed_payments = Payment.query.filter_by(status='COMPLETED').count()
-        pending_payments = Payment.query.filter_by(status='PENDING').count()
+        total_payments = filter_payments_query(Payment.query).count()
+        completed_payments = filter_payments_query(
+            Payment.query.filter_by(status='COMPLETED')
+        ).count()
+        pending_payments = filter_payments_query(
+            Payment.query.filter_by(status='PENDING')
+        ).count()
         
         # إحصائيات الشيكات
-        total_checks = Check.query.count()
-        pending_checks = Check.query.filter_by(status='PENDING').count()
-        bounced_checks = Check.query.filter_by(status='BOUNCED').count()
+        total_checks = filter_checks_query(Check.query).count()
+        pending_checks = filter_checks_query(Check.query.filter_by(status='PENDING')).count()
+        bounced_checks = filter_checks_query(Check.query.filter_by(status='BOUNCED')).count()
         
         return jsonify({
             'success': True,
@@ -2001,21 +2050,27 @@ def search_entities():
         
         results = []
         
+        from utils.company_scope import (
+            filter_customers_query,
+            filter_partners_query,
+            filter_suppliers_query,
+        )
+
         if entity_type == 'CUSTOMER':
-            entities = Customer.query.filter(
-                Customer.name.contains(search_term)
+            entities = filter_customers_query(
+                Customer.query.filter(Customer.name.contains(search_term))
             ).limit(20).all()
             results = [{'id': e.id, 'name': e.name, 'type': 'CUSTOMER'} for e in entities]
         
         elif entity_type == 'SUPPLIER':
-            entities = Supplier.query.filter(
-                Supplier.name.contains(search_term)
+            entities = filter_suppliers_query(
+                Supplier.query.filter(Supplier.name.contains(search_term))
             ).limit(20).all()
             results = [{'id': e.id, 'name': e.name, 'type': 'SUPPLIER'} for e in entities]
         
         elif entity_type == 'PARTNER':
-            entities = Partner.query.filter(
-                Partner.name.contains(search_term)
+            entities = filter_partners_query(
+                Partner.query.filter(Partner.name.contains(search_term))
             ).limit(20).all()
             results = [{'id': e.id, 'name': e.name, 'type': 'PARTNER'} for e in entities]
         
@@ -2032,14 +2087,16 @@ def search_entities():
 @ledger_control_bp.route('/verify-customer-balances', methods=['POST'])
 @permission_required(SystemPermissions.MANAGE_SYSTEM_HEALTH)
 def verify_customer_balances():
-    """التحقق من أرصدة العملاء القدامى وتحديثها حسب النظام الجديد"""
+    """التحقق من أرصدة الزبائن القدامى وتحديثها حسب النظام الجديد"""
     try:
         from decimal import Decimal
         from models import Customer
         from utils.customer_balance_updater import update_customer_balance_components
         from utils.balance_calculator import calculate_customer_balance_components
         
-        customers = Customer.query.limit(10000).all()
+        from utils.company_scope import filter_customers_query
+
+        customers = filter_customers_query(Customer.query).limit(10000).all()
         total = len(customers)
         
         verified = 0
@@ -2101,7 +2158,7 @@ def verify_customer_balances():
                     verified += 1
                     
             except Exception as e:
-                current_app.logger.error(f"❌ خطأ في التحقق من رصيد العميل #{customer.id}: {e}")
+                current_app.logger.error(f"❌ خطأ في التحقق من رصيد الزبون #{customer.id}: {e}")
                 issues.append({
                     'customer_id': customer.id,
                     'customer_name': getattr(customer, 'name', 'Unknown'),
@@ -2116,10 +2173,10 @@ def verify_customer_balances():
             'verified': verified,
             'updated': updated,
             'issues': issues,
-            'message': f'تم التحقق من {total} عميل: {verified} صحيح، {updated} تم تحديثه'
+            'message': f'تم التحقق من {total} زبون: {verified} صحيح، {updated} تم تحديثه'
         })
     except Exception as e:
-        current_app.logger.error(f"❌ خطأ في التحقق من أرصدة العملاء: {str(e)}")
+        current_app.logger.error(f"❌ خطأ في التحقق من أرصدة الزبائن: {str(e)}")
         db.session.rollback()
         current_app.logger.exception('API error')
         return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500

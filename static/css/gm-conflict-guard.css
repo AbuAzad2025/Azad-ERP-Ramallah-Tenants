@@ -1,0 +1,168 @@
+/**
+ * طبقة أخيرة — تمنع تعارض enhancements / security_dark_mode / ux-* مع gm-pro-ui
+ * يُحمَّل بعد كل ملفات CSS العامة (عدا print)
+ */
+
+/* ─── إلغاء تلوين عام لكل div/span في الليلي (security_dark_mode) ─── */
+body.gm-pro-ui.dark-mode p,
+body.gm-pro-ui.dark-mode span,
+body.gm-pro-ui.dark-mode div {
+  color: inherit;
+}
+
+body.gm-pro-ui.dark-mode {
+  background: var(--gm-content-bg) !important;
+  color: var(--gm-text) !important;
+}
+
+body.gm-pro-ui.dark-mode .content-wrapper {
+  background: var(--gm-content-bg) !important;
+  color: var(--gm-text) !important;
+}
+
+body.gm-pro-ui:not(.dark-mode) {
+  background: var(--gm-content-bg) !important;
+  color: var(--gm-text) !important;
+}
+
+body.gm-pro-ui:not(.dark-mode) .content-wrapper {
+  background: var(--gm-content-bg) !important;
+}
+
+/* ─── أزرار: تجاوز تدرجات enhancements ─── */
+body.gm-pro-ui .btn {
+  background-image: none !important;
+  transform: none;
+}
+
+body.gm-pro-ui .btn-primary {
+  background: var(--gm-primary) !important;
+  border-color: var(--gm-primary) !important;
+  color: #fff !important;
+}
+
+body.gm-pro-ui .btn-primary:hover,
+body.gm-pro-ui .btn-primary:focus {
+  background: var(--gm-primary-hover) !important;
+  border-color: var(--gm-primary-hover) !important;
+}
+
+body.gm-pro-ui .btn-success {
+  background: var(--gm-success) !important;
+  border-color: var(--gm-success) !important;
+  color: #fff !important;
+}
+
+body.gm-pro-ui .btn-danger {
+  background: var(--gm-danger) !important;
+  border-color: var(--gm-danger) !important;
+  color: #fff !important;
+}
+
+body.gm-pro-ui .btn-warning:not(.btn-outline-warning) {
+  background: var(--gm-warning) !important;
+  border-color: var(--gm-warning) !important;
+  color: #1f2937 !important;
+}
+
+body.gm-pro-ui .btn-info {
+  background: var(--gm-info) !important;
+  border-color: var(--gm-info) !important;
+  color: #fff !important;
+}
+
+/* أزرار جدول دائرية — لا تُجبر على شكل enhancements إن لم تُطلَب */
+body.gm-pro-ui .table td .btn-sm {
+  width: auto;
+  min-width: 34px;
+  height: auto;
+  min-height: 34px;
+  border-radius: 10px !important;
+  padding: 0.25rem 0.5rem;
+}
+
+body.gm-pro-ui .table td .btn-sm:hover {
+  transform: none;
+}
+
+body.gm-pro-ui .table td .btn-sm i {
+  color: inherit !important;
+}
+
+/* ─── حقول: تجاوز enhancements light fixes ─── */
+body.gm-pro-ui .form-control,
+body.gm-pro-ui .custom-select,
+body.gm-pro-ui select.form-control,
+body.gm-pro-ui .select2-container--bootstrap4 .select2-selection,
+body.gm-pro-ui .select2-container--default .select2-selection--single {
+  background: var(--gm-surface) !important;
+  color: var(--gm-text) !important;
+  border-color: var(--gm-border) !important;
+}
+
+body.gm-pro-ui .form-control:focus,
+body.gm-pro-ui .custom-select:focus {
+  border-color: var(--gm-primary) !important;
+  box-shadow: 0 0 0 3px var(--gm-primary-soft) !important;
+}
+
+body.gm-pro-ui.dark-mode .form-control,
+body.gm-pro-ui.dark-mode .custom-select {
+  background: var(--gm-surface) !important;
+  border-color: var(--gm-border) !important;
+  color: var(--gm-text) !important;
+}
+
+/* ─── بطاقات وجداول ليلية ─── */
+body.gm-pro-ui.dark-mode .card {
+  background: var(--gm-surface) !important;
+  color: var(--gm-text) !important;
+  border: 1px solid var(--gm-border) !important;
+  border-top: 1px solid var(--gm-border) !important;
+  box-shadow: var(--gm-shadow) !important;
+}
+
+body.gm-pro-ui.dark-mode .card-header {
+  background: transparent !important;
+  border-color: var(--gm-border) !important;
+  color: var(--gm-text) !important;
+}
+
+body.gm-pro-ui.dark-mode .table {
+  background: var(--gm-surface) !important;
+  color: var(--gm-text) !important;
+}
+
+body.gm-pro-ui.dark-mode .table thead th {
+  background: var(--gm-content-bg) !important;
+  color: var(--gm-text) !important;
+  border-top: none !important;
+}
+
+body.gm-pro-ui.dark-mode .table tbody td {
+  color: var(--gm-text);
+  border-color: var(--gm-border);
+}
+
+body.gm-pro-ui.dark-mode a {
+  color: var(--gm-primary);
+}
+
+body.gm-pro-ui.dark-mode a:hover {
+  color: var(--gm-primary-hover);
+}
+
+/* ─── كونسول الأمان + طبقة gm ─── */
+body.security-console.sidebar-hidden .content-wrapper {
+  padding-top: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* منع تكديس transform على الكروت */
+body.gm-pro-ui .card:hover {
+  transform: none !important;
+}
+
+body.gm-pro-ui .small-box:hover {
+  transform: none !important;
+}

@@ -78,7 +78,7 @@ class LedgerCache:
                 entity = db.session.get(Customer, entity_id)
                 if entity:
                     entity_name = entity.name
-                    entity_type_ar = 'عميل'
+                    entity_type_ar = 'زبون'
             elif entity_type == 'SUPPLIER':
                 entity = db.session.get(Supplier, entity_id)
                 if entity:

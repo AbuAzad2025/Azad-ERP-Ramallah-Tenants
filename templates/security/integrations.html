@@ -737,7 +737,7 @@
                                     <li>payment.completed - عند اكتمال دفعة</li>
                                     <li>service.completed - عند اكتمال صيانة</li>
                                     <li>stock.low - عند انخفاض المخزون</li>
-                                    <li>customer.created - عند إضافة عميل</li>
+                                    <li>customer.created - عند إضافة زبون</li>
                                 </ul>
                             </div>
                         </div>
@@ -1098,7 +1098,7 @@
             <div class="integration-card card">
                 <div class="integration-header" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);">
                     <div class="integration-icon"><i class="fas fa-tv"></i></div>
-                    <h4 class="mb-0">شاشة العميل (Customer Display)</h4>
+                    <h4 class="mb-0">شاشة الزبون (Customer Display)</h4>
                     <small>VFD / LCD 2x20</small>
                     {% if integrations.customer_display.enabled %}
                     <span class="status-badge status-enabled float-left">مفعّل ✅</span>
@@ -1112,7 +1112,7 @@
                         <div class="form-group">
                             <div class="custom-control custom-switch">
                                 <input type="checkbox" class="custom-control-input" id="customer_display_enabled" name="customer_display_enabled" {% if integrations.customer_display.enabled %}checked{% endif %}>
-                                <label class="custom-control-label" for="customer_display_enabled"><strong>تفعيل شاشة العميل</strong></label>
+                                <label class="custom-control-label" for="customer_display_enabled"><strong>تفعيل شاشة الزبون</strong></label>
                             </div>
                         </div>
                         <div class="form-section">

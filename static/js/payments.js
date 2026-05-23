@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var normalizeMethod = window.normalizeMethod || function(v) { v = String(v || '').trim(); return v ? v.replace(/\s+/g,'_').replace(/-/g,'_').toUpperCase() : ''; };
   function normDir(v) { v = (v || '').toUpperCase(); if (v === 'INCOMING') return 'IN'; if (v === 'OUTGOING') return 'OUT'; return v; }
   var validDates = window.validDates || function(start, end) { if (!start || !end) return { start: start, end: end }; var s = new Date(start), e = new Date(end); if (isNaN(s) || isNaN(e)) return { start: start, end: end }; if (s.getTime() > e.getTime()) return { start: end, end: start }; return { start: start, end: end }; };
-  var deriveEntityLabel = window.deriveEntityLabel || function(p) { if (p && p.entity_display) return p.entity_display; var m = [['customer_id','عميل'],['supplier_id','مورد'],['partner_id','شريك'],['sale_id','بيع'],['invoice_id','فاتورة'],['service_id','صيانة'],['shipment_id','شحنة'],['expense_id','مصروف'],['preorder_id','حجز'],['loan_settlement_id','تسوية']]; for (var i = 0; i < m.length; i++) if (p && p[m[i][0]]) return m[i][1] + ' #' + p[m[i][0]]; return (p && p.entity_type) || ''; };
+  var deriveEntityLabel = window.deriveEntityLabel || function(p) { if (p && p.entity_display) return p.entity_display; var m = [['customer_id','زبون'],['supplier_id','مورد'],['partner_id','شريك'],['sale_id','بيع'],['invoice_id','فاتورة'],['service_id','صيانة'],['shipment_id','شحنة'],['expense_id','مصروف'],['preorder_id','حجز'],['loan_settlement_id','تسوية']]; for (var i = 0; i < m.length; i++) if (p && p[m[i][0]]) return m[i][1] + ' #' + p[m[i][0]]; return (p && p.entity_type) || ''; };
   function inferEntityContext() {
     const path = location.pathname.replace(/\/+$/, '');
     const m = path.match(/^\/vendors\/(suppliers|partners)\/(\d+)\/payments$/i);
@@ -291,13 +291,14 @@ document.addEventListener('DOMContentLoaded', function() {
         return '<span class="badge bg-secondary me-1 text-light">' + text + '</span>';
       }).join(' ');
       const dateOnly = (p.payment_date || '').split('T')[0] || '';
-      var viewLink = '/payments/' + safePath(p.id);
+      var gp = window.gmPath || function(x){ return x; };
+      var viewLink = gp('/payments/' + safePath(p.id));
       if (p && typeof p.payment_id === 'number' && typeof p.split_id === 'number') {
-        viewLink = '/payments/' + safePath(p.payment_id) + '/split/' + safePath(p.split_id);
+        viewLink = gp('/payments/' + safePath(p.payment_id) + '/split/' + safePath(p.split_id));
       } else if (p && typeof p.id === 'string' && p.id.indexOf('check_') === 0) {
         var cid = p.id.replace('check_', '');
         if (cid && String(cid).trim()) {
-          viewLink = '/checks/detail/' + safePath(cid);
+          viewLink = gp('/checks/detail/' + safePath(cid));
         }
       }
       var actionsHtml = '<div class="btn-group btn-group-xs action-btns" role="group">' +
@@ -410,6 +411,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!btn) return;
     const id = btn.dataset.id;
     if (!id) return;
+    if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_payments')) return;
     
     const reason = prompt('أدخل سبب أرشفة هذه الدفعة:');
     if (!reason) return;
@@ -446,6 +448,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!btn) return;
     const id = btn.dataset.id;
     if (!id) return;
+    if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_payments')) return;
     
     if (!confirm('هل أنت متأكد من استعادة سند الدفع #' + id + '؟')) return;
     
@@ -476,6 +479,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.addEventListener('click', async function (e) {
     const btn = e.target.closest('.btn-refund');
     if (!btn) return;
+    if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_payments')) return;
     var sid = btn.getAttribute('data-split-id');
     var pid = btn.getAttribute('data-payment-id');
     if (!(sid || pid)) return;
@@ -600,7 +604,7 @@ function initSmartSearch() {
       entityType = 'supplier';
     } else if (input.placeholder.includes('شريك')) {
       entityType = 'partner';
-    } else if (input.placeholder.includes('عميل')) {
+    } else if (input.placeholder.includes('زبون')) {
       entityType = 'customer';
     }
     

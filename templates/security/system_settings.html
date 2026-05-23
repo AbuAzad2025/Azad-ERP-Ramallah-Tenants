@@ -991,7 +991,7 @@
                             <input class="form-check-input mb-2" type="checkbox" name="notify_on_service_complete" id="notify_service" 
                                    {% if data.business.notify_on_service_complete %}checked{% endif %}>
                             <label class="form-check-label fw-bold d-block" for="notify_service">إشعار انتهاء الصيانة</label>
-                            <small class="text-muted">إبلاغ العميل عند جاهزية المركبة</small>
+                            <small class="text-muted">إبلاغ الزبون عند جاهزية المركبة</small>
                         </div>
                       </div>
                       
@@ -1051,7 +1051,7 @@
                             <input class="form-check-input mb-2" type="checkbox" name="credit_limit_check" id="credit_check" 
                                    {% if data.business.credit_limit_check %}checked{% endif %}>
                             <label class="form-check-label fw-bold d-block" for="credit_check">تفعيل فحص حد الائتمان</label>
-                            <small class="text-muted">منع الفوترة للعميل المتجاوز للحد</small>
+                            <small class="text-muted">منع الفوترة للزبون المتجاوز للحد</small>
                         </div>
                       </div>
                       
@@ -1097,7 +1097,7 @@
                             <input class="form-check-input mb-2" type="checkbox" name="multi_tenancy_enabled" id="multi_tenancy" 
                                    {% if data.business.multi_tenancy_enabled %}checked{% endif %}>
                             <label class="form-check-label fw-bold d-block" for="multi_tenancy">تفعيل وضع تعدد المستأجرين</label>
-                            <small class="text-muted">عزل بيانات العملاء بشكل كامل</small>
+                            <small class="text-muted">عزل بيانات الزبائن بشكل كامل</small>
                         </div>
                       </div>
                       
@@ -1147,7 +1147,7 @@
                         <div class="mb-3">
                           <label class="form-label fw-bold">اسم النظام (يظهر في الشريط العلوي)</label>
                           <input type="text" name="system_name" class="form-control form-control-lg" 
-                                 value="{{ data.branding.system_name }}" placeholder="نظام الحازم">
+                                 value="{{ data.branding.system_name }}" placeholder="منصة أزاد ERP">
                           <div class="form-text">الاسم الذي سيظهر في الزاوية العلوية اليمنى للنظام.</div>
                         </div>
                       </div>
@@ -1156,7 +1156,7 @@
                         <div class="mb-3">
                           <label class="form-label fw-bold">اسم الشركة (يظهر في التقارير)</label>
                           <input type="text" name="company_name" class="form-control form-control-lg" 
-                                 value="{{ data.branding.company_name }}" placeholder="شركة الحازم">
+                                 value="{{ data.branding.company_name }}" placeholder="شركة أزاد للأنظمة الذكية">
                           <div class="form-text">الاسم الرسمي للشركة الذي سيظهر في الفواتير والتقارير المطبوعة.</div>
                         </div>
                       </div>
@@ -1172,10 +1172,10 @@
                                          style="height: 80px; width: auto; object-fit: contain;">
                                     <div class="small text-muted mt-1">الشعار الحالي</div>
                                   {% else %}
-                                    <img src="{{ url_for('static', filename='img/azad_logo.png') }}" 
+                                    <img src="{{ url_for('static', filename='branding/platform/logos/primary.png') }}" 
                                          class="img-thumbnail bg-white opacity-50" 
                                          style="height: 80px; width: auto; object-fit: contain;">
-                                    <div class="small text-muted mt-1">الشعار الافتراضي</div>
+                                    <div class="small text-muted mt-1">الشعار الافتراضي (المنصة)</div>
                                   {% endif %}
                               </div>
                               <div class="flex-grow-1">

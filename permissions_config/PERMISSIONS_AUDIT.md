@@ -63,7 +63,7 @@
 
 | المجال | صلاحية القراءة (عرض) | صلاحية الكتابة (تعديل/حذف/إضافة) |
 |--------|------------------------|-------------------------------------|
-| العملاء | `MANAGE_CUSTOMERS` | `MANAGE_CUSTOMERS` |
+| الزبائن | `MANAGE_CUSTOMERS` | `MANAGE_CUSTOMERS` |
 | الموردون/الشركاء | `MANAGE_VENDORS` | `MANAGE_VENDORS` |
 | المستودعات | `VIEW_WAREHOUSES` | `MANAGE_WAREHOUSES` |
 | الجرد/القطع | `VIEW_PARTS` / `VIEW_INVENTORY` | `MANAGE_INVENTORY` |

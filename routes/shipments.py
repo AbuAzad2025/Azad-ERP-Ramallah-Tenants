@@ -315,7 +315,11 @@ def list_shipments():
             return st
 
     if _wants_json():
-        q = db.session.query(Shipment).filter(Shipment.is_archived == False).options(
+        from utils.company_scope import filter_shipments_query
+
+        q = filter_shipments_query(
+            db.session.query(Shipment).filter(Shipment.is_archived == False)
+        ).options(
             joinedload(Shipment.destination_warehouse),
         )
 
@@ -440,7 +444,11 @@ def shipments_data():
     f_dest   = (request.args.get("destination") or "").strip()
     f_extra  = (request.args.get("search_extra") or request.args.get("search[value]", "") or "").strip()
 
-    base_q = db.session.query(Shipment).filter(Shipment.is_archived == False)
+    from utils.company_scope import filter_shipments_query
+
+    base_q = filter_shipments_query(
+        db.session.query(Shipment).filter(Shipment.is_archived == False)
+    )
     total_count = base_q.order_by(None).with_entities(func.count(Shipment.id)).scalar() or 0
     q = base_q
     dest_wh = None
@@ -754,7 +762,9 @@ def edit_shipment(id: int):
                 # تعيين المستودع بشكل مباشر وصريح
                 form.destination_id.data = dest_warehouse
                 # التأكد من أن القيمة لن تتغير
-                form.destination_id.query = Warehouse.query.filter(
+                from utils.company_scope import filter_warehouses_query
+
+                form.destination_id.query = filter_warehouses_query(Warehouse.query).filter(
                     (Warehouse.id == sh.destination_id) | (Warehouse.is_active == True)
                 ).order_by(Warehouse.name)
         

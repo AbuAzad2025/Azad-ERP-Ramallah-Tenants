@@ -81,7 +81,7 @@
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center">
             <div>
-              <h6 class="text-muted mb-1"><i class="fas fa-users ml-1"></i> العملاء</h6>
+              <h6 class="text-muted mb-1"><i class="fas fa-users ml-1"></i> الزبائن</h6>
               <h3 class="mb-0 entity-count">{{ summary.customers.count }}</h3>
               <p class="text-sm mb-0 mt-2">
                 <span class="total-balance {% if summary.customers.total_balance > 0 %}text-success{% elif summary.customers.total_balance < 0 %}text-danger{% else %}text-secondary{% endif %}">
@@ -146,13 +146,13 @@
     <div class="col-md-6">
       <div class="card border-0 shadow-sm">
         <div class="card-header bg-danger text-white">
-          <h5 class="mb-0"><i class="fas fa-arrow-down ml-2"></i> أعلى 10 عملاء (عليه لنا)</h5>
+          <h5 class="mb-0"><i class="fas fa-arrow-down ml-2"></i> أعلى 10 زبائن (عليه لنا)</h5>
         </div>
         <div class="card-body">
           <table class="table table-hover">
             <thead>
               <tr>
-                <th>العميل</th>
+                <th>الزبون</th>
                 <th>الرصيد</th>
               </tr>
             </thead>
@@ -304,7 +304,7 @@ function initCharts(data) {
   new Chart(document.getElementById('balancesChart'), {
     type: 'bar',
     data: {
-      labels: ['الموردون', 'الشركاء', 'العملاء'],
+      labels: ['الموردون', 'الشركاء', 'الزبائن'],
       datasets: [{
         label: 'الرصيد الإجمالي (₪)',
         data: [

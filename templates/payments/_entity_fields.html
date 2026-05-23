@@ -17,7 +17,7 @@
   {% if form.entity_id is defined %}{{ form.entity_id(id="entity_id") }}{% endif %}
 </div>
 
-<!-- حاوية العميل -->
+<!-- حاوية الزبون -->
     <div class="entity-field-container" data-entity-type="customer" style="display: {% if etype == 'customer' %}block{% else %}none{% endif %};">
       {% if form.customer_search is defined %}
         <label class="form-label required-field">
@@ -26,12 +26,12 @@
           <span class="text-danger fw-bold">*</span>
         </label>
         <div class="input-group" style="position: relative;">
-          {{ form.customer_search(class="form-control search-dropdown-field", placeholder="🔍 ابحث أو اختر عميل...", autocomplete="off", id="customer_search_main") }}
+          {{ form.customer_search(class="form-control search-dropdown-field", placeholder="🔍 ابحث أو اختر زبون...", autocomplete="off", id="customer_search_main") }}
           <button type="button" class="btn btn-outline-secondary dropdown-toggle-btn" data-entity="customer">
             <i class="fas fa-chevron-down"></i>
           </button>
           <a class="btn btn-outline-primary" href="{{ url_for('customers_bp.create_form') }}" target="_blank">
-            <i class="fas fa-plus ml-1"></i>عميل جديد
+            <i class="fas fa-plus ml-1"></i>زبون جديد
           </a>
         </div>
         <small class="form-text text-muted">
@@ -98,8 +98,8 @@
   {% endif %}
   <div class="mb-3">
     {% if form.customer_search is defined %}
-      <label class="form-label">العميل المرتبط</label>
-      {{ form.customer_search(class="form-control", placeholder="العميل المرتبط بالبيع", autocomplete="off", readonly=true, id="sale_customer_display") }}
+      <label class="form-label">الزبون المرتبط</label>
+      {{ form.customer_search(class="form-control", placeholder="الزبون المرتبط بالبيع", autocomplete="off", readonly=true, id="sale_customer_display") }}
     {% endif %}
   </div>
 </div>
@@ -115,8 +115,8 @@
   </div>
   <div class="mb-3">
     {% if form.customer_search is defined %}
-      <label class="form-label">العميل المرتبط</label>
-      {{ form.customer_search(class="form-control", placeholder="العميل المرتبط بالصيانة", autocomplete="off", readonly=true, id="service_customer_display") }}
+      <label class="form-label">الزبون المرتبط</label>
+      {{ form.customer_search(class="form-control", placeholder="الزبون المرتبط بالصيانة", autocomplete="off", readonly=true, id="service_customer_display") }}
     {% endif %}
   </div>
 </div>
@@ -165,19 +165,19 @@
     {% if form.customer_search is defined %}
       <label class="form-label">
         <i class="fas fa-user text-success"></i>
-        العميل المرتبط بالمصروف
+        الزبون المرتبط بالمصروف
       </label>
       <div class="input-group" style="position: relative;">
-        {{ form.customer_search(class="form-control search-dropdown-field", placeholder="🔍 ابحث أو اختر العميل...", autocomplete="off", id="expense_customer_search") }}
+        {{ form.customer_search(class="form-control search-dropdown-field", placeholder="🔍 ابحث أو اختر الزبون...", autocomplete="off", id="expense_customer_search") }}
         <button type="button" class="btn btn-outline-secondary dropdown-toggle-btn" data-entity="customer">
           <i class="fas fa-chevron-down"></i>
         </button>
         <a class="btn btn-outline-primary" href="{{ url_for('customers_bp.create_form') }}" target="_blank">
-          <i class="fas fa-plus ml-1"></i>عميل جديد
+          <i class="fas fa-plus ml-1"></i>زبون جديد
         </a>
       </div>
       <small class="form-text text-muted">
-        <i class="fas fa-info-circle"></i> اختياري: إذا كانت المصاريف لصالح عميل محدد لتخصم من كشفه
+        <i class="fas fa-info-circle"></i> اختياري: إذا كانت المصاريف لصالح زبون محدد لتخصم من كشفه
       </small>
     {% endif %}
   </div>
@@ -211,8 +211,8 @@
   </div>
   <div class="mb-3">
     {% if form.customer_search is defined %}
-      <label class="form-label">العميل المرتبط</label>
-      {{ form.customer_search(class="form-control", placeholder="العميل المرتبط بالحجز", autocomplete="off", readonly=true, id="preorder_customer_display") }}
+      <label class="form-label">الزبون المرتبط</label>
+      {{ form.customer_search(class="form-control", placeholder="الزبون المرتبط بالحجز", autocomplete="off", readonly=true, id="preorder_customer_display") }}
     {% endif %}
   </div>
 </div>
@@ -225,8 +225,8 @@
   </div>
   <div class="mb-3">
     {% if form.customer_search is defined %}
-      <label class="form-label">العميل المرتبط</label>
-      {{ form.customer_search(class="form-control", placeholder="العميل المرتبط بالطلب", autocomplete="off", readonly=true, id="preorder_shop_customer_display") }}
+      <label class="form-label">الزبون المرتبط</label>
+      {{ form.customer_search(class="form-control", placeholder="الزبون المرتبط بالطلب", autocomplete="off", readonly=true, id="preorder_shop_customer_display") }}
     {% endif %}
   </div>
 </div>
@@ -256,8 +256,8 @@
   </div>
   <div class="mb-3">
     {% if form.customer_search is defined %}
-      <label class="form-label">العميل المرتبط</label>
-      {{ form.customer_search(class="form-control", placeholder="العميل المرتبط بالفاتورة", autocomplete="off", readonly=true, id="invoice_customer_display") }}
+      <label class="form-label">الزبون المرتبط</label>
+      {{ form.customer_search(class="form-control", placeholder="الزبون المرتبط بالفاتورة", autocomplete="off", readonly=true, id="invoice_customer_display") }}
     {% endif %}
   </div>
 </div>

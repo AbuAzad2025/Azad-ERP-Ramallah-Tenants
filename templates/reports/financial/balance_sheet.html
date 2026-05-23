@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
+{% from 'macros/gm_mobile_ui.html' import financial_scroll_shell %}
 
 {% block title %}الميزانية العمومية{% endblock %}
+{% block body_class %}gm-financial-report{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
@@ -19,8 +21,9 @@
             </div>
             
             <div class="row">
-                <div class="col-md-6">
-                    <table class="table table-bordered">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    {% call financial_scroll_shell('الأصول') %}
+                    <table class="table table-bordered no-mobile-cards mb-0">
                         <thead class="table-primary">
                             <tr>
                                 <th colspan="2"><h5 class="mb-0">💰 الأصول</h5></th>
@@ -46,10 +49,12 @@
                             </tr>
                         </tfoot>
                     </table>
+                    {% endcall %}
                 </div>
                 
                 <div class="col-md-6">
-                    <table class="table table-bordered">
+                    {% call financial_scroll_shell('الخصوم وحقوق الملكية') %}
+                    <table class="table table-bordered no-mobile-cards mb-0">
                         <thead class="table-warning">
                             <tr>
                                 <th colspan="2"><h5 class="mb-0">📊 الخصوم وحقوق الملكية</h5></th>
@@ -75,6 +80,7 @@
                             </tr>
                         </tfoot>
                     </table>
+                    {% endcall %}
                 </div>
             </div>
             

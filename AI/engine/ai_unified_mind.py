@@ -173,7 +173,7 @@ class UnifiedMind:
         entities = []
         
         entity_map = {
-            'customer': ['عميل', 'زبون', 'customer'],
+            'customer': ['زبون', 'زبون', 'customer'],
             'supplier': ['مورد', 'supplier'],
             'product': ['منتج', 'قطعة', 'بضاعة', 'product'],
             'sale': ['بيع', 'فاتورة', 'sale', 'invoice'],
@@ -206,7 +206,7 @@ class UnifiedMind:
         return any(w in q_lower for w in ['كم', 'how much', 'احسب', 'calculate', 'مجموع', 'total'])
     
     def _needs_database(self, q_lower: str) -> bool:
-        return any(w in q_lower for w in ['عميل', 'مورد', 'منتج', 'رصيد', 'فاتورة'])
+        return any(w in q_lower for w in ['زبون', 'مورد', 'منتج', 'رصيد', 'فاتورة'])
     
     def _is_accounting(self, q_lower: str) -> bool:
         return any(w in q_lower for w in ['قيد', 'gl', 'محاسبي', 'مدين', 'دائن', 'رصيد', 'balance'])
@@ -254,7 +254,7 @@ class UnifiedMind:
         
         if intent == 'query_balance':
             reasoning['steps'] = [
-                'تحديد نوع الجهة (عميل/مورد/شريك)',
+                'تحديد نوع الجهة (زبون/مورد/شريك)',
                 'البحث في قاعدة البيانات',
                 'حساب الرصيد: (مبيعات + فواتير) - (دفعات)',
                 'التحقق من صحة الحساب',
@@ -374,7 +374,7 @@ class UnifiedMind:
         if not customer_id:
             warnings.append({
                 'type': 'no_customer',
-                'message': 'بيع بدون عميل - قد يكون نقدي'
+                'message': 'بيع بدون زبون - قد يكون نقدي'
             })
         
         return {
@@ -402,7 +402,7 @@ class UnifiedMind:
             errors.append({
                 'type': 'missing_entity',
                 'severity': 'high',
-                'message': 'دفعة بدون جهة مرتبطة (عميل/مورد)'
+                'message': 'دفعة بدون جهة مرتبطة (زبون/مورد)'
             })
         
         return {

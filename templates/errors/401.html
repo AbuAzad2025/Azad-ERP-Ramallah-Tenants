@@ -6,7 +6,7 @@
 {% block hint %}{{ path or request.path }}{% endblock %}
 {% block buttons %}
   <a class="btn btn-primary" href="{{ url_for('auth.login') }}">تسجيل الدخول</a>
-  <a class="btn btn-ghost" href="/" rel="home">الصفحة الرئيسية</a>
+  <a class="btn btn-ghost" href="{{ gm_path('/') }}" rel="home">الصفحة الرئيسية</a>
   <a class="btn btn-ghost" href="{{ url_for('auth.customer_register') }}">إنشاء حساب</a>
 {% endblock %}
 {% block footer %}

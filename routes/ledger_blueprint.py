@@ -609,7 +609,7 @@ def get_ledger_data():
         payment_split_cache = {}
 
         for entry, batch, account in entries:
-            # استخراج اسم الجهة (عميل، مورد، الخ)
+            # استخراج اسم الجهة (زبون، مورد، الخ)
             entity_name, entity_type_ar, entity_id, entity_type_code = SmartEntityExtractor.extract_from_batch(batch)
             if not entity_name:
                 entity_name = "—"
@@ -2157,22 +2157,38 @@ def get_receivables_detailed_summary():
         to_date_str = request.args.get('to_date')
         from_date = datetime.strptime(from_date_str, '%Y-%m-%d') if from_date_str else None
         to_date = datetime.strptime(to_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59) if to_date_str else datetime.now(timezone.utc).replace(tzinfo=None)
+        from utils.company_scope import (
+            filter_customers_query,
+            filter_expenses_query,
+            filter_partners_query,
+            filter_payments_query,
+            filter_sales_query,
+            filter_service_requests_query,
+            filter_suppliers_query,
+        )
+
         receivables = []
         today = datetime.now(timezone.utc).replace(tzinfo=None)
 
-        cust_rows = db.session.query(Customer.id, Customer.current_balance).filter(
+        cust_rows = filter_customers_query(
+            Customer.query.with_entities(Customer.id, Customer.current_balance)
+        ).filter(
             Customer.current_balance.isnot(None),
             func.abs(Customer.current_balance) >= 0.01,
         ).all()
         cust_balances = {int(r.id): float(r.current_balance or 0) for r in cust_rows}
 
-        supp_rows = db.session.query(Supplier.id, Supplier.current_balance).filter(
+        supp_rows = filter_suppliers_query(
+            Supplier.query.with_entities(Supplier.id, Supplier.current_balance)
+        ).filter(
             Supplier.current_balance.isnot(None),
             func.abs(Supplier.current_balance) >= 0.01,
         ).all()
         supp_balances = {int(r.id): float(r.current_balance or 0) for r in supp_rows}
 
-        part_rows = db.session.query(Partner.id, Partner.current_balance).filter(
+        part_rows = filter_partners_query(
+            Partner.query.with_entities(Partner.id, Partner.current_balance)
+        ).filter(
             Partner.current_balance.isnot(None),
             func.abs(Partner.current_balance) >= 0.01,
         ).all()
@@ -2184,10 +2200,12 @@ def get_receivables_detailed_summary():
             if abs(balance) < 0.01:
                 continue
             customer = db.session.get(Customer, cid)
-            name = customer.name if customer else f"عميل #{cid}"
+            name = customer.name if customer else f"زبون #{cid}"
             oldest_date = None
             last_payment_date = None
-            oldest_sale = Sale.query.filter(Sale.customer_id == cid, Sale.status == 'CONFIRMED').order_by(Sale.sale_date.asc()).first()
+            oldest_sale = filter_sales_query(Sale.query).filter(
+                Sale.customer_id == cid, Sale.status == 'CONFIRMED'
+            ).order_by(Sale.sale_date.asc()).first()
             if oldest_sale and oldest_sale.sale_date:
                 oldest_date = oldest_sale.sale_date
             oldest_invoice = Invoice.query.filter(Invoice.customer_id == cid, Invoice.cancelled_at.is_(None)).order_by(Invoice.invoice_date.asc()).first()
@@ -2195,12 +2213,16 @@ def get_receivables_detailed_summary():
                 ref_dt = oldest_invoice.invoice_date or oldest_invoice.created_at
                 if ref_dt and (oldest_date is None or ref_dt < oldest_date):
                     oldest_date = ref_dt
-            oldest_service = ServiceRequest.query.filter(ServiceRequest.customer_id == cid).order_by(ServiceRequest.received_at.asc()).first()
+            oldest_service = filter_service_requests_query(ServiceRequest.query).filter(
+                ServiceRequest.customer_id == cid
+            ).order_by(ServiceRequest.received_at.asc()).first()
             if oldest_service:
                 ref_dt = oldest_service.received_at or oldest_service.created_at
                 if ref_dt and (oldest_date is None or ref_dt < oldest_date):
                     oldest_date = ref_dt
-            last_payment = Payment.query.filter(Payment.customer_id == cid).order_by(Payment.payment_date.desc()).first()
+            last_payment = filter_payments_query(Payment.query).filter(
+                Payment.customer_id == cid
+            ).order_by(Payment.payment_date.desc()).first()
             if last_payment and last_payment.payment_date:
                 last_payment_date = last_payment.payment_date
             days_overdue = (today - oldest_date).days if balance < 0 and oldest_date else 0
@@ -2209,7 +2231,7 @@ def get_receivables_detailed_summary():
             receivables.append({
                 "name": name,
                 "type": "customer",
-                "type_ar": "عميل",
+                "type_ar": "زبون",
                 "balance": balance,
                 "debit": abs(balance) if balance < 0 else 0.0,
                 "credit": balance if balance > 0 else 0.0,
@@ -2222,8 +2244,12 @@ def get_receivables_detailed_summary():
                 continue
             supplier = db.session.get(Supplier, sid)
             name = supplier.name if supplier else f"مورد #{sid}"
-            oldest_exp = Expense.query.filter(Expense.payee_type == 'SUPPLIER', Expense.payee_entity_id == sid).order_by(Expense.date.asc()).first()
-            last_pay = Payment.query.filter(Payment.supplier_id == sid).order_by(Payment.payment_date.desc()).first()
+            oldest_exp = filter_expenses_query(Expense.query).filter(
+                Expense.payee_type == 'SUPPLIER', Expense.payee_entity_id == sid
+            ).order_by(Expense.date.asc()).first()
+            last_pay = filter_payments_query(Payment.query).filter(
+                Payment.supplier_id == sid
+            ).order_by(Payment.payment_date.desc()).first()
             oldest_date = oldest_exp.date if oldest_exp else None
             last_transaction = last_pay.payment_date if last_pay and last_pay.payment_date else oldest_date
             last_transaction_str = last_transaction.strftime('%Y-%m-%d') if last_transaction else None
@@ -2244,8 +2270,12 @@ def get_receivables_detailed_summary():
                 continue
             partner = db.session.get(Partner, pid)
             name = partner.name if partner else f"شريك #{pid}"
-            oldest_exp = Expense.query.filter(Expense.payee_type == 'PARTNER', Expense.payee_entity_id == pid).order_by(Expense.date.asc()).first()
-            last_pay = Payment.query.filter(Payment.partner_id == pid).order_by(Payment.payment_date.desc()).first()
+            oldest_exp = filter_expenses_query(Expense.query).filter(
+                Expense.payee_type == 'PARTNER', Expense.payee_entity_id == pid
+            ).order_by(Expense.date.asc()).first()
+            last_pay = filter_payments_query(Payment.query).filter(
+                Payment.partner_id == pid
+            ).order_by(Payment.payment_date.desc()).first()
             oldest_date = oldest_exp.date if oldest_exp else None
             last_transaction = last_pay.payment_date if last_pay and last_pay.payment_date else oldest_date
             last_transaction_str = last_transaction.strftime('%Y-%m-%d') if last_transaction else None
@@ -2282,7 +2312,7 @@ def get_receivables_detailed_summary():
 @login_required
 @utils.permission_required(SystemPermissions.MANAGE_LEDGER)
 def get_receivables_summary():
-    """جلب ملخص الذمم (العملاء، الموردين، الشركاء)"""
+    """جلب ملخص الذمم (الزبائن، الموردين، الشركاء)"""
     try:
         from_date_str = request.args.get('from_date')
         to_date_str = request.args.get('to_date')
@@ -2292,7 +2322,7 @@ def get_receivables_summary():
         
         receivables = []
         
-        # 1. العملاء (Customers) - من دفتر الأستاذ
+        # 1. الزبائن (Customers) - من دفتر الأستاذ
         cust_query = db.session.query(
             GLBatch.entity_id,
             func.sum(GLEntry.debit).label('debit'),
@@ -2311,14 +2341,19 @@ def get_receivables_summary():
         
         if cust_rows:
             c_ids = [r.entity_id for r in cust_rows]
-            c_map = {c.id: c.name for c in Customer.query.filter(Customer.id.in_(c_ids)).all()}
+            from utils.company_scope import filter_customers_query
+
+            c_map = {
+                c.id: c.name
+                for c in filter_customers_query(Customer.query.filter(Customer.id.in_(c_ids))).all()
+            }
             
             for r in cust_rows:
                 if (r.debit or 0) > 0 or (r.credit or 0) > 0:
                     receivables.append({
                         "name": c_map.get(r.entity_id, f"Client #{r.entity_id}"),
                         "type": "customer",
-                        "type_ar": "عميل",
+                        "type_ar": "زبون",
                         "debit": float(r.debit or 0),
                         "credit": float(r.credit or 0)
                     })
@@ -2342,7 +2377,12 @@ def get_receivables_summary():
         
         if supp_rows:
             s_ids = [r.entity_id for r in supp_rows]
-            s_map = {s.id: s.name for s in Supplier.query.filter(Supplier.id.in_(s_ids)).all()}
+            from utils.company_scope import filter_suppliers_query
+
+            s_map = {
+                s.id: s.name
+                for s in filter_suppliers_query(Supplier.query.filter(Supplier.id.in_(s_ids))).all()
+            }
             
             for r in supp_rows:
                 if (r.debit or 0) > 0 or (r.credit or 0) > 0:
@@ -2373,7 +2413,12 @@ def get_receivables_summary():
         
         if partner_rows:
             p_ids = [r.entity_id for r in partner_rows]
-            p_map = {p.id: p.name for p in Partner.query.filter(Partner.id.in_(p_ids)).all()}
+            from utils.company_scope import filter_partners_query
+
+            p_map = {
+                p.id: p.name
+                for p in filter_partners_query(Partner.query.filter(Partner.id.in_(p_ids))).all()
+            }
             
             for r in partner_rows:
                 if (r.debit or 0) > 0 or (r.credit or 0) > 0:
@@ -2433,6 +2478,9 @@ def _parse_dates():
     return dfrom, dto_excl
 
 def _entity_filter(q):
+    from utils.gl_company_scope import apply_gl_branch_filter
+
+    q = apply_gl_branch_filter(q)
     et = (request.args.get("entity_type") or "").strip()
     eid = request.args.get("entity_id", type=int)
     if et and eid:
@@ -2634,7 +2682,7 @@ def entity_ledger():
     entity_name = "—"
     if et == 'CUSTOMER':
         customer = db.session.get(Customer, eid)
-        entity_name = customer.name if customer else f"عميل #{eid}"
+        entity_name = customer.name if customer else f"زبون #{eid}"
     elif et == 'SUPPLIER':
         supplier = db.session.get(Supplier, eid)
         if supplier:
@@ -2788,7 +2836,7 @@ def get_batch_details(batch_id):
 def get_ar_ap_summary():
     """
     تقرير الذمم التفصيلي الحقيقي المعتمد على قيود دفتر الأستاذ فقط.
-    يجمع الأرصدة لكل كيان (عميل، مورد، شريك، موظف).
+    يجمع الأرصدة لكل كيان (زبون، مورد، شريك، موظف).
     """
     try:
         from_date_str = request.args.get('from_date')

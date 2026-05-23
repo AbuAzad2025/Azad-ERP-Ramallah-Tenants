@@ -74,9 +74,9 @@ def get_local_faq_responses() -> Dict[str, str]:
     return {
         "من أنت": f"أنا المساعد الذكي داخل {company['system_name']}. أجيب من بيانات النظام المتاحة أو أوضح أن البيانات غير كافية.",
         "ما قدراتك": "أبحث في بيانات النظام، أشرح القيود والأرصدة، أساعد في التنقل، وأحلل الأخطاء حسب المعلومات المتوفرة.",
-        "اشرح رصيد العميل": "رصيد العميل يُقرأ من النظام. تفسير موجب أو سالب الرصيد يعتمد على سياسة الرصيد المطبقة في شاشة العميل أو دوال تحديث الرصيد.",
+        "اشرح رصيد الزبون": "رصيد الزبون يُقرأ من النظام. تفسير موجب أو سالب الرصيد يعتمد على سياسة الرصيد المطبقة في شاشة الزبون أو دوال تحديث الرصيد.",
         "كيف أحسب الضريبة": "أقرأ نسبة الضريبة من إعدادات النظام عند توفرها، وأعرض تحذيرًا إذا لم تكن الإعدادات متوفرة.",
-        "كيف أضيف عميل": f"صفحة العملاء حسب الخريطة الحالية: `{_route_for_keyword('customers create') or _route_for_keyword('customers') or 'غير مفهرس حالياً'}`",
+        "كيف أضيف زبون": f"صفحة الزبائن حسب الخريطة الحالية: `{_route_for_keyword('customers create') or _route_for_keyword('customers') or 'غير مفهرس حالياً'}`",
         "شرح الصلاحيات": "الصلاحيات تعتمد على الأدوار والإعدادات الفعلية في النظام، ولا أفترض أسماء أدوار ثابتة.",
     }
 
@@ -85,7 +85,7 @@ def get_local_quick_answers() -> Dict[str, Any]:
     return {
         "greetings": {"patterns": ["مرحبا", "هلا", "السلام", "صباح", "مساء", "hello", "hi"], "responses": ["أهلاً، كيف أساعدك في النظام؟"]},
         "thanks": {"patterns": ["شكرا", "مشكور", "thanks", "thank you"], "responses": ["على الرحب والسعة."]},
-        "help": {"patterns": ["مساعدة", "help", "ساعدني"], "responses": ["اسألني عن عميل، مورد، منتج، مبيعة، دفعة، مصروف، صيانة، مخزون، صفحة، أو خطأ."]},
+        "help": {"patterns": ["مساعدة", "help", "ساعدني"], "responses": ["اسألني عن زبون، مورد، منتج، مبيعة، دفعة، مصروف، صيانة، مخزون، صفحة، أو خطأ."]},
     }
 
 
@@ -99,7 +99,7 @@ def _count_model(model_name: str) -> Optional[int]:
 
 
 def _execute_count_command(message: str) -> Optional[str]:
-    patterns = {r"عدد العملاء": ("Customer", "العملاء"), r"عدد الموردين": ("Supplier", "الموردين"), r"عدد المستخدمين": ("User", "المستخدمين"), r"عدد المنتجات": ("Product", "المنتجات"), r"عدد الفواتير": ("Invoice", "الفواتير"), r"عدد المبيعات": ("Sale", "المبيعات"), r"عدد الدفعات": ("Payment", "الدفعات")}
+    patterns = {r"عدد الزبائن": ("Customer", "الزبائن"), r"عدد الموردين": ("Supplier", "الموردين"), r"عدد المستخدمين": ("User", "المستخدمين"), r"عدد المنتجات": ("Product", "المنتجات"), r"عدد الفواتير": ("Invoice", "الفواتير"), r"عدد المبيعات": ("Sale", "المبيعات"), r"عدد الدفعات": ("Payment", "الدفعات")}
     for pattern, (model_name, label) in patterns.items():
         if re.search(pattern, message):
             count = _count_model(model_name)
@@ -130,7 +130,7 @@ def _execute_currency_command(message: str) -> Optional[str]:
 def _execute_navigation_command(message: str) -> Optional[str]:
     if not re.search(r"(اذهب|انتقل|افتح|رابط|صفحة)", message):
         return None
-    keyword_map = {"العملاء": "customers", "الموردين": "suppliers vendors", "الفواتير": "invoices sales", "المبيعات": "sales", "المخزون": "inventory warehouses", "المستودعات": "warehouses", "التقارير": "reports", "الإعدادات": "settings", "المستخدمين": "users"}
+    keyword_map = {"الزبائن": "customers", "الموردين": "suppliers vendors", "الفواتير": "invoices sales", "المبيعات": "sales", "المخزون": "inventory warehouses", "المستودعات": "warehouses", "التقارير": "reports", "الإعدادات": "settings", "المستخدمين": "users"}
     for label, keyword in keyword_map.items():
         if label in message:
             return f"الرابط حسب خريطة النظام: `{_route_for_keyword(keyword) or 'غير مفهرس حالياً'}`"
@@ -138,7 +138,7 @@ def _execute_navigation_command(message: str) -> Optional[str]:
 
 
 def _execute_customer_analysis(message: str, session_id: str = None) -> Optional[str]:
-    match = re.search(r"(?:تحليل|رصيد|وضع|كشف)\s+عميل\s+(.+)", message)
+    match = re.search(r"(?:تحليل|رصيد|وضع|كشف)\s+زبون\s+(.+)", message)
     name = match.group(1).strip() if match else None
     memory = get_or_create_session_memory(session_id) if session_id else {}
     if not name and re.search(r"(رصيده|حسابه|كشفه|وضعه)", message) and memory.get("context", {}).get("last_customer_id"):
@@ -154,16 +154,16 @@ def _execute_customer_analysis(message: str, session_id: str = None) -> Optional
         from models import Customer, Invoice, Payment
         customer = Customer.query.filter(Customer.name.ilike(f"%{name}%")).first()
         if not customer:
-            return f"لم أجد عميلاً باسم: **{name}**"
+            return f"لم أجد زبوناً باسم: **{name}**"
         if session_id:
             memory["context"]["last_customer_id"] = customer.id
             memory["context"]["last_topic"] = "customer_analysis"
         balance = float(getattr(customer, "balance", 0) or 0)
         invoice_count = Invoice.query.filter_by(customer_id=customer.id).count()
         payment_count = Payment.query.filter_by(customer_id=customer.id).count()
-        return f"العميل: **{customer.name}**\nالهاتف: {customer.phone or 'غير مسجل'}\nالرصيد المسجل: {balance:.2f} {getattr(customer, 'currency', None) or 'ILS'}\nعدد الفواتير: {invoice_count}\nعدد الدفعات المباشرة: {payment_count}\nتفسير إشارة الرصيد يعتمد على سياسة النظام."
+        return f"الزبون: **{customer.name}**\nالهاتف: {customer.phone or 'غير مسجل'}\nالرصيد المسجل: {balance:.2f} {getattr(customer, 'currency', None) or 'ILS'}\nعدد الفواتير: {invoice_count}\nعدد الدفعات المباشرة: {payment_count}\nتفسير إشارة الرصيد يعتمد على سياسة النظام."
     except Exception as exc:
-        return f"تعذر تحليل العميل: {exc}"
+        return f"تعذر تحليل الزبون: {exc}"
 
 
 def _execute_financial_snapshot(message: str) -> Optional[str]:

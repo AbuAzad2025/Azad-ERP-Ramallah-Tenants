@@ -46,9 +46,9 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label fw-semibold">العميل</label>
+          <label class="form-label fw-semibold">الزبون</label>
           <select name="customer_id" class="form-select">
-            <option value="">جميع العملاء</option>
+            <option value="">جميع الزبائن</option>
             {% for cust in customers %}
             <option value="{{ cust.id }}" {% if selected_customer_id == cust.id %}selected{% endif %}>
               {{ cust.name }}
@@ -140,7 +140,7 @@
               <th>{{ FIELD_LABELS.get("status", "الحالة") }}</th>
               <th>{{ FIELD_LABELS.get("priority", "الأولوية") }}</th>
               <th>{{ FIELD_LABELS.get("received_at", "تاريخ الاستلام") }}</th>
-              <th>{{ FIELD_LABELS.get("customer_id", "العميل") }}</th>
+              <th>{{ FIELD_LABELS.get("customer_id", "الزبون") }}</th>
               <th>{{ FIELD_LABELS.get("mechanic_id", "الميكانيكي") }}</th>
               <th class="text-end">{{ FIELD_LABELS.get("total", "الإجمالي") }}</th>
             </tr>

@@ -214,7 +214,7 @@ def gather_system_context():
         current_stats = (
             f"المستخدمين: {total_users} | النشطين: {active_users}\n"
             f"الصيانة: {total_services} طلب\n"
-            f"العملاء: {total_customers} | الموردين: {total_suppliers}\n"
+            f"الزبائن: {total_customers} | الموردين: {total_suppliers}\n"
             f"المنتجات: {total_products} | منتجات بالمخزون: {products_in_stock}\n"
             f"المخازن: {total_warehouses}\n"
             f"CPU: {cpu_usage:.1f}% | RAM: {memory.percent:.1f}%"
@@ -313,7 +313,7 @@ def analyze_question_intent(question):
         intent["time_scope"] = "month"
     elif any(w in q for w in ["السنة", "year", "سنة", "عام"]):
         intent["time_scope"] = "year"
-    entity_map = {"Customer": ["عميل", "عملاء", "زبون", "customer", "client"], "ServiceRequest": ["صيانة", "service", "تشخيص", "عطل", "إصلاح", "اصلاح"], "Product": ["منتج", "منتجات", "product", "قطع", "قطعة"], "Warehouse": ["مخزن", "مخازن", "warehouse", "مستودع", "مخزون"], "Invoice": ["فاتورة", "فواتير", "invoice"], "Payment": ["دفع", "دفعة", "مدفوعات", "payment"], "Expense": ["مصروف", "مصاريف", "نفقات", "نفقة", "expense"], "Supplier": ["مورد", "موردين", "supplier", "vendor"], "Sale": ["بيع", "مبيعات", "sale", "sales"]}
+    entity_map = {"Customer": ["زبون", "زبائن", "زبون", "customer", "client"], "ServiceRequest": ["صيانة", "service", "تشخيص", "عطل", "إصلاح", "اصلاح"], "Product": ["منتج", "منتجات", "product", "قطع", "قطعة"], "Warehouse": ["مخزن", "مخازن", "warehouse", "مستودع", "مخزون"], "Invoice": ["فاتورة", "فواتير", "invoice"], "Payment": ["دفع", "دفعة", "مدفوعات", "payment"], "Expense": ["مصروف", "مصاريف", "نفقات", "نفقة", "expense"], "Supplier": ["مورد", "موردين", "supplier", "vendor"], "Sale": ["بيع", "مبيعات", "sale", "sales"]}
     for entity, keywords in entity_map.items():
         if any(k in q for k in keywords):
             intent["entities"].append(entity)
@@ -628,7 +628,7 @@ def get_local_fallback_response(message, search_results):
                 elif isinstance(value, dict):
                     response += f"• {key}: متوفر\n"
         else:
-            response += "لم أجد بيانات مباشرة للسؤال. أستطيع مساعدتك بالبحث في العملاء، المبيعات، الصيانة، المخزون، النفقات، المدفوعات، والصفحات."
+            response += "لم أجد بيانات مباشرة للسؤال. أستطيع مساعدتك بالبحث في الزبائن، المبيعات، الصيانة، المخزون، النفقات، المدفوعات، والصفحات."
         log_local_mode_usage()
         return response
     except Exception as exc:
@@ -812,7 +812,7 @@ def local_intelligent_response(message, session_id=None):
     validation = validate_search_results(message, search_results)
     if validation.get("has_data"):
         return get_local_fallback_response(message, search_results)
-    return "لم أجد بيانات مباشرة كافية. اسألني عن العملاء، الصيانة، المنتجات، النفقات، المدفوعات، المخزون، الصفحات، أو VAT."
+    return "لم أجد بيانات مباشرة كافية. اسألني عن الزبائن، الصيانة، المنتجات، النفقات، المدفوعات، المخزون، الصفحات، أو VAT."
 
 
 def ai_chat_with_search(user_id: int = None, query: str = None, message: str = None, session_id: str = "default", context: Dict = None):

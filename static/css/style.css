@@ -120,8 +120,9 @@
     box-shadow: 0 28px 60px rgba(15,23,42,1);
 }
 
-/* Security Owner Console - Top metrics (news style strip) */
-.security-summary-box {
+/* Security Owner Console - legacy dark strip (gm-security-console overrides on /security/) */
+body:not(.security-console) .security-summary-box,
+.security-summary-box.legacy-dark-kpi {
     background: #0b1120 !important;
     border-radius: 16px;
     border: 1px solid rgba(248,113,113,0.5);
@@ -553,9 +554,20 @@ h1, h2, h3, h4, h5, h6 {
     z-index: 1030;
 }
 
-.gm-main-footer .gm-footer-logo img {
+.gm-brand-mark,
+img.gm-brand-mark {
+    max-height: 48px;
+    max-width: 140px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.gm-main-footer .gm-footer-logo img,
+.gm-main-footer .gm-footer-logo .gm-brand-mark {
     height: 22px;
     max-width: 96px;
+    max-height: 22px;
     object-fit: contain;
     margin-inline-end: 0.5rem;
 }

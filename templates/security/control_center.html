@@ -1,0 +1,175 @@
+{% extends 'security/base_security.html' %}
+
+{% block security_title %}مركز التحكم — المنصة{% endblock %}
+{% block security_icon %}<i class="fas fa-sliders-h"></i>{% endblock %}
+{% block security_description %}تحكم إداري في المنصة، التينانتات، والصيانة{% endblock %}
+
+{% block security_breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('security.index') }}">لوحة المالك</a></li>
+<li class="breadcrumb-item active">مركز التحكم</li>
+{% endblock %}
+
+{% block security_content %}
+<div class="sec-card mb-4">
+  <div class="sec-card-body">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div>
+        <h4 class="text-white mb-1"><i class="fas fa-crown text-warning"></i> مركز التحكم — منصة أزاد</h4>
+        <p class="text-muted small mb-0">إجراءات SaaS وصيانة — ليس لوحة ملخصات فقط</p>
+      </div>
+      <a href="{{ url_for('security.index') }}" class="btn btn-glass btn-sm">الملخص</a>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="sec-card h-100">
+      <div class="sec-card-header"><strong><i class="fas fa-tools"></i> الصيانة والنظام</strong></div>
+      <div class="sec-card-body">
+        <p class="small text-muted mb-3">
+          وضع الصيانة:
+          {% if maintenance_mode %}
+          <span class="badge badge-danger">مفعّل</span>
+          {% else %}
+          <span class="badge badge-success">معطّل</span>
+          {% endif %}
+        </p>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="control_action" value="{% if maintenance_mode %}maintenance_off{% else %}maintenance_on{% endif %}">
+          <button type="submit" class="btn btn-glass btn-sm mb-2" onclick="return confirm('تغيير وضع الصيانة؟');">
+            {% if maintenance_mode %}إيقاف الصيانة{% else %}تفعيل الصيانة{% endif %}
+          </button>
+        </form>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="control_action" value="clear_cache">
+          <button type="submit" class="btn btn-glass btn-sm mb-2">مسح الكاش</button>
+        </form>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="control_action" value="clear_rbac">
+          <button type="submit" class="btn btn-glass btn-sm mb-2">مسح كاش RBAC</button>
+        </form>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="control_action" value="kill_sessions">
+          <button type="submit" class="btn btn-outline-danger btn-sm mb-2" onclick="return confirm('إنهاء كل الجلسات؟');">إنهاء الجلسات</button>
+        </form>
+        <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="control_action" value="integration_audit">
+          <button type="submit" class="btn btn-glass btn-sm">فحص تكامل المنصة</button>
+        </form>
+        <hr class="border-secondary">
+        <a href="{{ url_for('security.emergency_tools') }}" class="btn btn-link btn-sm text-warning p-0">أدوات الطوارئ →</a>
+        ·
+        <a href="{{ url_for('security.database_manager') }}" class="btn btn-link btn-sm text-info p-0">مدير DB →</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="sec-card h-100">
+      <div class="sec-card-header d-flex justify-content-between align-items-center">
+        <strong><i class="fas fa-building"></i> التينانتات — تفعيل / إيقاف</strong>
+        <a href="{{ url_for('advanced.multi_tenant') }}" class="btn btn-glass btn-sm">إدارة كاملة</a>
+      </div>
+      <div class="sec-card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-dark table-sm mb-0">
+            <thead>
+              <tr>
+                <th>الشركة</th>
+                <th>Slug</th>
+                <th>Schema</th>
+                <th>الحالة</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for t in tenants %}
+              <tr>
+                <td>{{ t.display_name }}</td>
+                <td><code>{{ t.slug }}</code></td>
+                <td class="small text-muted">{{ t.schema_name }}</td>
+                <td>
+                  {% if t.is_active %}<span class="badge badge-success">نشط</span>{% else %}<span class="badge badge-secondary">موقوف</span>{% endif %}
+                </td>
+                <td>
+                  <form method="post" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="control_action" value="tenant_toggle">
+                    <input type="hidden" name="tenant_slug" value="{{ t.slug }}">
+                    <button type="submit" class="btn btn-glass btn-xs btn-sm" onclick="return confirm('تبديل حالة {{ t.slug }}؟');">
+                      {% if t.is_active %}إيقاف{% else %}تفعيل{% endif %}
+                    </button>
+                  </form>
+                  <a href="{{ t.path }}" class="btn btn-link btn-sm text-info" target="_blank">فتح</a>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="text-center text-muted py-3">لا توجد تينانتات</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="sec-card"><div class="sec-card-body text-center">
+      <div class="h3 text-white mb-0">{{ stats.total_users }}</div>
+      <div class="small text-muted">مستخدمي المنصة</div>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="sec-card"><div class="sec-card-body text-center">
+      <div class="h3 text-success mb-0">{{ stats.active_users }}</div>
+      <div class="small text-muted">نشط</div>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="sec-card"><div class="sec-card-body text-center">
+      <div class="h3 text-warning mb-0">{{ tenants|length }}</div>
+      <div class="small text-muted">تينانت</div>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="sec-card"><div class="sec-card-body text-center">
+      <div class="h3 text-danger mb-0">{{ stats.failed_logins_24h }}</div>
+      <div class="small text-muted">فشل دخول 24س</div>
+    </div></div>
+  </div>
+</div>
+
+<div class="sec-card mb-4">
+  <div class="sec-card-header"><strong>اختصارات إدارية</strong></div>
+  <div class="sec-card-body">
+    <div class="row g-2">
+      <div class="col-md-4"><a href="{{ url_for('advanced.owner_hub') }}" class="btn btn-glass w-100">مركز SaaS</a></div>
+      <div class="col-md-4"><a href="{{ url_for('security.users_center') }}" class="btn btn-glass w-100">المستخدمون</a></div>
+      <div class="col-md-4"><a href="{{ url_for('security.audit_log_viewer') }}" class="btn btn-glass w-100">سجل التدقيق</a></div>
+      <div class="col-md-4"><a href="{{ url_for('advanced.backup_manager') }}" class="btn btn-glass w-100">النسخ الاحتياطي</a></div>
+      <div class="col-md-4"><a href="{{ url_for('security.settings_center') }}" class="btn btn-glass w-100">مركز العمليات</a></div>
+      <div class="col-md-4"><a href="{{ url_for('security.owner_branding') }}" class="btn btn-glass w-100">هوية المنصة</a></div>
+    </div>
+  </div>
+</div>
+
+{% if control_result and last_action == 'integration_audit' %}
+<div class="sec-card">
+  <div class="sec-card-header"><strong>نتيجة فحص التكامل</strong></div>
+  <div class="sec-card-body">
+    <ul class="mb-0">
+      {% for iss in control_result.issues or [] %}
+      <li class="text-{{ 'danger' if iss.level == 'critical' else 'warning' if iss.level == 'warning' else 'muted' }}">{{ iss.msg }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

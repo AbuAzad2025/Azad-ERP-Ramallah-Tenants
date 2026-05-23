@@ -786,14 +786,14 @@ def build_supplier_balance_view(supplier_id, session=None):
         {"key": "expenses_service_supply", "label": "توريد خدمة", "amount": _component("expenses_service_supply"), "flow": "SERVICE_SUPPLY"},
         {"key": "expenses_normal", "label": "مصروفات عادية", "amount": _component("expenses_normal"), "flow": "EXPENSE"},
         {"key": "sale_returns_from_supplier", "label": "مرتجع مبيعات (من المورد)", "amount": _component("sale_returns_from_supplier"), "flow": "SALE_RETURN_SUPPLIER"},
-        {"key": "sale_returns_from_customer", "label": "مرتجع مبيعات (من عميل مرتبط)", "amount": _component("sale_returns_from_customer"), "flow": "SALE_RETURN_CUSTOMER"},
+        {"key": "sale_returns_from_customer", "label": "مرتجع مبيعات (من زبون مرتبط)", "amount": _component("sale_returns_from_customer"), "flow": "SALE_RETURN_CUSTOMER"},
         {"key": "payments_in_balance", "label": "دفعات واردة منه", "amount": _component("payments_in_balance"), "flow": "PAYMENT_IN"},
         {"key": "returned_checks_out_balance", "label": "شيكات صادرة له ومرتجعة", "amount": _component("returned_checks_out_balance"), "flow": "RETURNED_OUT"},
     ]
 
     obligations_rows = [
         {"key": "returns_balance", "label": "مرتجعات توريد", "amount": _component("returns_balance"), "flow": "RETURN_SUPPLY"},
-        {"key": "sales_balance", "label": "مبيعات له (عميل مرتبط)", "amount": _component("sales_balance"), "flow": "SALE"},
+        {"key": "sales_balance", "label": "مبيعات له (زبون مرتبط)", "amount": _component("sales_balance"), "flow": "SALE"},
         {"key": "services_balance", "label": "خدمات له", "amount": _component("services_balance"), "flow": "SERVICE"},
         {"key": "preorders_balance", "label": "حجوزات له", "amount": _component("preorders_balance"), "flow": "PREORDER"},
         {"key": "payments_out_balance", "label": "دفعات دفعنا له", "amount": _component("payments_out_balance"), "flow": "PAYMENT_OUT"},

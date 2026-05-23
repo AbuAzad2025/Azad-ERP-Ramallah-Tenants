@@ -867,6 +867,26 @@ def generic_search(target: str):
     limit = _limit_from_request(8, 15)
     q_int = int(q) if q.isdigit() else None
 
+    from utils.company_scope import (
+        assert_customer_access,
+        assert_expense_access,
+        assert_partner_access,
+        assert_payment_access,
+        assert_sale_access,
+        assert_supplier_access,
+        assert_warehouse_access,
+        filter_checks_query,
+        filter_customers_query,
+        filter_expenses_query,
+        filter_partners_query,
+        filter_payments_query,
+        filter_sales_query,
+        filter_service_requests_query,
+        filter_shipments_query,
+        filter_suppliers_query,
+        filter_warehouses_query,
+    )
+
     allow_customers = (
         utils.is_super()
         or utils.is_admin()
@@ -916,16 +936,17 @@ def generic_search(target: str):
         if q_int is not None:
             c0 = db.session.get(Customer, q_int)
             if c0:
+                assert_customer_access(c0.id)
                 items = _item(
                     url_for("customers_bp.customer_detail", customer_id=c0.id),
                     c0.name or f"#{c0.id}",
                     (c0.phone or c0.email or "").strip() or None,
-                    "عميل",
+                    "زبون",
                     "badge-info",
                 )
-                html_parts.append(_section("العملاء", items))
+                html_parts.append(_section("الزبائن", items))
                 return
-        qry = Customer.query.filter(Customer.is_archived == False)
+        qry = filter_customers_query(Customer.query.filter(Customer.is_archived == False))
         qry = qry.filter(or_(Customer.name.ilike(q_like), Customer.phone.ilike(q_like), Customer.email.ilike(q_like)))
         rows = qry.order_by(func.lower(Customer.name).asc()).limit(limit).all()
         if not rows:
@@ -935,12 +956,12 @@ def generic_search(target: str):
                 url_for("customers_bp.customer_detail", customer_id=c.id),
                 c.name or f"#{c.id}",
                 (c.phone or c.email or "").strip() or None,
-                "عميل",
+                "زبون",
                 "badge-info",
             )
             for c in rows
         )
-        html_parts.append(_section("العملاء", items))
+        html_parts.append(_section("الزبائن", items))
 
     def _append_suppliers():
         if not allow_vendors:
@@ -948,6 +969,7 @@ def generic_search(target: str):
         if q_int is not None:
             s0 = db.session.get(Supplier, q_int)
             if s0:
+                assert_supplier_access(s0.id)
                 items = _item(
                     url_for("vendors_bp.suppliers_statement", supplier_id=s0.id),
                     s0.name or f"#{s0.id}",
@@ -957,7 +979,7 @@ def generic_search(target: str):
                 )
                 html_parts.append(_section("الموردون", items))
                 return
-        qry = Supplier.query
+        qry = filter_suppliers_query(Supplier.query)
         qry = qry.filter(or_(Supplier.name.ilike(q_like), Supplier.phone.ilike(q_like), Supplier.identity_number.ilike(q_like)))
         rows = qry.order_by(func.lower(Supplier.name).asc()).limit(limit).all()
         if not rows:
@@ -980,6 +1002,7 @@ def generic_search(target: str):
         if q_int is not None:
             p0 = db.session.get(Partner, q_int)
             if p0:
+                assert_partner_access(p0.id)
                 items = _item(
                     url_for("vendors_bp.partners_statement", partner_id=p0.id),
                     p0.name or f"#{p0.id}",
@@ -989,7 +1012,7 @@ def generic_search(target: str):
                 )
                 html_parts.append(_section("الشركاء", items))
                 return
-        qry = Partner.query
+        qry = filter_partners_query(Partner.query)
         qry = qry.filter(or_(Partner.name.ilike(q_like), Partner.phone_number.ilike(q_like), Partner.identity_number.ilike(q_like)))
         rows = qry.order_by(func.lower(Partner.name).asc()).limit(limit).all()
         if not rows:
@@ -1053,6 +1076,7 @@ def generic_search(target: str):
         if q_int is not None:
             s0 = db.session.get(Sale, q_int)
             if s0:
+                assert_sale_access(s0.id)
                 title = (getattr(s0, "sale_number", None) or f"#{s0.id}") if getattr(s0, "sale_number", None) else f"#{s0.id}"
                 subtitle = None
                 try:
@@ -1063,7 +1087,7 @@ def generic_search(target: str):
                 items = _item(url_for("sales_bp.sale_detail", id=s0.id), title, subtitle, "مبيعات", "badge-dark")
                 html_parts.append(_section("المبيعات", items))
                 return
-        qry = db.session.query(Sale).join(Customer, Sale.customer_id == Customer.id)
+        qry = filter_sales_query(db.session.query(Sale).join(Customer, Sale.customer_id == Customer.id))
         qry = qry.filter(Sale.is_archived.is_(False))
         qry = qry.filter(
             or_(
@@ -1093,12 +1117,13 @@ def generic_search(target: str):
         if q_int is not None:
             p0 = db.session.get(Payment, q_int)
             if p0:
+                assert_payment_access(p0.id)
                 title = getattr(p0, "payment_number", None) or getattr(p0, "receipt_number", None) or f"#{p0.id}"
                 subtitle = (getattr(p0, "receiver_name", None) or getattr(p0, "reference", None) or "").strip() or None
                 items = _item(url_for("payments.view_payment", payment_id=p0.id), title, subtitle, "دفعات", "badge-primary")
                 html_parts.append(_section("الدفعات", items))
                 return
-        qry = Payment.query.filter(Payment.is_archived.is_(False))
+        qry = filter_payments_query(Payment.query.filter(Payment.is_archived.is_(False)))
         qry = qry.filter(
             or_(
                 Payment.payment_number.ilike(q_like),
@@ -1128,14 +1153,14 @@ def generic_search(target: str):
         if not allow_shipments:
             return
         if q_int is not None:
-            sh0 = db.session.get(Shipment, q_int)
+            sh0 = filter_shipments_query(Shipment.query.filter_by(id=q_int)).first()
             if sh0:
                 title = getattr(sh0, "shipment_number", None) or getattr(sh0, "number", None) or f"#{sh0.id}"
                 subtitle = (getattr(sh0, "tracking_number", None) or getattr(sh0, "destination", None) or "").strip() or None
                 items = _item(url_for("shipments_bp.shipment_detail", id=sh0.id), title, subtitle, "شحنة", "badge-danger")
                 html_parts.append(_section("الشحنات", items))
                 return
-        qry = Shipment.query.filter(Shipment.is_archived.is_(False))
+        qry = filter_shipments_query(Shipment.query.filter(Shipment.is_archived.is_(False)))
         qry = qry.filter(
             or_(
                 Shipment.shipment_number.ilike(q_like),
@@ -1165,7 +1190,7 @@ def generic_search(target: str):
         if not allow_services:
             return
         if q_int is not None:
-            r0 = db.session.get(ServiceRequest, q_int)
+            r0 = filter_service_requests_query(ServiceRequest.query.filter_by(id=q_int)).first()
             if r0:
                 title = getattr(r0, "service_number", None) or f"#{r0.id}"
                 subtitle = None
@@ -1178,7 +1203,9 @@ def generic_search(target: str):
                 items = _item(url_for("service.view_request", rid=r0.id), title, subtitle, "صيانة", "badge-info")
                 html_parts.append(_section("طلبات الصيانة", items))
                 return
-        qry = db.session.query(ServiceRequest).join(Customer, ServiceRequest.customer_id == Customer.id)
+        qry = filter_service_requests_query(
+            db.session.query(ServiceRequest).join(Customer, ServiceRequest.customer_id == Customer.id)
+        )
         qry = qry.filter(ServiceRequest.is_archived.is_(False))
         qry = qry.filter(
             or_(
@@ -1210,6 +1237,7 @@ def generic_search(target: str):
         if q_int is not None:
             w0 = db.session.get(Warehouse, q_int)
             if w0:
+                assert_warehouse_access(w0.id)
                 items = _item(
                     url_for("warehouse_bp.detail", warehouse_id=w0.id),
                     w0.name or f"#{w0.id}",
@@ -1219,7 +1247,7 @@ def generic_search(target: str):
                 )
                 html_parts.append(_section("المستودعات", items))
                 return
-        qry = Warehouse.query.filter(Warehouse.is_active.is_(True))
+        qry = filter_warehouses_query(Warehouse.query.filter(Warehouse.is_active.is_(True)))
         qry = qry.filter(or_(Warehouse.name.ilike(q_like), Warehouse.location.ilike(q_like), Warehouse.online_slug.ilike(q_like)))
         rows = qry.order_by(func.lower(Warehouse.name).asc()).limit(limit).all()
         if not rows:
@@ -1240,13 +1268,13 @@ def generic_search(target: str):
         if not allow_checks:
             return
         if q_int is not None:
-            ch0 = db.session.get(Check, q_int)
+            ch0 = filter_checks_query(Check.query.filter_by(id=q_int)).first()
             if ch0:
                 subtitle = " - ".join([x for x in [(ch0.check_bank or "").strip(), (ch0.drawer_name or "").strip()] if x]) or None
                 items = _item(url_for("checks.check_detail", check_id=ch0.id), ch0.check_number or f"#{ch0.id}", subtitle, "شيك", "badge-warning")
                 html_parts.append(_section("الشيكات", items))
                 return
-        qry = Check.query.filter(Check.is_archived.is_(False))
+        qry = filter_checks_query(Check.query.filter(Check.is_archived.is_(False)))
         qry = qry.filter(
             or_(
                 Check.check_number.ilike(q_like),
@@ -1277,6 +1305,7 @@ def generic_search(target: str):
         if q_int is not None:
             e0 = db.session.get(Expense, q_int)
             if e0 and not bool(getattr(e0, "is_archived", False)):
+                assert_expense_access(e0.id)
                 title = (getattr(e0, "tax_invoice_number", None) or f"#{e0.id}").strip() if getattr(e0, "tax_invoice_number", None) else f"#{e0.id}"
                 subtitle = (
                     (getattr(e0, "paid_to", None) or "").strip()
@@ -1287,7 +1316,7 @@ def generic_search(target: str):
                 items = _item(url_for("expenses_bp.detail", exp_id=e0.id), title, subtitle, "مصروف", "badge-danger")
                 html_parts.append(_section("المصاريف", items))
                 return
-        qry = Expense.query.filter(Expense.is_archived.is_(False))
+        qry = filter_expenses_query(Expense.query.filter(Expense.is_archived.is_(False)))
         qry = qry.filter(
             or_(
                 Expense.tax_invoice_number.ilike(q_like),
@@ -1569,7 +1598,7 @@ def create_customer_api():
         return jsonify({"id": c.id, "text": c.name}), 201
     except SQLAlchemyError:
         db.session.rollback()
-        return jsonify({"error": "فشل حفظ العميل"}), 500
+        return jsonify({"error": "فشل حفظ الزبون"}), 500
 
 @bp.get("/search_suppliers")
 @login_required
@@ -1583,15 +1612,18 @@ def search_suppliers():
             "phone": s.phone,
             "identity_number": s.identity_number,
         }
+    from utils.company_scope import assert_supplier_access, filter_suppliers_query
+
     sid = (request.args.get("id") or "").strip()
     if sid.isdigit():
+        assert_supplier_access(int(sid))
         s = db.session.get(Supplier, int(sid))
         if not s:
             return jsonify({"results": []})
         return jsonify({"results": [_ser(s)]})
     q = (request.args.get("q") or "").strip()
     limit = _limit_from_request(20, 50)
-    qry = Supplier.query
+    qry = filter_suppliers_query(Supplier.query)
     if q:
         like = f"%{q}%"
         qry = qry.filter(
@@ -1723,7 +1755,10 @@ def search_partners():
         }
 
     pid = (request.args.get("id") or "").strip()
+    from utils.company_scope import assert_partner_access, filter_partners_query
+
     if pid.isdigit():
+        assert_partner_access(int(pid))
         p = db.session.get(Partner, int(pid))
         if not p:
             return jsonify({"results": []})
@@ -1734,7 +1769,7 @@ def search_partners():
     active_only = (request.args.get("active_only", "1") or "1") not in {"0", "false", "False"}
     has_partner_warehouse = (request.args.get("has_partner_warehouse") or "").strip() in {"1", "true", "True"}
 
-    qry = Partner.query
+    qry = filter_partners_query(Partner.query)
     if active_only and hasattr(Partner, "is_active"):
         qry = qry.filter(Partner.is_active.is_(True))
     if has_partner_warehouse:
@@ -1946,7 +1981,9 @@ def api_warehouses():
     active_only_arg = (request.args.get("active_only") or "1").strip()
     limit = _limit_from_request(20, 50)
 
-    qry = Warehouse.query
+    from utils.company_scope import filter_warehouses_query
+
+    qry = filter_warehouses_query(Warehouse.query)
     if active_only_arg in {"1", "true", "True"}:
         qry = qry.filter(Warehouse.is_active.is_(True))
     if type_param:
@@ -2280,7 +2317,12 @@ def api_products_by_warehouse(wid: int):
 def api_inventory_summary():
     ids = request.args.getlist("warehouse_ids", type=int)
     q = utils.q  # q is a function, not _q()
-    wh_ids = ids or [w.id for w in Warehouse.query.order_by(Warehouse.name).all()]
+    from utils.company_scope import filter_warehouses_query
+
+    wh_ids = ids or [
+        w.id
+        for w in filter_warehouses_query(Warehouse.query).order_by(Warehouse.name).all()
+    ]
     if not wh_ids:
         return jsonify({"data": []})
     qry = (
@@ -2563,8 +2605,10 @@ def invoices():
 @login_required
 @limiter.limit("60/minute")
 def services():
+    from utils.company_scope import filter_service_requests_query
+
     q = utils.q
-    qry = ServiceRequest.query
+    qry = filter_service_requests_query(ServiceRequest.query)
     if q:
         like = f"%{q}%"
         qry = qry.filter(
@@ -2590,8 +2634,10 @@ def services():
 @login_required
 @limiter.limit("60/minute")
 def sales():
+    from utils.company_scope import filter_sales_query
+
     q = utils.q
-    qry = Sale.query
+    qry = filter_sales_query(Sale.query)
     if q:
         like = f"%{q}%"
         qry = qry.filter(or_(Sale.sale_number.ilike(like),))
@@ -2614,8 +2660,10 @@ def sales():
 @login_required
 @limiter.limit("60/minute")
 def shipments():
+    from utils.company_scope import filter_shipments_query
+
     q = utils.q
-    qry = Shipment.query
+    qry = filter_shipments_query(Shipment.query)
     if q:
         like = f"%{q}%"
         qry = qry.filter(or_(Shipment.shipment_number.ilike(like), Shipment.tracking_number.ilike(like)))
@@ -3101,8 +3149,10 @@ def online_preorders():
 @login_required
 @limiter.limit("60/minute")
 def expenses():
+    from utils.company_scope import filter_expenses_query
+
     q = utils.q
-    qry = Expense.query
+    qry = filter_expenses_query(Expense.query)
     if q:
         like = f"%{q}%"
         qry = qry.filter(or_(Expense.tax_invoice_number.ilike(like), Expense.description.ilike(like)))
@@ -3138,8 +3188,10 @@ def loan_settlements():
 @login_required
 @limiter.limit("60/minute")
 def payments():
+    from utils.company_scope import filter_payments_query
+
     q = utils.q
-    qry = Payment.query
+    qry = filter_payments_query(Payment.query)
     if q:
         like = f"%{q}%"
         qry = qry.filter(or_(Payment.payment_number.ilike(like), Payment.receipt_number.ilike(like)))
@@ -4017,23 +4069,23 @@ def api_archive_stats():
 @bp.route("/archive/customer/<int:customer_id>", methods=["POST"])
 @login_required
 def api_archive_customer(customer_id):
-    """أرشفة عميل عبر API"""
+    """أرشفة زبون عبر API"""
     try:
         customer = db.get_or_404(Customer, customer_id)
         
         if customer.is_archived:
-            return jsonify({'success': False, 'error': 'العميل مؤرشف بالفعل'}), 400
+            return jsonify({'success': False, 'error': 'الزبون مؤرشف بالفعل'}), 400
         
         reason = request.json.get('reason', 'أرشفة عبر API')
         
-        # أرشفة العميل
+        # أرشفة الزبون
         archive = Archive.archive_record(
             record=customer,
             reason=reason,
             user_id=current_user.id
         )
         
-        # تحديث حالة العميل
+        # تحديث حالة الزبون
         customer.is_archived = True
         customer.archived_at = datetime.now(timezone.utc)
         customer.archived_by = current_user.id
@@ -4043,7 +4095,7 @@ def api_archive_customer(customer_id):
         
         return jsonify({
             'success': True,
-            'message': f'تم أرشفة العميل {customer.name} بنجاح',
+            'message': f'تم أرشفة الزبون {customer.name} بنجاح',
             'data': {
                 'customer_id': customer.id,
                 'archive_id': archive.id
@@ -4306,12 +4358,12 @@ def api_archive_payment(payment_id):
 @bp.route("/restore/customer/<int:customer_id>", methods=["POST"])
 @login_required
 def api_restore_customer(customer_id):
-    """استعادة عميل عبر API"""
+    """استعادة زبون عبر API"""
     try:
         customer = db.get_or_404(Customer, customer_id)
         
         if not customer.is_archived:
-            return jsonify({'success': False, 'error': 'العميل غير مؤرشف'}), 400
+            return jsonify({'success': False, 'error': 'الزبون غير مؤرشف'}), 400
         
         # البحث عن الأرشيف
         archive = Archive.query.filter_by(
@@ -4322,7 +4374,7 @@ def api_restore_customer(customer_id):
         if archive:
             db.session.delete(archive)
         
-        # استعادة العميل
+        # استعادة الزبون
         customer.is_archived = False
         customer.archived_at = None
         customer.archived_by = None
@@ -4332,7 +4384,7 @@ def api_restore_customer(customer_id):
         
         return jsonify({
             'success': True,
-            'message': f'تم استعادة العميل {customer.name} بنجاح',
+            'message': f'تم استعادة الزبون {customer.name} بنجاح',
             'data': {
                 'customer_id': customer.id
             }
@@ -4667,7 +4719,9 @@ def get_warehouse_info(warehouse_id):
 @login_required
 def get_partners():
     try:
-        partners = Partner.query.filter_by(is_archived=False).all()
+        from utils.company_scope import filter_partners_query
+
+        partners = filter_partners_query(Partner.query.filter_by(is_archived=False)).all()
         
         partners_list = []
         for partner in partners:
@@ -4705,7 +4759,9 @@ def get_partners():
 def get_suppliers():
     """جلب قائمة الموردين"""
     try:
-        suppliers = Supplier.query.filter_by(is_archived=False).all()
+        from utils.company_scope import filter_suppliers_query
+
+        suppliers = filter_suppliers_query(Supplier.query.filter_by(is_archived=False)).all()
         
         suppliers_list = []
         for supplier in suppliers:

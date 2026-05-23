@@ -1,5 +1,6 @@
-<!-- File: templates/sales/list.html -->
+﻿<!-- File: templates/sales/list.html -->
 {% extends 'base_print.html' if print_mode else 'base.html' %}
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block title %}قائمة فواتير المبيعات{% endblock %}
 
 {% block head_extra %}
@@ -111,7 +112,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
         <colgroup>
           <col style="width:6%"><!-- رقم -->
           <col style="width:12%"><!-- التاريخ -->
-          <col style="width:28%"><!-- العميل -->
+          <col style="width:28%"><!-- الزبون -->
           <col style="width:18%"><!-- الإجمالي -->
           <col style="width:18%"><!-- ذمة -->
           <col style="width:6%"><!-- العملة -->
@@ -120,7 +121,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
           <tr>
             <th>#</th>
             <th>التاريخ</th>
-            <th>العميل</th>
+            <th>الزبون</th>
             <th>الإجمالي</th>
             <th>الذمة</th>
             <th>العملة</th>
@@ -154,17 +155,22 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
   </div>
 {% else %}
 <div class="container-fluid py-4">
+  {{ readonly_banner('view_sales', 'manage_sales', 'المبيعات') }}
   <div class="card">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
       <h3 class="mb-0"><i class="fas fa-file-invoice mr-2"></i> فواتير المبيعات</h3>
       <div class="sales-header-actions">
         <button type="button" class="btn btn-light" data-toggle="modal" data-target="#printSalesModal"><i class="fas fa-print mr-1"></i> طباعة</button>
+        {% if has_perm('view_sales') or has_perm('manage_sales') %}
         <a href="{{ url_for('returns.list_returns') }}" class="btn btn-danger" title="عرض المرتجعات" data-no-confirm="true" data-no-danger="true">
           <i class="fas fa-undo-alt"></i> المرتجعات
         </a>
+        {% endif %}
+        {% if has_perm('manage_sales') %}
         <a href="{{ url_for('sales_bp.create_sale') }}" class="btn btn-create" title="إنشاء فاتورة جديدة">
           <i class="fas fa-plus-circle"></i> إنشاء فاتورة
         </a>
+        {% endif %}
       </div>
     </div>
 
@@ -260,7 +266,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
                 <input type="text" name="invoice_no" class="form-control" placeholder="مثال: 2026-0001" value="{{ request.args.get('invoice_no','') }}">
               </div>
               <div class="form-group col-lg-2 col-md-6">
-                <label class="mb-1">العميل</label>
+                <label class="mb-1">الزبون</label>
                 <input type="text" name="customer" class="form-control" placeholder="اسم/هاتف" value="{{ request.args.get('customer','') }}">
               </div>
               <div class="form-group col-lg-2 col-md-3">
@@ -280,7 +286,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
                 <select id="sales-sort" name="sort" class="form-control">
                   <option value="date" {% if sort_val == 'date' %}selected{% endif %}>التاريخ</option>
                   <option value="invoice_no" {% if sort_val == 'invoice_no' %}selected{% endif %}>رقم الفاتورة</option>
-                  <option value="customer" {% if sort_val == 'customer' %}selected{% endif %}>العميل</option>
+                  <option value="customer" {% if sort_val == 'customer' %}selected{% endif %}>الزبون</option>
                   <option value="total" {% if sort_val == 'total' %}selected{% endif %}>الإجمالي</option>
                   <option value="paid" {% if sort_val == 'paid' %}selected{% endif %}>المدفوع</option>
                   <option value="balance" {% if sort_val == 'balance' %}selected{% endif %}>الإجمالي</option>
@@ -313,7 +319,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
             <tr>
               <th data-sortable="false">رقم</th>
               <th data-sortable="false">التاريخ</th>
-              <th data-sortable="false">العميل</th>
+              <th data-sortable="false">الزبون</th>
               <th data-sortable="false">الإجمالي</th>
               <th data-sortable="false" class="text-center">العملة</th>
               <th data-sortable="false" class="text-center d-none d-lg-table-cell">سعر الصرف</th>
@@ -353,6 +359,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
                   <a href="{{ url_for('sales_bp.sale_detail', id=sale.id) }}" class="btn btn-action-view btn-action-sm" title="عرض">
                     <i class="fas fa-eye"></i>
                   </a>
+                  {% if has_perm('manage_sales') %}
                   <a href="{{ url_for('sales_bp.edit_sale', id=sale.id) }}" class="btn btn-action-edit btn-action-sm" title="تعديل">
                     <i class="fas fa-edit"></i>
                   </a>
@@ -364,14 +371,14 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
                       <a href="{{ url_for('sales_bp.generate_invoice', id=sale.id) }}" class="dropdown-item" target="_blank">
                         <i class="fas fa-file-invoice-dollar mr-2"></i> فاتورة ضريبية
                       </a>
-                      {% if sale.customer_id and sale.is_receivable %}
+                      {% if sale.customer_id and sale.is_receivable and has_perm('manage_payments') %}
                       <a href="{{ url_for('payments.create_payment',
                                          entity_type='CUSTOMER',
                                          entity_id=sale.customer_id,
-                                         reference='دفعة من ' ~ (sale.customer.name if sale.customer else 'عميل') ~ ' - مبيعة ' ~ (sale.sale_number or sale.id),
-                                         notes='تسجيل على حساب العميل — مبيعة: ' ~ (sale.sale_number or sale.id),
+                                         reference='دفعة من ' ~ (sale.customer.name if sale.customer else 'زبون') ~ ' - مبيعة ' ~ (sale.sale_number or sale.id),
+                                         notes='تسجيل على حساب الزبون — مبيعة: ' ~ (sale.sale_number or sale.id),
                                          customer_id=sale.customer_id) }}" class="dropdown-item text-success">
-                        <i class="fas fa-money-bill-wave mr-2"></i> دفعة على حساب العميل
+                        <i class="fas fa-money-bill-wave mr-2"></i> دفعة على حساب الزبون
                       </a>
                       {% endif %}
                       <div class="dropdown-divider"></div>
@@ -386,6 +393,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
                       {% endif %}
                     </div>
                   </div>
+                  {% endif %}
                 </div>
               </td>
             </tr>

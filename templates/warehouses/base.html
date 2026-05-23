@@ -30,7 +30,7 @@
 {% macro is_active(prefix) -%}{% if ep.startswith(prefix) %}active{% endif %}{%- endmacro %}
 
 {% block breadcrumb %}
-  {% set DEFAULT_WID = 1 %}
+  {% set DEFAULT_WID = gm_default_warehouse_id if gm_default_warehouse_id is defined and gm_default_warehouse_id else none %}
   {% set wid =
     (warehouse.id if warehouse is defined else
      active_warehouse_id if active_warehouse_id is defined else
@@ -58,7 +58,7 @@
     <span class="text-muted mx-2">|</span>
 
     <a class="btn btn-sm btn-success shadow-sm fw-bold" 
-       href="{{ url_for('warehouse_bp.add_product', id=(wid or DEFAULT_WID)) }}">
+       href="{% if wid or DEFAULT_WID %}{{ url_for('warehouse_bp.add_product', id=(wid or DEFAULT_WID)) }}{% else %}{{ url_for('warehouse_bp.create') }}{% endif %}">
       <i class="fas fa-plus-circle ml-1"></i> إضافة منتج
     </a>
 

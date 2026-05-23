@@ -1,0 +1,85 @@
+{# واجهات مشتركة — تمرير أفقي/عمودي وفلاتر واضحة في كل الأوضاع #}
+
+{% macro _scroll_rail(position, hint) %}
+<div class="gm-scroll-rail gm-scroll-rail-{{ position }}" role="toolbar" aria-label="تمرير الجدول">
+  <button type="button" class="gm-scroll-btn gm-scroll-btn-start" data-gm-scroll-dir="start" title="بداية الجدول" aria-label="بداية الجدول">
+    <i class="fas fa-chevron-right"></i>
+  </button>
+  <div class="gm-scroll-rail-center">
+    <i class="fas fa-arrows-alt-h gm-scroll-rail-icon" aria-hidden="true"></i>
+    <span class="gm-scroll-hint-text">{{ hint }}</span>
+    <span class="gm-scroll-position" aria-live="polite"></span>
+  </div>
+  <button type="button" class="gm-scroll-btn gm-scroll-btn-end" data-gm-scroll-dir="end" title="نهاية الجدول" aria-label="نهاية الجدول">
+    <i class="fas fa-chevron-left"></i>
+  </button>
+</div>
+{% endmacro %}
+
+{% macro scroll_table_start(hint='اسحب أفقياً أو استخدم الأسهم لعرض كل الأعمدة', extra_class='') %}
+<div class="gm-ledger-scroll-card {{ extra_class }}" data-gm-scroll-table data-gm-scroll-hint="{{ hint }}">
+  {{ _scroll_rail('top', hint) }}
+  <div class="gm-ledger-scroll gm-ledger-scroll-inner table-responsive">
+{% endmacro %}
+
+{% macro scroll_table_end(hint='') %}
+  </div>
+  {% set bottom_hint = hint if hint else 'اسحب أفقياً أو استخدم الأسهم لعرض كل الأعمدة' %}
+  {{ _scroll_rail('bottom', bottom_hint) }}
+</div>
+{% endmacro %}
+
+{% macro filter_panel_start(title='فلاتر البحث', icon='fa-filter', collapsed=false, extra_class='') %}
+<div class="card gm-filter-panel mb-3 {{ extra_class }}" data-gm-filter-panel data-gm-filter-collapsed="{{ '1' if collapsed else '0' }}">
+  <div class="gm-filter-panel-header card-header d-flex align-items-center justify-content-between py-2">
+    <h3 class="card-title mb-0">
+      <i class="fas {{ icon }} ml-2 text-primary"></i> {{ title }}
+    </h3>
+    <button type="button" class="btn btn-sm btn-outline-primary gm-filter-toggle" aria-expanded="{{ 'false' if collapsed else 'true' }}">
+      <span class="gm-filter-toggle-label">{{ 'إظهار الفلاتر' if collapsed else 'إخفاء الفلاتر' }}</span>
+      <i class="fas fa-chevron-{{ 'down' if collapsed else 'up' }} ml-1"></i>
+    </button>
+  </div>
+  <div class="gm-filter-panel-body card-body"{% if collapsed %} style="display:none"{% endif %}>
+{% endmacro %}
+
+{% macro filter_panel_end() %}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro vertical_scroll_hints() %}
+<div class="gm-vscroll-hints" data-gm-vscroll-hints aria-hidden="true">
+  <button type="button" class="gm-vscroll-btn gm-vscroll-up" data-gm-vscroll="up" title="أعلى الصفحة" aria-label="أعلى الصفحة">
+    <i class="fas fa-chevron-up"></i>
+    <span>أعلى</span>
+  </button>
+  <button type="button" class="gm-vscroll-btn gm-vscroll-down" data-gm-vscroll="down" title="أسفل الصفحة" aria-label="أسفل الصفحة">
+    <i class="fas fa-chevron-down"></i>
+    <span>أسفل</span>
+  </button>
+</div>
+{% endmacro %}
+
+{# بطاقة تمرير أفقي للجداول العريضة (دفتر / تقارير مالية) — متوافقة مع gm-financial-scroll.js #}
+{% macro financial_scroll_shell(title='', hint='اسحب أفقياً لعرض كل الأعمدة', shell_class='') %}
+<div class="gm-financial-card {{ shell_class }}">
+  {% if title %}
+  <div class="gm-financial-card__head gm-financial-card__head--compact-only">
+    <span>{{ title }}</span>
+    <i class="fas fa-table text-muted"></i>
+  </div>
+  {% endif %}
+  <div class="gm-hscroll" data-gm-hscroll>
+    <div class="gm-hscroll__track">
+      {{ caller() }}
+    </div>
+    <div class="gm-hscroll__fade gm-hscroll__fade--start" aria-hidden="true"></div>
+    <div class="gm-hscroll__fade gm-hscroll__fade--end" aria-hidden="true"></div>
+    <div class="gm-hscroll__hint d-lg-none">
+      <i class="fas fa-arrows-alt-h"></i>
+      <span>{{ hint }}</span>
+    </div>
+  </div>
+</div>
+{% endmacro %}

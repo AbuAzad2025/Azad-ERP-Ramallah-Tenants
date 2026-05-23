@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var deriveEntityLabel = window.deriveEntityLabel || function(p) {
     if (p && p.entity_display) return p.entity_display;
-    var map = [['customer_id','عميل'],['supplier_id','مورد'],['partner_id','شريك'],['sale_id','بيع'],['invoice_id','فاتورة'],['service_id','صيانة'],['shipment_id','شحنة'],['expense_id','مصروف'],['preorder_id','حجز'],['loan_settlement_id','تسوية']];
+    var map = [['customer_id','زبون'],['supplier_id','مورد'],['partner_id','شريك'],['sale_id','بيع'],['invoice_id','فاتورة'],['service_id','صيانة'],['shipment_id','شحنة'],['expense_id','مصروف'],['preorder_id','حجز'],['loan_settlement_id','تسوية']];
     if (p) for (var i = 0; i < map.length; i++) if (p[map[i][0]]) return map[i][1] + ' #' + p[map[i][0]];
     return (p && p.entity_type) || '';
   };
@@ -447,7 +447,7 @@ function initSmartSearch() {
       entityType = 'supplier';
     } else if (input.placeholder.includes('شريك')) {
       entityType = 'partner';
-    } else if (input.placeholder.includes('عميل')) {
+    } else if (input.placeholder.includes('زبون')) {
       entityType = 'customer';
     }
 

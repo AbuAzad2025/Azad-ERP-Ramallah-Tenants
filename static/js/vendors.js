@@ -997,6 +997,10 @@ var partnersRequestSeq = 0;
       showPayError("أدخل مبلغ الدفعة.");
       return;
     }
+    if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_vendors')) {
+      showPayError('ليس لديك صلاحية لتسجيل الدفعة.');
+      return;
+    }
     togglePaySubmit(true);
     fetch(quickServiceCfg.payUrl, {
       method: "POST",

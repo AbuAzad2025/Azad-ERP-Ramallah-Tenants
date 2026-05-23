@@ -20,7 +20,7 @@ def main():
         tables = [
             ("users", "المستخدمون"),
             ("roles", "الأدوار"),
-            ("customers", "العملاء"),
+            ("customers", "الزبائن"),
             ("sales", "المبيعات"),
             ("payments", "المدفوعات"),
             ("expenses", "المصاريف"),

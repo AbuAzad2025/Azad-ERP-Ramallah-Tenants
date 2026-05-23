@@ -7,7 +7,7 @@
 {% block buttons %}
   <button class="btn btn-primary" type="button" onclick="location.reload()">إعادة المحاولة</button>
   <a class="btn btn-ghost" href="{{ url_for('main.dashboard') }}">اللوحة الرئيسية</a>
-  <a class="btn btn-ghost" href="/" rel="home">الصفحة الرئيسية</a>
+  <a class="btn btn-ghost" href="{{ gm_path('/') }}" rel="home">الصفحة الرئيسية</a>
 {% endblock %}
 {% block footer %}
   <strong>للدعم:</strong> 0562150193 | rafideen.ahmadghannam@gmail.com

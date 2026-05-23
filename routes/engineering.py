@@ -270,7 +270,11 @@ def add_task():
     
     teams = EngineeringTeam.query.filter_by(is_active=True).order_by(EngineeringTeam.name).all()
     employees = Employee.query.order_by(Employee.name).all()
-    customers = Customer.query.filter_by(is_active=True).order_by(Customer.name).all()
+    from utils.company_scope import filter_customers_query
+
+    customers = filter_customers_query(
+        Customer.query.filter_by(is_active=True)
+    ).order_by(Customer.name).all()
     cost_centers = CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all()
     
     return render_template('engineering/task_form.html',

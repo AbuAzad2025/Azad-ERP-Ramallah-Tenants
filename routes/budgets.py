@@ -2,6 +2,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from extensions import db
 from models import Budget, BudgetCommitment, Account, Branch, Site, SystemSettings, Expense, ExpenseType
+from utils.branch_context import accessible_branches_query, resolve_branch_id
+from utils.company_scope import filter_by_branches
 from sqlalchemy import func, extract
 from datetime import datetime, date
 from decimal import Decimal
@@ -26,13 +28,17 @@ def index():
     fiscal_year = request.args.get('year', datetime.now().year, type=int)
     branch_id = request.args.get('branch', None, type=int)
     
-    query = Budget.query.filter_by(fiscal_year=fiscal_year, is_active=True)
+    query = filter_by_branches(
+        Budget.query.filter_by(fiscal_year=fiscal_year, is_active=True),
+        Budget.branch_id,
+    )
     if branch_id:
+        resolve_branch_id(branch_id, required=False)
         query = query.filter_by(branch_id=branch_id)
     
     budgets = query.all()
     
-    branches = Branch.query.filter_by(is_active=True).all()
+    branches = accessible_branches_query().all()
     
     budget_data = []
     for budget in budgets:
@@ -162,8 +168,12 @@ def budget_vs_actual():
     fiscal_year = request.args.get('year', datetime.now().year, type=int)
     branch_id = request.args.get('branch', None, type=int)
     
-    query = Budget.query.filter_by(fiscal_year=fiscal_year, is_active=True)
+    query = filter_by_branches(
+        Budget.query.filter_by(fiscal_year=fiscal_year, is_active=True),
+        Budget.branch_id,
+    )
     if branch_id:
+        resolve_branch_id(branch_id, required=False)
         query = query.filter_by(branch_id=branch_id)
     
     budgets = query.all()

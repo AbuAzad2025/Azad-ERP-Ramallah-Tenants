@@ -11,12 +11,12 @@ import re
 # خريطة Workflows الكاملة
 SYSTEM_WORKFLOWS = {
     'add_customer': {
-        'name_ar': 'إضافة عميل جديد',
+        'name_ar': 'إضافة زبون جديد',
         'steps': [
-            '1. اذهب إلى صفحة العملاء (/customers)',
-            '2. اضغط على "إضافة عميل جديد"',
+            '1. اذهب إلى صفحة الزبائن (/customers)',
+            '2. اضغط على "إضافة زبون جديد"',
             '3. أدخل: الاسم، رقم الهاتف، البريد (اختياري)',
-            '4. حدد نوع العميل (فرد/شركة)',
+            '4. حدد نوع الزبون (فرد/شركة)',
             '5. اضغط حفظ',
         ],
         'route': '/customers/create',
@@ -29,7 +29,7 @@ SYSTEM_WORKFLOWS = {
         'steps': [
             '1. اذهب إلى صفحة الصيانة (/service)',
             '2. اضغط "طلب صيانة جديد"',
-            '3. اختر العميل',
+            '3. اختر الزبون',
             '4. اختر السيارة (أو أضف جديدة)',
             '5. حدد نوع الصيانة ووصف المشكلة',
             '6. أضف القطع والمهام (اختياري)',
@@ -45,7 +45,7 @@ SYSTEM_WORKFLOWS = {
         'steps': [
             '1. اذهب إلى المبيعات (/sales)',
             '2. اضغط "فاتورة جديدة"',
-            '3. اختر العميل',
+            '3. اختر الزبون',
             '4. أضف المنتجات والكميات',
             '5. النظام يحسب VAT تلقائياً',
             '6. اختر طريقة الدفع',
@@ -94,17 +94,17 @@ TABLE_RELATIONSHIPS = {
     'Customer': {
         'has_many': ['ServiceRequest', 'Invoice', 'Vehicle', 'Note'],
         'belongs_to': [],
-        'description': 'العميل هو محور النظام - له طلبات صيانة، فواتير، سيارات',
+        'description': 'الزبون هو محور النظام - له طلبات صيانة، فواتير، سيارات',
     },
     'ServiceRequest': {
         'has_many': ['ServicePart', 'ServiceTask'],
         'belongs_to': ['Customer', 'Vehicle', 'User'],
-        'description': 'طلب الصيانة يرتبط بعميل وسيارة، ويحتوي على قطع ومهام',
+        'description': 'طلب الصيانة يرتبط بزبون وسيارة، ويحتوي على قطع ومهام',
     },
     'Invoice': {
         'has_many': ['SaleLine', 'Payment'],
         'belongs_to': ['Customer', 'User'],
-        'description': 'الفاتورة ترتبط بعميل، وتحتوي على أسطر بيع ودفعات',
+        'description': 'الفاتورة ترتبط بزبون، وتحتوي على أسطر بيع ودفعات',
     },
     'Product': {
         'has_many': ['SaleLine', 'ServicePart', 'StockLevel'],
@@ -113,7 +113,7 @@ TABLE_RELATIONSHIPS = {
     },
     'Payment': {
         'belongs_to': ['Customer', 'Invoice', 'User'],
-        'description': 'الدفعة ترتبط بفاتورة وعميل',
+        'description': 'الدفعة ترتبط بفاتورة وزبون',
     },
 }
 
@@ -140,9 +140,9 @@ FIELD_EXPLANATIONS = {
 
 # أسئلة شائعة متقدمة
 ADVANCED_FAQ = {
-    'كيف أضيف عميل': {
+    'كيف أضيف زبون': {
         'workflow': 'add_customer',
-        'quick_answer': 'اذهب لصفحة العملاء واضغط "إضافة عميل جديد"',
+        'quick_answer': 'اذهب لصفحة الزبائن واضغط "إضافة زبون جديد"',
     },
     'كيف أنشئ فاتورة': {
         'workflow': 'create_invoice',
@@ -181,7 +181,7 @@ def find_workflow_by_query(query: str) -> Optional[Dict[str, Any]]:
     
     # البحث المباشر في workflows
     keywords_map = {
-        'عميل': 'add_customer',
+        'زبون': 'add_customer',
         'صيانة': 'create_service',
         'فاتورة': 'create_invoice',
         'شريك': 'partner_settlement',

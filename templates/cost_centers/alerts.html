@@ -13,9 +13,11 @@
 {% block content %}
 <div class="row mb-3">
     <div class="col-12">
+        {% if has_perm('manage_cost_centers') or has_perm('manage_advanced_accounting') %}
         <button class="btn btn-primary" data-toggle="modal" data-target="#addAlertModal">
             <i class="fas fa-plus"></i> إضافة تنبيه جديد
         </button>
+        {% endif %}
         <a href="{{ url_for('cost_centers_advanced.dashboard') }}" class="btn btn-outline-secondary">
             <i class="fas fa-chart-pie"></i> لوحة التحكم
         </a>

@@ -15,13 +15,13 @@ import time
 import platform
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from datetime import datetime, timezone
-from flask import Flask, url_for, request, current_app, render_template, g, redirect, make_response, jsonify
+from flask import Flask, url_for, request, current_app, render_template, g, redirect, make_response, jsonify, abort
 from werkzeug.routing import BuildError
 try:
     from flask_cors import CORS
 except ImportError:
     CORS = None
-from flask_login import AnonymousUserMixin, current_user
+from flask_login import AnonymousUserMixin, current_user, logout_user
 from jinja2 import ChoiceLoader, FileSystemLoader
 
 if os.name == "nt":
@@ -69,6 +69,7 @@ from routes.vendors import vendors_bp
 from routes.shipments import shipments_bp
 from routes.warehouses import warehouse_bp
 from routes.branches import branches_bp
+from routes.companies import companies_bp
 from routes.payments import payments_bp
 from routes.permissions import permissions_bp
 from routes.roles import roles_bp
@@ -140,6 +141,13 @@ def load_user(user_id):
             except Exception:
                 return None
             req_slug = str(getattr(g, "tenant_slug", "") or "").strip().lower()
+            if not req_slug:
+                try:
+                    from flask import request as _req
+
+                    req_slug = str(_req.environ.get("gm.tenant_slug") or "").strip().lower()
+                except Exception:
+                    req_slug = ""
             if not req_slug or req_slug != str(tenant_slug or "").strip().lower():
                 return None
             stmt = (
@@ -498,7 +506,40 @@ def _register_template_support(app):
 
     @app.context_processor
     def inject_common():
-        return {"current_app": current_app, "get_unique_flashes": get_unique_flashes, "static_url": static_url}
+        from utils.arabic_ux import ZB, UI_LABELS
+
+        def zb(key: str, default: str = "") -> str:
+            return ZB.get(key, default or key)
+
+        def ui_label(key: str, default: str = "") -> str:
+            return UI_LABELS.get(key, default or key)
+
+        return {
+            "current_app": current_app,
+            "get_unique_flashes": get_unique_flashes,
+            "static_url": static_url,
+            "ZB": ZB,
+            "UI_LABELS": UI_LABELS,
+            "zb": zb,
+            "ui_label": ui_label,
+        }
+
+    @app.context_processor
+    def inject_platform_footer():
+        from utils.branding_scope import build_platform_footer
+
+        try:
+            return {
+                "platform_footer": build_platform_footer(
+                    dev_email_default=app.config.get("DEV_EMAIL") or "",
+                ),
+            }
+        except Exception:
+            return {
+                "platform_footer": build_platform_footer(
+                    dev_email_default="rafideen.ahmadghannam@gmail.com",
+                ),
+            }
 
     @app.context_processor
     def inject_tenant_console_nav():
@@ -594,18 +635,32 @@ def _register_template_support(app):
             try:
                 if utils.is_super():
                     return True
+                if not getattr(current_user, "is_authenticated", False):
+                    return False
+                if hasattr(current_user, "has_permission") and callable(current_user.has_permission):
+                    return bool(current_user.has_permission(perm))
                 return str(perm).strip().lower() in _get_user_perms_cached(current_user)
             except Exception:
                 return False
+
         def has_any(*perms):
             try:
                 if utils.is_super():
                     return True
-                perm_set = _get_user_perms_cached(current_user)
                 for p in perms:
-                    if str(p).strip().lower() in perm_set:
+                    if has_perm(p):
                         return True
                 return False
+            except Exception:
+                return False
+
+        def can_ep(endpoint: str) -> bool:
+            try:
+                from utils.dashboard_routing import user_can_access_endpoint
+
+                if not getattr(current_user, "is_authenticated", False):
+                    return False
+                return user_can_access_endpoint(current_user, endpoint)
             except Exception:
                 return False
 
@@ -614,11 +669,36 @@ def _register_template_support(app):
             flags = _get_module_flags_cached()
             return bool(flags.get(key, True))
 
+        def gm_auth() -> dict:
+            try:
+                from utils.flash_messages import MSG_FORBIDDEN
+            except Exception:
+                MSG_FORBIDDEN = "ليس لديك صلاحية لهذا الإجراء."
+            try:
+                if not getattr(current_user, "is_authenticated", False):
+                    return {"super": False, "perms": [], "msg": MSG_FORBIDDEN}
+                raw = _get_user_perms_cached(current_user)
+                expanded: set[str] = set()
+                for p in raw:
+                    try:
+                        expanded |= utils._expand_perms(p)
+                    except Exception:
+                        expanded.add(str(p).strip().lower())
+                return {
+                    "super": bool(utils.is_super()),
+                    "perms": sorted(expanded),
+                    "msg": MSG_FORBIDDEN,
+                }
+            except Exception:
+                return {"super": False, "perms": [], "msg": MSG_FORBIDDEN}
+
         return {
             "has_perm": has_perm,
             "has_any": has_any,
+            "can_ep": can_ep,
             "get_module_flags": _get_module_flags_cached,
             "is_module_enabled": is_module_enabled,
+            "gm_auth": gm_auth,
         }
 
     @app.context_processor
@@ -689,6 +769,17 @@ def _register_template_support(app):
     app.jinja_env.filters["format_currency_in_ils"] = utils.format_currency_in_ils
     app.jinja_env.globals["get_entity_balance_in_ils"] = utils.get_entity_balance_in_ils
     app.jinja_env.globals["url_for_any"] = url_for_any
+
+    def safe_url_for(endpoint: str, **values):
+        from utils.tenant_permissions import _normalize_nav_endpoint
+
+        ep = _normalize_nav_endpoint(endpoint)
+        try:
+            return url_for(ep, **values)
+        except Exception:
+            return None
+
+    app.jinja_env.globals["safe_url_for"] = safe_url_for
     from utils.tenant_scope import gm_path
 
     app.jinja_env.globals["gm_path"] = gm_path
@@ -826,6 +917,7 @@ def _register_blueprints(app):
         shipments_bp,
         warehouse_bp,
         branches_bp,
+        companies_bp,
         payments_bp,
         permissions_bp,
         roles_bp,
@@ -1034,12 +1126,30 @@ def _register_app_handlers(app):
 
     @app.errorhandler(403)
     def _forbidden(e):
-        app.logger.error("403 FORBIDDEN: %s", request.path)
-        if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        app.logger.warning("403 FORBIDDEN: %s", request.path)
+        msg = "ليس لديك صلاحية للوصول إلى هذه الصفحة أو تنفيذ هذا الإجراء."
+        if (
+            request.path.startswith("/api/")
+            or request.accept_mimetypes.best == "application/json"
+            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        ):
             from flask import jsonify
-            return jsonify({"error": "غير مصرح لك بهذا الإجراء", "message": "غير مصرح لك بهذا الإجراء"}), 403
+            return jsonify({"error": msg, "message": msg}), 403
         try:
-            return render_template("errors/403.html", path=request.path), 403
+            from flask import redirect
+            from flask_login import current_user
+            from utils.flash_messages import MSG_FORBIDDEN, flash_warning
+
+            if getattr(current_user, "is_authenticated", False):
+                flash_warning(MSG_FORBIDDEN)
+                from utils.dashboard_routing import home_url_for_user
+
+                slug = str(getattr(g, "tenant_slug", None) or "").strip() or None
+                return redirect(home_url_for_user(current_user, slug))
+        except Exception:
+            pass
+        try:
+            return render_template("errors/403.html", path=request.path, message=msg), 403
         except Exception:
             return ("403 Forbidden", 403)
 
@@ -1246,6 +1356,9 @@ def create_app(config_object=Config) -> Flask:
         "assets_bp": assets_bp,
         "archive_bp": archive_bp,
         "accounting_docs_bp": accounting_docs_bp,
+        "recurring_bp": recurring_bp,
+        "performance_bp": performance_bp,
+        "ai_admin_bp": ai_admin_bp,
     }
     for _name, _opts in get_blueprint_guard_config():
         if _name in _blueprints_for_acl:
@@ -1521,13 +1634,13 @@ def create_app(config_object=Config) -> Flask:
 
     @app.before_request
     def resolve_tenant_from_path():
-        from flask import session
+        from flask import abort as _abort, session
         tenant_slug = (request.environ.get("gm.tenant_slug") or "").strip()
         if not tenant_slug:
             g.tenant_slug = None
             g.tenant_schema = None
             if request.path.startswith("/console"):
-                return abort(404)
+                return _abort(404)
             try:
                 uid = str(session.get("_user_id") or "")
                 if uid.startswith("t:"):
@@ -1541,12 +1654,12 @@ def create_app(config_object=Config) -> Flask:
         except Exception:
             tenant = None
         if not tenant or not getattr(tenant, "is_active", False):
-            return abort(404)
+            return _abort(404)
         g.tenant_schema = getattr(tenant, "schema_name", None)
         from utils.tenant_scope import tenant_path_blocked
 
         if tenant_path_blocked(request.path):
-            return abort(404)
+            return _abort(404)
 
         try:
             if current_user.is_authenticated:
@@ -1627,7 +1740,7 @@ def create_app(config_object=Config) -> Flask:
         setting_keys = {
             'system_name', 'SystemName', 'company_name', 'CompanyName',
             'login_title', 'login_subtitle', 'footer_text',
-            'custom_logo', 'custom_favicon',
+            'custom_logo', 'custom_logo_emblem', 'custom_favicon',
             'assets_version',
             'multi_tenancy_enabled',
             'primary_color', 'secondary_color', 'sidebar_bg', 'sidebar_text',
@@ -1677,8 +1790,10 @@ def create_app(config_object=Config) -> Flask:
             LOGO_PRIMARY,
         )
 
-        system_name_val = _get('system_name') or _get('SystemName') or 'أزاد لإدارة الكراج'
-        company_name_val = _get('company_name') or _get('CompanyName') or 'شركة أزاد للأنظمة الذكية'
+        from utils.branding_scope import PLATFORM_DEFAULT_COMPANY_NAME, PLATFORM_DEFAULT_SYSTEM_NAME
+
+        system_name_val = _get('system_name') or _get('SystemName') or PLATFORM_DEFAULT_SYSTEM_NAME
+        company_name_val = _get('company_name') or _get('CompanyName') or PLATFORM_DEFAULT_COMPANY_NAME
 
         assets_version = _get('assets_version', '') or ''
 
@@ -1720,6 +1835,17 @@ def create_app(config_object=Config) -> Flask:
                     tsn = SystemSettings.get_setting(f'tenant_{tenant_name}_system_name', '') or ''
                     if str(tsn).strip():
                         system_name_val = str(tsn).strip()
+                    else:
+                        try:
+                            from models import TenantRegistry
+
+                            tr = TenantRegistry.query.filter_by(slug=tenant_name).first()
+                            if tr and str(tr.display_name or "").strip():
+                                system_name_val = str(tr.display_name).strip()
+                                if not str(tcn).strip():
+                                    company_name_val = str(tr.display_name).strip()
+                        except Exception:
+                            pass
         except Exception:
             tenant_name = ''
 
@@ -1729,7 +1855,10 @@ def create_app(config_object=Config) -> Flask:
             assets_version=assets_version,
         )
         logo_url = branding.get("logo_url") or url_for(
-            "static", filename=normalize_rel_path("", default=rel_path_platform(ASSET_LOGOS, LOGO_PRIMARY))
+            "static", filename=normalize_rel_path("", default=rel_path_platform(ASSET_LOGOS, LOGO_EMBLEM))
+        )
+        logo_primary_url = branding.get("logo_primary_url") or url_for(
+            "static", filename=normalize_rel_path(custom_logo or "", default=rel_path_platform(ASSET_LOGOS, LOGO_PRIMARY))
         )
         favicon_url = branding.get("favicon_url") or url_for(
             "static", filename=normalize_rel_path(favicon_val, default=rel_path_platform(ASSET_FAVICONS, FAVICON_FILE))
@@ -1744,6 +1873,8 @@ def create_app(config_object=Config) -> Flask:
             'footer_text': _get('footer_text', 'جميع الحقوق محفوظة'),
             'custom_logo': branding.get('logo_rel') or custom_logo or '',
             'custom_logo_url': logo_url,
+            'custom_logo_primary_url': logo_primary_url,
+            'custom_logo_emblem_url': branding.get('logo_emblem_url') or logo_url,
             'custom_favicon': branding.get('favicon_rel') or favicon_val,
             'custom_favicon_url': favicon_url,
             'custom_header_url': header_url,
@@ -1787,10 +1918,15 @@ def create_app(config_object=Config) -> Flask:
                 settings["footer_text"] = print_settings["footer_text"]
 
         system_appearance = {}
+        from utils.branding_scope import build_platform_footer
+
         return dict(
             system_settings=settings,
             system_appearance=system_appearance,
             print_settings=print_settings,
+            platform_footer=build_platform_footer(
+                dev_email_default=app.config.get("DEV_EMAIL") or "",
+            ),
         )
 
     @app.context_processor
@@ -1833,8 +1969,40 @@ def create_app(config_object=Config) -> Flask:
             user_home_label=dashboard_label_for_user(user, tenant_slug) if user else "الرئيسية",
         )
         scope.update(_tenant_tpl_ctx())
+        try:
+            from utils.branch_context import build_org_context
+
+            org = build_org_context()
+            scope.update(org)
+            scope.update(
+                {
+                    "tenant_company_name": org.get("org_company_name") or "",
+                    "tenant_branch_name": org.get("org_branch_name") or "",
+                    "tenant_branch_id": org.get("org_branch_id"),
+                    "tenant_company_id": org.get("org_company_id"),
+                    "tenant_branches": org.get("org_branches") or [],
+                    "tenant_can_switch_branch": org.get("org_can_switch_branch", False),
+                }
+            )
+        except Exception:
+            pass
+
+        from utils.branding_scope import build_platform_footer
+
+        scope["platform_footer"] = build_platform_footer(
+            dev_email_default=app.config.get("DEV_EMAIL") or "",
+        )
         return scope
-    
+
+    @app.before_request
+    def _guard_org_scope_post():
+        try:
+            from utils.branch_context import guard_posted_branch_ids
+
+            guard_posted_branch_ids()
+        except Exception:
+            pass
+
     @app.before_request
     def check_maintenance_mode():
         """فحص وضع الصيانة - المنطق المحسّن"""
@@ -1928,10 +2096,21 @@ def create_app(config_object=Config) -> Flask:
             db.session.rollback()
 
         try:
-            from utils.branding_assets import ensure_legacy_img_aliases, init_platform_from_legacy
+            from utils.branding_assets import (
+                ensure_branding_canonical_files,
+                ensure_legacy_img_aliases,
+                init_platform_from_legacy,
+                wire_database_branding_paths,
+            )
 
+            ensure_branding_canonical_files(app)
             init_platform_from_legacy(app)
             ensure_legacy_img_aliases(app)
+            try:
+                wire_database_branding_paths(db.session, app=app)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
         except Exception:
             pass
 

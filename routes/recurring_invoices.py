@@ -9,6 +9,14 @@ import utils
 
 recurring_bp = Blueprint('recurring', __name__, url_prefix='/recurring')
 
+
+@recurring_bp.before_request
+def _platform_recurring_only():
+    from utils.branding_scope import require_platform_console
+
+    return require_platform_console()
+
+
 def _dec_from_form(field_name: str, default: str = "0") -> Decimal:
     raw = (request.form.get(field_name, None) or "").strip()
     if raw == "":
@@ -19,13 +27,7 @@ def _dec_from_form(field_name: str, default: str = "0") -> Decimal:
 @recurring_bp.route('/')
 @login_required
 def index():
-    # الحماية: فقط للمالك والمطور (Level 0)
-    from permissions_config.role_policy import is_platform_owner_role
-
-    if not is_platform_owner_role(current_user):
-        utils.flash_error('غير مصرح لك بالوصول لهذه الصفحة (تتطلب صلاحيات المالك)', 'danger')
-        return redirect(url_for('main.dashboard'))
-
+  # الحماية: attach_acl على recurring_bp (ACCESS_OWNER_DASHBOARD) + حجب المسار داخل /t/<slug>/
     page = request.args.get('page', 1, type=int)
     status_filter = request.args.get('status', '').strip()
     customer_filter = request.args.get('customer', type=int)
@@ -88,7 +90,7 @@ def add_template():
                 return redirect(url_for('recurring.add_template'))
             
             if not customer_id:
-                flash('العميل مطلوب', 'danger')
+                flash('الزبون مطلوب', 'danger')
                 return redirect(url_for('recurring.add_template'))
             
             if amount <= 0:

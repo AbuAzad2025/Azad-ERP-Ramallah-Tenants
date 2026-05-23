@@ -1,12 +1,24 @@
+function _gmUrl(path) {
+    return (window.gmPath || window.gmU || function (p) { return p; })(path);
+}
+
+function _gmArchiveGuard(perm) {
+    if (perm === 'manage_sales' && typeof window.gmRequirePermAny === 'function') {
+        return window.gmRequirePermAny('manage_sales', 'archive_sale');
+    }
+    if (typeof window.gmRequirePerm === 'function') return window.gmRequirePerm(perm);
+    return true;
+}
 
 function archivePayment(paymentId) {
+    if (!_gmArchiveGuard('manage_payments')) return;
     const reason = prompt('أدخل سبب أرشفة هذه الدفعة:');
     if (!reason) return;
     
     if (confirm('هل أنت متأكد من أرشفة هذه الدفعة؟')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/payments/archive/${paymentId}`;
+        form.action = _gmUrl(`/payments/archive/${paymentId}`);
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
         csrfToken.name = 'csrf_token';
@@ -24,10 +36,11 @@ function archivePayment(paymentId) {
 }
 
 function restorePayment(paymentId) {
+    if (!_gmArchiveGuard('manage_payments')) return;
     if (confirm('هل أنت متأكد من استعادة هذه الدفعة؟')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/payments/restore/${paymentId}`;
+        form.action = _gmUrl(`/payments/restore/${paymentId}`);
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
         csrfToken.name = 'csrf_token';
@@ -40,13 +53,14 @@ function restorePayment(paymentId) {
 }
 
 function archiveSupplier(supplierId) {
+    if (!_gmArchiveGuard('manage_vendors')) return;
     const reason = prompt('أدخل سبب أرشفة هذا المورد:');
     if (!reason) return;
     
     if (confirm('هل أنت متأكد من أرشفة هذا المورد؟')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/vendors/suppliers/archive/${supplierId}`;
+        form.action = _gmUrl(`/vendors/suppliers/archive/${supplierId}`);
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
         csrfToken.name = 'csrf_token';
@@ -64,10 +78,11 @@ function archiveSupplier(supplierId) {
 }
 
 function restoreSupplier(supplierId) {
+    if (!_gmArchiveGuard('manage_vendors')) return;
     if (confirm('هل أنت متأكد من استعادة هذا المورد؟')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/vendors/suppliers/restore/${supplierId}`;
+        form.action = _gmUrl(`/vendors/suppliers/restore/${supplierId}`);
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
         csrfToken.name = 'csrf_token';
@@ -80,13 +95,14 @@ function restoreSupplier(supplierId) {
 }
 
 function archivePartner(partnerId) {
+    if (!_gmArchiveGuard('manage_vendors')) return;
     const reason = prompt('أدخل سبب أرشفة هذا الشريك:');
     if (!reason) return;
     
     if (confirm('هل أنت متأكد من أرشفة هذا الشريك؟')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/vendors/partners/archive/${partnerId}`;
+        form.action = _gmUrl(`/vendors/partners/archive/${partnerId}`);
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
         csrfToken.name = 'csrf_token';
@@ -104,10 +120,11 @@ function archivePartner(partnerId) {
 }
 
 function restorePartner(partnerId) {
+    if (!_gmArchiveGuard('manage_vendors')) return;
     if (confirm('هل أنت متأكد من استعادة هذا الشريك؟')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/vendors/partners/restore/${partnerId}`;
+        form.action = _gmUrl(`/vendors/partners/restore/${partnerId}`);
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
         csrfToken.name = 'csrf_token';
@@ -120,13 +137,14 @@ function restorePartner(partnerId) {
 }
 
 function archiveSale(saleId) {
+    if (!_gmArchiveGuard('manage_sales')) return;
     const reason = prompt('أدخل سبب أرشفة هذه المبيعة:');
     if (!reason) return;
     
     if (confirm('هل أنت متأكد من أرشفة هذه المبيعة؟')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/sales/archive/${saleId}`;
+        form.action = _gmUrl(`/sales/archive/${saleId}`);
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
         csrfToken.name = 'csrf_token';
@@ -144,10 +162,11 @@ function archiveSale(saleId) {
 }
 
 function restoreSale(saleId) {
+    if (!_gmArchiveGuard('manage_sales')) return;
     if (confirm('هل أنت متأكد من استعادة هذه المبيعة؟')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/sales/restore/${saleId}`;
+        form.action = _gmUrl(`/sales/restore/${saleId}`);
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
         csrfToken.name = 'csrf_token';
@@ -160,6 +179,7 @@ function restoreSale(saleId) {
 }
 
 function archiveService(serviceId) {
+    if (!_gmArchiveGuard('manage_service')) return;
     const reason = prompt('أدخل سبب أرشفة طلب الصيانة هذا:');
     if (!reason) return;
     
@@ -184,10 +204,11 @@ function archiveService(serviceId) {
 }
 
 function restoreService(serviceId) {
+    if (!_gmArchiveGuard('manage_service')) return;
     if (confirm('هل أنت متأكد من استعادة طلب الصيانة هذا؟')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/service/restore/${serviceId}`;
+        form.action = _gmUrl(`/service/restore/${serviceId}`);
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
         csrfToken.name = 'csrf_token';
@@ -200,13 +221,14 @@ function restoreService(serviceId) {
 }
 
 function archiveCustomer(customerId) {
-    const reason = prompt('أدخل سبب أرشفة هذا العميل:');
+    if (!_gmArchiveGuard('manage_customers')) return;
+    const reason = prompt('أدخل سبب أرشفة هذا الزبون:');
     if (!reason) return;
     
-    if (confirm('هل أنت متأكد من أرشفة هذا العميل؟')) {
+    if (confirm('هل أنت متأكد من أرشفة هذا الزبون؟')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/customers/archive/${customerId}`;
+        form.action = _gmUrl(`/customers/archive/${customerId}`);
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
         csrfToken.name = 'csrf_token';
@@ -224,10 +246,11 @@ function archiveCustomer(customerId) {
 }
 
 function restoreCustomer(customerId) {
-    if (confirm('هل أنت متأكد من استعادة هذا العميل؟')) {
+    if (!_gmArchiveGuard('manage_customers')) return;
+    if (confirm('هل أنت متأكد من استعادة هذا الزبون؟')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/customers/restore/${customerId}`;
+        form.action = _gmUrl(`/customers/restore/${customerId}`);
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
         csrfToken.name = 'csrf_token';

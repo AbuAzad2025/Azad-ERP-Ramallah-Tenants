@@ -148,7 +148,7 @@
                     <td>{{ sale_return.created_at.strftime('%Y-%m-%d %H:%M') if sale_return.created_at else '-' }}</td>
                   </tr>
                   <tr>
-                    <th>العميل:</th>
+                    <th>الزبون:</th>
                     <td>
                       {% if sale_return.customer %}
                       <a href="{{ url_for('customers_bp.customer_detail', customer_id=sale_return.customer.id) }}">

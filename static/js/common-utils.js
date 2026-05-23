@@ -261,12 +261,12 @@
             const icon = '<i class="fas fa-wrench text-danger"></i>';
             const vehicle = esc(p.service_vehicle || 'غير محدد');
             const customer = esc(p.service_customer_name || 'غير معروف');
-            return `${icon} صيانة المركبة (${vehicle}) للعميل: ${customer}`;
+            return `${icon} صيانة المركبة (${vehicle}) للزبون: ${customer}`;
         }
         if (p.entity_display) return esc(p.entity_display);
         
         const entityConfig = {
-            customer_id: {icon: 'fas fa-user text-primary', label: 'عميل', badge: 'badge-primary'},
+            customer_id: {icon: 'fas fa-user text-primary', label: 'زبون', badge: 'badge-primary'},
             supplier_id: {icon: 'fas fa-truck text-info', label: 'مورد', badge: 'badge-info'},
             partner_id: {icon: 'fas fa-handshake text-success', label: 'شريك', badge: 'badge-success'},
             sale_id: {icon: 'fas fa-shopping-cart text-warning', label: 'فاتورة مبيعات', badge: 'badge-warning'},

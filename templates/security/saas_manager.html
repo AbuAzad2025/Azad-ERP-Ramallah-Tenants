@@ -295,7 +295,7 @@
                     <table class="table table-hover align-middle mb-0">
                       <thead class="bg-light">
                         <tr>
-                          <th class="ps-4">العميل / الشركة</th>
+                          <th class="ps-4">الزبون / الشركة</th>
                           <th>الباقة الحالية</th>
                           <th>الحالة</th>
                           <th>تاريخ البدء</th>
@@ -392,7 +392,7 @@
               <thead class="table-dark">
                 <tr>
                   <th>رقم الفاتورة</th>
-                  <th>العميل</th>
+                  <th>الزبون</th>
                   <th>المبلغ</th>
                   <th>التاريخ</th>
                   <th>الاستحقاق</th>
@@ -626,7 +626,7 @@
                 <div class="mb-3">
                   <label class="form-label">تنبيه قبل الانتهاء (أيام)</label>
                   <input type="number" class="form-control" value="7">
-                  <small class="text-muted">إرسال تنبيه للعميل قبل انتهاء الاشتراك</small>
+                  <small class="text-muted">إرسال تنبيه للزبون قبل انتهاء الاشتراك</small>
                 </div>
                 <div class="mb-3">
                   <label class="form-label">Grace Period (أيام)</label>
@@ -858,11 +858,11 @@ API Access
       <div class="modal-body">
         <form id="newSubscriberForm">
           <div class="mb-3">
-            <label class="form-label">العميل *</label>
+            <label class="form-label">الزبون *</label>
             <select class="custom-select" name="customer_id" id="customer_select" required>
-              <option value="">اختر عميل...</option>
+              <option value="">اختر زبون...</option>
             </select>
-            <small class="text-muted">سيتم تحميل العملاء من قاعدة البيانات</small>
+            <small class="text-muted">سيتم تحميل الزبائن من قاعدة البيانات</small>
           </div>
           <div class="mb-3">
             <label class="form-label">الباقة *</label>
@@ -1107,7 +1107,7 @@ window.viewSubscription = async function(subId) {
     
     if (data.success) {
       const sub = data.subscription;
-      alert(`تفاصيل الاشتراك\n\nالعميل: ${sub.customer_name}\nالباقة: ${sub.plan_name}\nالحالة: ${sub.status}\nالسعر: $${sub.price}/شهر\nالبداية: ${sub.start_date}\nالنهاية: ${sub.end_date}\nالأيام المتبقية: ${sub.days_left}`);
+      alert(`تفاصيل الاشتراك\n\nالزبون: ${sub.customer_name}\nالباقة: ${sub.plan_name}\nالحالة: ${sub.status}\nالسعر: $${sub.price}/شهر\nالبداية: ${sub.start_date}\nالنهاية: ${sub.end_date}\nالأيام المتبقية: ${sub.days_left}`);
     } else {
       if(typeof showToast!=='undefined')showToast('فشل جلب البيانات','error');else alert('فشل جلب البيانات');
     }
@@ -1229,7 +1229,7 @@ window.markPaid = async function(invId) {
 }
 
 window.sendReminder = async function(invId) {
-  if (!confirm('إرسال تذكير للعميل؟')) return;
+  if (!confirm('إرسال تذكير للزبون؟')) return;
   
   try {
     const res = await fetch(`/security/api/saas/invoices/${invId}/send-reminder`, {
@@ -1314,13 +1314,13 @@ const plans = [
   {% endfor %}
 ];
 
-// تحميل قائمة العملاء عند فتح Modal
+// تحميل قائمة الزبائن عند فتح Modal
 async function loadCustomers() {
   try {
     const res = await fetch('/api/customers');
     const customers = await res.json();
     const select = document.getElementById('customer_select');
-    select.innerHTML = '<option value="">اختر عميل...</option>';
+    select.innerHTML = '<option value="">اختر زبون...</option>';
     customers.forEach(c => {
       const option = document.createElement('option');
       option.value = c.id;
@@ -1328,11 +1328,11 @@ async function loadCustomers() {
       select.appendChild(option);
     });
   } catch (e) {
-    notify('⚠️ تأكد من وجود عملاء في النظام أولاً', 'warning');
+    notify('⚠️ تأكد من وجود زبائن في النظام أولاً', 'warning');
   }
 }
 
-// عند فتح modal المشترك الجديد، حمّل العملاء
+// عند فتح modal المشترك الجديد، حمّل الزبائن
 const newSubModal = document.getElementById('newSubscriberModal');
 if (newSubModal) {
   newSubModal.addEventListener('show.bs.modal', loadCustomers);
@@ -1460,7 +1460,7 @@ function filterSubscribersTable(query) {
             <div class="card border-primary">
               <div class="card-body">
                 <h6 class="card-title text-primary">📦 1. الباقات (Plans)</h6>
-                <p class="small mb-2">الخطط اللي تعرضها على العملاء</p>
+                <p class="small mb-2">الخطط اللي تعرضها على الزبائن</p>
                 <div class="bg-light p-2 rounded small">
                   <strong>مثال:</strong><br>
                   باقة Pro = $79/شهر<br>
@@ -1475,7 +1475,7 @@ function filterSubscribersTable(query) {
             <div class="card border-success">
               <div class="card-body">
                 <h6 class="card-title text-success">🎫 2. الاشتراكات (Subscriptions)</h6>
-                <p class="small mb-2">العملاء المشتركين عندك</p>
+                <p class="small mb-2">الزبائن المشتركين عندك</p>
                 <div class="bg-light p-2 rounded small">
                   <strong>مثال:</strong><br>
                   شركة ABC<br>
@@ -1490,7 +1490,7 @@ function filterSubscribersTable(query) {
             <div class="card border-warning">
               <div class="card-body">
                 <h6 class="card-title text-warning">🧾 3. الفواتير (Invoices)</h6>
-                <p class="small mb-2">الفواتير اللي ترسلها للعملاء</p>
+                <p class="small mb-2">الفواتير اللي ترسلها للزبائن</p>
                 <div class="bg-light p-2 rounded small">
                   <strong>مثال:</strong><br>
                   فاتورة #001<br>
@@ -1547,13 +1547,13 @@ function filterSubscribersTable(query) {
                 <ol class="mb-3">
                   <li>اذهب لتبويب <span class="badge bg-primary">المشتركين</span></li>
                   <li>اضغط <span class="badge bg-success">مشترك جديد</span></li>
-                  <li>اختر العميل من القائمة</li>
+                  <li>اختر الزبون من القائمة</li>
                   <li>اختر الباقة</li>
                   <li>حدد تاريخ البدء</li>
                   <li>اضغط <span class="badge bg-success">حفظ</span></li>
                 </ol>
                 <div class="alert alert-warning mb-0">
-                  <strong>⚠️ مهم:</strong> يجب أن يكون العميل موجود في النظام أولاً
+                  <strong>⚠️ مهم:</strong> يجب أن يكون الزبون موجود في النظام أولاً
                 </div>
               </div>
             </div>
@@ -1580,7 +1580,7 @@ function filterSubscribersTable(query) {
                 <ol class="mb-3">
                   <li>اضغط زر <span class="badge bg-info">✉</span></li>
                   <li>تأكيد</li>
-                  <li>✅ يرسل تذكير للعميل</li>
+                  <li>✅ يرسل تذكير للزبون</li>
                 </ol>
               </div>
             </div>

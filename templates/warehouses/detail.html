@@ -107,12 +107,14 @@
           <i class="fas fa-cogs ml-1"></i> أدوات الإدارة
         </h6>
         <div class="d-flex flex-wrap gap-2">
+          {% if has_perm('manage_warehouses') or has_perm('manage_inventory') %}
           <a href="{{ url_for('warehouse_bp.add_product', id=warehouse.id) }}" class="btn btn-success btn-sm">
             <i class="fas fa-plus ml-1" style="pointer-events: none;"></i> <span style="pointer-events: none;">إضافة منتج</span>
           </a>
           <a href="{{ url_for('warehouse_bp.import_products', id=warehouse.id) }}" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-file-upload ml-1" style="pointer-events: none;"></i> <span style="pointer-events: none;">استيراد (CSV)</span>
           </a>
+          {% endif %}
         </div>
       </div>
     </div>

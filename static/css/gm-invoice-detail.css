@@ -1,0 +1,236 @@
+/**
+ * تفاصيل الفاتورة — تخطيط تطبيق موبايل
+ */
+@media (max-width: 991.98px) {
+  html:not([data-ui-mode="desktop"]) body.gm-invoice-detail .content,
+  html[data-ui-mode="mobile"] body.gm-invoice-detail .content,
+  html[data-ui-mode="tablet"] body.gm-invoice-detail .content {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  html:not([data-ui-mode="desktop"]) body.gm-invoice-detail .container.py-4,
+  html[data-ui-mode="mobile"] body.gm-invoice-detail .container.py-4,
+  html[data-ui-mode="tablet"] body.gm-invoice-detail .container.py-4 {
+    padding-top: 0.5rem !important;
+    padding-left: 0.65rem;
+    padding-right: 0.65rem;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-hero,
+  html[data-ui-mode="mobile"] .gm-invoice-hero,
+  html[data-ui-mode="tablet"] .gm-invoice-hero {
+    display: block;
+    border-radius: 16px;
+    background: linear-gradient(145deg, #4f46e5 0%, #6366f1 45%, #818cf8 100%);
+    color: #fff;
+    padding: 1rem 1.1rem;
+    margin-bottom: 0.85rem;
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.35);
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-hero__top,
+  html[data-ui-mode="mobile"] .gm-invoice-hero__top,
+  html[data-ui-mode="tablet"] .gm-invoice-hero__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-hero__number,
+  html[data-ui-mode="mobile"] .gm-invoice-hero__number,
+  html[data-ui-mode="tablet"] .gm-invoice-hero__number {
+    font-size: 1.05rem;
+    font-weight: 800;
+    margin: 0;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-hero__amount,
+  html[data-ui-mode="mobile"] .gm-invoice-hero__amount,
+  html[data-ui-mode="tablet"] .gm-invoice-hero__amount {
+    font-size: 1.65rem;
+    font-weight: 800;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-chips,
+  html[data-ui-mode="mobile"] .gm-invoice-chips,
+  html[data-ui-mode="tablet"] .gm-invoice-chips {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-chip,
+  html[data-ui-mode="mobile"] .gm-invoice-chip,
+  html[data-ui-mode="tablet"] .gm-invoice-chip {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.55rem 0.65rem;
+    font-size: 0.78rem;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-chip strong,
+  html[data-ui-mode="mobile"] .gm-invoice-chip strong,
+  html[data-ui-mode="tablet"] .gm-invoice-chip strong {
+    display: block;
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 600;
+    margin-bottom: 0.15rem;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-lines-desktop,
+  html[data-ui-mode="mobile"] .gm-invoice-lines-desktop,
+  html[data-ui-mode="tablet"] .gm-invoice-lines-desktop {
+    display: none !important;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-lines-mobile,
+  html[data-ui-mode="mobile"] .gm-invoice-lines-mobile,
+  html[data-ui-mode="tablet"] .gm-invoice-lines-mobile {
+    display: block;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-line-card,
+  html[data-ui-mode="mobile"] .gm-invoice-line-card,
+  html[data-ui-mode="tablet"] .gm-invoice-line-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 0.75rem 0.85rem;
+    margin-bottom: 0.55rem;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-line-card__title,
+  html[data-ui-mode="mobile"] .gm-invoice-line-card__title,
+  html[data-ui-mode="tablet"] .gm-invoice-line-card__title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    margin-bottom: 0.35rem;
+    color: #0f172a;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-line-card__grid,
+  html[data-ui-mode="mobile"] .gm-invoice-line-card__grid,
+  html[data-ui-mode="tablet"] .gm-invoice-line-card__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem 0.65rem;
+    font-size: 0.78rem;
+    color: #475569;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-line-card__total,
+  html[data-ui-mode="mobile"] .gm-invoice-line-card__total,
+  html[data-ui-mode="tablet"] .gm-invoice-line-card__total {
+    margin-top: 0.45rem;
+    padding-top: 0.45rem;
+    border-top: 1px dashed #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    color: #4f46e5;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-totals-mobile,
+  html[data-ui-mode="mobile"] .gm-invoice-totals-mobile,
+  html[data-ui-mode="tablet"] .gm-invoice-totals-mobile {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 0.65rem 0.85rem;
+    margin: 0.75rem 0 1rem;
+    border: 1px solid #e2e8f0;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-totals-mobile .row-line,
+  html[data-ui-mode="mobile"] .gm-invoice-totals-mobile .row-line,
+  html[data-ui-mode="tablet"] .gm-invoice-totals-mobile .row-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.28rem 0;
+    font-size: 0.82rem;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-totals-mobile .row-line.grand,
+  html[data-ui-mode="mobile"] .gm-invoice-totals-mobile .row-line.grand,
+  html[data-ui-mode="tablet"] .gm-invoice-totals-mobile .row-line.grand {
+    font-weight: 800;
+    font-size: 1rem;
+    color: #059669;
+    border-top: 2px solid #cbd5e1;
+    margin-top: 0.35rem;
+    padding-top: 0.5rem;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-actions-bar,
+  html[data-ui-mode="mobile"] .gm-invoice-actions-bar,
+  html[data-ui-mode="tablet"] .gm-invoice-actions-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    z-index: 1040;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid #e2e8f0;
+    padding: 0.45rem 0.65rem;
+    display: flex;
+    gap: 0.4rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  html:not([data-ui-mode="desktop"]) .gm-invoice-actions-bar .btn,
+  html[data-ui-mode="mobile"] .gm-invoice-actions-bar .btn,
+  html[data-ui-mode="tablet"] .gm-invoice-actions-bar .btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    padding: 0.45rem 0.75rem;
+  }
+
+  html:not([data-ui-mode="desktop"]) body.gm-invoice-detail .card > .card-header.bg-primary,
+  html[data-ui-mode="mobile"] body.gm-invoice-detail .card > .card-header.bg-primary,
+  html[data-ui-mode="tablet"] body.gm-invoice-detail .card > .card-header.bg-primary {
+    display: none;
+  }
+
+  html:not([data-ui-mode="desktop"]) body.gm-invoice-detail .card.rounded,
+  html[data-ui-mode="mobile"] body.gm-invoice-detail .card.rounded,
+  html[data-ui-mode="tablet"] body.gm-invoice-detail .card.rounded {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  html:not([data-ui-mode="desktop"]) body.gm-invoice-detail .card-body.bg-light,
+  html[data-ui-mode="mobile"] body.gm-invoice-detail .card-body.bg-light,
+  html[data-ui-mode="tablet"] body.gm-invoice-detail .card-body.bg-light {
+    background: transparent !important;
+    padding: 0;
+  }
+}
+
+@media (min-width: 992px) {
+  .gm-invoice-hero,
+  .gm-invoice-chips,
+  .gm-invoice-lines-mobile,
+  .gm-invoice-totals-mobile,
+  .gm-invoice-actions-bar {
+    display: none !important;
+  }
+  .gm-invoice-lines-desktop {
+    display: block !important;
+  }
+}
+
+.gm-invoice-lines-mobile {
+  display: none;
+}

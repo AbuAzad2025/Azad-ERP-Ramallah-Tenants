@@ -84,10 +84,10 @@
     التاريخ: {{ sale.sale_date and sale.sale_date.strftime('%Y-%m-%d') or '—' }}
   </div>
 
-  <!-- معلومات العميل -->
+  <!-- معلومات الزبون -->
   <table class="kv" style="margin-bottom:10px">
-    <tr><th>اسم العميل</th><td>{{ sale.customer.name if sale.customer else '—' }}</td></tr>
-    <tr><th>هاتف العميل</th><td>{{ sale.customer.phone if sale.customer else '—' }}</td></tr>
+    <tr><th>اسم الزبون</th><td>{{ sale.customer.name if sale.customer else '—' }}</td></tr>
+    <tr><th>هاتف الزبون</th><td>{{ sale.customer.phone if sale.customer else '—' }}</td></tr>
     <tr><th>البائع</th><td>{% if sale.seller_employee %}{{ sale.seller_employee.name }}{% elif sale.seller %}{{ sale.seller.username }}{% else %}—{% endif %}</td></tr>
   </table>
 

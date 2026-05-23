@@ -44,6 +44,12 @@ from utils import _get_or_404
 
 shop_bp = Blueprint("shop", __name__, url_prefix="/shop", template_folder="templates/shop")
 
+
+def _scoped_wh_query():
+    from utils.company_scope import filter_warehouses_query
+
+    return filter_warehouses_query(Warehouse.query)
+
 @shop_bp.before_request
 def restrict_shop_access():
     # الحماية: فقط للمالك والمطور (Level 0) لصفحات الإدارة
@@ -85,14 +91,14 @@ def _resp(msg, cat="info", code=None, data=None, to="shop.catalog"):
 def _find_default_warehouse():
     default_id = current_app.config.get("SHOP_DEFAULT_WAREHOUSE_ID")
     if default_id:
-        wh = Warehouse.query.filter_by(id=default_id, is_active=True).first()
+        wh = _scoped_wh_query().filter_by(id=default_id, is_active=True).first()
         if wh:
             return wh
     online_val = getattr(WarehouseType, "ONLINE").value if hasattr(WarehouseType, "ONLINE") else "ONLINE"
     return (
-        Warehouse.query.filter_by(is_active=True, online_is_default=True).first()
-        or (Warehouse.query.filter_by(is_active=True, warehouse_type=online_val).first() if hasattr(Warehouse, "warehouse_type") else None)
-        or Warehouse.query.filter_by(is_active=True).first()
+        _scoped_wh_query().filter_by(is_active=True, online_is_default=True).first()
+        or (_scoped_wh_query().filter_by(is_active=True, warehouse_type=online_val).first() if hasattr(Warehouse, "warehouse_type") else None)
+        or _scoped_wh_query().filter_by(is_active=True).first()
     )
 
 def _json_loads(value: str) -> Dict[str, Any]:
@@ -118,7 +124,7 @@ def _online_scope_ids():
     if hasattr(g, "_online_ids"):
         return g._online_ids
     try:
-        q = Warehouse.query.filter(Warehouse.is_active.is_(True))
+        q = _scoped_wh_query().filter(Warehouse.is_active.is_(True))
         if hasattr(Warehouse, "online_is_default"):
             q = q.filter(Warehouse.online_is_default.is_(True))
         ids = [w.id for w in q.all()]
@@ -129,7 +135,7 @@ def _online_scope_ids():
         current_app.logger.debug('database query failed in shop.py', exc_info=True)
     try:
         online_val = getattr(WarehouseType, "ONLINE").value if hasattr(WarehouseType, "ONLINE") else "ONLINE"
-        q = Warehouse.query.filter(Warehouse.is_active.is_(True))
+        q = _scoped_wh_query().filter(Warehouse.is_active.is_(True))
         if hasattr(Warehouse, "warehouse_type"):
             q = q.filter(Warehouse.warehouse_type == online_val)
         ids = [w.id for w in q.all()]
@@ -1278,9 +1284,9 @@ def admin_product_new():
         db.session.flush()
         online_val = getattr(WarehouseType, "ONLINE").value if hasattr(WarehouseType, "ONLINE") else "ONLINE"
         default_wh = (
-            Warehouse.query.filter_by(is_active=True, online_is_default=True).first()
-            or Warehouse.query.filter_by(is_active=True, warehouse_type=online_val).first()
-            or Warehouse.query.filter_by(is_active=True).first()
+            _scoped_wh_query().filter_by(is_active=True, online_is_default=True).first()
+            or _scoped_wh_query().filter_by(is_active=True, warehouse_type=online_val).first()
+            or _scoped_wh_query().filter_by(is_active=True).first()
         )
         if default_wh:
             if not StockLevel.query.filter_by(product_id=p.id, warehouse_id=default_wh.id).first():
@@ -1360,9 +1366,9 @@ def admin_product_edit(pid):
             if not StockLevel.query.filter_by(product_id=product.id).first():
                 online_val = getattr(WarehouseType, "ONLINE").value if hasattr(WarehouseType, "ONLINE") else "ONLINE"
                 default_wh = (
-                    Warehouse.query.filter_by(is_active=True, online_is_default=True).first()
-                    or Warehouse.query.filter_by(is_active=True, warehouse_type=online_val).first()
-                    or Warehouse.query.filter_by(is_active=True).first()
+                    _scoped_wh_query().filter_by(is_active=True, online_is_default=True).first()
+                    or _scoped_wh_query().filter_by(is_active=True, warehouse_type=online_val).first()
+                    or _scoped_wh_query().filter_by(is_active=True).first()
                 )
                 if default_wh:
                     kwargs = {"product_id": product.id, "warehouse_id": default_wh.id, "quantity": 0}

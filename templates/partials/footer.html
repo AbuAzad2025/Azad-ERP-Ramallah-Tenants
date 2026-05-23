@@ -1,39 +1,51 @@
-<footer class="main-footer gm-main-footer" dir="rtl">
-  <div class="gm-footer-left d-flex align-items-center">
-    <div class="gm-footer-logo d-flex align-items-center">
-      <img src="{{ system_settings.custom_logo_url }}" alt="{{ system_settings.company_name or system_settings.system_name or 'النظام' }}" loading="lazy" decoding="async">
-      <div class="gm-footer-owner">
-        <span class="gm-footer-owner-name">{{ system_settings.company_name or system_settings.system_name or 'النظام' }}</span>
-        <span class="gm-footer-owner-tagline text-muted small">
-          {{ system_settings.system_name or 'منصة إدارة كراج احترافية' }}
-        </span>
+{# الفوتر: منصة أزاد + المطوّر فقط — لا يظهر هنا شعار/اسم التينانت (الحازم / المهندس الفلسطيني) #}
+{% set platform_footer = platform_footer | default({
+  'company_name': 'شركة أزاد للأنظمة الذكية',
+  'system_name': 'منصة أزاد ERP',
+  'developer_name_en': 'Eng. Ahmad Ghannam',
+  'developer_name_ar': 'المهندس أحمد غنام',
+  'email': 'rafideen.ahmadghannam@gmail.com',
+  'phone': '',
+  'logo_url': url_for('static', filename='branding/platform/logos/emblem.png'),
+  'year': now().year
+}, true) %}
+<footer class="main-footer gm-main-footer gm-platform-footer" dir="rtl">
+  <div class="gm-footer-inner">
+    <div class="gm-footer-developer">
+      <img
+        src="{{ platform_footer.logo_url }}"
+        class="gm-brand-mark gm-footer-platform-logo"
+        alt="{{ platform_footer.company_name }}"
+        loading="lazy"
+        decoding="async"
+      >
+      <div class="gm-footer-developer-text">
+        <div class="gm-footer-developer-name">{{ platform_footer.company_name }}</div>
+        <div class="gm-footer-developer-tagline">{{ platform_footer.system_name }}</div>
+        <div class="gm-footer-developer-person">
+          <i class="fas fa-code ms-1"></i>
+          {{ platform_footer.developer_name_ar }}
+          <span class="opacity-75">({{ platform_footer.developer_name_en }})</span>
+        </div>
       </div>
     </div>
-  </div>
-  <div class="gm-footer-center d-none d-md-flex align-items-center justify-content-center text-muted small">
-    <span class="mx-2"><i class="fas fa-shield-alt gm-footer-icon"></i> حماية متقدمة</span>
-    <span class="mx-2"><i class="fas fa-tachometer-alt gm-footer-icon"></i> أداء محسّن</span>
-    <span class="mx-2"><i class="fas fa-database gm-footer-icon"></i> نسخة احتياطية آمنة</span>
-  </div>
-  <div class="gm-footer-right d-flex align-items-center justify-content-end">
-    <div class="gm-footer-version text-muted small d-none d-sm-inline-flex align-items-center mx-2">
-      <i class="fas fa-code-branch gm-footer-icon"></i>
-      <span class="ml-1">v3.2.0</span>
-    </div>
-    <div class="gm-footer-actions d-flex align-items-center">
-      {% if system_settings and system_settings.COMPANY_PHONE %}
-      <a href="tel:{{ system_settings.COMPANY_PHONE }}" class="gm-footer-action" title="اتصال">
-        <i class="fas fa-phone-alt"></i>
-      </a>
-      {% endif %}
-      {% if system_settings and system_settings.COMPANY_EMAIL %}
-      <a href="mailto:{{ system_settings.COMPANY_EMAIL }}" class="gm-footer-action" title="البريد">
-        <i class="fas fa-envelope"></i>
-      </a>
-      {% endif %}
-      <a href="{{ url_for('security.settings_center') }}" class="gm-footer-action d-none d-md-inline-flex" title="لوحة المالك السرية">
-        <i class="fas fa-user-secret"></i>
-      </a>
+
+    <div class="gm-footer-meta text-center">
+      <div class="gm-footer-contact d-flex flex-wrap justify-content-center align-items-center gap-3">
+        {% if platform_footer.email %}
+        <a href="mailto:{{ platform_footer.email }}" class="gm-footer-contact-link">
+          <i class="fas fa-envelope ms-1"></i>{{ platform_footer.email }}
+        </a>
+        {% endif %}
+        {% if platform_footer.phone %}
+        <a href="tel:{{ platform_footer.phone }}" class="gm-footer-contact-link">
+          <i class="fas fa-phone-alt ms-1"></i>{{ platform_footer.phone }}
+        </a>
+        {% endif %}
+      </div>
+      <div class="gm-footer-copyright mt-2">
+        &copy; {{ platform_footer.year }} {{ platform_footer.company_name }} — جميع الحقوق محفوظة
+      </div>
     </div>
   </div>
 </footer>

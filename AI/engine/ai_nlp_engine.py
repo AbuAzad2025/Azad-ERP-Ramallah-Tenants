@@ -38,7 +38,7 @@ class ArabicSentenceAnalyzer:
     }
 
     ENTITY_PATTERNS = {
-        "customer": r"\b(عميل|عملاء|زبون|زبائن|الزباين|العملاء|customer|customers)\b",
+        "customer": r"\b(زبون|زبائن|زبون|زبائن|الزباين|الزبائن|customer|customers)\b",
         "supplier": r"\b(مورد|موردين|supplier|vendors?)\b",
         "product": r"\b(منتج|منتجات|قطعة|قطع|product|part|parts)\b",
         "warehouse": r"\b(مخزن|مخازن|مستودع|مخزون|warehouse|inventory|stock)\b",
@@ -114,7 +114,7 @@ class SemanticUnderstanding:
         },
         "customer_satisfaction": {
             "keywords": ("رضا", "شكوي", "تقييم", "خدمة", "جودة", "complaint", "feedback"),
-            "related": ("عملاء", "تجربة", "customers"),
+            "related": ("زبائن", "تجربة", "customers"),
             "intent": "feedback",
         },
         "inventory_management": {
@@ -229,7 +229,7 @@ class ContextualProcessor:
         resolved = str(text or "")
         if any(ref in normalized for ref in ("منهم", "منها", "هذا", "ذلك", "تلك")):
             if "customer" in self.mentioned_entities:
-                resolved = resolved.replace("منهم", "من العملاء")
+                resolved = resolved.replace("منهم", "من الزبائن")
             elif "product" in self.mentioned_entities:
                 resolved = resolved.replace("منها", "من المنتجات")
         return resolved

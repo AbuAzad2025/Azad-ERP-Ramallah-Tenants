@@ -175,17 +175,17 @@
                   <label for="entity_type">نوع الجهة</label>
                   <select class="form-control" id="entity_type">
                     <option value="">-- بدون ربط --</option>
-                    <option value="customer">عميل</option>
+                    <option value="customer">زبون</option>
                     <option value="supplier">مورد</option>
                     <option value="partner">شريك</option>
                   </select>
                 </div>
 
                 <div class="form-group" id="customerSelect" style="display: none;">
-                  <label for="customer_id">العميل</label>
+                  <label for="customer_id">الزبون</label>
                   <div class="input-group">
-                    <select class="form-control select2" id="customer_id" name="customer_id" data-placeholder="ابحث عن عميل...">
-                      <option value="">-- اختر عميل --</option>
+                    <select class="form-control select2" id="customer_id" name="customer_id" data-placeholder="ابحث عن زبون...">
+                      <option value="">-- اختر زبون --</option>
                       {% for customer in customers %}
                       <option value="{{ customer.id }}" 
                               data-phone="{{ customer.phone }}" 
@@ -196,14 +196,14 @@
                       {% endfor %}
                     </select>
                     <div class="input-group-append">
-                      <a href="{{ url_for('customers_bp.create_form') }}" class="btn btn-action-add" target="_blank" title="إضافة عميل جديد">
+                      <a href="{{ url_for('customers_bp.create_form') }}" class="btn btn-action-add" target="_blank" title="إضافة زبون جديد">
                         <i class="fas fa-plus"></i>
                       </a>
                     </div>
                   </div>
                   <small class="form-text text-muted">
-                    <i class="fas fa-info-circle"></i> لم تجد العميل؟ 
-                    <a href="{{ url_for('customers_bp.create_form') }}" target="_blank">أضف عميل جديد</a>
+                    <i class="fas fa-info-circle"></i> لم تجد الزبون؟ 
+                    <a href="{{ url_for('customers_bp.create_form') }}" target="_blank">أضف زبون جديد</a>
                   </small>
                 </div>
 
@@ -277,7 +277,7 @@
                 <div class="form-group">
                   <label for="internal_notes">ملاحظات داخلية</label>
                   <textarea class="form-control" id="internal_notes" name="internal_notes" rows="4" 
-                            placeholder="ملاحظات داخلية لا تظهر للعملاء...">{{ check.internal_notes if check else '' }}</textarea>
+                            placeholder="ملاحظات داخلية لا تظهر للزبائن...">{{ check.internal_notes if check else '' }}</textarea>
                   <small class="form-text text-muted">هذه الملاحظات لن تظهر في التقارير العامة</small>
                 </div>
               </div>
@@ -368,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       customerSelect.style.display = 'block';
       setTimeout(function() {
-        initSelect2('#customer_id', 'ابحث عن عميل...');
+        initSelect2('#customer_id', 'ابحث عن زبون...');
       }, 100);
     } else if (this.value === 'supplier') {
 
@@ -391,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function() {
       entityType.value = 'customer';
       customerSelect.style.display = 'block';
       setTimeout(function() {
-        initSelect2('#customer_id', 'ابحث عن عميل...');
+        initSelect2('#customer_id', 'ابحث عن زبون...');
       }, 100);
     {% elif check.supplier_id %}
       entityType.value = 'supplier';

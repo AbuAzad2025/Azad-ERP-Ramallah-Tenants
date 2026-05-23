@@ -273,7 +273,7 @@
           <i class="fas fa-home ml-1"></i> الرئيسية
         </a>
 
-        {% if current_user.has_permission('manage_vendors') %}
+        {% if has_perm('manage_vendors') %}
           <button class="btn btn-info text-white fw-bold shadow-sm" onclick="recalculatePartnerBalances()" title="إعادة حساب الأرصدة">
             <i class="fas fa-calculator ml-1"></i> إعادة حساب الأرصدة
           </button>
@@ -283,7 +283,7 @@
           <i class="fas fa-file-invoice-dollar ml-1"></i> قائمة التسويات
         </a>
 
-        {% if current_user.has_permission('manage_vendors') %}
+        {% if has_perm('manage_vendors') %}
           <a href="{{ url_for('vendors_bp.partners_create') }}" class="btn btn-primary fw-bold shadow-sm px-4">
             <i class="fas fa-plus ml-1"></i> شريك جديد
           </a>
@@ -350,7 +350,7 @@
                   <i class="fas fa-file-invoice-dollar"></i>
                 </a>
 
-                {% if current_user.has_permission('manage_vendors') %}
+                {% if has_perm('manage_vendors') %}
                 <div class="dropdown d-inline-block">
                   <button class="btn btn-sm btn-secondary rounded-circle" type="button" data-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-ellipsis-v"></i>

@@ -99,7 +99,7 @@
   <input type="date" name="end_date" value="{{ request.args.get('end_date', '') }}" class="form-control">
 </div>
 <div class="col-md-3">
-  <label class="form-label"><i class="fas fa-user"></i> العميل</label>
+  <label class="form-label"><i class="fas fa-user"></i> الزبون</label>
   <select name="customer_id" class="form-select">
     <option value="">الكل</option>
     {% for c in all_customers %}
@@ -137,7 +137,7 @@
   <th class="text-center">#</th>
   <th>رقم الطلبية</th>
   <th>التاريخ</th>
-  <th>العميل</th>
+  <th>الزبون</th>
   <th class="text-center">عدد الأصناف</th>
   <th class="text-end">الإجمالي</th>
   <th class="text-end">المدفوع</th>

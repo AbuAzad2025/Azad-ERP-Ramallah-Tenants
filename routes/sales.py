@@ -460,15 +460,16 @@ def dashboard():
 @sales_bp.route("/", endpoint="index")
 @login_required
 def list_sales():
+    from utils.company_scope import filter_sales_query
+
     f = request.args
-    q = (Sale.query
-         .filter(Sale.is_archived == False)
-        .options(
+    q = filter_sales_query(
+        Sale.query.filter(Sale.is_archived == False)
+    ).options(
             joinedload(Sale.customer).load_only(Customer.id, Customer.name, Customer.phone),
             joinedload(Sale.seller).load_only(User.id, User.username),
-            joinedload(Sale.seller_employee).load_only(Employee.id, Employee.name)
-        )
-         .outerjoin(Customer))
+            joinedload(Sale.seller_employee).load_only(Employee.id, Employee.name),
+        ).outerjoin(Customer)
     st = (f.get("status") or "").upper().strip()
     status_filter_enabled = bool(st and st != "ALL")
     if status_filter_enabled:
@@ -601,7 +602,7 @@ def list_sales():
         SaleStatus.REFUNDED.value,
     }
 
-    summary_q = Sale.query.filter(Sale.is_archived.is_(False))
+    summary_q = filter_sales_query(Sale.query.filter(Sale.is_archived.is_(False)))
     need_customer_join = bool(cust or search_term)
     if need_customer_join:
         summary_q = summary_q.outerjoin(Customer)
@@ -734,14 +735,16 @@ def list_sales():
     for key in ["page", "print", "scope", "range_start", "range_end", "page_number", "ajax"]:
         query_args.pop(key, None)
 
+    from utils.company_scope import filter_customers_query, filter_warehouses_query
+
     context = {
         "sales": sales_list,
         "pagination": pag,
-        "warehouses": Warehouse.query.options(
-            load_only(Warehouse.id, Warehouse.name)
+        "warehouses": filter_warehouses_query(
+            Warehouse.query.options(load_only(Warehouse.id, Warehouse.name))
         ).order_by(Warehouse.name).all(),
-        "customers": Customer.query.options(
-            load_only(Customer.id, Customer.name, Customer.phone)
+        "customers": filter_customers_query(
+            Customer.query.options(load_only(Customer.id, Customer.name, Customer.phone))
         ).order_by(Customer.name).limit(100).all(),
         "sellers": User.query.filter_by(is_active=True).order_by(User.username).all(),
         "status_map": STATUS_MAP,
@@ -772,7 +775,7 @@ def list_sales():
     <tr>
       <th data-sortable="false">رقم</th>
       <th data-sortable="false">التاريخ</th>
-      <th data-sortable="false">العميل</th>
+      <th data-sortable="false">الزبون</th>
       <th data-sortable="false">الإجمالي</th>
       <th data-sortable="false" class="text-center">العملة</th>
       <th data-sortable="false" class="text-center d-none d-lg-table-cell">سعر الصرف</th>
@@ -827,10 +830,10 @@ def list_sales():
               <a href="{{ url_for('payments.create_payment',
                                          entity_type='CUSTOMER',
                                          entity_id=sale.customer_id,
-                                         reference='دفعة من ' ~ (sale.customer.name if sale.customer else 'عميل') ~ ' - مبيعة ' ~ (sale.sale_number or sale.id),
-                                         notes='تسجيل على حساب العميل — مبيعة: ' ~ (sale.sale_number or sale.id),
+                                         reference='دفعة من ' ~ (sale.customer.name if sale.customer else 'زبون') ~ ' - مبيعة ' ~ (sale.sale_number or sale.id),
+                                         notes='تسجيل على حساب الزبون — مبيعة: ' ~ (sale.sale_number or sale.id),
                                          customer_id=sale.customer_id) }}" class="dropdown-item text-success">
-                <i class="fas fa-money-bill-wave mr-2"></i> دفعة على حساب العميل
+                <i class="fas fa-money-bill-wave mr-2"></i> دفعة على حساب الزبون
               </a>
               {% endif %}
               <div class="dropdown-divider"></div>
@@ -1001,6 +1004,8 @@ def _resolve_unit_price(product_id: int, warehouse_id: Optional[int]) -> float:
 @sales_bp.route("/new", methods=["GET", "POST"], endpoint="create_sale")
 @login_required
 def create_sale():
+    from utils.company_scope import filter_warehouses_query
+
     form = SaleForm()
     if request.method == "POST" and not form.validate_on_submit():
         current_app.logger.warning("Sale form errors: %s", form.errors)
@@ -1016,8 +1021,10 @@ def create_sale():
                                        products=Product.query.options(
                                            load_only(Product.id, Product.name, Product.sku, Product.price, Product.currency, Product.is_active)
                                        ).filter(Product.is_active == True).order_by(Product.name).all(),
-                                       warehouses=Warehouse.query.options(
-                                           load_only(Warehouse.id, Warehouse.name)
+                                       warehouses=filter_warehouses_query(
+                                           Warehouse.query.options(
+                                               load_only(Warehouse.id, Warehouse.name)
+                                           )
                                        ).order_by(Warehouse.name).all(),
                                        cost_centers=CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all())
             for d in lines_payload:
@@ -1077,7 +1084,7 @@ def create_sale():
                     run_invoice_gl_sync_after_commit(inv_row.id)
             except Exception:
                 pass
-            utils.flash_success("تم إنشاء المبيعة وسجل الذمة (الفاتورة) على حساب العميل.")
+            utils.flash_success("تم إنشاء المبيعة وسجل الذمة (الفاتورة) على حساب الزبون.")
             return redirect(url_for("sales_bp.sale_detail", id=sale.id))
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1089,23 +1096,28 @@ def create_sale():
             utils.flash_error("خطأ أثناء الحفظ")
     return render_template("sales/form.html", form=form, title="إنشاء فاتورة جديدة",
                            products=Product.query.order_by(Product.name).all(),
-                           warehouses=Warehouse.query.order_by(Warehouse.name).all(),
+                           warehouses=filter_warehouses_query(Warehouse.query).order_by(Warehouse.name).all(),
                            cost_centers=CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all())
 
 @sales_bp.route("/<int:id>", methods=["GET"], endpoint="sale_detail")
 @login_required
 def sale_detail(id: int):
+    from utils.company_scope import assert_sale_access
+
+    assert_sale_access(id)
     options = [
         joinedload(Sale.customer), joinedload(Sale.seller), joinedload(Sale.seller_employee),
         joinedload(Sale.lines).joinedload(SaleLine.product),
         joinedload(Sale.lines).joinedload(SaleLine.warehouse),
         joinedload(Sale.payments),
     ]
-    sale = Sale.query.options(*options).filter(Sale.id == id).first()
+    from utils.company_scope import scoped_sale_query, filter_payments_query
+
+    sale = scoped_sale_query().options(*options).filter(Sale.id == id).first()
     if not sale:
         padded = f"{id:04d}"
         alt = (
-            Sale.query
+            scoped_sale_query()
             .filter(Sale.sale_number.ilike(f"%-{padded}"))
             .order_by(Sale.sale_date.desc(), Sale.id.desc())
             .first()
@@ -1136,7 +1148,7 @@ def sale_detail(id: int):
         invoice_tax_amount = (base_for_tax * sale_tax_rate / Decimal("100")).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
         grand_total = (base_for_tax + invoice_tax_amount).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
         sale.total_amount = float(grand_total)
-        sale.balance_due = float((grand_total - D(getattr(sale, "total_paid", 0))).quantize(TWOPLACES, rounding=ROUND_HALF_UP))
+        sale.balance_due = float(grand_total)
         # حساب عرض بالشيكل عند الحاجة
         try:
             from models import convert_amount, PaymentStatus
@@ -1195,11 +1207,16 @@ def sale_detail(id: int):
 @sales_bp.route("/<int:id>/payments", methods=["GET"], endpoint="sale_payments")
 @login_required
 def sale_payments(id: int):
+    from utils.company_scope import assert_sale_access, filter_payments_query
+
+    assert_sale_access(id)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
-    q = (Payment.query.options(joinedload(Payment.splits))
-         .filter(Payment.sale_id == id)
-         .order_by(Payment.payment_date.desc(), Payment.id.desc()))
+    q = (
+        filter_payments_query(Payment.query.options(joinedload(Payment.splits)))
+        .filter(Payment.sale_id == id)
+        .order_by(Payment.payment_date.desc(), Payment.id.desc())
+    )
     pagination = q.paginate(page=page, per_page=per_page, error_out=False)
     sale = db.session.get(Sale, id) or abort(404)
     total_paid = getattr(sale, "total_paid", 0)
@@ -1225,6 +1242,9 @@ def sale_payments(id: int):
 @login_required
 @utils.permission_required(SystemPermissions.MANAGE_SALES)
 def edit_sale(id):
+    from utils.company_scope import assert_sale_access, filter_warehouses_query
+
+    assert_sale_access(id)
     sale = _get_or_404(Sale, id)
     if sale.status in ("CANCELLED", "REFUNDED"):
         utils.flash_error("لا يمكن تعديل فاتورة ملغاة/مرتجعة.")
@@ -1264,8 +1284,10 @@ def edit_sale(id):
                                        products=Product.query.options(
                                            load_only(Product.id, Product.name, Product.sku, Product.price, Product.currency, Product.is_active)
                                        ).filter(Product.is_active == True).order_by(Product.name).all(),
-                                       warehouses=Warehouse.query.options(
-                                           load_only(Warehouse.id, Warehouse.name)
+                                       warehouses=filter_warehouses_query(
+                                           Warehouse.query.options(
+                                               load_only(Warehouse.id, Warehouse.name)
+                                           )
                                        ).order_by(Warehouse.name).all())
             # جلب السعر التلقائي فقط إذا كان 0 أو سالب
             for d in lines_payload:
@@ -1326,7 +1348,7 @@ def edit_sale(id):
             utils.flash_error("خطأ أثناء التعديل")
     return render_template("sales/form.html", form=form, sale=sale, title="تعديل الفاتورة",
                            products=Product.query.order_by(Product.name).all(),
-                           warehouses=Warehouse.query.order_by(Warehouse.name).all(),
+                           warehouses=filter_warehouses_query(Warehouse.query).order_by(Warehouse.name).all(),
                            cost_centers=CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all())
 
 @sales_bp.route("/quick", methods=["POST"])
@@ -1382,7 +1404,7 @@ def quick_sell():
             run_sale_gl_sync_after_commit(sale.id)
         except Exception:
             current_app.logger.warning(f'Failed to sync sale GL entries: {sale.id}')
-        # تحديث رصيد العميل
+        # تحديث رصيد الزبون
         try:
             from utils.customer_balance_updater import update_customer_balance_components
             update_customer_balance_components(sale.customer_id)

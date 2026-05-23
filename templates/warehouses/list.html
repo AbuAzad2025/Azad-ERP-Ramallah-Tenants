@@ -1,4 +1,4 @@
-{% extends 'warehouses/base.html' %}
+﻿{% extends 'warehouses/base.html' %}
 
 {% block page_title %}المستودعات{% endblock %}
 
@@ -7,7 +7,9 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/warehouses.css') }}">
 {% endblock %}
 
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
+{{ readonly_banner('view_warehouses', 'manage_warehouses', 'المستودعات') }}
 <!-- إحصائيات سريعة -->
 <div class="row mb-4">
   <div class="col-lg-3 col-md-6 mb-3">
@@ -91,7 +93,7 @@
         <a href="{{ url_for('main.dashboard') }}" class="btn btn-light btn-sm shadow-sm text-primary fw-bold">
           <i class="fas fa-home ml-1"></i> الرئيسية
         </a>
-        {% if current_user.has_permission('manage_warehouses') %}
+        {% if has_perm('manage_warehouses') %}
         <a href="{{ url_for('warehouse_bp.create') }}" class="btn btn-light btn-sm shadow-sm text-primary fw-bold">
           <i class="fas fa-plus ml-1"></i>إضافة مستودع
         </a>
@@ -125,7 +127,7 @@
         </div>
       </form>
 
-      {% if current_user.has_permission('manage_warehouses') %}
+      {% if has_perm('manage_warehouses') %}
       <a href="{{ url_for('warehouse_bp.create') }}" class="btn btn-action-add btn-modern">
         <i class="fas fa-plus" style="pointer-events: none;"></i> <span style="pointer-events: none;">مستودع جديد</span>
       </a>
@@ -176,7 +178,7 @@
                   <a class="btn btn-action-report btn-action-sm" href="{{ url_for('warehouse_bp.preview_inventory', warehouse_id=w.id) }}">
                     <i class="fas fa-clipboard-list" style="pointer-events: none;"></i>
                   </a>
-                  {% if current_user.has_permission('manage_warehouses') %}
+                  {% if has_perm('manage_warehouses') %}
                   <a class="btn btn-action-edit btn-action-sm" href="{{ url_for('warehouse_bp.edit', warehouse_id=w.id) }}">
                     <i class="fas fa-edit" style="pointer-events: none;"></i>
                   </a>

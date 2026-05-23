@@ -161,8 +161,8 @@ def is_known_system_role(role_name: str) -> bool:
 
 # لوحة الدخول الافتراضية: (دور, منصة, تينانت)
 _ROLE_HOME_ROWS: tuple[tuple[str, str, str], ...] = (
-    (SystemRoles.OWNER.value, "security.index", "tenant_console.index"),
-    (SystemRoles.DEVELOPER.value, "security.index", "tenant_console.index"),
+    (SystemRoles.OWNER.value, "security.control_center", "tenant_console.control"),
+    (SystemRoles.DEVELOPER.value, "security.control_center", "tenant_console.control"),
     (SystemRoles.SUPER_ADMIN.value, "main.dashboard", "main.dashboard"),
     (SystemRoles.ADMIN.value, "main.dashboard", "main.dashboard"),
     (SystemRoles.MANAGER.value, "main.dashboard", "main.dashboard"),

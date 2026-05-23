@@ -11,6 +11,16 @@ import utils
 from models import Supplier, PaymentDirection, PaymentMethod, PaymentStatus, SupplierSettlement, SupplierSettlementStatus, build_supplier_settlement_draft, AuditLog, SaleStatus, ServiceStatus
 import json
 
+from utils.company_scope import (
+    assert_supplier_access,
+    filter_expenses_query,
+    filter_sale_returns_query,
+    scoped_check_query,
+    scoped_expense_query,
+    scoped_payment_query,
+    scoped_sale_query,
+)
+
 supplier_settlements_bp = Blueprint("supplier_settlements_bp", __name__, url_prefix="/suppliers")
 
 def get_unpriced_supplier_products():
@@ -120,6 +130,7 @@ def settlements_list():
     )
 
 def _get_supplier_or_404(sid: int) -> Supplier:
+    assert_supplier_access(sid)
     obj = db.session.get(Supplier, sid)
     if not obj:
         abort(404)
@@ -417,7 +428,7 @@ def _get_returned_checks_to_supplier(supplier_id: int, supplier, date_from: date
     returned_checks_out = Decimal('0.00')
     items = []
     
-    returned_out_direct = db.session.query(Payment).outerjoin(
+    returned_out_direct = scoped_payment_query().outerjoin(
         Check, Check.payment_id == Payment.id
     ).filter(
         Payment.supplier_id == supplier_id,
@@ -440,7 +451,7 @@ def _get_returned_checks_to_supplier(supplier_id: int, supplier, date_from: date
     returned_out_from_preorders = []
     
     if supplier.customer_id:
-        returned_out_from_customer = db.session.query(Payment).outerjoin(
+        returned_out_from_customer = scoped_payment_query().outerjoin(
             Check, Check.payment_id == Payment.id
         ).filter(
             Payment.customer_id == supplier.customer_id,
@@ -456,7 +467,7 @@ def _get_returned_checks_to_supplier(supplier_id: int, supplier, date_from: date
             Payment.payment_date <= date_to
         ).all()
         
-        returned_out_from_sales = db.session.query(Payment).join(
+        returned_out_from_sales = scoped_payment_query().join(
             Sale, Sale.id == Payment.sale_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -474,7 +485,7 @@ def _get_returned_checks_to_supplier(supplier_id: int, supplier, date_from: date
             Payment.payment_date <= date_to
         ).all()
         
-        returned_out_from_invoices = db.session.query(Payment).join(
+        returned_out_from_invoices = scoped_payment_query().join(
             Invoice, Invoice.id == Payment.invoice_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -492,7 +503,7 @@ def _get_returned_checks_to_supplier(supplier_id: int, supplier, date_from: date
             Payment.payment_date <= date_to
         ).all()
         
-        returned_out_from_services = db.session.query(Payment).join(
+        returned_out_from_services = scoped_payment_query().join(
             ServiceRequest, ServiceRequest.id == Payment.service_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -510,7 +521,7 @@ def _get_returned_checks_to_supplier(supplier_id: int, supplier, date_from: date
             Payment.payment_date <= date_to
         ).all()
         
-        returned_out_from_preorders = db.session.query(Payment).join(
+        returned_out_from_preorders = scoped_payment_query().join(
             PreOrder, PreOrder.id == Payment.preorder_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -547,7 +558,7 @@ def _get_returned_checks_to_supplier(supplier_id: int, supplier, date_from: date
         })
     
     # ✅ الشيكات اليدوية المرتدة (بدون payment_id) - OUT
-    manual_returned_checks = db.session.query(Check).filter(
+    manual_returned_checks = scoped_check_query().filter(
         Check.supplier_id == supplier_id,
         Check.payment_id.is_(None),
         Check.direction == PaymentDirection.OUT.value,
@@ -583,7 +594,7 @@ def _get_returned_checks_from_supplier(supplier_id: int, supplier, date_from: da
     returned_checks_in = Decimal('0.00')
     items = []
     
-    returned_in_direct = db.session.query(Payment).outerjoin(
+    returned_in_direct = scoped_payment_query().outerjoin(
         Check, Check.payment_id == Payment.id
     ).filter(
         Payment.supplier_id == supplier_id,
@@ -606,7 +617,7 @@ def _get_returned_checks_from_supplier(supplier_id: int, supplier, date_from: da
     returned_in_from_preorders = []
     
     if supplier.customer_id:
-        returned_in_from_customer = db.session.query(Payment).outerjoin(
+        returned_in_from_customer = scoped_payment_query().outerjoin(
             Check, Check.payment_id == Payment.id
         ).filter(
             Payment.customer_id == supplier.customer_id,
@@ -622,7 +633,7 @@ def _get_returned_checks_from_supplier(supplier_id: int, supplier, date_from: da
             Payment.payment_date <= date_to
         ).all()
         
-        returned_in_from_sales = db.session.query(Payment).join(
+        returned_in_from_sales = scoped_payment_query().join(
             Sale, Sale.id == Payment.sale_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -640,7 +651,7 @@ def _get_returned_checks_from_supplier(supplier_id: int, supplier, date_from: da
             Payment.payment_date <= date_to
         ).all()
         
-        returned_in_from_invoices = db.session.query(Payment).join(
+        returned_in_from_invoices = scoped_payment_query().join(
             Invoice, Invoice.id == Payment.invoice_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -658,7 +669,7 @@ def _get_returned_checks_from_supplier(supplier_id: int, supplier, date_from: da
             Payment.payment_date <= date_to
         ).all()
         
-        returned_in_from_services = db.session.query(Payment).join(
+        returned_in_from_services = scoped_payment_query().join(
             ServiceRequest, ServiceRequest.id == Payment.service_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -676,7 +687,7 @@ def _get_returned_checks_from_supplier(supplier_id: int, supplier, date_from: da
             Payment.payment_date <= date_to
         ).all()
         
-        returned_in_from_preorders = db.session.query(Payment).join(
+        returned_in_from_preorders = scoped_payment_query().join(
             PreOrder, PreOrder.id == Payment.preorder_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -713,7 +724,7 @@ def _get_returned_checks_from_supplier(supplier_id: int, supplier, date_from: da
         })
     
     # ✅ الشيكات اليدوية المرتدة (بدون payment_id) - IN
-    manual_returned_checks = db.session.query(Check).filter(
+    manual_returned_checks = scoped_check_query().filter(
         Check.supplier_id == supplier_id,
         Check.payment_id.is_(None),
         Check.direction == PaymentDirection.IN.value,
@@ -792,7 +803,7 @@ def _calculate_smart_supplier_balance(supplier_id: int, date_from: datetime, dat
         returns_to_supplier = _get_returns_to_supplier(supplier_id, date_from, date_to)
         
         from models import ExpenseType, SaleReturn, SaleReturnLine
-        expenses_service = Expense.query.outerjoin(ExpenseType).filter(
+        expenses_service = filter_expenses_query(Expense.query).outerjoin(ExpenseType).filter(
             or_(
                 Expense.supplier_id == supplier_id,
                 and_(Expense.payee_type == "SUPPLIER", Expense.payee_entity_id == supplier_id)
@@ -805,7 +816,7 @@ def _calculate_smart_supplier_balance(supplier_id: int, date_from: datetime, dat
             )
         ).all()
         
-        expenses_normal = Expense.query.outerjoin(ExpenseType).filter(
+        expenses_normal = filter_expenses_query(Expense.query).outerjoin(ExpenseType).filter(
             or_(
                 Expense.supplier_id == supplier_id,
                 and_(Expense.payee_type == "SUPPLIER", Expense.payee_entity_id == supplier_id)
@@ -863,7 +874,7 @@ def _calculate_smart_supplier_balance(supplier_id: int, date_from: datetime, dat
         sale_returns_from_customer = Decimal('0.00')
         
         if supplier.customer_id:
-            sale_returns = SaleReturn.query.filter(
+            sale_returns = filter_sale_returns_query(SaleReturn.query).filter(
                 SaleReturn.customer_id == supplier.customer_id,
                 SaleReturn.status == 'CONFIRMED',
                 SaleReturn.created_at >= date_from,
@@ -1048,9 +1059,9 @@ def _calculate_supplier_outgoing(supplier_id: int, date_from: datetime, date_to:
     from models import Sale, ExchangeTransaction
     from sqlalchemy import func
     
-    # المبيعات للمورد (إذا كان عميل أيضاً)
-    sales = db.session.query(func.sum(Sale.total_amount)).filter(
-        Sale.customer_id == supplier_id,  # إذا كان المورد عميل أيضاً
+    # المبيعات للمورد (إذا كان زبون أيضاً)
+    sales = scoped_sale_query().with_entities(func.sum(Sale.total_amount)).filter(
+        Sale.customer_id == supplier_id,  # إذا كان المورد زبون أيضاً
         Sale.sale_date >= date_from,
         Sale.sale_date <= date_to
     ).scalar() or 0
@@ -1075,7 +1086,7 @@ def _calculate_payments_to_supplier(supplier_id: int, date_from: datetime, date_
     from models import Payment
     from sqlalchemy import func
     
-    amount = db.session.query(func.sum(Payment.total_amount)).filter(
+    amount = scoped_payment_query().with_entities(func.sum(Payment.total_amount)).filter(
         Payment.supplier_id == supplier_id,
         Payment.direction == "OUTGOING",
         Payment.status == "COMPLETED",
@@ -1090,7 +1101,7 @@ def _calculate_payments_from_supplier(supplier_id: int, date_from: datetime, dat
     from models import Payment
     from sqlalchemy import func
     
-    amount = db.session.query(func.sum(Payment.total_amount)).filter(
+    amount = scoped_payment_query().with_entities(func.sum(Payment.total_amount)).filter(
         Payment.supplier_id == supplier_id,
         Payment.direction == "INCOMING",
         Payment.status == "COMPLETED",
@@ -1171,13 +1182,13 @@ def _get_supplier_operations_details(supplier_id: int, date_from: datetime, date
         ExchangeTransaction.created_at <= date_to
     ).order_by(desc(ExchangeTransaction.created_at)).limit(10).all()
     
-    recent_payments = db.session.query(Payment).filter(
+    recent_payments = scoped_payment_query().filter(
         Payment.supplier_id == supplier_id,
         Payment.payment_date >= date_from,
         Payment.payment_date <= date_to
     ).order_by(desc(Payment.payment_date)).limit(10).all()
     
-    recent_expenses = db.session.query(Expense).filter(
+    recent_expenses = scoped_expense_query().filter(
         or_(
             Expense.supplier_id == supplier_id,
             and_(Expense.payee_type == "SUPPLIER", Expense.payee_entity_id == supplier_id)
@@ -1186,7 +1197,7 @@ def _get_supplier_operations_details(supplier_id: int, date_from: datetime, date
         Expense.date <= date_to
     ).order_by(desc(Expense.date)).limit(10).all()
     
-    recent_sales = db.session.query(Sale).filter(
+    recent_sales = scoped_sale_query().filter(
         Sale.customer_id == supplier_id,
         Sale.sale_date >= date_from,
         Sale.sale_date <= date_to
@@ -1480,7 +1491,7 @@ def _get_supplier_exchange_items(supplier_id: int, date_from: datetime, date_to:
 
 def _get_sales_to_supplier(supplier_id: int, date_from: datetime, date_to: datetime):
     """
-    مبيعات للمورد (كعميل) - تُخصم من حقوقه
+    مبيعات للمورد (كزبون) - تُخصم من حقوقه
     """
     from models import Sale, SaleLine, Product, Supplier
     
@@ -1540,7 +1551,7 @@ def _get_sales_to_supplier(supplier_id: int, date_from: datetime, date_to: datet
 
 def _get_services_to_supplier(supplier_id: int, date_from: datetime, date_to: datetime):
     """
-    رسوم صيانة على المورد (كعميل) - تُخصم من حقوقه
+    رسوم صيانة على المورد (كزبون) - تُخصم من حقوقه
     """
     from models import ServiceRequest, Supplier
     
@@ -1587,8 +1598,8 @@ def _get_payments_to_supplier(supplier_id: int, supplier, date_from: datetime, d
     
     تشمل:
     1. الدفعات المرتبطة مباشرة بـ supplier_id
-    2. الدفعات المرتبطة بـ customer_id (العميل المرتبط بالمورد)
-    3. الدفعات المرتبطة بمبيعات للعميل (entity_type = SALE)
+    2. الدفعات المرتبطة بـ customer_id (الزبون المرتبط بالمورد)
+    3. الدفعات المرتبطة بمبيعات للزبون (entity_type = SALE)
     """
     from models import Payment, PaymentDirection, PaymentStatus, PaymentEntityType, Sale, Check
     from sqlalchemy import or_
@@ -1597,7 +1608,7 @@ def _get_payments_to_supplier(supplier_id: int, supplier, date_from: datetime, d
     total_ils = Decimal('0.00')
     
     # 1. الدفعات المرتبطة مباشرة بالمورد
-    direct_payments = db.session.query(Payment).outerjoin(
+    direct_payments = scoped_payment_query().outerjoin(
         Check, Check.payment_id == Payment.id
     ).filter(
         Payment.supplier_id == supplier_id,
@@ -1624,9 +1635,9 @@ def _get_payments_to_supplier(supplier_id: int, supplier, date_from: datetime, d
             "source": "supplier"
         })
     
-    # 2. الدفعات المرتبطة بالعميل المرتبط بالمورد
+    # 2. الدفعات المرتبطة بالزبون المرتبط بالمورد
     if supplier.customer_id:
-        customer_payments = db.session.query(Payment).outerjoin(
+        customer_payments = scoped_payment_query().outerjoin(
             Check, Check.payment_id == Payment.id
         ).filter(
             Payment.customer_id == supplier.customer_id,
@@ -1654,8 +1665,8 @@ def _get_payments_to_supplier(supplier_id: int, supplier, date_from: datetime, d
                     "source": "customer"
                 })
         
-        # 3. الدفعات المرتبطة بمبيعات للعميل (استثناء الشيكات المرتدة)
-        sale_payments = db.session.query(Payment).join(
+        # 3. الدفعات المرتبطة بمبيعات للزبون (استثناء الشيكات المرتدة)
+        sale_payments = scoped_payment_query().join(
             Sale, Sale.id == Payment.sale_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -1687,7 +1698,7 @@ def _get_payments_to_supplier(supplier_id: int, supplier, date_from: datetime, d
     
     # ✅ 4. الدفعات المرتبطة بمصروفات المورد (توريد خدمة) - خارج if supplier.customer_id
     from models import Expense
-    expense_payments = db.session.query(Payment).join(
+    expense_payments = scoped_payment_query().join(
         Expense, Expense.id == Payment.expense_id
     ).filter(
         or_(
@@ -1719,9 +1730,9 @@ def _get_payments_to_supplier(supplier_id: int, supplier, date_from: datetime, d
             })
     
     if supplier.customer_id:
-        # 5. الدفعات المرتبطة بفواتير للعميل (استثناء الشيكات المرتدة)
+        # 5. الدفعات المرتبطة بفواتير للزبون (استثناء الشيكات المرتدة)
         from models import Invoice
-        invoice_payments = db.session.query(Payment).join(
+        invoice_payments = scoped_payment_query().join(
             Invoice, Invoice.id == Payment.invoice_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -1751,9 +1762,9 @@ def _get_payments_to_supplier(supplier_id: int, supplier, date_from: datetime, d
                     "source": "invoice"
                 })
         
-        # 5. الدفعات المرتبطة بخدمات للعميل (استثناء الشيكات المرتدة)
+        # 5. الدفعات المرتبطة بخدمات للزبون (استثناء الشيكات المرتدة)
         from models import ServiceRequest
-        service_payments = db.session.query(Payment).join(
+        service_payments = scoped_payment_query().join(
             ServiceRequest, ServiceRequest.id == Payment.service_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -1783,9 +1794,9 @@ def _get_payments_to_supplier(supplier_id: int, supplier, date_from: datetime, d
                     "source": "service"
                 })
         
-        # 6. الدفعات المرتبطة بحجوزات مسبقة للعميل (استثناء الشيكات المرتدة)
+        # 6. الدفعات المرتبطة بحجوزات مسبقة للزبون (استثناء الشيكات المرتدة)
         from models import PreOrder
-        preorder_payments = db.session.query(Payment).join(
+        preorder_payments = scoped_payment_query().join(
             PreOrder, PreOrder.id == Payment.preorder_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -1817,7 +1828,7 @@ def _get_payments_to_supplier(supplier_id: int, supplier, date_from: datetime, d
     
     # ✅ 7. الشيكات اليدوية (بدون payment_id) المرتبطة بالمورد مباشرة
     from models import Check, CheckStatus
-    manual_checks = db.session.query(Check).filter(
+    manual_checks = scoped_check_query().filter(
         Check.supplier_id == supplier_id,
         Check.payment_id.is_(None),
         Check.direction == PaymentDirection.OUT.value,
@@ -1860,8 +1871,8 @@ def _get_payments_from_supplier(supplier_id: int, supplier, date_from: datetime,
     
     تشمل:
     1. الدفعات المرتبطة مباشرة بـ supplier_id
-    2. الدفعات المرتبطة بـ customer_id (العميل المرتبط بالمورد)
-    3. الدفعات المرتبطة بمبيعات للعميل (entity_type = SALE)
+    2. الدفعات المرتبطة بـ customer_id (الزبون المرتبط بالمورد)
+    3. الدفعات المرتبطة بمبيعات للزبون (entity_type = SALE)
     """
     from models import Payment, PaymentDirection, PaymentStatus, PaymentEntityType, Sale, Check
     from sqlalchemy import or_
@@ -1870,7 +1881,7 @@ def _get_payments_from_supplier(supplier_id: int, supplier, date_from: datetime,
     total_ils = Decimal('0.00')
     
     # 1. الدفعات المرتبطة مباشرة بالمورد
-    direct_payments = db.session.query(Payment).outerjoin(
+    direct_payments = scoped_payment_query().outerjoin(
         Check, Check.payment_id == Payment.id
     ).filter(
         Payment.supplier_id == supplier_id,
@@ -1897,9 +1908,9 @@ def _get_payments_from_supplier(supplier_id: int, supplier, date_from: datetime,
             "source": "supplier"
         })
     
-    # 2. الدفعات المرتبطة بالعميل المرتبط بالمورد (استثناء الشيكات المرتدة)
+    # 2. الدفعات المرتبطة بالزبون المرتبط بالمورد (استثناء الشيكات المرتدة)
     if supplier.customer_id:
-        customer_payments = db.session.query(Payment).outerjoin(
+        customer_payments = scoped_payment_query().outerjoin(
             Check, Check.payment_id == Payment.id
         ).filter(
             Payment.customer_id == supplier.customer_id,
@@ -1927,8 +1938,8 @@ def _get_payments_from_supplier(supplier_id: int, supplier, date_from: datetime,
                     "source": "customer"
                 })
         
-        # 3. الدفعات المرتبطة بمبيعات للعميل (استثناء الشيكات المرتدة)
-        sale_payments = db.session.query(Payment).join(
+        # 3. الدفعات المرتبطة بمبيعات للزبون (استثناء الشيكات المرتدة)
+        sale_payments = scoped_payment_query().join(
             Sale, Sale.id == Payment.sale_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -1958,9 +1969,9 @@ def _get_payments_from_supplier(supplier_id: int, supplier, date_from: datetime,
                     "source": "sale"
                 })
         
-        # 4. الدفعات المرتبطة بفواتير للعميل (استثناء الشيكات المرتدة)
+        # 4. الدفعات المرتبطة بفواتير للزبون (استثناء الشيكات المرتدة)
         from models import Invoice
-        invoice_payments = db.session.query(Payment).join(
+        invoice_payments = scoped_payment_query().join(
             Invoice, Invoice.id == Payment.invoice_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -1990,9 +2001,9 @@ def _get_payments_from_supplier(supplier_id: int, supplier, date_from: datetime,
                     "source": "invoice"
                 })
         
-        # 5. الدفعات المرتبطة بخدمات للعميل (استثناء الشيكات المرتدة)
+        # 5. الدفعات المرتبطة بخدمات للزبون (استثناء الشيكات المرتدة)
         from models import ServiceRequest
-        service_payments = db.session.query(Payment).join(
+        service_payments = scoped_payment_query().join(
             ServiceRequest, ServiceRequest.id == Payment.service_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -2022,9 +2033,9 @@ def _get_payments_from_supplier(supplier_id: int, supplier, date_from: datetime,
                     "source": "service"
                 })
         
-        # 5. الدفعات المرتبطة بحجوزات مسبقة للعميل (استثناء الشيكات المرتدة)
+        # 5. الدفعات المرتبطة بحجوزات مسبقة للزبون (استثناء الشيكات المرتدة)
         from models import PreOrder
-        preorder_payments = db.session.query(Payment).join(
+        preorder_payments = scoped_payment_query().join(
             PreOrder, PreOrder.id == Payment.preorder_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -2056,7 +2067,7 @@ def _get_payments_from_supplier(supplier_id: int, supplier, date_from: datetime,
     
     # ✅ 7. الشيكات اليدوية (بدون payment_id) المرتبطة بالمورد مباشرة
     from models import Check, CheckStatus
-    manual_checks = db.session.query(Check).filter(
+    manual_checks = scoped_check_query().filter(
         Check.supplier_id == supplier_id,
         Check.payment_id.is_(None),
         Check.direction == PaymentDirection.IN.value,
@@ -2095,7 +2106,7 @@ def _get_payments_from_supplier(supplier_id: int, supplier, date_from: datetime,
 
 def _get_supplier_preorders(supplier_id: int, date_from: datetime, date_to: datetime):
     """
-    حجوزات مسبقة للمورد (إذا كان عميلاً)
+    حجوزات مسبقة للمورد (إذا كان زبوناً)
     تُحسب فقط الإجمالي (عليه)، بدون العربون
     """
     from models import PreOrder, Supplier

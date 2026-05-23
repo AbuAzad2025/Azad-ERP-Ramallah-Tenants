@@ -29,17 +29,31 @@ from permissions_config.endpoint_access import (  # noqa: E402 — بعد ثوا
     PLATFORM_OWNER_ENDPOINT_PERMISSIONS,
     TENANT_ENDPOINT_PERMISSIONS,
     permission_for_endpoint,
+    permissions_for_endpoint,
 )
 
 # مرادفات للتوافق — المصدر: permissions_config/endpoint_access.py
 HUB_ENDPOINT_PERMISSIONS = TENANT_ENDPOINT_PERMISSIONS
 PLATFORM_HUB_ENDPOINT_PERMISSIONS = PLATFORM_OWNER_ENDPOINT_PERMISSIONS
 
+# أسماء قديمة في القوائم → endpoints الفعلية في Flask
+NAV_ENDPOINT_ALIASES: dict[str, str] = {
+    "roles_bp.list_roles": "roles.list_roles",
+    "roles_bp.create_role": "roles.create_role",
+}
+
+
+def _normalize_nav_endpoint(endpoint: str) -> str:
+    ep = (endpoint or "").strip()
+    return NAV_ENDPOINT_ALIASES.get(ep, ep)
+
+
 TENANT_CONSOLE_NAV: tuple[dict, ...] = (
     {
         "title": "الرئيسية",
         "items": (
-            {"endpoint": "tenant_console.index", "label": "لوحة المالك", "icon": "fa-home"},
+            {"endpoint": "tenant_console.control", "label": "مركز التحكم", "icon": "fa-sliders-h"},
+            {"endpoint": "tenant_console.index", "label": "لوحة الملخص", "icon": "fa-home"},
             {"endpoint": "main.dashboard", "label": "لوحة التشغيل", "icon": "fa-tachometer-alt"},
         ),
     },
@@ -56,7 +70,7 @@ TENANT_CONSOLE_NAV: tuple[dict, ...] = (
         "items": (
             {"endpoint": "sales_bp.list_sales", "label": "المبيعات", "icon": "fa-shopping-cart"},
             {"endpoint": "returns.list_returns", "label": "المرتجعات", "icon": "fa-undo"},
-            {"endpoint": "customers_bp.list_customers", "label": "العملاء", "icon": "fa-user-friends"},
+            {"endpoint": "customers_bp.list_customers", "label": "الزبائن", "icon": "fa-user-friends"},
             {"endpoint": "payments.index", "label": "الدفعات", "icon": "fa-money-bill-wave"},
             {"endpoint": "vendors_bp.suppliers_list", "label": "الموردون", "icon": "fa-truck"},
             {"endpoint": "expenses_bp.list_expenses", "label": "المصروفات", "icon": "fa-receipt"},
@@ -86,11 +100,18 @@ TENANT_CONSOLE_NAV: tuple[dict, ...] = (
         ),
     },
     {
+        "title": "الحوكمة",
+        "items": (
+            {"endpoint": "tenant_console.activity", "label": "سجل النشاط", "icon": "fa-history"},
+            {"endpoint": "accounting_validation.index", "label": "التحقق المحاسبي", "icon": "fa-check-double"},
+        ),
+    },
+    {
         "title": "الفريق",
         "items": (
             {"endpoint": "users_bp.list_users", "label": "المستخدمون", "icon": "fa-users"},
             {"endpoint": "users_bp.create_user", "label": "إضافة مستخدم", "icon": "fa-user-plus"},
-            {"endpoint": "roles_bp.list_roles", "label": "الأدوار", "icon": "fa-user-tag"},
+            {"endpoint": "roles.list_roles", "label": "الأدوار", "icon": "fa-user-tag"},
         ),
     },
 )
@@ -152,10 +173,15 @@ def _tenant_owner_session() -> bool:
 
 
 def _user_can_access_endpoint(user, endpoint: str, perm_map: dict[str, str] | None = None) -> bool:
-    needed = (perm_map or {}).get(endpoint) if perm_map is not None else permission_for_endpoint(endpoint)
-    if not needed:
+    if perm_map is not None:
+        needed = perm_map.get(endpoint)
+        if not needed:
+            return False
+        return user_has_effective_permission(user, needed)
+    alts = permissions_for_endpoint(endpoint)
+    if not alts:
         return False
-    return user_has_effective_permission(user, needed)
+    return any(user_has_effective_permission(user, p) for p in alts)
 
 
 def user_can_access_hub_endpoint(user, endpoint: str) -> bool:
@@ -172,14 +198,17 @@ def build_tenant_console_nav(user) -> tuple:
     for group in TENANT_CONSOLE_NAV:
         if group.get("owner_only") and not owner_session:
             continue
-        items = tuple(
-            it
-            for it in group.get("items", ())
-            if user_can_access_hub_endpoint(user, it.get("endpoint", ""))
-        )
+        items = []
+        for it in group.get("items", ()):
+            ep = _normalize_nav_endpoint(it.get("endpoint", ""))
+            if not ep or not user_can_access_hub_endpoint(user, ep):
+                continue
+            row = dict(it)
+            row["endpoint"] = ep
+            items.append(row)
         if items:
             sec = dict(group)
-            sec["items"] = items
+            sec["items"] = tuple(items)
             out.append(sec)
     return tuple(out)
 

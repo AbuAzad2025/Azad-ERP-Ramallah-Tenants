@@ -1,0 +1,337 @@
+/**
+ * تباين النص والخلفية — WCAG-oriented pairs لكل الواجهة
+ */
+:root {
+  --ux-on-light: #1f2937;
+  --ux-on-light-muted: #4b5563;
+  --ux-on-dark: #f9fafb;
+  --ux-on-dark-muted: #e5e7eb;
+  --ux-on-warning: #1c1917;
+  --ux-on-warning-muted: #44403c;
+  --ux-on-info: #0c4a6e;
+  --ux-on-success: #14532d;
+}
+
+/* ── نصوص ثانوية على خلفيات فاتحة ── */
+body:not(.dark-mode) .text-muted,
+body:not(.dark-mode) .form-text,
+body:not(.dark-mode) small.text-muted {
+  color: var(--ux-on-light-muted) !important;
+}
+
+.bg-light .text-muted,
+.bg-white .text-muted,
+.card-body .text-muted,
+.alert-light .text-muted,
+.modal-body .text-muted {
+  color: var(--ux-on-light-muted) !important;
+}
+
+/* نص muted فوق خلفية فاتحة داخل alert/card */
+.bg-light,
+.bg-light p,
+.bg-light small,
+.bg-light .form-text {
+  color: var(--ux-on-light) !important;
+}
+
+.bg-light .text-muted {
+  color: var(--ux-on-light-muted) !important;
+}
+
+/* ── خلفيات داكنة / ملونة: نص فاتح ── */
+.bg-primary,
+.bg-secondary,
+.bg-success,
+.bg-danger,
+.bg-dark,
+.bg-primary *,
+.bg-secondary *,
+.bg-success *,
+.bg-danger *,
+.bg-dark * {
+  color: var(--ux-on-dark);
+}
+
+.bg-primary .text-muted,
+.bg-success .text-muted,
+.bg-danger .text-muted,
+.bg-dark .text-muted,
+.bg-secondary .text-muted {
+  color: var(--ux-on-dark-muted) !important;
+  opacity: 1 !important;
+}
+
+/* ── تحذير / أصفر: نص داكن دائماً ── */
+.bg-warning,
+.bg-warning.text-white,
+.card.bg-warning,
+.card-header.bg-warning,
+.small-box.bg-warning,
+.alert-warning,
+.btn-warning:not(.btn-outline-warning) {
+  color: var(--ux-on-warning) !important;
+}
+
+.bg-warning .text-white,
+.bg-warning .text-muted,
+.bg-warning h1,
+.bg-warning h2,
+.bg-warning h3,
+.bg-warning h4,
+.bg-warning h5,
+.bg-warning h6,
+.bg-warning p,
+.bg-warning span,
+.bg-warning small,
+.bg-warning a:not(.btn),
+.card-header.bg-warning.text-white,
+.card-header.bg-warning.text-white * {
+  color: var(--ux-on-warning) !important;
+}
+
+.small-box.bg-warning > .inner h3,
+.small-box.bg-warning > .inner p {
+  color: var(--ux-on-warning) !important;
+  text-shadow: none !important;
+}
+
+.small-box.bg-warning .icon {
+  color: rgba(28, 25, 23, 0.28) !important;
+}
+
+.btn-warning,
+.btn-warning:hover,
+.btn-warning:focus,
+.btn-warning:active {
+  color: var(--ux-on-warning) !important;
+}
+
+.badge.bg-warning {
+  color: var(--ux-on-warning) !important;
+  background-color: #fbbf24 !important;
+}
+
+/* ── معلومات (فاتح نسبياً): نص داكن ── */
+.bg-info:not(.btn),
+.alert-info,
+.small-box.bg-info {
+  color: var(--ux-on-info) !important;
+}
+
+.bg-info.text-white,
+.bg-info.text-white *,
+.small-box.bg-info > .inner h3,
+.small-box.bg-info > .inner p {
+  color: var(--ux-on-info) !important;
+  text-shadow: none !important;
+}
+
+.small-box.bg-info .icon {
+  color: rgba(12, 74, 110, 0.25) !important;
+}
+
+.badge.bg-info {
+  color: #fff !important;
+  background-color: #0891b2 !important;
+}
+
+/* ── تنبيهات Bootstrap ── */
+.alert-success {
+  color: var(--ux-on-success) !important;
+  background-color: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
+}
+
+.alert-warning {
+  color: #854d0e !important;
+  background-color: #fef3c7 !important;
+  border-color: #fcd34d !important;
+}
+
+.alert-danger {
+  color: #7f1d1d !important;
+  background-color: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+}
+
+.alert-info {
+  color: var(--ux-on-info) !important;
+  background-color: #e0f2fe !important;
+  border-color: #7dd3fc !important;
+}
+
+.alert-primary {
+  color: #1e3a8a !important;
+  background-color: #dbeafe !important;
+  border-color: #93c5fd !important;
+}
+
+/* ── ترويسات بطاقات ملونة ── */
+.card-header.bg-primary,
+.card-header.bg-success,
+.card-header.bg-danger,
+.card-header.bg-dark,
+.card-header.bg-secondary {
+  color: var(--ux-on-dark) !important;
+}
+
+.card-header.bg-warning {
+  color: var(--ux-on-warning) !important;
+}
+
+.card-header.bg-info {
+  color: var(--ux-on-info) !important;
+}
+
+/* ── تدرجات إحصائية ── */
+.bg-gradient-stats-gold,
+.bg-gradient-stats-gold * {
+  color: var(--ux-on-warning) !important;
+}
+
+.bg-gradient-stats-cyan,
+.bg-gradient-stats-blue {
+  color: var(--ux-on-dark) !important;
+}
+
+/* ── جداول ── */
+.table thead th,
+table.dataTable thead th {
+  color: #ffffff !important;
+}
+
+.table tbody td {
+  color: var(--ux-on-light) !important;
+}
+
+.table-hover tbody tr:hover td {
+  color: var(--ux-on-light) !important;
+}
+
+.table-warning td,
+.table-warning th {
+  color: var(--ux-on-warning) !important;
+}
+
+.table-active td {
+  color: var(--ux-on-light) !important;
+}
+
+/* ── Select2 ── */
+.select2-container--default .select2-results__option {
+  color: var(--ux-on-light) !important;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+  background-color: #4f46e5 !important;
+  color: #fff !important;
+}
+
+body.dark-mode .select2-container--default .select2-selection--single .select2-selection__rendered,
+body.dark-mode .select2-dropdown,
+body.dark-mode .select2-container--default .select2-results__option {
+  color: var(--ux-on-dark) !important;
+}
+
+/* ── الوضع الليلي ── */
+body.dark-mode {
+  color: var(--ux-on-dark) !important;
+}
+
+body.dark-mode .text-muted,
+body.dark-mode .form-text {
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode .card,
+body.dark-mode .card-body,
+body.dark-mode .table tbody td {
+  color: #f3f4f6 !important;
+}
+
+body.dark-mode .bg-light {
+  background-color: #374151 !important;
+  color: var(--ux-on-dark) !important;
+}
+
+body.dark-mode .bg-light .text-muted {
+  color: #d1d5db !important;
+}
+
+body.dark-mode .alert-warning {
+  background-color: #422006 !important;
+  border-color: #ca8a04 !important;
+  color: #fef08a !important;
+}
+
+body.dark-mode .alert-info {
+  background-color: #0c4a6e !important;
+  color: #e0f2fe !important;
+}
+
+body.dark-mode .alert-success {
+  background-color: #14532d !important;
+  color: #bbf7d0 !important;
+}
+
+body.dark-mode .alert-danger {
+  background-color: #7f1d1d !important;
+  color: #fecaca !important;
+}
+
+/* ── أزرار outline على خلفية فاتحة ── */
+body:not(.dark-mode) .btn-outline-secondary {
+  color: #374151 !important;
+  border-color: #9ca3af !important;
+}
+
+body:not(.dark-mode) .btn-outline-warning {
+  color: #92400e !important;
+  border-color: #d97706 !important;
+}
+
+body:not(.dark-mode) .btn-outline-info {
+  color: #0e7490 !important;
+  border-color: #06b6d4 !important;
+}
+
+/* ── breadcrumb / عناوين ── */
+.breadcrumb-item.active {
+  color: var(--ux-on-light-muted) !important;
+}
+
+body:not(.dark-mode) .content-header h1,
+body:not(.dark-mode) .card-title {
+  color: #111827 !important;
+}
+
+body.dark-mode .content-header h1,
+body.dark-mode .card-title {
+  color: #f9fafb !important;
+}
+
+/* ── روابط داخل بطاقات ملونة ── */
+.bg-warning a:not(.btn) {
+  color: #78350f !important;
+  text-decoration: underline;
+}
+
+.bg-primary a:not(.btn),
+.bg-success a:not(.btn),
+.bg-danger a:not(.btn) {
+  color: #e0e7ff !important;
+}
+
+/* تلميحات داخل بطاقات */
+.ux-hint-box {
+  color: var(--ux-on-light) !important;
+  background-color: #f3f4f6 !important;
+  border: 1px solid #e5e7eb;
+}
+
+body.dark-mode .ux-hint-box {
+  color: var(--ux-on-dark) !important;
+  background-color: #374151 !important;
+  border-color: #4b5563;
+}

@@ -11,7 +11,7 @@
 {% block hint %}الوقت المتوقع للعودة: عادة خلال 5-10 دقائق{% endblock %}
 {% block buttons %}
   <button class="btn btn-primary" type="button" onclick="location.reload()">إعادة المحاولة</button>
-  <a class="btn btn-ghost" href="/" rel="home">الصفحة الرئيسية</a>
+  <a class="btn btn-ghost" href="{{ gm_path('/') }}" rel="home">الصفحة الرئيسية</a>
   <a class="btn btn-ghost" href="https://wa.me/970562150193?text=مرحباً، أحتاج للمساعدة" target="_blank">تواصل معنا</a>
 {% endblock %}
 {% block footer %}

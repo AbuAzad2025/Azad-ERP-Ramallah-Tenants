@@ -89,8 +89,8 @@
 
   <div class="box">
     <table class="kv">
-      <tr><th>اسم العميل</th><td>{{ sale.customer.name  if sale.customer else '—' }}</td></tr>
-      <tr><th>هاتف العميل</th><td>{{ sale.customer.phone if sale.customer else '—' }}</td></tr>
+      <tr><th>اسم الزبون</th><td>{{ sale.customer.name  if sale.customer else '—' }}</td></tr>
+      <tr><th>هاتف الزبون</th><td>{{ sale.customer.phone if sale.customer else '—' }}</td></tr>
       <tr><th>البائع</th><td>{% if sale.seller_employee %}{{ sale.seller_employee.name }}{% elif sale.seller %}{{ sale.seller.username }}{% else %}—{% endif %}</td></tr>
     </table>
   </div>
@@ -167,7 +167,7 @@
 
   <div class="sign-row">
     <div class="sign">توقيع البائع<br><br>{{ sale.seller_employee.name if sale.seller_employee else (sale.seller.username if sale.seller else '________') }}</div>
-    <div class="sign">توقيع العميل<br><br>__________</div>
+    <div class="sign">توقيع الزبون<br><br>__________</div>
   </div>
 
   <div class="text-center mt-3 no-print">

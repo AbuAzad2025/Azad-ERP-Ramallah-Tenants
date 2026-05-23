@@ -44,7 +44,7 @@ def _search_terms(query: str) -> List[str]:
     terms = []
     for token in re.split(r"[\s،,؛;:]+", str(query or "")):
         token = token.strip()
-        if len(token) >= 3 and token not in {"كم", "عدد", "رصيد", "عميل", "مورد", "منتج", "قطعة", "مبيعات", "دفع", "دفعة", "مصروف", "صيانة", "customer", "supplier", "product", "sales", "payment", "expense", "service"}:
+        if len(token) >= 3 and token not in {"كم", "عدد", "رصيد", "زبون", "مورد", "منتج", "قطعة", "مبيعات", "دفع", "دفعة", "مصروف", "صيانة", "customer", "supplier", "product", "sales", "payment", "expense", "service"}:
             terms.append(token)
     return terms[:6]
 
@@ -73,7 +73,7 @@ def search_database_for_query(query: str, permission_context: Optional[Dict[str,
         results["intent"] = intent
         entities = intent.get("entities", [])
 
-        if ("customer" in entities or any(word in query_lower for word in ["عميل", "زبون", "customer"])) and _allow("customers", permission_context):
+        if ("customer" in entities or any(word in query_lower for word in ["زبون", "زبون", "customer"])) and _allow("customers", permission_context):
             results.update(search_customers(query_lower))
         if ("supplier" in entities or any(word in query_lower for word in ["مورد", "vendor", "supplier"])) and _allow("suppliers", permission_context):
             results.update(search_suppliers(query_lower))
@@ -110,7 +110,7 @@ def analyze_query_intent(query_lower: str) -> Dict[str, Any]:
         intent.update(type="analysis", action="report")
 
     entity_keywords = {
-        "customer": ["عميل", "زبون", "customer", "client"],
+        "customer": ["زبون", "زبون", "customer", "client"],
         "supplier": ["مورد", "vendor", "supplier"],
         "product": ["منتج", "قطعة", "product", "part", "item"],
         "service": ["صيانة", "service", "repair", "خدمة"],

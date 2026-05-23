@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block page_title %}إدارة العملات{% endblock %}
 
@@ -36,6 +36,7 @@
 </style>
 {% endblock %}
 
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
 <div class="row">
     <div class="col-12">
@@ -46,6 +47,7 @@
                     العملات المتاحة
                 </h3>
                 <div class="card-tools">
+                    {% if has_perm('manage_currencies') %}
                     <a href="{{ url_for('currencies.new_currency') }}" class="btn btn-success btn-sm">
                         <i class="fas fa-plus ml-1"></i>
                         إضافة عملة جديدة
@@ -62,6 +64,7 @@
                         <i class="fas fa-cog ml-1"></i>
                         إعدادات الأسعار
                     </a>
+                    {% endif %}
                 </div>
             </div>
             <div class="card-body">

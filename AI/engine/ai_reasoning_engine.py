@@ -48,13 +48,13 @@ class ReasoningEngine:
         entity_name = self._extract_entity_name(query)
         steps.append(f"استخرجت الاسم: {entity_name if entity_name else 'غير محدد'}")
         if not entity_name:
-            return {"answer": "لم أفهم اسم العميل المطلوب. حدد اسم العميل حتى أقرأ رصيده من النظام.", "confidence": 0.5, "reasoning_steps": steps}
+            return {"answer": "لم أفهم اسم الزبون المطلوب. حدد اسم الزبون حتى أقرأ رصيده من النظام.", "confidence": 0.5, "reasoning_steps": steps}
         customer_data = self._find_in_database("Customer", "name", entity_name)
         if not customer_data:
-            steps.append("لم أجد العميل في قاعدة البيانات")
+            steps.append("لم أجد الزبون في قاعدة البيانات")
             route = self._route_for_keyword("customers") or "/customers"
-            return {"answer": f"لم أجد عميلاً باسم '{entity_name}' في قاعدة البيانات.\n\nتحقق من الإملاء أو افتح قائمة العملاء: {route}", "confidence": 0.7, "reasoning_steps": steps}
-        steps.append(f"وجدت العميل في قاعدة البيانات: ID={customer_data['id']}")
+            return {"answer": f"لم أجد زبوناً باسم '{entity_name}' في قاعدة البيانات.\n\nتحقق من الإملاء أو افتح قائمة الزبائن: {route}", "confidence": 0.7, "reasoning_steps": steps}
+        steps.append(f"وجدت الزبون في قاعدة البيانات: ID={customer_data['id']}")
         sales = self._get_customer_sales(customer_data["id"])
         payments = self._get_customer_payments(customer_data["id"])
         steps.append(f"جلبت {len(sales)} عملية بيع/فاتورة")
@@ -67,10 +67,10 @@ class ReasoningEngine:
         balance = Decimal(str(stored_balance)) if stored_balance is not None else calculated_balance
         steps.append(f"حسبت من الحركات المقروءة: {total_sales} - قبض {payments_in} + صرف/استرداد {payments_out} = {calculated_balance}")
         if stored_balance is not None:
-            steps.append(f"استخدمت الرصيد المخزن على العميل: {balance}")
+            steps.append(f"استخدمت الرصيد المخزن على الزبون: {balance}")
         answer_parts = [
             f"🔍 بحثت عن: {entity_name}",
-            f"✅ وجدته: عميل #{customer_data['id']}",
+            f"✅ وجدته: زبون #{customer_data['id']}",
             "",
             "📊 تحليل الرصيد من البيانات المتاحة:",
             f"  • إجمالي المبيعات/الفواتير المقروءة: {float(total_sales):.2f}",
@@ -78,7 +78,7 @@ class ReasoningEngine:
             f"  • الدفعات الصادرة/الاستردادات المقروءة: {float(payments_out):.2f}",
             f"  • الرصيد المسجل/المعتمد: {float(balance):.2f}",
             "",
-            "لا أفسر إشارة الرصيد تلقائيًا كـ عليه/له إلا حسب سياسة شاشة العميل أو دالة تحديث الرصيد في النظام.",
+            "لا أفسر إشارة الرصيد تلقائيًا كـ عليه/له إلا حسب سياسة شاشة الزبون أو دالة تحديث الرصيد في النظام.",
         ]
         return {"answer": "\n".join(answer_parts), "confidence": 0.88, "reasoning_steps": steps, "data_used": {"customer": customer_data, "sales_count": len(sales), "payments_count": len(payments)}}
 
@@ -90,12 +90,12 @@ class ReasoningEngine:
             answer = """🔍 قيد فاتورة البيع - شرح عام:
 
 القيد المعتاد:
-مدين: ذمم العملاء بإجمالي الفاتورة
+مدين: ذمم الزبائن بإجمالي الفاتورة
 دائن: المبيعات بالصافي
 دائن: ضريبة القيمة المضافة إذا كانت مفعلة
 
 المنطق:
-1. العميل صار عليه ذمة حسب سياسة النظام.
+1. الزبون صار عليه ذمة حسب سياسة النظام.
 2. الإيراد زاد.
 3. الضريبة التزام مستحق إن كانت مطبقة.
 
@@ -127,16 +127,16 @@ VAT = الصافي بعد الخصم × نسبة الضريبة
     def _reason_tutorial(self, query: str, data: Dict, steps: List[str]) -> Dict[str, Any]:
         steps.append("استنتجت: سؤال تعليمي")
         q_lower = str(query or "").lower()
-        if "عميل" in q_lower and any(w in q_lower for w in ["أضيف", "اضيف", "add", "إنشاء", "انشاء"]):
-            steps.append("الموضوع المطلوب: كيفية إضافة عميل جديد")
-            route = self._route_for_keyword("customers create") or self._route_for_keyword("customers") or "صفحة العملاء غير مفهرسة حالياً"
-            answer = f"""📝 كيف تضيف عميل:
+        if "زبون" in q_lower and any(w in q_lower for w in ["أضيف", "اضيف", "add", "إنشاء", "انشاء"]):
+            steps.append("الموضوع المطلوب: كيفية إضافة زبون جديد")
+            route = self._route_for_keyword("customers create") or self._route_for_keyword("customers") or "صفحة الزبائن غير مفهرسة حالياً"
+            answer = f"""📝 كيف تضيف زبون:
 
 المسار حسب خريطة النظام: {route}
 
 الخطوات:
-1. افتح صفحة العملاء.
-2. اضغط إضافة عميل جديد إن كان الزر متاحًا حسب صلاحيتك.
+1. افتح صفحة الزبائن.
+2. اضغط إضافة زبون جديد إن كان الزر متاحًا حسب صلاحيتك.
 3. أدخل الاسم ورقم الهاتف.
 4. أدخل البيانات الاختيارية مثل العنوان والملاحظات.
 5. راجع الرصيد الافتتاحي قبل الحفظ.
@@ -150,7 +150,7 @@ VAT = الصافي بعد الخصم × نسبة الضريبة
         return {"answer": "", "confidence": 0, "reasoning_steps": steps}
 
     def _extract_entity_name(self, query: str) -> Optional[str]:
-        patterns = [r"رصيد\s+(?:العميل\s+)?([^\s،.؟?]+)", r"balance\s+of\s+(\w+)", r"customer\s+(\w+)", r"العميل\s+([^\s،.؟?]+)"]
+        patterns = [r"رصيد\s+(?:الزبون\s+)?([^\s،.؟?]+)", r"balance\s+of\s+(\w+)", r"customer\s+(\w+)", r"الزبون\s+([^\s،.؟?]+)"]
         for pattern in patterns:
             match = re.search(pattern, str(query or ""), re.IGNORECASE)
             if match:

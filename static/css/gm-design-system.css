@@ -1,0 +1,468 @@
+/**
+ * نظام تصميم ERP عربي — مكوّنات (الألوان من gm-theme-tokens.css)
+ */
+
+html {
+  background: var(--gm-content-bg);
+}
+
+/* ─── أساس الصفحة ─── */
+body.gm-pro-ui {
+  font-family: var(--gm-font);
+  background: var(--gm-content-bg) !important;
+  color: var(--gm-text) !important;
+}
+
+body.gm-pro-ui.electric-theme {
+  background: var(--gm-content-bg) !important;
+  background-image: none !important;
+}
+
+body.gm-pro-ui .content-wrapper {
+  background: var(--gm-content-bg) !important;
+  color: var(--gm-text);
+}
+
+body.gm-pro-ui .content-header {
+  padding-top: 0.75rem;
+  padding-bottom: 0.5rem;
+}
+
+body.gm-pro-ui .content-header h1 {
+  color: var(--gm-text) !important;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+body.gm-pro-ui .breadcrumb {
+  background: transparent;
+  padding: 0;
+}
+
+body.gm-pro-ui .breadcrumb-item,
+body.gm-pro-ui .breadcrumb-item a {
+  color: var(--gm-text-muted);
+}
+
+body.gm-pro-ui .breadcrumb-item.active {
+  color: var(--gm-text);
+}
+
+/* ─── الشريط العلوي ─── */
+body.gm-pro-ui .main-header.navbar {
+  background: var(--gm-header-bg) !important;
+  border-bottom: 1px solid var(--gm-border);
+  min-height: var(--gm-header-height);
+  box-shadow: var(--gm-shadow);
+}
+
+body.gm-pro-ui .main-header .nav-link,
+body.gm-pro-ui .main-header .navbar-nav .nav-link {
+  color: #f8fafc !important;
+}
+
+body.gm-pro-ui .main-header .badge {
+  font-weight: 600;
+  font-size: 0.72rem;
+  border-radius: 999px;
+  padding: 0.35em 0.65em;
+}
+
+body.gm-pro-ui .navbar-info-center .badge-light {
+  background: rgba(255, 255, 255, 0.15);
+  color: #f1f5f9;
+}
+
+/* ─── الشريط الجانبي ─── */
+body.gm-pro-ui .main-sidebar {
+  background: var(--gm-sidebar-bg) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12) !important;
+  width: var(--gm-sidebar-width) !important;
+}
+
+body.gm-pro-ui .garage-brand-area {
+  position: relative;
+  text-align: center;
+  padding: 1rem 0.75rem 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+body.gm-pro-ui .garage-brand-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  text-decoration: none;
+}
+
+body.gm-pro-ui .garage-brand-image {
+  height: 48px !important;
+  max-width: 140px !important;
+  width: auto;
+  object-fit: contain;
+  margin: 0 !important;
+}
+
+body.gm-pro-ui .garage-brand-text {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.gm-pro-ui .gm-sidebar-close {
+  position: absolute;
+  left: 0.5rem;
+  top: 0.65rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.gm-pro-ui .sidebar .user-panel {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.75rem 1rem !important;
+}
+
+body.gm-pro-ui .sidebar .user-panel .d-block {
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+/* عناصر القائمة — بدون تكديس */
+body.gm-pro-ui .nav-sidebar {
+  padding: 0.5rem 0.65rem 1.5rem;
+}
+
+body.gm-pro-ui .nav-sidebar > .nav-item > .nav-link {
+  color: var(--gm-sidebar-text) !important;
+  border-radius: 10px;
+  margin-bottom: 2px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.92rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+body.gm-pro-ui .nav-sidebar > .nav-item > .nav-link:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+  transform: none !important;
+}
+
+body.gm-pro-ui .nav-sidebar > .nav-item > .nav-link.active {
+  background: var(--gm-sidebar-active-bg) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+body.gm-pro-ui .nav-sidebar .nav-icon {
+  margin: 0 !important;
+  width: 1.25rem;
+  text-align: center;
+  font-size: 1rem;
+  color: inherit;
+  opacity: 0.9;
+}
+
+body.gm-pro-ui .nav-sidebar .nav-link p {
+  margin: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.gm-pro-ui .nav-sidebar .nav-link .right {
+  margin-right: auto;
+  margin-left: 0;
+  transition: transform 0.2s ease;
+}
+
+body.gm-pro-ui .nav-sidebar .menu-open > .nav-link .right {
+  transform: rotate(-90deg);
+}
+
+/* القوائم الفرعية — RTL منظم */
+[dir="rtl"] body.gm-pro-ui .nav-sidebar .nav-treeview {
+  margin: 0.15rem 0 0.35rem 0;
+  padding: 0.25rem 0.5rem 0.25rem 0;
+  border-right: 2px solid rgba(255, 255, 255, 0.12);
+  border-left: none;
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 0 8px 8px 0;
+}
+
+[dir="rtl"] body.gm-pro-ui .nav-sidebar .nav-treeview > .nav-item > .nav-link {
+  padding: 0.4rem 0.65rem 0.4rem 1.75rem !important;
+  font-size: 0.86rem;
+  color: var(--gm-sidebar-text) !important;
+  border-radius: 8px;
+}
+
+[dir="rtl"] body.gm-pro-ui .nav-sidebar .nav-treeview .nav-icon {
+  font-size: 0.55rem;
+  opacity: 0.7;
+}
+
+body.gm-pro-ui .nav-sidebar .nav-treeview .nav-link.active {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+}
+
+/* ─── بطاقات ومؤشرات KPI ─── */
+body.gm-pro-ui .card,
+body.gm-pro-ui .small-box,
+body.gm-pro-ui .info-box {
+  background: var(--gm-surface) !important;
+  border: 1px solid var(--gm-border) !important;
+  border-radius: var(--gm-radius-lg) !important;
+  box-shadow: var(--gm-shadow) !important;
+  color: var(--gm-text);
+}
+
+body.gm-pro-ui .card:hover {
+  transform: none !important;
+  box-shadow: var(--gm-shadow-hover) !important;
+}
+
+body.gm-pro-ui .card-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--gm-border) !important;
+  color: var(--gm-text);
+  font-weight: 700;
+  padding: 1rem 1.15rem;
+}
+
+body.gm-pro-ui .card-body {
+  padding: 1rem 1.15rem;
+}
+
+body.gm-pro-ui .small-box {
+  border-radius: var(--gm-radius-lg) !important;
+  overflow: hidden;
+}
+
+body.gm-pro-ui .small-box .inner h3,
+body.gm-pro-ui .small-box .inner p {
+  color: var(--gm-text);
+}
+
+/* ─── أزرار ─── */
+body.gm-pro-ui .btn {
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  padding: 0.45rem 1rem;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+body.gm-pro-ui .btn-primary {
+  background: var(--gm-primary) !important;
+  border-color: var(--gm-primary) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+body.gm-pro-ui .btn-primary:hover {
+  background: var(--gm-primary-hover) !important;
+  border-color: var(--gm-primary-hover) !important;
+  transform: none !important;
+}
+
+body.gm-pro-ui .btn-success {
+  background: var(--gm-success) !important;
+  border-color: var(--gm-success) !important;
+}
+
+body.gm-pro-ui .btn-danger {
+  background: var(--gm-danger) !important;
+  border-color: var(--gm-danger) !important;
+}
+
+body.gm-pro-ui .btn-outline-primary {
+  color: var(--gm-primary) !important;
+  border-color: var(--gm-primary) !important;
+}
+
+body.gm-pro-ui .btn-outline-primary:hover {
+  background: var(--gm-primary-soft) !important;
+  color: var(--gm-primary-hover) !important;
+}
+
+body.gm-pro-ui .btn-secondary,
+body.gm-pro-ui .btn-outline-secondary {
+  color: var(--gm-text-muted);
+  border-color: var(--gm-border);
+}
+
+/* شارات الحالة */
+body.gm-pro-ui .badge-success,
+body.gm-pro-ui .bg-success {
+  background-color: var(--gm-success) !important;
+}
+
+body.gm-pro-ui .badge-warning,
+body.gm-pro-ui .bg-warning {
+  background-color: var(--gm-warning) !important;
+  color: #1f2937 !important;
+}
+
+body.gm-pro-ui .badge-danger,
+body.gm-pro-ui .bg-danger {
+  background-color: var(--gm-danger) !important;
+}
+
+body.gm-pro-ui .badge-info,
+body.gm-pro-ui .bg-info {
+  background-color: var(--gm-info) !important;
+}
+
+body.gm-pro-ui .badge-primary {
+  background-color: var(--gm-primary) !important;
+}
+
+/* ─── جداول ─── */
+body.gm-pro-ui .table {
+  color: var(--gm-text);
+  background: var(--gm-surface);
+}
+
+body.gm-pro-ui .table thead th {
+  background: var(--gm-content-bg);
+  color: var(--gm-text-muted);
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-transform: none;
+  border-bottom: 2px solid var(--gm-border);
+  padding: 0.75rem 1rem;
+  white-space: nowrap;
+}
+
+body.gm-pro-ui .table td {
+  border-color: var(--gm-border);
+  padding: 0.7rem 1rem;
+  vertical-align: middle;
+}
+
+body.gm-pro-ui .table-hover tbody tr:hover {
+  background: var(--gm-primary-soft) !important;
+}
+
+body.gm-pro-ui .table-striped tbody tr:nth-of-type(odd) {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+body.dark-mode.gm-pro-ui .table-striped tbody tr:nth-of-type(odd) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* ─── نماذج ─── */
+body.gm-pro-ui .form-control,
+body.gm-pro-ui .form-select,
+body.gm-pro-ui .custom-select {
+  background: var(--gm-surface) !important;
+  border: 1px solid var(--gm-border) !important;
+  color: var(--gm-text) !important;
+  border-radius: 10px !important;
+  min-height: var(--gm-field-height, 44px) !important;
+  padding: 0.6rem 0.95rem !important;
+  line-height: 1.45 !important;
+}
+
+body.gm-pro-ui .form-control:focus,
+body.gm-pro-ui .form-select:focus {
+  border-color: var(--gm-primary) !important;
+  box-shadow: 0 0 0 3px var(--gm-primary-soft) !important;
+}
+
+body.gm-pro-ui .form-label {
+  color: var(--gm-text);
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+/* ─── الفوتر ─── */
+body.gm-pro-ui .main-footer.gm-main-footer {
+  background: var(--gm-footer-bg) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--gm-footer-text) !important;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.8rem;
+}
+
+body.gm-pro-ui .gm-main-footer .gm-footer-owner-name {
+  color: #fff !important;
+  font-size: 0.85rem;
+}
+
+body.gm-pro-ui .gm-main-footer .gm-footer-owner-tagline,
+body.gm-pro-ui .gm-main-footer .text-muted {
+  color: var(--gm-sidebar-text) !important;
+}
+
+body.gm-pro-ui .gm-main-footer .gm-footer-action {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+body.gm-pro-ui .gm-main-footer .gm-footer-action:hover {
+  background: var(--gm-primary) !important;
+  border-color: var(--gm-primary) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ─── تنبيهات ─── */
+body.gm-pro-ui .alert {
+  border-radius: var(--gm-radius);
+  border-width: 1px;
+}
+
+/* ─── شريط تنقل سفلي (موبايل) ─── */
+body.gm-pro-ui .gm-mobile-bottom-nav {
+  background: var(--gm-surface);
+  border-top: 1px solid var(--gm-border);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+}
+
+body.gm-pro-ui .gm-mobile-bottom-nav .gm-tab {
+  color: var(--gm-text-muted);
+  font-size: 0.7rem;
+}
+
+body.gm-pro-ui .gm-mobile-bottom-nav .gm-tab.active {
+  color: var(--gm-primary);
+}
+
+/* تباين مع ux-contrast */
+body.gm-pro-ui:not(.dark-mode) .text-muted {
+  color: var(--gm-text-muted) !important;
+}
+
+body.gm-pro-ui .text-primary {
+  color: var(--gm-primary) !important;
+}
+
+/* إخفاء زخرفة electric على الكروت */
+body.gm-pro-ui .glass-panel {
+  background: var(--gm-surface);
+  border: 1px solid var(--gm-border);
+}

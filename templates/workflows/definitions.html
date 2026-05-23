@@ -16,9 +16,11 @@
                 <a href="{{ url_for('workflows.index') }}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left"></i> العودة
                 </a>
+                {% if has_perm('manage_workflows') %}
                 <a href="{{ url_for('workflows.add_definition') }}" class="btn btn-primary">
                     <i class="fas fa-plus"></i> تعريف جديد
                 </a>
+                {% endif %}
             </div>
         </div>
 

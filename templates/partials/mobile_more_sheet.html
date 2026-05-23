@@ -1,0 +1,134 @@
+<div class="modal fade gm-mobile-sheet-modal" id="gmMobileMoreSheet" tabindex="-1" role="dialog" aria-labelledby="gmMobileMoreLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content gm-more-sheet-content">
+      <div class="gm-more-sheet-handle" aria-hidden="true"></div>
+      <div class="gm-more-sheet-header" id="gmMobileMoreLabel">كل الأقسام</div>
+      <div class="gm-more-sheet-body">
+
+        <div class="gm-more-section">
+          <div class="gm-more-section-title">التشغيل</div>
+          <div class="gm-more-grid">
+            {% if (has_perm('view_customers') or has_perm('manage_customers')) and ('customers_bp.list_customers' in current_app.view_functions) %}
+            <a href="{{ url_for('customers_bp.list_customers') }}" class="gm-more-tile">
+              <span class="gm-more-tile-icon bg-success"><i class="fas fa-users"></i></span>
+              <span class="gm-more-tile-label">الزبائن</span>
+            </a>
+            {% endif %}
+            {% if (has_perm('view_sales') or has_perm('manage_sales')) and ('sales_bp.list_sales' in current_app.view_functions) %}
+            <a href="{{ url_for('sales_bp.list_sales') }}" class="gm-more-tile">
+              <span class="gm-more-tile-icon bg-info"><i class="fas fa-shopping-cart"></i></span>
+              <span class="gm-more-tile-label">المبيعات</span>
+            </a>
+            {% endif %}
+            {% if (has_perm('view_service') or has_perm('manage_service')) and ('service.list_requests' in current_app.view_functions) %}
+            <a href="{{ url_for('service.list_requests') }}" class="gm-more-tile">
+              <span class="gm-more-tile-icon bg-warning"><i class="fas fa-wrench"></i></span>
+              <span class="gm-more-tile-label">الصيانة</span>
+            </a>
+            {% endif %}
+            {% if (has_perm('view_warehouses') or has_perm('manage_warehouses')) and ('warehouse_bp.list' in current_app.view_functions) %}
+            <a href="{{ url_for('warehouse_bp.list') }}" class="gm-more-tile">
+              <span class="gm-more-tile-icon bg-primary"><i class="fas fa-warehouse"></i></span>
+              <span class="gm-more-tile-label">المستودعات</span>
+            </a>
+            {% endif %}
+            {% if has_perm('manage_shipments') and ('shipments_bp.list_shipments' in current_app.view_functions) %}
+            <a href="{{ url_for('shipments_bp.list_shipments') }}" class="gm-more-tile">
+              <span class="gm-more-tile-icon bg-danger"><i class="fas fa-shipping-fast"></i></span>
+              <span class="gm-more-tile-label">الشحنات</span>
+            </a>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if has_perm('view_payments') or has_perm('manage_payments') or has_perm('manage_expenses') or has_perm('manage_ledger') or has_perm('view_reports') %}
+        <div class="gm-more-section">
+          <div class="gm-more-section-title">المحاسبة</div>
+          <div class="gm-more-grid">
+            {% if (has_perm('view_payments') or has_perm('manage_payments')) and ('payments.index' in current_app.view_functions) %}
+            <a href="{{ url_for('payments.index') }}" class="gm-more-tile">
+              <span class="gm-more-tile-icon bg-success"><i class="fas fa-money-bill-wave"></i></span>
+              <span class="gm-more-tile-label">الدفعات</span>
+            </a>
+            {% endif %}
+            {% if (has_perm('view_payments') or has_perm('manage_payments')) and ('checks.index' in current_app.view_functions) %}
+            <a href="{{ url_for('checks.index') }}" class="gm-more-tile">
+              <span class="gm-more-tile-icon bg-info"><i class="fas fa-money-check"></i></span>
+              <span class="gm-more-tile-label">الشيكات</span>
+            </a>
+            {% endif %}
+            {% if has_perm('manage_expenses') and ('expenses_bp.list_expenses' in current_app.view_functions) %}
+            <a href="{{ url_for('expenses_bp.list_expenses') }}" class="gm-more-tile">
+              <span class="gm-more-tile-icon bg-warning"><i class="fas fa-receipt"></i></span>
+              <span class="gm-more-tile-label">المصروفات</span>
+            </a>
+            {% endif %}
+            {% if has_perm('manage_ledger') and ('ledger.index' in current_app.view_functions) %}
+            <a href="{{ url_for('ledger.index') }}" class="gm-more-tile">
+              <span class="gm-more-tile-icon bg-dark"><i class="fas fa-book"></i></span>
+              <span class="gm-more-tile-label">الدفتر</span>
+            </a>
+            {% endif %}
+            {% if has_perm('view_reports') and ('accounting_hub_bp.index' in current_app.view_functions) %}
+            <a href="{{ url_for('accounting_hub_bp.index') }}" class="gm-more-tile">
+              <span class="gm-more-tile-icon bg-secondary"><i class="fas fa-calculator"></i></span>
+              <span class="gm-more-tile-label">مركز المحاسبة</span>
+            </a>
+            {% endif %}
+            {% if has_perm('view_reports') and ('reports_bp.dynamic_report' in current_app.view_functions) %}
+            <a href="{{ url_for('reports_bp.dynamic_report') }}" class="gm-more-tile">
+              <span class="gm-more-tile-icon bg-primary"><i class="fas fa-chart-line"></i></span>
+              <span class="gm-more-tile-label">التقارير</span>
+            </a>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="gm-more-section">
+          <div class="gm-more-section-title">النظام</div>
+          <div class="gm-more-grid">
+            {% if 'main.dashboard' in current_app.view_functions %}
+            <a href="{{ url_for('main.dashboard') }}" class="gm-more-tile">
+              <span class="gm-more-tile-icon bg-primary"><i class="fas fa-home"></i></span>
+              <span class="gm-more-tile-label">الرئيسية</span>
+            </a>
+            {% endif %}
+            {% if has_perm('manage_users') and ('users_bp.list_users' in current_app.view_functions) %}
+            <a href="{{ url_for('users_bp.list_users') }}" class="gm-more-tile">
+              <span class="gm-more-tile-icon bg-info"><i class="fas fa-user-cog"></i></span>
+              <span class="gm-more-tile-label">المستخدمين</span>
+            </a>
+            {% endif %}
+            {% if (has_perm('view_shop') or has_perm('manage_shop')) and ('shop.catalog' in current_app.view_functions) %}
+            <a href="{{ url_for('shop.catalog') }}" class="gm-more-tile" target="_blank">
+              <span class="gm-more-tile-icon bg-success"><i class="fas fa-store"></i></span>
+              <span class="gm-more-tile-label">المتجر</span>
+            </a>
+            {% endif %}
+            <a href="#" class="gm-more-tile" data-widget="pushmenu" onclick="return false;">
+              <span class="gm-more-tile-icon bg-secondary"><i class="fas fa-bars"></i></span>
+              <span class="gm-more-tile-label">القائمة الكاملة</span>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var sheet = document.getElementById('gmMobileMoreSheet');
+  if (!sheet) return;
+  sheet.querySelectorAll('[data-widget="pushmenu"]').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (window.jQuery) window.jQuery(sheet).modal('hide');
+      var push = document.querySelector('[data-widget="pushmenu"]');
+      if (push) push.click();
+    });
+  });
+});
+</script>

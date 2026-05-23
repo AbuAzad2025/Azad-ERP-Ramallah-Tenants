@@ -37,6 +37,7 @@
   }
 
   function openCreateModal() {
+    if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_notes')) return;
     loadModalContent('ملاحظة جديدة', window.NOTES_ENDPOINTS.createForm, 'create');
   }
 
@@ -82,11 +83,15 @@
 
   function wireCardActions(scope) {
     scope.querySelectorAll('.btn-edit-note').forEach(btn => {
-      btn.addEventListener('click', () => openEditModal(btn.dataset.id));
+      btn.addEventListener('click', () => {
+        if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_notes')) return;
+        openEditModal(btn.dataset.id);
+      });
     });
 
     scope.querySelectorAll('.btn-delete-note').forEach(btn => {
       btn.addEventListener('click', async () => {
+        if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_notes')) return;
         if (!confirm('تأكيد حذف الملاحظة؟')) return;
         const id = btn.dataset.id;
         const res = await fetch(window.NOTES_ENDPOINTS.delete(id), {
@@ -106,6 +111,7 @@
 
     scope.querySelectorAll('.btn-pin-note').forEach(btn => {
       btn.addEventListener('click', async () => {
+        if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_notes')) return;
         const id = btn.dataset.id;
         const res = await fetch(window.NOTES_ENDPOINTS.togglePin(id), {
           method: 'POST',
@@ -155,6 +161,7 @@
 
     form.addEventListener('submit', async e => {
       e.preventDefault();
+      if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_notes')) return;
       clearErrors(form);
 
       const action = form.getAttribute('action') || (mode === 'edit' ? window.NOTES_ENDPOINTS.update(id) : window.NOTES_ENDPOINTS.createForm);

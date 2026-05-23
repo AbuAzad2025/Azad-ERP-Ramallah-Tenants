@@ -2,7 +2,7 @@
 <div class="row g-3">
   <div class="col-md-6">
     <label class="form-label fw-bold">{{ form.name.label.text }} <span class="text-danger">*</span></label>
-    {{ form.name(class="form-control form-control-modern" + (' is-invalid' if form.name.errors else ''), placeholder="أدخل اسم العميل", required=form.name.flags.required) }}
+    {{ form.name(class="form-control form-control-modern" + (' is-invalid' if form.name.errors else ''), placeholder="أدخل اسم الزبون", required=form.name.flags.required) }}
     {% for e in form.name.errors %}<small class="text-danger">{{ e }}</small>{% endfor %}
   </div>
   <div class="col-md-3">

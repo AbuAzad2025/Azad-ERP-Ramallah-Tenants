@@ -669,6 +669,8 @@ class UserForm(FlaskForm):
     username = StrippedStringField('اسم المستخدم', validators=[DataRequired(), Length(min=3, max=50)])
     email = StrippedStringField('البريد الإلكتروني', validators=[DataRequired(), Email(), Length(max=120)])
     role_id = SelectField('الدور', coerce=int, validators=[DataRequired()])
+    branch_ids = SelectMultipleField('الفروع المسموح بها', coerce=int, choices=[], validate_choice=False)
+    primary_branch_id = SelectField('الفرع الرئيسي', coerce=int, validators=[Optional()], choices=[], validate_choice=False)
     is_active = BooleanField('نشِط')
     password = PasswordField('كلمة المرور الجديدة', validators=[Optional(), Length(min=6, max=128)])
     confirm = PasswordField('تأكيد كلمة المرور', validators=[Optional(), EqualTo('password', message='يجب أن تتطابق كلمتا المرور')])
@@ -717,7 +719,13 @@ class UserForm(FlaskForm):
                 choices.append((r.id, f"{r_label} ({r_name}){suffix}"))
 
         self.role_id.choices = choices
-        
+
+        from utils.branch_context import branch_choices_for_form
+
+        br_choices = branch_choices_for_form(include_empty=False, with_company=True)
+        self.branch_ids.choices = br_choices
+        self.primary_branch_id.choices = [(0, "—")] + br_choices
+
         try:
             from flask import request
             self._editing_user_id = request.view_args.get('user_id')
@@ -797,28 +805,28 @@ class PermissionForm(FlaskForm):
 
 class CustomerForm(FlaskForm):
     id = HiddenField()
-    name = StrippedStringField('اسم العميل', validators=[DataRequired(message="هذا الحقل مطلوب"), Length(max=100)])
+    name = StrippedStringField('اسم الزبون', validators=[DataRequired(message="هذا الحقل مطلوب"), Length(max=100)])
     phone = StrippedStringField('الهاتف', validators=[DataRequired(message="الهاتف مطلوب"), Length(max=20, message="أقصى طول 20 رقم"), Unique(Customer, "phone", message="رقم الهاتف مستخدم مسبقًا", case_insensitive=False, normalizer=normalize_phone)])
     email = StrippedStringField('البريد الإلكتروني', validators=[Optional(), Email(message="صيغة البريد غير صحيحة"), Length(max=120), Unique(Customer, "email", message="البريد مستخدم مسبقًا", case_insensitive=True, normalizer=normalize_email)])
     address = StrippedStringField('العنوان', validators=[Optional(), Length(max=200, message="أقصى طول 200 حرف")])
     whatsapp = StrippedStringField('واتساب', validators=[Optional(), Length(max=20, message="أقصى طول 20 رقم")])
-    category = EnumSelectField(CustomerCategory, 'تصنيف العميل', default=CustomerCategory.NORMAL.value, validators=[DataRequired()])
+    category = EnumSelectField(CustomerCategory, 'تصنيف الزبون', default=CustomerCategory.NORMAL.value, validators=[DataRequired()])
     credit_limit = MoneyField('حد الائتمان', validators=[Optional(), NumberRange(min=0, message="يجب أن يكون ≥ 0")])
     discount_rate = PercentField('معدل الخصم (%)', validators=[Optional()])
     currency = CurrencySelectField('العملة', validators=[DataRequired(message='العملة مطلوبة')])
     opening_balance = MoneyField('الرصيد الافتتاحي (موجب=له، سالب=عليه)', validators=[Optional()])
     is_active = BooleanField('نشط', default=True)
-    is_online = BooleanField('عميل أونلاين', default=False)
+    is_online = BooleanField('زبون أونلاين', default=False)
     is_archived = BooleanField('مؤرشف', default=False)
     notes = TextAreaField('ملاحظات', validators=[Optional(), Length(max=500, message="أقصى طول 500 حرف")])
     password = PasswordField('كلمة المرور', validators=[Optional(), Length(min=6, message="الحد الأدنى 6 أحرف")])
     confirm = PasswordField('تأكيد كلمة المرور', validators=[Optional(), EqualTo('password', message='يجب أن تتطابق كلمتا المرور')])
-    submit = SubmitField('حفظ العميل')
+    submit = SubmitField('حفظ الزبون')
 
     def validate_password(self, field):
         is_create = not (self.id.data and str(self.id.data).strip().isdigit())
         if is_create and not (field.data and str(field.data).strip()):
-            raise ValidationError("كلمة المرور مطلوبة عند إنشاء عميل جديد")
+            raise ValidationError("كلمة المرور مطلوبة عند إنشاء زبون جديد")
 
     def validate_phone(self, field):
         field.data = normalize_phone(field.data)
@@ -1027,7 +1035,7 @@ class PaymentAllocationForm(FlaskForm):
 
 
 class BulkPaymentForm(IdempotencyMixin, FlaskForm):
-    payer_type = SelectField(choices=[('customer','عميل'),('partner','شريك'),('supplier','مورد')], validators=[DataRequired()], coerce=str)
+    payer_type = SelectField(choices=[('customer','زبون'),('partner','شريك'),('supplier','مورد')], validators=[DataRequired()], coerce=str)
     payer_search = StringField(validators=[Optional(), Length(max=100)])
     payer_id = HiddenField(validators=[DataRequired()])
     total_amount = MoneyField(validators=[DataRequired(), NumberRange(min=0.01)])
@@ -1061,7 +1069,7 @@ class BulkPaymentForm(IdempotencyMixin, FlaskForm):
                     sum_alloc += v
             if (self.payer_type.data or '').lower() == 'supplier':
                 if getattr(fm, 'service_ids', None) and (fm.service_ids.data or []):
-                    fm.service_ids.errors.append('❌ لا يمكن تسوية خدمات العميل ضمن تسوية مورد.')
+                    fm.service_ids.errors.append('❌ لا يمكن تسوية خدمات الزبون ضمن تسوية مورد.')
                     ok = False
         if not nonempty:
             self.allocations.errors.append('❌ أضف عنصر توزيع واحدًا على الأقل.')
@@ -1441,17 +1449,17 @@ class PaymentForm(PaymentDetailsMixin, FlaskForm):
 
     entity_id = HiddenField(validators=[Optional()])
 
-    customer_search = StringField('البحث عن العميل', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث بالاسم أو الهاتف...", "onkeyup": "searchEntities('CUSTOMER', this.value)"}); customer_id = HiddenField()
+    customer_search = StringField('البحث عن الزبون', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث بالاسم أو الهاتف...", "onkeyup": "searchEntities('CUSTOMER', this.value)"}); customer_id = HiddenField()
     supplier_search = StringField('البحث عن المورد', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث بالاسم أو البريد...", "onkeyup": "searchEntities('SUPPLIER', this.value)"}); supplier_id = HiddenField()
     partner_search  = StringField('البحث عن الشريك', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث بالاسم أو البريد...", "onkeyup": "searchEntities('PARTNER', this.value)"}); partner_id  = HiddenField()
     shipment_search = StringField('البحث عن الشحنة', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث برقم الشحنة...", "onkeyup": "searchEntities('SHIPMENT', this.value)"}); shipment_id = HiddenField()
     expense_search  = StringField('البحث عن المصروف', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث بالوصف...", "onkeyup": "searchEntities('EXPENSE', this.value)"}); expense_id  = HiddenField()
     expense_type_search = StringField('البحث عن نوع المصروف', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث بنوع المصروف...", "onkeyup": "searchEntities('EXPENSE_TYPE', this.value)"}); expense_type_id = HiddenField()
     loan_settlement_search = StringField('البحث عن التسوية', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث برقم التسوية...", "onkeyup": "searchEntities('LOAN', this.value)"}); loan_settlement_id = HiddenField()
-    sale_search     = StringField('البحث عن البيع', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث برقم البيع أو اسم العميل...", "onkeyup": "searchEntities('SALE', this.value)"}); sale_id     = HiddenField()
-    invoice_search  = StringField('البحث عن الفاتورة', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث برقم الفاتورة أو اسم العميل...", "onkeyup": "searchEntities('INVOICE', this.value)"}); invoice_id  = HiddenField()
-    preorder_search = StringField('البحث عن الطلب المسبق', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث برقم الطلب أو اسم العميل...", "onkeyup": "searchEntities('PREORDER', this.value)"}); preorder_id = HiddenField()
-    service_search  = StringField('البحث عن طلب الصيانة', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث برقم الطلب أو اسم العميل...", "onkeyup": "searchEntities('SERVICE', this.value)"}); service_id  = HiddenField()
+    sale_search     = StringField('البحث عن البيع', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث برقم البيع أو اسم الزبون...", "onkeyup": "searchEntities('SALE', this.value)"}); sale_id     = HiddenField()
+    invoice_search  = StringField('البحث عن الفاتورة', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث برقم الفاتورة أو اسم الزبون...", "onkeyup": "searchEntities('INVOICE', this.value)"}); invoice_id  = HiddenField()
+    preorder_search = StringField('البحث عن الطلب المسبق', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث برقم الطلب أو اسم الزبون...", "onkeyup": "searchEntities('PREORDER', this.value)"}); preorder_id = HiddenField()
+    service_search  = StringField('البحث عن طلب الصيانة', validators=[Optional(), Length(max=100)], render_kw={"placeholder": "ابحث برقم الطلب أو اسم الزبون...", "onkeyup": "searchEntities('SERVICE', this.value)"}); service_id  = HiddenField()
 
     receipt_number = StringField(
         'رقم الإيصال',
@@ -1655,7 +1663,7 @@ class PaymentForm(PaymentDetailsMixin, FlaskForm):
 
         if not rid_val and not allow_missing_reference:
             if et == 'CUSTOMER':
-                self.customer_search.errors.append('❌ يجب اختيار العميل لهذه الدفعة.')
+                self.customer_search.errors.append('❌ يجب اختيار الزبون لهذه الدفعة.')
             else:
                 getattr(self, fn).errors.append('❌ يجب اختيار المرجع المناسب للكيان المحدد.')
             return False
@@ -1753,7 +1761,7 @@ class PreOrderForm(PaymentDetailsMixin, FlaskForm):
     expected_date   = UnifiedDateTimeField('تاريخ التسليم المتوقع', format='%Y-%m-%d %H:%M', validators=[Optional()], render_kw={'autocomplete': 'off', 'dir': 'ltr'})
     status = EnumSelectField(PreOrderStatus, 'الحالة', default=PreOrderStatus.PENDING.value, validators=[DataRequired()])
 
-    customer_id  = AjaxSelectField('العميل',   endpoint='api.search_customers', get_label='name', validators=[DataRequired()])
+    customer_id  = AjaxSelectField('الزبون',   endpoint='api.search_customers', get_label='name', validators=[DataRequired()])
     product_id   = AjaxSelectField('القطعة',    endpoint='api.search_products',  get_label='name', validators=[DataRequired()])
     warehouse_id = AjaxSelectField('المخزن',    endpoint='api.search_warehouses', get_label='name', validators=[DataRequired()])
     supplier_id  = AjaxSelectField('المورد',    endpoint='api.search_suppliers', get_label='name', validators=[Optional()])
@@ -1824,7 +1832,7 @@ class PreOrderForm(PaymentDetailsMixin, FlaskForm):
 
 class ServiceRequestForm(FlaskForm):
     service_number = StrippedStringField('رقم الخدمة', validators=[Optional(), Length(max=50)])
-    customer_id    = AjaxSelectField('العميل', endpoint='api.search_customers', get_label='name', validators=[DataRequired()])
+    customer_id    = AjaxSelectField('الزبون', endpoint='api.search_customers', get_label='name', validators=[DataRequired()])
     mechanic_id    = AjaxSelectField('الفني', endpoint='api.search_users', get_label='username', validators=[Optional()])
     vehicle_type_id = AjaxSelectField('نوع المعدة/المركبة', endpoint='api.search_equipment_types', get_label='name', validators=[Optional()])
 
@@ -2310,7 +2318,7 @@ class UniversalReportForm(FlaskForm):
 class AuditLogFilterForm(FlaskForm):
     model_name = SelectField(
         'النموذج',
-        choices=[('', 'الكل'), ('Customer', 'عملاء'), ('Product', 'منتجات'), ('Sale', 'مبيعات')],
+        choices=[('', 'الكل'), ('Customer', 'زبائن'), ('Product', 'منتجات'), ('Sale', 'مبيعات')],
         validators=[Optional()],
         validate_choice=False
     )
@@ -2338,7 +2346,7 @@ class AuditLogFilterForm(FlaskForm):
 class CustomReportForm(FlaskForm):
     report_type = SelectField(
         'نوع التقرير',
-        choices=[('inventory', 'المخزون'), ('sales', 'المبيعات'), ('customers', 'العملاء'), ('financial', 'مالي')],
+        choices=[('inventory', 'المخزون'), ('sales', 'المبيعات'), ('customers', 'الزبائن'), ('financial', 'مالي')],
         validators=[DataRequired()],
         validate_choice=False
     )
@@ -2484,7 +2492,7 @@ class ExpenseForm(PaymentDetailsMixin, FlaskForm):
     warehouse_id       = AjaxSelectField('المستودع', endpoint='api.search_warehouses',    get_label='name', validators=[Optional()], coerce=int, allow_blank=True)
     partner_id         = AjaxSelectField('الشريك', endpoint='api.search_partners',         get_label='name', validators=[Optional()], coerce=int, allow_blank=True)
     supplier_id        = AjaxSelectField('المورد', endpoint='api.search_suppliers',        get_label='name', validators=[Optional()], coerce=int, allow_blank=True)
-    customer_id        = AjaxSelectField('العميل', endpoint='api.search_customers',        get_label='name', validators=[Optional()], coerce=int, allow_blank=True)
+    customer_id        = AjaxSelectField('الزبون', endpoint='api.search_customers',        get_label='name', validators=[Optional()], coerce=int, allow_blank=True)
     
     installments_count = IntegerField('عدد الأقساط', validators=[Optional(), NumberRange(min=1, max=60)], default=1)
     create_deduction = BooleanField('خصم شهري تلقائي', default=False)
@@ -2576,7 +2584,7 @@ class ExpenseForm(PaymentDetailsMixin, FlaskForm):
     maintenance_technician_name = StrippedStringField('اسم الفني المنفذ', validators=[Optional(), Length(max=200)])
     import_tax_reference = StrippedStringField('مرجع ضريبة الاستيراد', validators=[Optional(), Length(max=100)])
     import_tax_notes = TextAreaField('ملاحظات ضريبة الاستيراد', validators=[Optional(), Length(max=1000)])
-    hospitality_type = SelectField('نوع الضيافة', choices=[('', '-- اختر النوع --'), ('EMPLOYEES', 'ضيافة موظفين'), ('CLIENTS', 'ضيافة عملاء'), ('GENERAL', 'ضيافة عامة')], validators=[Optional()], validate_choice=False)
+    hospitality_type = SelectField('نوع الضيافة', choices=[('', '-- اختر النوع --'), ('EMPLOYEES', 'ضيافة موظفين'), ('CLIENTS', 'ضيافة زبائن'), ('GENERAL', 'ضيافة عامة')], validators=[Optional()], validate_choice=False)
     hospitality_notes = TextAreaField('ملاحظات الضيافة', validators=[Optional(), Length(max=1000)])
     hospitality_attendees = TextAreaField('الحضور', validators=[Optional(), Length(max=1000)])
     hospitality_location = StrippedStringField('مكان الضيافة', validators=[Optional(), Length(max=200)])
@@ -2724,7 +2732,7 @@ class ExpenseForm(PaymentDetailsMixin, FlaskForm):
         ]
         selected_entities = [(label, field) for label, field in entity_fields if _field_selected(field)]
         if len(selected_entities) > 1:
-            msg = 'اختر جهة واحدة فقط من الحقول (مورد/شريك/عميل/موظف)'
+            msg = 'اختر جهة واحدة فقط من الحقول (مورد/شريك/زبون/موظف)'
             for _, field in selected_entities:
                 field.errors.append(msg)
             return False
@@ -3097,7 +3105,7 @@ class CustomerFormOnline(FlaskForm):
     password = PasswordField('كلمة المرور', validators=[Optional(), Length(min=8, max=128)])
     confirm_password = PasswordField('تأكيد كلمة المرور', validators=[DataRequired(), EqualTo('password', message="كلمتا المرور غير متطابقتين")])
     address  = StrippedStringField('العنوان', validators=[Optional(), Length(max=200)])
-    category = SelectField('فئة العميل', choices=[('عادي', 'عادي'), ('ذهبي', 'ذهبي'), ('بلاتيني', 'بلاتيني')], default='عادي')
+    category = SelectField('فئة الزبون', choices=[('عادي', 'عادي'), ('ذهبي', 'ذهبي'), ('بلاتيني', 'بلاتيني')], default='عادي')
     submit   = SubmitField('تسجيل')
 
     def _norm_msisdn(self, v):
@@ -3382,7 +3390,7 @@ class SaleForm(FlaskForm):
     sale_date   = UnifiedDateTimeField('تاريخ البيع', format='%Y-%m-%d %H:%M',
                     formats=['%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'], validators=[Optional()],
                     render_kw={'type':'datetime-local', 'step':'60'})
-    customer_id = AjaxSelectField('العميل', endpoint='api.search_customers', get_label='name', coerce=int, validators=[DataRequired()])
+    customer_id = AjaxSelectField('الزبون', endpoint='api.search_customers', get_label='name', coerce=int, validators=[DataRequired()])
     seller_employee_id = AjaxSelectField('البائع', endpoint='api.search_employees', get_label='name', coerce=int, validators=[DataRequired()])
 
     currency     = CurrencySelectField('عملة', validators=[DataRequired()])
@@ -3483,7 +3491,7 @@ class InvoiceForm(FlaskForm):
     invoice_date   = UnifiedDateTimeField("تاريخ الفاتورة", default=_utc_now_naive, validators=[DataRequired()], render_kw={"type":"datetime-local","step":"60"})
     due_date       = UnifiedDateTimeField("تاريخ الاستحقاق", validators=[Optional()], render_kw={"type":"datetime-local","step":"60"})
 
-    customer_id = AjaxSelectField("العميل", coerce=int, allow_blank=True)
+    customer_id = AjaxSelectField("الزبون", coerce=int, allow_blank=True)
     supplier_id = AjaxSelectField("المورد", coerce=int, allow_blank=True)
     partner_id  = AjaxSelectField("الشريك", coerce=int, allow_blank=True)
     sale_id     = AjaxSelectField("البيع", coerce=int, allow_blank=True)
@@ -4087,7 +4095,7 @@ class CheckForm(FlaskForm):
     )
     
     customer_id = IntegerField(
-        'العميل',
+        'الزبون',
         validators=[Optional()],
         render_kw={'class': 'form-control'}
     )
@@ -4113,7 +4121,7 @@ class CheckForm(FlaskForm):
     internal_notes = TextAreaField(
         'ملاحظات داخلية',
         validators=[Optional()],
-        render_kw={'rows': 2, 'placeholder': 'ملاحظات خاصة (لا تظهر للعميل)'}
+        render_kw={'rows': 2, 'placeholder': 'ملاحظات خاصة (لا تظهر للزبون)'}
     )
     
     reference_number = StrippedStringField(
@@ -4255,14 +4263,14 @@ class InventoryAdjustmentForm(FlaskForm):
 class NoteForm(FlaskForm):
     author_id   = HiddenField(validators=[Optional()])
     content     = TextAreaField('المحتوى', validators=[DataRequired(), Length(max=1000)])
-    entity_type = SelectField('نوع الكيان', choices=[('', '— لا شيء —'), ('CUSTOMER', 'عميل'), ('SUPPLIER', 'مورد'), ('PARTNER', 'شريك'), ('PRODUCT', 'منتج'), ('SALE', 'بيع'), ('INVOICE', 'فاتورة'), ('SERVICE', 'خدمة'), ('SHIPMENT', 'شحنة')], validators=[Optional()], default='')
+    entity_type = SelectField('نوع الكيان', choices=[('', '— لا شيء —'), ('CUSTOMER', 'زبون'), ('SUPPLIER', 'مورد'), ('PARTNER', 'شريك'), ('PRODUCT', 'منتج'), ('SALE', 'بيع'), ('INVOICE', 'فاتورة'), ('SERVICE', 'خدمة'), ('SHIPMENT', 'شحنة')], validators=[Optional()], default='')
     entity_id   = StrippedStringField('معرّف الكيان', validators=[Optional(), Length(max=50)])
     is_pinned   = BooleanField('مثبّتة', default=False)
     priority    = SelectField('الorلوية', choices=[('LOW', 'منخفضة'), ('MEDIUM', 'متوسطة'), ('HIGH', 'عالية'), ('URGENT', 'عاجلة')], default='MEDIUM', validators=[DataRequired()])
     
     target_type = SelectField('نوع المستهدفين', choices=[
         ('', '-- اختر --'),
-        ('CUSTOMERS', 'عملاء'),
+        ('CUSTOMERS', 'زبائن'),
         ('SUPPLIERS', 'موردين'),
         ('PARTNERS', 'شركاء'),
         ('USERS', 'موظفين'),
@@ -4481,7 +4489,7 @@ class ClosingEntryForm(FlaskForm):
 
 
 class ExportContactsForm(FlaskForm):
-    customer_ids = AjaxSelectMultipleField('اختر العملاء', endpoint='api.search_customers', get_label='name', validators=[DataRequired(message='❌ اختر عميلًا واحدًا على الأقل')])
+    customer_ids = AjaxSelectMultipleField('اختر الزبائن', endpoint='api.search_customers', get_label='name', validators=[DataRequired(message='❌ اختر زبونًا واحدًا على الأقل')])
     fields = SelectMultipleField('الحقول', choices=[('name', 'الاسم'), ('phone', 'الجوال'), ('whatsapp', 'واتساب'), ('email', 'البريد الإلكتروني'), ('address', 'العنوان'), ('notes', 'ملاحظات')], default=['name', 'phone', 'email'], coerce=str, validators=[Optional()])
     format = SelectField('صيغة التصدير', choices=[('vcf', 'vCard'), ('csv', 'CSV'), ('excel', 'Excel')], default='vcf', validators=[DataRequired()], coerce=str)
     submit = SubmitField('تصدير')
@@ -4490,7 +4498,7 @@ class ExportContactsForm(FlaskForm):
         if not super().validate(extra_validators=extra_validators):
             return False
         if not self.customer_ids.data:
-            self.customer_ids.errors.append('❌ اختر عميلًا واحدًا على الأقل')
+            self.customer_ids.errors.append('❌ اختر زبونًا واحدًا على الأقل')
             return False
         allowed = {k for k, _ in self.fields.choices}
         sel = [f for f in (self.fields.data or []) if f in allowed]
@@ -4758,7 +4766,7 @@ class SaleReturnLineForm(FlaskForm):
                                      ('COMPANY', '🏢 الشركة'),
                                      ('SUPPLIER', '🏭 المورد'),
                                      ('PARTNER', '🤝 الشريك'),
-                                     ('CUSTOMER', '👤 العميل')
+                                     ('CUSTOMER', '👤 الزبون')
                                  ],
                                  default='',
                                  validators=[Optional()])
@@ -4774,7 +4782,7 @@ class SaleReturnForm(FlaskForm):
     id = HiddenField()
     sale_id = SelectField('رقم البيع', validators=[DataRequired()], coerce=int,
                          render_kw={"placeholder": "اختر البيع للمرتجع"})
-    customer_id = SelectField('العميل', validators=[DataRequired()], coerce=int)
+    customer_id = SelectField('الزبون', validators=[DataRequired()], coerce=int)
     warehouse_id = SelectField('المخزن', validators=[Optional()], coerce=int)
     reason = StringField('سبب المرتجع', validators=[DataRequired(), Length(max=200)],
                         render_kw={"placeholder": "أدخل سبب المرتجع"})
@@ -4798,7 +4806,7 @@ class SaleReturnForm(FlaskForm):
             self.sale_id.choices = [(0, 'اختر البيع')] + [(s.id, f"بيع #{s.id} - {s.created_at.strftime('%Y-%m-%d') if s.created_at else ''}") for s in sales]
             
             customers = Customer.query.filter_by(is_archived=False).order_by(Customer.name).all()
-            self.customer_id.choices = [(0, 'اختر العميل')] + [(c.id, c.name) for c in customers]
+            self.customer_id.choices = [(0, 'اختر الزبون')] + [(c.id, c.name) for c in customers]
             
             warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.name).all()
             self.warehouse_id.choices = [(0, 'اختياري')] + [(w.id, w.name) for w in warehouses]
@@ -4858,7 +4866,7 @@ class ArchiveSearchForm(FlaskForm):
             ('service_requests', 'طلبات الصيانة'),
             ('payments', 'الدفعات'),
             ('sales', 'المبيعات'),
-            ('customers', 'العملاء'),
+            ('customers', 'الزبائن'),
             ('products', 'المنتجات'),
             ('inventory', 'المخزون'),
             ('expenses', 'النفقات'),

@@ -26,6 +26,23 @@
           
           <div class="col-md-4">
             <label class="form-label fw-bold">
+              الشركة <span class="text-danger">*</span>
+            </label>
+            <select name="company_id" class="custom-select" required {% if branch and branch.code == 'MAIN' %}disabled{% endif %}>
+              <option value="">-- اختر شركة --</option>
+              {% for co in companies %}
+              <option value="{{ co.id }}" {% if (branch and branch.company_id == co.id) or (not branch and default_company_id == co.id) %}selected{% endif %}>
+                {{ co.name }} ({{ co.code }})
+              </option>
+              {% endfor %}
+            </select>
+            {% if branch and branch.code == 'MAIN' %}
+            <input type="hidden" name="company_id" value="{{ branch.company_id }}">
+            {% endif %}
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-bold">
               الاسم <span class="text-danger">*</span>
             </label>
             <input type="text" name="name" class="form-control" placeholder="مثال: فرع رام الله" value="{{ branch.name if branch else '' }}" required>

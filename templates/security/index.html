@@ -24,17 +24,43 @@
     <div class="sec-card-body py-3">
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
-          <h4 class="text-white mb-1"><i class="fas fa-crown text-warning"></i> {{ hub_tagline|default('لوحة مالك المنصة') }}</h4>
+          <h4 class="mb-1"><i class="fas fa-crown text-warning"></i> {{ hub_tagline|default('لوحة مالك المنصة') }}</h4>
           <p class="text-muted small mb-0">تطوير المنصة، SaaS، التينانتات، والهوية الافتراضية — منفصل عن لوحات مالكي التينانت.</p>
         </div>
+        <a href="{{ control_url }}" class="btn btn-danger btn-sm"><i class="fas fa-sliders-h"></i> مركز التحكم</a>
         <a href="{{ url_for('advanced.owner_hub') }}" class="btn btn-glass btn-sm"><i class="fas fa-cloud"></i> مركز SaaS</a>
       </div>
     </div>
   </div>
 
+  {% if saas_snapshot %}
+  <div class="sec-card mb-4">
+    <div class="sec-card-header d-flex align-items-center justify-content-between">
+      <strong><i class="fas fa-cloud"></i> ملخص SaaS</strong>
+      <a href="{{ url_for('advanced.multi_tenant') }}" class="btn btn-glass btn-sm">إدارة التينانتات</a>
+    </div>
+    <div class="sec-card-body">
+      <div class="row text-center">
+        <div class="col-md-4 mb-2 mb-md-0">
+          <div class="h3 mb-0">{{ saas_snapshot.tenants_total }}</div>
+          <div class="text-muted small">إجمالي التينانتات</div>
+        </div>
+        <div class="col-md-4 mb-2 mb-md-0">
+          <div class="h3 mb-0 text-success">{{ saas_snapshot.tenants_active }}</div>
+          <div class="text-muted small">نشط</div>
+        </div>
+        <div class="col-md-4">
+          <div class="h3 mb-0 text-warning">{{ saas_snapshot.tenants_inactive }}</div>
+          <div class="text-muted small">موقوف</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="sec-card mb-4">
     <div class="sec-card-header"><strong><i class="fas fa-th-large"></i> مراكز لوحة المالك</strong></div>
-    <div class="sec-card-body rounded-bottom" style="background:#f4f6f9;">
+    <div class="sec-card-body sec-card-body--inset rounded-bottom">
       {% include 'partials/owner_hub_cards.html' %}
     </div>
   </div>
@@ -42,7 +68,7 @@
   <div class="sec-card mb-4">
     <div class="sec-card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
       <div>
-        <h5 class="mb-1 fw-bold text-white"><i class="fas fa-bolt text-info ms-2"></i> إجراءات سريعة</h5>
+        <h5 class="mb-1 fw-bold"><i class="fas fa-bolt text-primary ms-2"></i> إجراءات سريعة</h5>
         <div class="text-muted small">اختصارات لأكثر المراكز استخداماً داخل الكونسول</div>
       </div>
       <div class="text-muted small font-monospace">CTRL+K</div>
@@ -52,43 +78,43 @@
         <div class="col-lg-4 col-md-6">
           <a href="{{ url_for('security.owner_branding') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between">
             <span class="d-flex align-items-center"><i class="fas fa-palette text-warning ms-2"></i> الهوية والترويسة</span>
-            <i class="fas fa-arrow-left text-white-50"></i>
+            <i class="fas fa-arrow-left text-muted"></i>
           </a>
         </div>
         <div class="col-lg-4 col-md-6">
           <a href="{{ url_for('security.settings_center') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between">
             <span class="d-flex align-items-center"><i class="fas fa-satellite-dish text-info ms-2"></i> مركز العمليات</span>
-            <i class="fas fa-arrow-left text-white-50"></i>
+            <i class="fas fa-arrow-left text-muted"></i>
           </a>
         </div>
         <div class="col-lg-4 col-md-6">
           <a href="{{ url_for('security.monitoring_dashboard') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between">
             <span class="d-flex align-items-center"><i class="fas fa-chart-line text-info ms-2"></i> لوحة المراقبة</span>
-            <i class="fas fa-arrow-left text-white-50"></i>
+            <i class="fas fa-arrow-left text-muted"></i>
           </a>
         </div>
         <div class="col-lg-4 col-md-6">
           <a href="{{ url_for('security.users_center') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between">
             <span class="d-flex align-items-center"><i class="fas fa-users text-info ms-2"></i> مركز المستخدمين</span>
-            <i class="fas fa-arrow-left text-white-50"></i>
+            <i class="fas fa-arrow-left text-muted"></i>
           </a>
         </div>
         <div class="col-lg-4 col-md-6">
           <a href="{{ url_for('security.database_manager') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between">
             <span class="d-flex align-items-center"><i class="fas fa-database text-info ms-2"></i> مدير قاعدة البيانات</span>
-            <i class="fas fa-arrow-left text-white-50"></i>
+            <i class="fas fa-arrow-left text-muted"></i>
           </a>
         </div>
         <div class="col-lg-4 col-md-6">
           <a href="{{ url_for('security.integrations') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between">
             <span class="d-flex align-items-center"><i class="fas fa-plug text-info ms-2"></i> التكاملات</span>
-            <i class="fas fa-arrow-left text-white-50"></i>
+            <i class="fas fa-arrow-left text-muted"></i>
           </a>
         </div>
         <div class="col-lg-4 col-md-6">
           <a href="{{ url_for('security.emergency_tools') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between border border-1 border-opacity-10">
             <span class="d-flex align-items-center"><i class="fas fa-exclamation-triangle text-danger ms-2"></i> أدوات الطوارئ</span>
-            <i class="fas fa-arrow-left text-white-50"></i>
+            <i class="fas fa-arrow-left text-muted"></i>
           </a>
         </div>
       </div>
@@ -98,7 +124,7 @@
   <div class="sec-card mb-4">
     <div class="sec-card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
       <div>
-        <h5 class="mb-0 fw-bold text-white"><i class="fas fa-signal text-info ms-2"></i> الحالة الحية</h5>
+        <h5 class="mb-0 fw-bold"><i class="fas fa-signal text-primary ms-2"></i> الحالة الحية</h5>
       </div>
       <div>
         {% if system_settings and system_settings.maintenance_mode %}
@@ -162,19 +188,19 @@
 
   <div class="sec-card">
     <div class="sec-card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <h5 class="mb-0 fw-bold text-white"><i class="fas fa-history text-info ms-2"></i> آخر الإجراءات</h5>
+      <h5 class="mb-0 fw-bold"><i class="fas fa-history text-primary ms-2"></i> آخر الإجراءات</h5>
       <a href="{{ url_for('security.audit_log_viewer') }}" class="btn btn-glass btn-sm">عرض السجل</a>
     </div>
     <div class="sec-card-body p-0">
       <div class="timeline" id="auditTimeline" style="max-height: 280px; overflow-y: auto;">
         {% if recent %}
           {% for audit in recent[:10] %}
-          <div class="timeline-item" style="padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+          <div class="timeline-item">
             <div class="d-flex justify-content-between align-items-start">
               <div class="d-flex align-items-start">
                 <i class="fas fa-circle text-{% if audit.success %}success{% else %}danger{% endif %} mt-1" style="font-size: 0.5rem; margin-left: 10px;"></i>
                 <div>
-                  <strong class="text-white">{{ audit.event or 'نشاط' }}</strong>
+                  <strong>{{ audit.event or 'نشاط' }}</strong>
                   <br><small class="text-muted">
                     <i class="fas fa-user"></i> {{ audit.user.username if audit.user else 'غير معروف' }}
                     {% if audit.ip %} | <i class="fas fa-network-wired"></i> {{ audit.ip }}{% endif %}

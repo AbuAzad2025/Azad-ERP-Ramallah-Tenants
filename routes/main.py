@@ -43,6 +43,32 @@ main_bp = Blueprint("main", __name__, template_folder="templates")
 def favicon():
     return send_from_directory(current_app.static_folder, "favicon.ico", mimetype="image/vnd.microsoft.icon")
 
+@main_bp.route("/org/switch-branch", methods=["POST"], endpoint="switch_active_branch")
+@login_required
+def switch_active_branch():
+    from utils.branch_context import set_active_branch_id
+
+    bid = request.form.get("branch_id", type=int)
+    if bid and set_active_branch_id(bid):
+        flash("تم تبديل الفرع النشط", "success")
+    else:
+        flash("تعذر تبديل الفرع", "warning")
+    return redirect(request.referrer or url_for("main.dashboard"))
+
+
+@main_bp.route("/org/switch-company", methods=["POST"], endpoint="switch_active_company")
+@login_required
+def switch_active_company():
+    from utils.branch_context import set_active_company_id
+
+    cid = request.form.get("company_id", type=int)
+    if cid and set_active_company_id(cid):
+        flash("تم تبديل الشركة النشطة", "success")
+    else:
+        flash("تعذر تبديل الشركة", "warning")
+    return redirect(request.referrer or url_for("main.dashboard"))
+
+
 @main_bp.route("/login", methods=["GET"], endpoint="login_alias")
 def login_alias():
     nxt = request.args.get("next")
@@ -114,6 +140,18 @@ def dashboard():
         abort(403)
 
     dash_widgets = dashboard_widgets_for_user(current_user)
+
+    def _dash_scope_key() -> str:
+        from utils.company_scope import get_accessible_branch_ids
+        from utils.branch_context import get_active_branch_id
+
+        uid = getattr(current_user, "id", 0) or 0
+        aid = get_active_branch_id()
+        ids = get_accessible_branch_ids()
+        bid = ",".join(str(i) for i in (ids or []))
+        return f"u{uid}_a{aid}_b{bid}"
+
+    scope_key = _dash_scope_key()
 
     inventory_total = 0
     low_stock_count = 0
@@ -207,11 +245,14 @@ def dashboard():
             return value
 
     if _has_perm(SystemPermissions.MANAGE_SALES):
-        cache_key_recent = f'dashboard_recent_sales_{today}'
+        from utils.company_scope import filter_sales_query
+
+        cache_key_recent = f'dashboard_recent_sales_{today}_{scope_key}'
         recent_sales = cache.get(cache_key_recent)
         if recent_sales is None:
             recent_sales = (
-                Sale.query.options(
+                filter_sales_query(Sale.query)
+                .options(
                     load_only(
                         Sale.id,
                         Sale.sale_number,
@@ -250,17 +291,18 @@ def dashboard():
         revenue_values = srep.get("daily_values", [])
         week_revenue = float(srep.get("total_revenue", 0) or 0)
         
-        cache_key_today_rev = f'dashboard_today_revenue_{today}'
+        cache_key_today_rev = f'dashboard_today_revenue_{today}_{scope_key}'
         today_revenue = cache.get(cache_key_today_rev)
         if today_revenue is None:
             today_revenue = Decimal('0.00')
             today_sales_rows = (
-                db.session.query(
+                filter_sales_query(
+                    db.session.query(
                     Sale.total_amount,
                     Sale.currency,
                     Sale.fx_rate_used,
                     Sale.sale_date,
-                )
+                ))
                 .filter(
                     Sale.status == SaleStatus.CONFIRMED.value,
                     Sale.sale_date >= day_start_dt,
@@ -279,27 +321,39 @@ def dashboard():
     def _sum_entity_balance(model):
         total = Decimal('0.00')
         try:
-            cache_key = f"dashboard_balance_{model.__tablename__}"
+            cache_key = f"dashboard_balance_{model.__tablename__}_{scope_key}"
             cached_total = cache.get(cache_key)
             if cached_total is not None:
                 return float(cached_total)
-            
+
+            from utils.company_scope import filter_customers_query, filter_suppliers_query
+
             if model.__name__ == 'Customer':
                 try:
-                    result = db.session.query(func.coalesce(func.sum(Customer.current_balance), 0)).scalar() or 0.0
+                    result = (
+                        filter_customers_query(
+                            db.session.query(func.coalesce(func.sum(Customer.current_balance), 0))
+                        ).scalar()
+                        or 0.0
+                    )
                     cache.set(cache_key, float(result), timeout=300)
                     return float(result)
                 except Exception:
                     current_app.logger.warning('cache operation failed silently in main.py', exc_info=True)
-            
+
             if model.__name__ == 'Supplier':
                 try:
-                    result = db.session.query(func.coalesce(func.sum(Supplier.current_balance), 0)).scalar() or 0.0
+                    result = (
+                        filter_suppliers_query(
+                            db.session.query(func.coalesce(func.sum(Supplier.current_balance), 0))
+                        ).scalar()
+                        or 0.0
+                    )
                     cache.set(cache_key, float(result), timeout=300)
                     return float(result)
                 except Exception:
                     current_app.logger.warning('cache operation failed silently in main.py', exc_info=True)
-            
+
             try:
                 balance_attr = getattr(model, 'balance', None)
                 if balance_attr and hasattr(balance_attr, 'expression'):
@@ -308,8 +362,13 @@ def dashboard():
                     return float(result)
             except Exception:
                 current_app.logger.warning('cache operation failed silently in main.py', exc_info=True)
-            
-            entities = model.query.options(load_only(model.id)).limit(10000).all()
+
+            entities = model.query.options(load_only(model.id))
+            if model.__name__ == 'Customer':
+                entities = filter_customers_query(entities)
+            elif model.__name__ == 'Supplier':
+                entities = filter_suppliers_query(entities)
+            entities = entities.limit(10000).all()
             for entity in entities:
                 try:
                     if model.__name__ == 'Supplier':
@@ -342,7 +401,9 @@ def dashboard():
         total_partner_balance = _sum_partner_smart_balance()
 
     def _aggregate_payments(start_dt, end_dt):
-        cache_key_pay = f'dashboard_payments_{start_dt.date()}_{end_dt.date()}'
+        from utils.company_scope import filter_expenses_query, filter_payments_query
+
+        cache_key_pay = f'dashboard_payments_{start_dt.date()}_{end_dt.date()}_{scope_key}'
         cached = cache.get(cache_key_pay)
         if cached is not None:
             return cached['incoming'], cached['outgoing']
@@ -350,13 +411,14 @@ def dashboard():
         incoming = Decimal('0.00')
         outgoing = Decimal('0.00')
         payments = (
-            db.session.query(
+            filter_payments_query(
+                db.session.query(
                 Payment.total_amount,
                 Payment.currency,
                 Payment.fx_rate_used,
                 Payment.payment_date,
                 Payment.direction,
-            )
+            ))
             .filter(
                 Payment.payment_date >= start_dt,
                 Payment.payment_date < end_dt,
@@ -372,11 +434,12 @@ def dashboard():
                 outgoing += amt_ils
         
         expenses_without_payments = (
-            db.session.query(
+            filter_expenses_query(
+                db.session.query(
                 Expense.amount,
                 Expense.currency,
                 Expense.date,
-            )
+            ))
             .outerjoin(
                 Payment,
                 and_(
@@ -413,20 +476,23 @@ def dashboard():
     week_net = week_incoming - week_outgoing
 
     if dash_widgets.get("payments") or dash_widgets.get("ledger"):
-        cache_key_daily_pay = f'dashboard_daily_payments_{week_start_dt.date()}_{week_end_dt.date()}'
+        cache_key_daily_pay = f'dashboard_daily_payments_{week_start_dt.date()}_{week_end_dt.date()}_{scope_key}'
         daily_payments_data = cache.get(cache_key_daily_pay)
         if daily_payments_data is None:
             from collections import defaultdict
+            from utils.company_scope import filter_payments_query
+
             daily_payments = defaultdict(lambda: {'incoming': Decimal('0.00'), 'outgoing': Decimal('0.00')})
 
             all_week_payments = (
-                db.session.query(
+                filter_payments_query(
+                    db.session.query(
                     Payment.total_amount,
                     Payment.currency,
                     Payment.fx_rate_used,
                     Payment.payment_date,
                     Payment.direction,
-                )
+                ))
                 .filter(
                     Payment.payment_date >= week_start_dt,
                     Payment.payment_date < week_end_dt,
@@ -478,7 +544,9 @@ def dashboard():
     customer_segment_labels: list = []
     customer_segment_values: list = []
     if dash_widgets.get("sales") or dash_widgets.get("reports"):
-        cache_key_monthly = f'dashboard_monthly_sales_{month_start_today}'
+        from utils.company_scope import filter_customers_query, filter_sales_query
+
+        cache_key_monthly = f'dashboard_monthly_sales_{month_start_today}_{scope_key}'
         monthly_data = cache.get(cache_key_monthly)
         if monthly_data is None:
             month_keys = []
@@ -493,7 +561,8 @@ def dashboard():
             sales_period_start = _shift_month(month_start_today, -5)
             sales_period_end = _shift_month(month_start_today, 1)
             monthly_sales_rows = (
-                Sale.query.options(
+                filter_sales_query(Sale.query)
+                .options(
                     load_only(
                         Sale.sale_date,
                         Sale.total_amount,
@@ -523,13 +592,15 @@ def dashboard():
         monthly_sales_values = monthly_data['values']
 
     if dash_widgets.get("customers"):
-        cache_key_customers = f'dashboard_customers_{today}'
+        from utils.company_scope import filter_customers_query, filter_sales_query
+
+        cache_key_customers = f'dashboard_customers_{today}_{scope_key}'
         customer_data = cache.get(cache_key_customers)
         if customer_data is None:
             thirty_days_ago = today - timedelta(days=30)
             ninety_days_ago = today - timedelta(days=90)
             new_count = int(
-                db.session.query(func.count(Customer.id))
+                filter_customers_query(db.session.query(func.count(Customer.id)))
                 .filter(
                     Customer.created_at.isnot(None),
                     Customer.created_at >= datetime.combine(thirty_days_ago, time.min),
@@ -538,7 +609,7 @@ def dashboard():
                 or 0
             )
             active_count = int(
-                db.session.query(func.count(func.distinct(Sale.customer_id)))
+                filter_sales_query(db.session.query(func.count(func.distinct(Sale.customer_id))))
                 .filter(
                     Sale.customer_id.isnot(None),
                     Sale.sale_date >= datetime.combine(ninety_days_ago, time.min),
@@ -548,8 +619,10 @@ def dashboard():
                 or 0
             )
             active_new_count = int(
-                db.session.query(func.count(func.distinct(Sale.customer_id)))
-                .join(Customer, Customer.id == Sale.customer_id)
+                filter_sales_query(
+                    db.session.query(func.count(func.distinct(Sale.customer_id)))
+                    .join(Customer, Customer.id == Sale.customer_id)
+                )
                 .filter(
                     Sale.customer_id.isnot(None),
                     Sale.sale_date >= datetime.combine(ninety_days_ago, time.min),
@@ -560,7 +633,9 @@ def dashboard():
                 .scalar()
                 or 0
             )
-            total_customers_count = int(db.session.query(func.count(Customer.id)).scalar() or 0)
+            total_customers_count = int(
+                filter_customers_query(db.session.query(func.count(Customer.id))).scalar() or 0
+            )
             active_existing = max(active_count - active_new_count, 0)
             inactive_count = max(total_customers_count - (new_count + active_existing), 0)
             customer_data = {
@@ -572,7 +647,7 @@ def dashboard():
 
         active_existing = customer_data['active_existing']
         inactive_count = customer_data['inactive_count']
-        customer_segment_labels = ["عملاء جدد", "عملاء نشطين", "عملاء غير نشطين"]
+        customer_segment_labels = ["زبائن جدد", "زبائن نشطين", "زبائن غير نشطين"]
         customer_segment_values = [
             customer_data['new_count'],
             active_existing,
@@ -664,13 +739,17 @@ def dashboard():
 
     if dash_widgets.get("customers"):
         try:
+            from utils.company_scope import filter_customers_query
+
             customer_debts = (
-                db.session.query(
-                    Customer.id,
-                    Customer.name,
-                    Customer.balance.label("cust_balance"),
-                    func.count(Sale.id).label("sale_count"),
-                    func.max(Sale.sale_date).label("last_sale"),
+                filter_customers_query(
+                    db.session.query(
+                        Customer.id,
+                        Customer.name,
+                        Customer.balance.label("cust_balance"),
+                        func.count(Sale.id).label("sale_count"),
+                        func.max(Sale.sale_date).label("last_sale"),
+                    )
                 )
                 .outerjoin(
                     Sale,
@@ -689,8 +768,13 @@ def dashboard():
             id_list = [row[0] for row in customer_debts]
             customers_map = {}
             if id_list:
+                from utils.company_scope import filter_customers_query
+
                 customers_map = {
-                    c.id: c for c in Customer.query.filter(Customer.id.in_(id_list)).all()
+                    c.id: c
+                    for c in filter_customers_query(
+                        Customer.query.filter(Customer.id.in_(id_list))
+                    ).all()
                 }
             for cust_id, cust_name, cust_balance, sale_count, last_sale in customer_debts:
                 balance_value = cust_balance or 0
@@ -700,7 +784,7 @@ def dashboard():
                         balance_value = cust_obj.balance
                     except Exception as exc:
                         current_app.logger.warning(
-                            f"خطأ في حساب رصيد العميل #{cust_id}: {exc}"
+                            f"خطأ في حساب رصيد الزبون #{cust_id}: {exc}"
                         )
                 if balance_value and balance_value < 0:
                     amount_due = abs(float(balance_value))
@@ -708,7 +792,7 @@ def dashboard():
                         "category": "الذمم",
                         "severity": "warning",
                         "icon": "fas fa-user-clock",
-                        "title": f"دين على العميل {cust_name}",
+                        "title": f"دين على الزبون {cust_name}",
                         "message": f"عدد الفواتير المفتوحة: {sale_count}",
                         "amount_display": f"{amount_due:,.2f} ₪",
                         "link": url_for('customers_bp.list_customers', name=cust_name),
@@ -719,13 +803,17 @@ def dashboard():
 
     if dash_widgets.get("expenses"):
         try:
+            from utils.company_scope import filter_expenses_query
+
             recent_expenses = (
-                db.session.query(
-                    Expense.id,
-                    Expense.description,
-                    Expense.amount,
-                    Expense.currency,
-                    Expense.date,
+                filter_expenses_query(
+                    db.session.query(
+                        Expense.id,
+                        Expense.description,
+                        Expense.amount,
+                        Expense.currency,
+                        Expense.date,
+                    )
                 )
                 .filter(
                     Expense.date >= alert_today - timedelta(days=7),
@@ -762,7 +850,9 @@ def dashboard():
 
     recent_services_count = 0
     if _has_perm(SystemPermissions.MANAGE_SERVICE) or _has_perm(SystemPermissions.VIEW_SERVICE):
-        q = ServiceRequest.query
+        from utils.company_scope import filter_service_requests_query
+
+        q = filter_service_requests_query(ServiceRequest.query)
         if not any(_has_perm(c) for c in (SystemPermissions.MANAGE_CUSTOMERS, SystemPermissions.MANAGE_SALES, SystemPermissions.MANAGE_USERS)):
             q = q.filter_by(mechanic_id=current_user.id)
         done_statuses = ("COMPLETED", "CANCELLED", "CLOSED", "DELIVERED", "FINISHED")
@@ -904,8 +994,10 @@ def restore_db():
 
 @main_bp.route("/automated-backup-status", methods=["GET"], endpoint="automated_backup_status")
 @login_required
+@utils.permission_required(SystemPermissions.BACKUP_DATABASE)
 def automated_backup_status():
-    if not utils.is_super():
+    is_prod = (current_app.config.get("ENV") == "production" or current_app.config.get("FLASK_ENV") == "production")
+    if is_prod and not utils.is_super():
         return jsonify({"enabled": False, "next_run": None, "schedule": "غير متاح"})
 
     try:
@@ -930,9 +1022,11 @@ def automated_backup_status():
 
 @main_bp.route("/toggle-automated-backup", methods=["POST"], endpoint="toggle_automated_backup")
 @login_required
+@utils.permission_required(SystemPermissions.BACKUP_DATABASE)
 def toggle_automated_backup():
-    if not utils.is_super():
-        utils.flash_error("غير مسموح")
+    is_prod = (current_app.config.get("ENV") == "production" or current_app.config.get("FLASK_ENV") == "production")
+    if is_prod and not utils.is_super():
+        utils.flash_error("غير مسموح بالتعديل في الإنتاج إلا للمسؤولين (Super/Owner).")
         return redirect(url_for("main.dashboard"))
     
     from extensions import scheduler

@@ -68,20 +68,20 @@
         </div>
     </div>
     
-    <!-- تقرير العملاء -->
+    <!-- تقرير الزبائن -->
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title">
                     <i class="fas fa-users ml-2"></i>
-                    أرصدة العملاء بالشيكل
+                    أرصدة الزبائن بالشيكل
                 </h3>
             </div>
             <div class="card-body">
                 {% if customer_report and not customer_report.error %}
                 <div class="text-center mb-3">
                     <h4 class="text-primary">{{ customer_report.formatted_total }}</h4>
-                    <p class="text-muted">إجمالي {{ customer_report.total_customers }} عميل</p>
+                    <p class="text-muted">إجمالي {{ customer_report.total_customers }} زبون</p>
                 </div>
                 
                 {% if customer_report.customers %}
@@ -89,7 +89,7 @@
                     <table class="table table-sm">
                         <thead>
                             <tr>
-                                <th>العميل</th>
+                                <th>الزبون</th>
                                 <th class="text-end">الرصيد</th>
                             </tr>
                         </thead>
@@ -104,13 +104,13 @@
                     </table>
                 </div>
                 {% if customer_report.customers|length > 5 %}
-                <p class="text-muted small">و {{ customer_report.customers|length - 5 }} عميل آخر</p>
+                <p class="text-muted small">و {{ customer_report.customers|length - 5 }} زبون آخر</p>
                 {% endif %}
                 {% endif %}
                 {% else %}
                 <div class="text-center text-muted">
                     <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                    <p>خطأ في تحميل تقرير العملاء</p>
+                    <p>خطأ في تحميل تقرير الزبائن</p>
                 </div>
                 {% endif %}
             </div>

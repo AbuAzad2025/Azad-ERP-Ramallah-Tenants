@@ -1,6 +1,6 @@
-{% extends 'base_print.html' if print_mode else 'base.html' %}
+﻿{% extends 'base_print.html' if print_mode else 'base.html' %}
 
-{% block title %}قائمة العملاء{% endblock %}
+{% block title %}قائمة الزبائن{% endblock %}
 
 {% block extra_css %}
 {% if print_mode %}
@@ -277,12 +277,12 @@ body.print-mode .content {
   {% if print_mode %}
   <div class="print-sheet">
     <div class="print-header">
-      <h1>قائمة العملاء</h1>
+      <h1>قائمة الزبائن</h1>
       <p class="print-subtitle">تاريخ الطباعة: {{ generated_at.strftime("%Y-%m-%d %H:%M") }}</p>
     </div>
     <div class="print-meta">
       <div class="print-meta-item">
-        <span class="print-meta-label">عدد العملاء</span>
+        <span class="print-meta-label">عدد الزبائن</span>
         <span class="print-meta-value">{{ summary.total_customers }}</span>
       </div>
       <div class="print-meta-item">
@@ -332,22 +332,27 @@ body.print-mode .content {
       </table>
     </div>
     <div class="print-summary">
-      <div class="print-summary-item"><span class="label">عملاء بذمة:</span> <span class="value">{{ summary.customers_with_debt }}</span></div>
-      <div class="print-summary-item"><span class="label">عملاء لهم رصيد:</span> <span class="value">{{ summary.customers_with_credit }}</span></div>
+      <div class="print-summary-item"><span class="label">زبائن بذمة:</span> <span class="value">{{ summary.customers_with_debt }}</span></div>
+      <div class="print-summary-item"><span class="label">زبائن لهم رصيد:</span> <span class="value">{{ summary.customers_with_credit }}</span></div>
       <div class="print-summary-item"><span class="label">متوسط الرصيد:</span> <span class="value">{{ "%.2f"|format(summary.average_balance) }} ₪</span></div>
     </div>
   </div>
   {% else %}
+  {% from 'macros/permissions.html' import readonly_banner with context %}
+  {{ readonly_banner('view_customers', 'manage_customers', 'الزبائن') }}
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="h4 m-0 text-dark"><i class="fas fa-users ml-2"></i> قائمة العملاء</h2>
+    <h2 class="h4 m-0 text-dark"><i class="fas fa-users ml-2"></i> قائمة الزبائن</h2>
     <div class="btn-group-actions-end no-print">
       <div class="no-print-inline">
+        {% if has_perm('manage_customers') %}
         <a href="{{ url_for('customers_bp.create_form') }}" class="btn btn-primary mr-2">
-          <i class="fas fa-user-plus"></i> إضافة عميل
+          <i class="fas fa-user-plus"></i> إضافة زبون
         </a>
+        {% endif %}
         <button type="button" class="btn btn-outline-secondary mr-2" id="open-print-modal">
           <i class="fas fa-print"></i> طباعة
         </button>
+        {% if has_perm('manage_customers') %}
         <div class="btn-group mr-2" role="group">
           <button type="button" class="btn btn-action-export dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <i class="fas fa-download"></i> تصدير
@@ -358,6 +363,7 @@ body.print-mode .content {
           </div>
         </div>
         <a href="{{ url_for('customers_bp.import_customers') }}" class="btn btn-outline-info mr-2"><i class="fas fa-file-csv"></i> استيراد</a>
+        {% endif %}
         
         {% if request.args.get('show_archived') == '1' %}
         <a href="{{ url_for('customers_bp.list_customers', **dict(args, show_archived=None)) }}" class="btn btn-secondary mr-2"><i class="fas fa-eye-slash"></i> إخفاء الأرشيف</a>
@@ -365,7 +371,7 @@ body.print-mode .content {
         <a href="{{ url_for('customers_bp.list_customers', **dict(args, show_archived='1')) }}" class="btn btn-outline-secondary mr-2"><i class="fas fa-archive"></i> عرض الأرشيف</a>
         {% endif %}
         
-        {% if current_user.has_permission('manage_advanced_accounting') %}
+        {% if has_perm('manage_advanced_accounting') %}
         <button class="btn btn-outline-info mr-2" onclick="recalculateBalances()" title="إعادة حساب الأرصدة">
             <i class="fas fa-calculator"></i> إعادة حساب الأرصدة
         </button>
@@ -381,7 +387,7 @@ body.print-mode .content {
       <div class="dashboard-stats-card text-white h-100 card-hover shadow-sm border-0" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); border-radius: 15px;">
         <div class="card-body d-flex justify-content-between align-items-center">
           <div>
-            <h6 class="text-white-50 mb-1">إجمالي العملاء</h6>
+            <h6 class="text-white-50 mb-1">إجمالي الزبائن</h6>
             <h3 class="mb-0 fw-bold">{{ summary.total_customers }}</h3>
           </div>
           <i class="fas fa-users fa-2x opacity-50"></i>
@@ -406,7 +412,7 @@ body.print-mode .content {
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center">
             <div>
-              <h6 class="text-white-50 mb-1">عملاء لهم رصيد</h6>
+              <h6 class="text-white-50 mb-1">زبائن لهم رصيد</h6>
               <h3 class="mb-0 fw-bold">{{ summary.customers_with_credit }}</h3>
             </div>
             <i class="fas fa-hand-holding-heart fa-2x opacity-50"></i>
@@ -419,7 +425,7 @@ body.print-mode .content {
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center">
             <div>
-              <h6 class="text-white-50 mb-1">عملاء بذمة</h6>
+              <h6 class="text-white-50 mb-1">زبائن بذمة</h6>
               <h3 class="mb-0 fw-bold">{{ summary.customers_with_debt }}</h3>
             </div>
             <i class="fas fa-exclamation-triangle fa-2x opacity-50"></i>
@@ -449,7 +455,7 @@ body.print-mode .content {
           <div class="col-lg-6 col-md-7">
             <div class="input-group">
               <span class="input-group-text"><i class="fas fa-search"></i></span>
-              <input type="text" id="customers-search" class="form-control form-control-modern" placeholder="بحث في العملاء" value="{{ args.get('q','') }}">
+              <input type="text" id="customers-search" class="form-control form-control-modern" placeholder="بحث في الزبائن" value="{{ args.get('q','') }}">
             </div>
           </div>
           <div class="col-lg-6 col-md-5 text-md-left text-sm-right mt-3 mt-md-0">
@@ -497,7 +503,7 @@ body.print-mode .content {
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">طباعة قائمة العملاء</h5>
+          <h5 class="modal-title">طباعة قائمة الزبائن</h5>
           <button type="button" class="close" data-dismiss="modal" aria-label="إغلاق">
             <span aria-hidden="true">×</span>
           </button>
@@ -512,7 +518,7 @@ body.print-mode .content {
               <label class="d-block font-weight-bold mb-2">نطاق الطباعة</label>
               <div class="custom-control custom-radio mb-2">
                 <input class="custom-control-input" type="radio" name="scope" id="print-scope-all" value="all" {% if scope_value == 'all' %}checked{% endif %}>
-                <label class="custom-control-label" for="print-scope-all">كل القائمة ({{ total_filtered }} عميل)</label>
+                <label class="custom-control-label" for="print-scope-all">كل القائمة ({{ total_filtered }} زبون)</label>
               </div>
               <div class="custom-control custom-radio mb-2">
                 <input class="custom-control-input" type="radio" name="scope" id="print-scope-range" value="range" {% if scope_value == 'range' %}checked{% endif %}>
@@ -570,9 +576,9 @@ body.print-mode .content {
       $('.delete-btn').off('click').on('click', function(e) {
         e.preventDefault();
         var customerId = $(this).data('id');
-        var url = '/customers/' + customerId + '/delete';
+        var url = (window.gmPath||window.gmU||function(p){return p;})('/customers/') + customerId + '/delete';
         
-        if (confirm('هل أنت متأكد من حذف هذا العميل؟\n\nملاحظة: سيتم الحذف فقط إذا لم يكن له معاملات أو رصيد.')) {
+        if (confirm('هل أنت متأكد من حذف هذا الزبون؟\n\nملاحظة: سيتم الحذف فقط إذا لم يكن له معاملات أو رصيد.')) {
           $('#deleteForm').attr('action', url).submit();
         }
       });

@@ -121,7 +121,7 @@
         <div class="row mt-3">
           <div class="col-md-4">
             <strong class="text-danger"><i class="fas fa-exclamation-circle"></i> إجباري:</strong>
-            <small>رقم الفاتورة، العميل، السبب، المنتج، الكمية، السعر</small>
+            <small>رقم الفاتورة، الزبون، السبب، المنتج، الكمية، السعر</small>
           </div>
           <div class="col-md-4">
             <strong class="text-muted"><i class="fas fa-info-circle"></i> اختياري:</strong>
@@ -129,7 +129,7 @@
           </div>
           <div class="col-md-4">
             <strong class="text-success"><i class="fas fa-magic"></i> تلقائي:</strong>
-            <small>الإجمالي، بيانات العميل والمخزن</small>
+            <small>الإجمالي، بيانات الزبون والمخزن</small>
           </div>
         </div>
       </div>
@@ -171,7 +171,7 @@
                 </div>
                 {% endif %}
                 <small class="form-text text-info">
-                  <i class="fas fa-info-circle"></i> <strong>إجباري:</strong> العميل الذي قام بالإرجاع
+                  <i class="fas fa-info-circle"></i> <strong>إجباري:</strong> الزبون الذي قام بالإرجاع
                   <br>💡 يتم تعبئته تلقائياً عند اختيار البيع
                 </small>
               </div>
@@ -204,7 +204,7 @@
           
           <div class="form-group">
             {{ form.reason.label(class="form-label required") }}
-            {{ form.reason(class="form-control", placeholder="مثال: منتج تالف، عدم رضا العميل، خطأ في الطلب") }}
+            {{ form.reason(class="form-control", placeholder="مثال: منتج تالف، عدم رضا الزبون، خطأ في الطلب") }}
             {% if form.reason.errors %}
             <div class="invalid-feedback d-block">
               {% for error in form.reason.errors %}{{ error }}{% endfor %}
@@ -212,7 +212,7 @@
             {% endif %}
             <small class="form-text text-danger">
               <i class="fas fa-exclamation-circle"></i> <strong>إجباري:</strong> يجب ذكر سبب واضح للمرتجع
-              <br>📝 مثال: منتج تالف، لا يطابق المواصفات، عدم رضا العميل، خطأ في الطلب
+              <br>📝 مثال: منتج تالف، لا يطابق المواصفات، عدم رضا الزبون، خطأ في الطلب
             </small>
           </div>
           
@@ -366,7 +366,7 @@
             <option value="COMPANY">🏢 الشركة</option>
             <option value="SUPPLIER">🏭 المورد</option>
             <option value="PARTNER">🤝 الشريك</option>
-            <option value="CUSTOMER">👤 العميل</option>
+            <option value="CUSTOMER">👤 الزبون</option>
           </select>
           <small class="text-warning" style="display:none;" data-liability-hint="__INDEX__">
             <i class="fas fa-exclamation-triangle"></i> من يتحمل الخسارة؟
@@ -521,7 +521,7 @@ document.getElementById('sale_id').addEventListener('change', function() {
         // عرض معلومات البيع
         document.getElementById('sale-info-content').innerHTML = `
           <strong>📋 تفاصيل الفاتورة الأصلية:</strong><br>
-          <strong>👤 العميل:</strong> سيتم التحديث تلقائياً<br>
+          <strong>👤 الزبون:</strong> سيتم التحديث تلقائياً<br>
           <strong>🏪 المخزن:</strong> ${data.warehouse_id || 'غير محدد'}<br>
           <strong>💰 العملة:</strong> ${data.currency}<br>
           <strong>📦 عدد المنتجات في الفاتورة:</strong> ${data.items.length}<br>
@@ -590,7 +590,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// عند تغيير العميل: تصفية قائمة الفواتير لهذا العميل
+// عند تغيير الزبون: تصفية قائمة الفواتير لهذا الزبون
 document.getElementById('customer_id').addEventListener('change', function() {
   const customerId = this.value;
   const saleSelect = document.getElementById('sale_id');

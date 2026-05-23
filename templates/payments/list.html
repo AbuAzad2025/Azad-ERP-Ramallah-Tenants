@@ -1,4 +1,4 @@
-{% extends 'base_print.html' if print_mode else 'base.html' %}
+﻿{% extends 'base_print.html' if print_mode else 'base.html' %}
 {% block title %}سندات الدفع{% if supplier %} — {{ supplier.name }}{% endif %}{% endblock %}
 
 {% block page_title %}
@@ -78,7 +78,9 @@
   {% endif %}
 {% endblock %}
 
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
+{{ readonly_banner('view_payments', 'manage_payments', 'الدفعات') }}
   {% if print_mode %}
   <div class="print-sheet">
     <div class="print-header">
@@ -166,6 +168,7 @@
                 <a href="{{ url_for('payments.download_receipt', payment_id=payment.id) }}" class="btn btn-secondary" title="طباعة الإيصال" target="_blank">
                   <i class="fas fa-print"></i>
                 </a>
+                {% if has_perm('manage_payments') %}
                 {% if payment.is_archived %}
                 <button type="button" class="btn btn-success" title="استعادة" onclick="restorePayment({{ payment.id }})">
                   <i class="fas fa-undo"></i>
@@ -174,6 +177,7 @@
                 <button type="button" class="btn btn-warning" title="أرشفة" onclick="archivePayment({{ payment.id }})">
                   <i class="fas fa-archive"></i>
                 </button>
+                {% endif %}
                 {% endif %}
               </div>
             </td>
@@ -344,10 +348,12 @@
                     <i class="fas fa-redo me-1"></i> إعادة تعيين
                   </button>
                 </div>
+                {% if has_perm('manage_payments') %}
                 <div class="col-md-2 col-sm-4 ml-auto">
                   <label class="form-label d-block">&nbsp;</label>
                   <a id="btnAddPayment" href="{{ url_for('payments.create_payment') }}" class="btn btn-primary btn-block">إضافة دفعة</a>
                 </div>
+                {% endif %}
               </div>
             </div>
           </div>

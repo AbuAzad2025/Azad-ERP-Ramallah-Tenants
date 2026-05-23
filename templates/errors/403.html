@@ -29,7 +29,7 @@
   <main class="card" role="main" aria-labelledby="err-title">
     <div class="code" aria-hidden="true">403</div>
     <h1 id="err-title" class="title">غير مسموح بالوصول</h1>
-    <p class="desc">ليس لديك صلاحية للوصول إلى هذه الصفحة.</p>
+    <p class="desc">{{ message or 'ليس لديك صلاحية للوصول إلى هذه الصفحة.' }}</p>
     <p class="hint mono">المسار: {{ path }}</p>
     
     <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:16px;margin:16px 0;">
@@ -43,7 +43,7 @@
     
     <div class="row">
       <a class="btn btn-primary" href="{{ url_for('main.dashboard') }}">الانتقال إلى اللوحة</a>
-      <a class="btn btn-ghost" href="/" rel="home">الصفحة الرئيسية</a>
+      <a class="btn btn-ghost" href="{{ gm_path('/') }}" rel="home">الصفحة الرئيسية</a>
       <button class="btn btn-ghost" type="button" onclick="history.back()">عودة للخلف</button>
     </div>
     <div class="footer">

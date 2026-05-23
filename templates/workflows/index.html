@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}إدارة Workflows{% endblock %}
 
 {% block page_title %}<i class="fas fa-project-diagram text-primary"></i> إدارة Workflows (BPM){% endblock %}
@@ -9,16 +9,20 @@
   <li class="breadcrumb-item active">Workflows</li>
 {% endblock %}
 
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
+{{ readonly_banner('view_workflows', 'manage_workflows', 'سير العمل') }}
         <div class="row mb-3 no-print">
             <div class="col-12">
                 <div class="btn-group mb-2">
                     <a href="{{ url_for('advanced.accounting_control') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left"></i> العودة للوحة التحكم
                     </a>
+                    {% if has_perm('manage_workflows') %}
                     <a href="{{ url_for('workflows.definitions') }}" class="btn btn-primary">
                         <i class="fas fa-cogs"></i> إدارة التعريفات
                     </a>
+                    {% endif %}
                     <a href="{{ url_for('workflows.instances') }}" class="btn btn-info">
                         <i class="fas fa-tasks"></i> نسخ التنفيذ
                     </a>

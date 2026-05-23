@@ -269,6 +269,9 @@
     const csrf = form.querySelector('input[name="csrf_token"]')?.value || '';
     showLoading(true);
     try {
+      if (typeof window.gmRequirePermAny === 'function' && !window.gmRequirePermAny('view_reports', 'manage_reports')) {
+        throw new Error('ليس لديك صلاحية لتشغيل هذا التقرير.');
+      }
       const r = await fetch('/reports/api/dynamic', {
         method: 'POST',
         headers: {

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}كشف مفصل للعميل - {{ customer.name|default('—') }}{% endblock %}
+{% block title %}كشف مفصل للزبون - {{ customer.name|default('—') }}{% endblock %}
 
 {% block content %}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">
             <i class="fas fa-user text-primary ml-2"></i>
-            كشف مفصل للعميل: {{ customer.name|default('—') }}
+            كشف مفصل للزبون: {{ customer.name|default('—') }}
         </h2>
         <div class="btn-group">
             <div class="btn-group shadow-sm rounded-pill overflow-hidden bg-white ms-2">
@@ -30,7 +30,7 @@
         <div class="col-md-6">
             <div class="card border-0 shadow-sm">
                 <div class="card-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
-                    <h5 class="mb-0"><i class="fas fa-info-circle ml-2"></i>معلومات العميل</h5>
+                    <h5 class="mb-0"><i class="fas fa-info-circle ml-2"></i>معلومات الزبون</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -211,7 +211,7 @@
                     <div class="alert alert-info mb-0">
                         <div class="small text-muted">شيكات قيد التحصيل</div>
                         <div class="fw-bold">{{ balance_data.checks.in_progress|format_currency }}</div>
-                        <small class="text-muted">شيكات على العميل: {{ balance_data.checks.outstanding|format_currency }}</small>
+                        <small class="text-muted">شيكات على الزبون: {{ balance_data.checks.outstanding|format_currency }}</small>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -484,7 +484,7 @@
         <div class="card-body text-center py-5">
             <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
             <h5 class="text-muted">لا توجد معاملات في الفترة المحددة</h5>
-            <p class="text-muted">لم يتم العثور على أي معاملات للعميل في الفترة المحددة.</p>
+            <p class="text-muted">لم يتم العثور على أي معاملات للزبون في الفترة المحددة.</p>
         </div>
     </div>
     {% endif %}

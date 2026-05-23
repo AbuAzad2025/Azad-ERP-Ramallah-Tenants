@@ -1,12 +1,13 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}إدارة الفروع{% endblock %}
 
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
 <div class="container-fluid mt-4" dir="rtl">
   
   <!-- رأس الطباعة -->
   <div class="print-header d-none d-print-block">
-    <h2>نظام أزاد لإدارة الكراج</h2>
+    <h2>{{ system_settings.company_name or system_settings.system_name }}</h2>
     <div class="company-info">
       رام الله - فلسطين 🇵🇸 | تاريخ الطباعة: {{ "now"|format_datetime("%Y-%m-%d") }}
     </div>
@@ -23,12 +24,14 @@
       <button class="btn btn-outline-primary" onclick="window.print()">
         <i class="fas fa-print ml-1"></i> طباعة
       </button>
+      {% if has_perm('manage_branches') %}
       <a href="{{ url_for('branches_bp.export_branches') }}" class="btn btn-outline-success">
         <i class="fas fa-download ml-1"></i> تصدير CSV
       </a>
       <a href="{{ url_for('branches_bp.create_branch') }}" class="btn btn-primary">
         <i class="fas fa-plus ml-1"></i> إضافة فرع
       </a>
+      {% endif %}
     </div>
   </div>
 

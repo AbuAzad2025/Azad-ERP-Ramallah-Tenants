@@ -1,0 +1,12 @@
+{# عرض تنبيه وضع القراءة فقط عندما يملك المستخدم عرضاً دون إدارة #}
+{% macro readonly_banner(view_perm, manage_perm, module_name='') %}
+{% if has_perm(view_perm) and not has_perm(manage_perm) %}
+<div class="alert alert-info border-0 shadow-sm mb-3" role="status">
+  <i class="fas fa-eye ml-2"></i>
+  <strong>وضع العرض فقط</strong>
+  {% if module_name %} — {{ module_name }}{% endif %}:
+  يمكنك الاطلاع على البيانات دون إنشاء أو تعديل أو حذف.
+  {% if not module_name %}تواصل مع المسؤول إذا احتجت صلاحية إدارة.{% endif %}
+</div>
+{% endif %}
+{% endmacro %}

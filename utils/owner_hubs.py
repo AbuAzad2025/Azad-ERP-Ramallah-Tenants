@@ -26,9 +26,11 @@ PLATFORM_HUB_SECTIONS = (
 
         "cards": (
 
-            {"endpoint": "security.index", "label": "لوحة المالك", "icon": "fa-home", "color": "warning", "desc": "مركز قيادة المنصة"},
+            {"endpoint": "security.control_center", "label": "مركز التحكم", "icon": "fa-sliders-h", "color": "danger", "desc": "صيانة، تينانتات، كاش، جلسات"},
 
-            {"endpoint": "security.settings_center", "label": "مركز العمليات", "icon": "fa-cogs", "color": "info", "desc": "ثوابت ونظام (بدون هوية مكررة)"},
+            {"endpoint": "security.index", "label": "لوحة الملخص", "icon": "fa-home", "color": "warning", "desc": "مؤشرات وروابط سريعة"},
+
+            {"endpoint": "security.settings_center", "label": "مركز العمليات", "icon": "fa-cogs", "color": "info", "desc": "ثوابت ونظام"},
 
             {"endpoint": "security.monitoring_dashboard", "label": "المراقبة", "icon": "fa-chart-line", "color": "success", "desc": "صحة المنصة"},
 
@@ -98,6 +100,28 @@ TENANT_HUB_SECTIONS = (
 
     {
 
+        "id": "command",
+
+        "title": "القيادة والتحكم",
+
+        "icon": "fa-crown",
+
+        "owner_only": True,
+
+        "cards": (
+
+            {"endpoint": "tenant_console.control", "label": "مركز التحكم", "icon": "fa-sliders-h", "color": "danger", "desc": "تدقيق، مزامنة أرصدة، فريق، فترات"},
+
+            {"endpoint": "tenant_console.index", "label": "لوحة الملخص", "icon": "fa-home", "color": "warning", "desc": "مؤشرات تشغيلية"},
+
+            {"endpoint": "tenant_console.activity", "label": "سجل النشاط", "icon": "fa-history", "color": "dark", "desc": "آخر التعديلات"},
+
+        ),
+
+    },
+
+    {
+
         "id": "ops",
 
         "title": "التشغيل اليومي",
@@ -108,11 +132,11 @@ TENANT_HUB_SECTIONS = (
 
             {"endpoint": "main.dashboard", "label": "لوحة التشغيل", "icon": "fa-tachometer-alt", "color": "primary", "desc": "مبيعات، صيانة، مخزون"},
 
-            {"endpoint": "sales_bp.list_sales", "label": "المبيعات", "icon": "fa-shopping-cart", "color": "success", "desc": "فواتير وذمم عملاء"},
+            {"endpoint": "sales_bp.list_sales", "label": "المبيعات", "icon": "fa-shopping-cart", "color": "success", "desc": "فواتير وذمم زبائن"},
 
             {"endpoint": "returns.list_returns", "label": "المرتجعات", "icon": "fa-undo", "color": "warning", "desc": "مرتجعات البيع والمخزون"},
 
-            {"endpoint": "customers_bp.list_customers", "label": "العملاء", "icon": "fa-user-friends", "color": "info", "desc": "بطاقات وكشوف حساب"},
+            {"endpoint": "customers_bp.list_customers", "label": "الزبائن", "icon": "fa-user-friends", "color": "info", "desc": "بطاقات وكشوف حساب"},
 
             {"endpoint": "payments.index", "label": "الدفعات", "icon": "fa-money-bill-wave", "color": "success", "desc": "تحصيل وصرف"},
 
@@ -224,6 +248,24 @@ TENANT_HUB_SECTIONS = (
 
     {
 
+        "id": "governance",
+
+        "title": "الحوكمة والمتابعة",
+
+        "icon": "fa-shield-alt",
+
+        "cards": (
+
+            {"endpoint": "tenant_console.activity", "label": "سجل النشاط", "icon": "fa-history", "color": "dark", "desc": "آخر التعديلات على بيانات شركتك"},
+
+            {"endpoint": "accounting_validation.index", "label": "التحقق المحاسبي", "icon": "fa-check-double", "color": "success", "desc": "توازن القيود والأرصدة"},
+
+        ),
+
+    },
+
+    {
+
         "id": "team",
 
         "title": "الفريق",
@@ -236,7 +278,7 @@ TENANT_HUB_SECTIONS = (
 
             {"endpoint": "users_bp.create_user", "label": "إضافة مستخدم", "icon": "fa-user-plus", "color": "primary", "desc": "موظفون ومحاسبون — داخل شركتك فقط"},
 
-            {"endpoint": "roles_bp.list_roles", "label": "الأدوار والصلاحيات", "icon": "fa-user-tag", "color": "info", "desc": "أدوار داخل شركتك فقط"},
+            {"endpoint": "roles.list_roles", "label": "الأدوار والصلاحيات", "icon": "fa-user-tag", "color": "info", "desc": "أدوار داخل شركتك فقط"},
 
         ),
 

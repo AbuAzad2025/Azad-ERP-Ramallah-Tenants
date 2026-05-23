@@ -35,7 +35,7 @@
     {% block extra_content %}{% endblock %}
     <p class="hint mono">{% block hint %}{{ path or request.path }}{% endblock %}</p>
     <div class="row">
-      {% block buttons %}<a class="btn btn-primary" href="/">الصفحة الرئيسية</a>{% endblock %}
+      {% block buttons %}<a class="btn btn-primary" href="{{ gm_path('/') }}">الصفحة الرئيسية</a>{% endblock %}
     </div>
     <div class="footer">
       {% block footer %}{% endblock %}

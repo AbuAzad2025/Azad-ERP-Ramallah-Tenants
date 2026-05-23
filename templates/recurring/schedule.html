@@ -18,7 +18,7 @@
     <div class="card-body">
       <div class="row">
         <div class="col-md-3">
-          <strong>العميل:</strong> {{ template.customer.name if template.customer else '-' }}
+          <strong>الزبون:</strong> {{ template.customer.name if template.customer else '-' }}
         </div>
         <div class="col-md-3">
           <strong>المبلغ:</strong> {{ template.amount|number_format }} {{ template.currency }}
@@ -104,7 +104,7 @@
                 <td><small class="text-danger">{{ schedule.error_message if schedule.error_message else '-' }}</small></td>
                 <td>
                   {% if schedule.invoice_id and schedule.invoice %}
-                  <a href="{{ url_for('customers_bp.account_statement', customer_id=schedule.invoice.customer_id) }}" class="btn btn-sm btn-info" title="عرض كشف حساب العميل">
+                  <a href="{{ url_for('customers_bp.account_statement', customer_id=schedule.invoice.customer_id) }}" class="btn btn-sm btn-info" title="عرض كشف حساب الزبون">
                     <i class="fas fa-file-invoice"></i> كشف الحساب
                   </a>
                   {% else %}

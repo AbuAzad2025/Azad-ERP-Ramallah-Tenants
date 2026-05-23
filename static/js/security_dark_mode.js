@@ -6,6 +6,7 @@
 
 (function() {
   if (window.__SECURITY_DARK_MODE_INIT__) return;
+  if (window.__GM_THEME_INIT__) return;
   window.__SECURITY_DARK_MODE_INIT__ = true;
   'use strict';
   

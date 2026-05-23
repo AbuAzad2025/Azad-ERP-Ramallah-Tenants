@@ -293,11 +293,11 @@ def get_knowledge_base():
 
 
 def get_local_faq_responses():
-    return {"من أنت": "أنا المساعد الذكي داخل نظام أزاد. أساعدك في التنقل، فهم البيانات، المحاسبة، التقارير، والأخطاء البرمجية داخل النظام.", "ما قدراتك": "أستطيع قراءة خريطة النظام، فهم الجداول والنماذج، تحليل الأخطاء، شرح القيود المحاسبية، وتوجيهك للصفحات المناسبة حسب الصلاحيات.", "كيف أضيف عميل": "افتح صفحة العملاء ثم إضافة عميل جديد. أدخل الاسم والهاتف والبيانات المطلوبة، ثم احفظ. تحقق من الرصيد الافتتاحي قبل الحفظ."}
+    return {"من أنت": "أنا المساعد الذكي داخل نظام أزاد. أساعدك في التنقل، فهم البيانات، المحاسبة، التقارير، والأخطاء البرمجية داخل النظام.", "ما قدراتك": "أستطيع قراءة خريطة النظام، فهم الجداول والنماذج، تحليل الأخطاء، شرح القيود المحاسبية، وتوجيهك للصفحات المناسبة حسب الصلاحيات.", "كيف أضيف زبون": "افتح صفحة الزبائن ثم إضافة زبون جديد. أدخل الاسم والهاتف والبيانات المطلوبة، ثم احفظ. تحقق من الرصيد الافتتاحي قبل الحفظ."}
 
 
 def get_local_quick_rules():
-    return {"count_customers": {"patterns": ["كم عدد العملاء", "عدد الزبائن", "how many customers"], "model": "Customer", "response_template": "✅ عدد العملاء: {count} عميل"}, "count_services": {"patterns": ["كم صيانة", "عدد الصيانات", "طلبات الصيانة"], "model": "ServiceRequest", "response_template": "🔧 عدد طلبات الصيانة: {count} طلب"}, "count_expenses": {"patterns": ["كم نفقة", "عدد النفقات", "المصاريف"], "model": "Expense", "response_template": "💸 عدد النفقات: {count} نفقة"}, "count_products": {"patterns": ["كم منتج", "عدد القطع", "المنتجات"], "model": "Product", "response_template": "📦 عدد المنتجات: {count} منتج"}, "count_suppliers": {"patterns": ["كم مورد", "عدد الموردين"], "model": "Supplier", "response_template": "🏭 عدد الموردين: {count} مورد"}}
+    return {"count_customers": {"patterns": ["كم عدد الزبائن", "عدد الزبائن", "how many customers"], "model": "Customer", "response_template": "✅ عدد الزبائن: {count} زبون"}, "count_services": {"patterns": ["كم صيانة", "عدد الصيانات", "طلبات الصيانة"], "model": "ServiceRequest", "response_template": "🔧 عدد طلبات الصيانة: {count} طلب"}, "count_expenses": {"patterns": ["كم نفقة", "عدد النفقات", "المصاريف"], "model": "Expense", "response_template": "💸 عدد النفقات: {count} نفقة"}, "count_products": {"patterns": ["كم منتج", "عدد القطع", "المنتجات"], "model": "Product", "response_template": "📦 عدد المنتجات: {count} منتج"}, "count_suppliers": {"patterns": ["كم مورد", "عدد الموردين"], "model": "Supplier", "response_template": "🏭 عدد الموردين: {count} مورد"}}
 
 
 def analyze_error(traceback_text):

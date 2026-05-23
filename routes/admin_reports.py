@@ -278,8 +278,19 @@ def admin_dashboard():
             
             week_start = today - timedelta(days=7)
             month_start = today - timedelta(days=30)
-            
-            today_sales = db.session.query(func.sum(Sale.total_amount)).filter(
+
+            from utils.company_scope import (
+                filter_customers_query,
+                filter_payments_query,
+                filter_sales_query,
+                filter_service_requests_query,
+                filter_warehouses_query,
+            )
+            from models import Customer, Warehouse
+
+            today_sales = filter_sales_query(
+                db.session.query(func.sum(Sale.total_amount))
+            ).filter(
                 and_(
                     Sale.sale_date >= today_start,
                     Sale.sale_date < today_end,
@@ -287,21 +298,27 @@ def admin_dashboard():
                 )
             ).scalar() or Decimal("0")
             
-            week_sales = db.session.query(func.sum(Sale.total_amount)).filter(
+            week_sales = filter_sales_query(
+                db.session.query(func.sum(Sale.total_amount))
+            ).filter(
                 and_(
                     Sale.sale_date >= datetime.combine(week_start, _time.min),
                     Sale.status == SaleStatus.CONFIRMED.value
                 )
             ).scalar() or Decimal("0")
             
-            month_sales = db.session.query(func.sum(Sale.total_amount)).filter(
+            month_sales = filter_sales_query(
+                db.session.query(func.sum(Sale.total_amount))
+            ).filter(
                 and_(
                     Sale.sale_date >= datetime.combine(month_start, _time.min),
                     Sale.status == SaleStatus.CONFIRMED.value
                 )
             ).scalar() or Decimal("0")
             
-            today_payments_in = db.session.query(func.sum(Payment.total_amount)).filter(
+            today_payments_in = filter_payments_query(
+                db.session.query(func.sum(Payment.total_amount))
+            ).filter(
                 and_(
                     Payment.payment_date >= today_start,
                     Payment.payment_date < today_end,
@@ -310,7 +327,9 @@ def admin_dashboard():
                 )
             ).scalar() or Decimal("0")
             
-            today_payments_out = db.session.query(func.sum(Payment.total_amount)).filter(
+            today_payments_out = filter_payments_query(
+                db.session.query(func.sum(Payment.total_amount))
+            ).filter(
                 and_(
                     Payment.payment_date >= today_start,
                     Payment.payment_date < today_end,
@@ -319,20 +338,32 @@ def admin_dashboard():
                 )
             ).scalar() or Decimal("0")
             
-            pending_services = ServiceRequest.query.filter(
-                ~ServiceRequest.status.in_([ServiceStatus.COMPLETED.value, ServiceStatus.CANCELLED.value])
-            ).count()
-            
-            low_stock_count = db.session.query(func.count(Product.id)).join(
-                StockLevel, Product.id == StockLevel.product_id
-            ).filter(
-                and_(
-                    Product.is_active.is_(True),
-                    func.coalesce(StockLevel.quantity, 0) <= Product.min_qty
+            pending_services = filter_service_requests_query(
+                ServiceRequest.query.filter(
+                    ~ServiceRequest.status.in_(
+                        [ServiceStatus.COMPLETED.value, ServiceStatus.CANCELLED.value]
+                    )
                 )
-            ).scalar() or 0
-            
-            total_customers = db.session.query(func.count(Customer.id)).scalar() or 0
+            ).count()
+
+            _wh_ids = filter_warehouses_query(Warehouse.query).with_entities(Warehouse.id)
+            low_stock_count = (
+                db.session.query(func.count(Product.id))
+                .join(StockLevel, Product.id == StockLevel.product_id)
+                .filter(
+                    StockLevel.warehouse_id.in_(_wh_ids),
+                    and_(
+                        Product.is_active.is_(True),
+                        func.coalesce(StockLevel.quantity, 0) <= Product.min_qty,
+                    ),
+                )
+                .scalar()
+                or 0
+            )
+
+            total_customers = (
+                filter_customers_query(db.session.query(func.count(Customer.id))).scalar() or 0
+            )
             total_products = db.session.query(func.count(Product.id)).filter(
                 Product.is_active.is_(True)
             ).scalar() or 0
@@ -392,24 +423,36 @@ def api_stats():
         today_start = datetime.combine(today, _time.min)
         today_end = datetime.combine(today + timedelta(days=1), _time.min)
         
-        today_sales_count = Sale.query.filter(
-            and_(
-                Sale.sale_date >= today_start,
-                Sale.sale_date < today_end,
-                Sale.status == SaleStatus.CONFIRMED.value
+        from utils.company_scope import (
+            filter_payments_query,
+            filter_sales_query,
+            filter_service_requests_query,
+        )
+
+        today_sales_count = filter_sales_query(
+            Sale.query.filter(
+                and_(
+                    Sale.sale_date >= today_start,
+                    Sale.sale_date < today_end,
+                    Sale.status == SaleStatus.CONFIRMED.value,
+                )
             )
         ).count()
         
-        today_payments_count = Payment.query.filter(
-            and_(
-                Payment.payment_date >= today_start,
-                Payment.payment_date < today_end,
-                Payment.status == PaymentStatus.COMPLETED.value
+        today_payments_count = filter_payments_query(
+            Payment.query.filter(
+                and_(
+                    Payment.payment_date >= today_start,
+                    Payment.payment_date < today_end,
+                    Payment.status == PaymentStatus.COMPLETED.value,
+                )
             )
         ).count()
         
-        pending_services = ServiceRequest.query.filter(
-            ~ServiceRequest.status.in_([ServiceStatus.COMPLETED.value, ServiceStatus.CANCELLED.value])
+        pending_services = filter_service_requests_query(
+            ServiceRequest.query.filter(
+                ~ServiceRequest.status.in_([ServiceStatus.COMPLETED.value, ServiceStatus.CANCELLED.value])
+            )
         ).count()
         
         return jsonify({

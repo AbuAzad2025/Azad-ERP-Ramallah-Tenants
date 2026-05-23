@@ -127,7 +127,7 @@
           <table class="table table-sm">
             <tr><th width="200">رمز المشروع:</th><td>{{ project.code }}</td></tr>
             <tr><th>اسم المشروع:</th><td>{{ project.name }}</td></tr>
-            <tr><th>العميل:</th><td>{{ project.client.name if project.client else '-' }}</td></tr>
+            <tr><th>الزبون:</th><td>{{ project.client.name if project.client else '-' }}</td></tr>
             <tr><th>المدير:</th><td>{{ project.manager.full_name or project.manager.username }}</td></tr>
             <tr><th>الفرع:</th><td>{{ project.branch.name if project.branch else '-' }}</td></tr>
             <tr><th>مركز التكلفة:</th><td>{{ project.cost_center.name if project.cost_center else '-' }}</td></tr>

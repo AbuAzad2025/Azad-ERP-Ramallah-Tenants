@@ -24,6 +24,10 @@ TENANT_PLATFORM_BLOCKED_PREFIXES: tuple[str, ...] = (
 
     "/other-systems",
 
+    "/recurring",
+
+    "/system/performance",
+
 )
 
 
@@ -125,6 +129,13 @@ def template_context() -> dict:
     prefix = gm_url_prefix()
 
     out: dict = {"gm_url_prefix": prefix, "gm_path": gm_path}
+
+    try:
+        from utils.warehouse_defaults import get_default_warehouse_id
+
+        out["gm_default_warehouse_id"] = get_default_warehouse_id()
+    except Exception:
+        out["gm_default_warehouse_id"] = None
 
 
 

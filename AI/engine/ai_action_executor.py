@@ -115,14 +115,14 @@ class ActionExecutor:
             if not name or not phone:
                 return {"success": False, "message": "❌ الاسم ورقم الهاتف مطلوبان"}
             if Customer.query.filter_by(phone=phone).first():
-                return {"success": False, "message": "❌ العميل موجود مسبقاً بنفس رقم الهاتف"}
+                return {"success": False, "message": "❌ الزبون موجود مسبقاً بنفس رقم الهاتف"}
             customer = self._new_model(Customer, {"name": name, "phone": phone, "whatsapp": self._clean(params.get("whatsapp")) or phone, "email": self._clean(params.get("email")), "address": self._clean(params.get("address")), "opening_balance": self._decimal(params.get("opening_balance")), "notes": self._clean(params.get("notes")), "currency": self._clean(params.get("currency")) or "ILS", "is_active": True})
             db.session.add(customer)
             db.session.commit()
-            return {"success": True, "message": f"✅ تم إضافة العميل '{customer.name}'", "customer_id": customer.id, "data": customer.to_dict() if hasattr(customer, "to_dict") else {"id": customer.id, "name": customer.name, "phone": customer.phone}}
+            return {"success": True, "message": f"✅ تم إضافة الزبون '{customer.name}'", "customer_id": customer.id, "data": customer.to_dict() if hasattr(customer, "to_dict") else {"id": customer.id, "name": customer.name, "phone": customer.phone}}
         except Exception as exc:
             db.session.rollback()
-            return {"success": False, "message": f"❌ فشل إضافة العميل: {exc}", "error": str(exc)}
+            return {"success": False, "message": f"❌ فشل إضافة الزبون: {exc}", "error": str(exc)}
 
     def add_supplier(self, params: Dict[str, Any]) -> Dict[str, Any]:
         try:
@@ -219,7 +219,7 @@ class ActionExecutor:
             warehouse_id = params.get("warehouse_id")
             items = params.get("items") or []
             if not customer_id or not warehouse_id or not items:
-                return {"success": False, "message": "❌ العميل والمستودع وبند واحد على الأقل مطلوبة"}
+                return {"success": False, "message": "❌ الزبون والمستودع وبند واحد على الأقل مطلوبة"}
             tax_rate = self._vat_rate(bool(params.get("vat_enabled", True)))
             sale = self._new_model(Sale, {"customer_id": customer_id, "seller_id": user_id, "sale_date": datetime.now(timezone.utc), "tax_rate": tax_rate, "discount_total": self._decimal(params.get("discount")), "shipping_cost": self._decimal(params.get("shipping_cost")), "notes": self._clean(params.get("notes")), "status": self._clean(params.get("status")) or "CONFIRMED", "currency": self._clean(params.get("currency")) or "ILS"})
             db.session.add(sale)
@@ -269,7 +269,7 @@ class ActionExecutor:
         try:
             from models import ServiceRequest
             if not params.get("customer_id"):
-                return {"success": False, "message": "❌ معرف العميل مطلوب"}
+                return {"success": False, "message": "❌ معرف الزبون مطلوب"}
             description = self._clean(params.get("problem_description", params.get("issue_description", params.get("description"))))
             if not description:
                 return {"success": False, "message": "❌ وصف العطل مطلوب"}
@@ -342,7 +342,7 @@ class ActionExecutor:
 
 def parse_user_request(message: str) -> Optional[Tuple[str, Dict[str, Any]]]:
     message = str(message or "")
-    if any(word in message.lower() for word in ["أضف عميل", "اضف عميل", "إضافة عميل", "add customer"]):
+    if any(word in message.lower() for word in ["أضف زبون", "اضف زبون", "إضافة زبون", "add customer"]):
         params: Dict[str, Any] = {}
         name_match = re.search(r"اسمه?\s+([^\s،,]+)", message)
         if name_match:

@@ -42,7 +42,7 @@ def compute_sale_totals(sale) -> dict:
 def ensure_invoice_for_sale(sale, *, commit: bool = False):
     """
     إنشاء أو تحديث سجل Invoice مرتبط بالمبيعة (مصدر SALE).
-    الفاتورة = مستند الذمة؛ التحصيل يتم على حساب العميل وليس بإغلاق البيع مباشرة.
+    الفاتورة = مستند الذمة؛ التحصيل يتم على حساب الزبون وليس بإغلاق البيع مباشرة.
     """
     from models import Invoice, InvoiceLine, InvoiceSource
 
@@ -187,7 +187,7 @@ def compute_sale_paid_display(sale, grand_total=None):
 
 def sale_receivable_display(sale) -> dict:
     """
-    عرض محاسبي: المبيعة = ذمة على العميل (مبلغ الفاتورة).
+    عرض محاسبي: المبيعة = ذمة على الزبون (مبلغ الفاتورة).
     لا نعرض «مفتوحة/متبقي» كحالة تحصيل على مستوى البيع.
     """
     total = float(getattr(sale, "total_amount", 0) or 0)

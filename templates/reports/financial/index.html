@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='adminlte/plugins/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/public_mobile.css') }}">
+    {% include 'partials/gm_tenant_runtime.html' %}
     <style>
         .report-card {
             transition: all 0.3s ease;
@@ -188,7 +189,7 @@
                                 <i class="fas fa-users report-icon text-primary"></i>
                                 <h5 class="card-title">الأرصدة المجمعة</h5>
                                 <p class="card-text">Balances Summary</p>
-                                <small class="text-muted">أرصدة العملاء والموردين والشركاء</small>
+                                <small class="text-muted">أرصدة الزبائن والموردين والشركاء</small>
                             </div>
                         </div>
                     </div>
@@ -246,11 +247,12 @@
 
             showLoading();
             
-            let url = `/reports/financial/${reportType}?start_date=${startDate}&end_date=${endDate}`;
+            const gp = window.gmPath || window.gmU || function(p){ return p; };
+            let url = gp(`/reports/financial/${reportType}?start_date=${startDate}&end_date=${endDate}`);
             if (reportType === 'balance-sheet') {
-                url = `/reports/financial/${reportType}?date=${endDate}`;
+                url = gp(`/reports/financial/${reportType}?date=${endDate}`);
             } else if (reportType === 'balances-summary') {
-                url = `/reports/financial/${reportType}`;
+                url = gp(`/reports/financial/${reportType}`);
             }
 
             fetch(url)
@@ -406,9 +408,9 @@
             return `
                 <div class="row">
                     <div class="col-md-4">
-                        <h6>أرصدة العملاء</h6>
+                        <h6>أرصدة الزبائن</h6>
                         <div class="alert alert-info">
-                            <strong>إجمالي أرصدة العملاء: ${summary.total_customer_balance.toLocaleString()} ₪</strong>
+                            <strong>إجمالي أرصدة الزبائن: ${summary.total_customer_balance.toLocaleString()} ₪</strong>
                         </div>
                         <table class="table table-sm">
                             ${data.details.customers.slice(0, 10).map(c => `

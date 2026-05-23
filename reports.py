@@ -52,7 +52,7 @@ def _allowed_columns(model) -> set[str]:
 
 
 def customer_balance_report_ils(customer_ids: list = None) -> Dict:
-    """تقرير أرصدة العملاء بالشيكل"""
+    """تقرير أرصدة الزبائن بالشيكل"""
     try:
         import utils
         
@@ -1006,7 +1006,7 @@ def top_products_report(
         elif share >= 10:
             reason = "حصة إيراد كبيرة"
         elif orders_count >= 5:
-            reason = "مكرر الطلب من العملاء"
+            reason = "مكرر الطلب من الزبائن"
         else:
             reason = "أداء جيد ضمن الفترة"
         item = {

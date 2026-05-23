@@ -26,13 +26,13 @@ PROVIDER_KEY_MATERIAL_FILE = "ai_provider_key_material.json"
 DEFAULT_MODELS = {
     "نموذج التنبؤ بالمبيعات": {"status": "pending", "accuracy": None, "last_update": None, "last_trained": None, "training_jobs": [], "metric_source": None},
     "نموذج إدارة المخزون": {"status": "pending", "accuracy": None, "last_update": None, "last_trained": None, "training_jobs": [], "metric_source": None},
-    "نموذج تحليل العملاء": {"status": "pending", "accuracy": None, "last_update": None, "last_trained": None, "training_jobs": [], "metric_source": None},
+    "نموذج تحليل الزبائن": {"status": "pending", "accuracy": None, "last_update": None, "last_trained": None, "training_jobs": [], "metric_source": None},
 }
 
 AVAILABLE_MODELS = [
     {"id": "sales_predictor", "name": "نموذج التنبؤ بالمبيعات", "description": "تنبؤ بالمبيعات المستقبلية بناءً على البيانات التاريخية", "icon": "fa-chart-line", "status": "pending", "accuracy": None, "last_trained": None},
     {"id": "inventory_optimizer", "name": "نموذج إدارة المخزون", "description": "التنبؤ بالنقص في المخزون وتحسين الطلبات", "icon": "fa-boxes", "status": "pending", "accuracy": None, "last_trained": None},
-    {"id": "customer_analyzer", "name": "نموذج تحليل العملاء", "description": "تحليل سلوك العملاء والتنبؤ بالاحتياجات", "icon": "fa-users", "status": "pending", "accuracy": None, "last_trained": None},
+    {"id": "customer_analyzer", "name": "نموذج تحليل الزبائن", "description": "تحليل سلوك الزبائن والتنبؤ بالاحتياجات", "icon": "fa-users", "status": "pending", "accuracy": None, "last_trained": None},
 ]
 
 

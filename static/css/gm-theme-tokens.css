@@ -1,0 +1,145 @@
+/**
+ * Arabic ERP Theme System — Design Tokens
+ * Variants: palestinian | gulf  ×  light | dark
+ * HTML: data-gm-variant + data-gm-theme  |  body.dark-mode للتوافق
+ */
+
+:root {
+  --gm-font: "Tajawal", "Cairo", system-ui, sans-serif;
+  --gm-radius: 12px;
+  --gm-radius-lg: 16px;
+  --gm-radius-input: 10px;
+  --gm-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 4px 14px rgba(15, 23, 42, 0.04);
+  --gm-shadow-hover: 0 4px 20px rgba(15, 23, 42, 0.1);
+  --gm-shadow-card: 0 2px 12px rgba(15, 23, 42, 0.06);
+  --gm-sidebar-width: 260px;
+  --gm-header-height: 56px;
+  --gm-footer-height: 88px;
+  --gm-field-height: 44px;
+  --gm-btn-min-height: 44px;
+  --gm-table-header-height: 48px;
+  --gm-table-row-height: 52px;
+  --gm-space-label-field: 0.5rem;
+  --gm-space-field-row: 1rem;
+  --gm-space-block: 1.25rem;
+  --gm-space-section: 1.5rem;
+  --gm-space-inline: 16px;
+  --gm-space-btn-inline: 20px;
+  --gm-line-height: 1.55;
+  --gm-z-dropdown: 1000;
+}
+
+/* ─── Palestinian Light (افتراضي) ─── */
+html[data-gm-variant="palestinian"][data-gm-theme="light"],
+html[data-gm-variant="palestinian"]:not([data-gm-theme="dark"]) {
+  color-scheme: light;
+  --gm-content-bg: #f8f7f2;
+  --gm-surface: #ffffff;
+  --gm-surface-alt: #f1f5f1;
+  --gm-primary: #006b3f;
+  --gm-primary-hover: #004c2f;
+  --gm-primary-soft: rgba(0, 107, 63, 0.12);
+  --gm-secondary: #111827;
+  --gm-accent: #c8102e;
+  --gm-gold: #c9a227;
+  --gm-text: #111827;
+  --gm-text-muted: #6b7280;
+  --gm-border: #e5e7eb;
+  --gm-sidebar-bg: #004c2f;
+  --gm-sidebar-text: #e8f5e9;
+  --gm-sidebar-active-bg: #006b3f;
+  --gm-header-bg: #006b3f;
+  --gm-footer-bg: #004c2f;
+  --gm-footer-text: #f1f5f1;
+  --gm-success: #0e9f6e;
+  --gm-warning: #d97706;
+  --gm-danger: #dc2626;
+  --gm-info: #2563eb;
+  --gm-pattern-id: palestinian;
+}
+
+/* ─── Palestinian Dark ─── */
+html[data-gm-variant="palestinian"][data-gm-theme="dark"] {
+  color-scheme: dark;
+  --gm-content-bg: #0b0f0e;
+  --gm-surface: #111827;
+  --gm-surface-alt: #17201c;
+  --gm-primary: #00a651;
+  --gm-primary-hover: #007a3d;
+  --gm-primary-soft: rgba(0, 166, 81, 0.15);
+  --gm-secondary: #f9fafb;
+  --gm-accent: #e11d48;
+  --gm-gold: #d6b25e;
+  --gm-text: #f9fafb;
+  --gm-text-muted: #a1a1aa;
+  --gm-border: #263238;
+  --gm-sidebar-bg: #0b0f0e;
+  --gm-sidebar-text: #cbd5e1;
+  --gm-sidebar-active-bg: #00a651;
+  --gm-header-bg: #111827;
+  --gm-footer-bg: #0b0f0e;
+  --gm-footer-text: #e4e4e7;
+  --gm-success: #22c55e;
+  --gm-warning: #f59e0b;
+  --gm-danger: #ef4444;
+  --gm-info: #60a5fa;
+  --gm-pattern-id: palestinian;
+}
+
+/* ─── Gulf Light ─── */
+html[data-gm-variant="gulf"][data-gm-theme="light"],
+html[data-gm-variant="gulf"]:not([data-gm-theme="dark"]) {
+  color-scheme: light;
+  --gm-content-bg: #faf8f2;
+  --gm-surface: #ffffff;
+  --gm-surface-alt: #f4f7f8;
+  --gm-primary: #063b5b;
+  --gm-primary-hover: #022a44;
+  --gm-primary-soft: rgba(6, 59, 91, 0.12);
+  --gm-secondary: #0f766e;
+  --gm-accent: #c9a24a;
+  --gm-gold: #b88a2e;
+  --gm-text: #0f172a;
+  --gm-text-muted: #64748b;
+  --gm-border: #e2e8f0;
+  --gm-sidebar-bg: #063b5b;
+  --gm-sidebar-text: #e2e8f0;
+  --gm-sidebar-active-bg: #0f766e;
+  --gm-header-bg: #063b5b;
+  --gm-footer-bg: #022a44;
+  --gm-footer-text: #f1f5f9;
+  --gm-success: #059669;
+  --gm-warning: #d97706;
+  --gm-danger: #dc2626;
+  --gm-info: #0284c7;
+  --gm-pattern-id: gulf;
+}
+
+/* ─── Gulf Dark ─── */
+html[data-gm-variant="gulf"][data-gm-theme="dark"] {
+  color-scheme: dark;
+  --gm-content-bg: #07111f;
+  --gm-surface: #0d1b2a;
+  --gm-surface-alt: #10263a;
+  --gm-primary: #0f766e;
+  --gm-primary-hover: #115e59;
+  --gm-primary-soft: rgba(15, 118, 110, 0.18);
+  --gm-secondary: #d4af37;
+  --gm-accent: #c89b3c;
+  --gm-gold: #d6b25e;
+  --gm-text: #f8fafc;
+  --gm-text-muted: #cbd5e1;
+  --gm-border: #1e3a4c;
+  --gm-sidebar-bg: #07111f;
+  --gm-sidebar-text: #94a3b8;
+  --gm-sidebar-active-bg: #0f766e;
+  --gm-header-bg: #0d1b2a;
+  --gm-footer-bg: #07111f;
+  --gm-footer-text: #e2e8f0;
+  --gm-success: #10b981;
+  --gm-warning: #f59e0b;
+  --gm-danger: #f43f5e;
+  --gm-info: #38bdf8;
+  --gm-pattern-id: gulf;
+}
+

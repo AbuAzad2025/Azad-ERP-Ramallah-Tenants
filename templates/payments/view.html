@@ -124,7 +124,7 @@
             <div class="d-flex align-items-center">
               <i class="fas fa-user text-primary ml-2"></i>
               <div>
-                <strong>عميل:</strong> {{ payment.customer.name }}
+                <strong>زبون:</strong> {{ payment.customer.name }}
                 {% if payment.customer.phone %}
                   <br><small class="text-muted">{{ payment.customer.phone }}</small>
                 {% endif %}
@@ -156,7 +156,7 @@
               <div>
                 <strong>فاتورة:</strong> {{ payment.invoice.invoice_number or payment.invoice.id }}
                 {% if payment.invoice.customer %}
-                  <br><small class="text-muted">عميل: {{ payment.invoice.customer.name }}</small>
+                  <br><small class="text-muted">زبون: {{ payment.invoice.customer.name }}</small>
                 {% endif %}
               </div>
             </div>
@@ -166,7 +166,7 @@
               <div>
                 <strong>فاتورة مبيعات:</strong> {{ payment.sale.sale_number or payment.sale.id }}
                 {% if payment.sale.customer %}
-                  <br><small class="text-muted">عميل: {{ payment.sale.customer.name }}</small>
+                  <br><small class="text-muted">زبون: {{ payment.sale.customer.name }}</small>
                 {% endif %}
               </div>
             </div>
@@ -176,7 +176,7 @@
               <div>
                 <strong>طلب صيانة:</strong> {{ payment.service.service_number or payment.service.id }}
                 {% if payment.service.customer %}
-                  <br><small class="text-muted">عميل: {{ payment.service.customer.name }}</small>
+                  <br><small class="text-muted">زبون: {{ payment.service.customer.name }}</small>
                 {% endif %}
               </div>
             </div>

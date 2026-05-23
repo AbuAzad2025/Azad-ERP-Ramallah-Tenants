@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}كشف حساب العميل{% endblock %}
+{% block title %}كشف حساب الزبون{% endblock %}
 
 {% block head_extra %}
 <style>
@@ -86,7 +86,7 @@
       text-align: center;
     }
     
-    /* معلومات العميل للطباعة */
+    /* معلومات الزبون للطباعة */
     .print-customer-info {
       display: block !important;
       font-size: 6pt !important;
@@ -201,7 +201,7 @@
   <nav aria-label="breadcrumb" class="flex-grow-1">
     <ol class="breadcrumb bg-white px-3 py-2 rounded mb-0">
       <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">الرئيسية</a></li>
-      <li class="breadcrumb-item"><a href="{{ url_for('customers_bp.list_customers') }}">العملاء</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('customers_bp.list_customers') }}">الزبائن</a></li>
       <li class="breadcrumb-item active">كشف حساب {{ customer.name }}</li>
     </ol>
   </nav>
@@ -219,18 +219,18 @@
 {% block content %}
 <!-- رأس الصفحة للطباعة فقط -->
 <div class="print-header-info">
-  {% with doc_title='كشف حساب عميل' %}
+  {% with doc_title='كشف حساب زبون' %}
   {% include 'partials/print_letterhead.html' %}
   {% endwith %}
 </div>
 
-<!-- معلومات العميل والرصيد - للطباعة فقط -->
+<!-- معلومات الزبون والرصيد - للطباعة فقط -->
 <div class="print-customer-info">
   <table style="width: 100%; border-collapse: collapse;">
     <tr>
       <td style="width: 55%; padding: 4px; vertical-align: top;">
         <div style="margin-bottom: 3px;">
-          <strong>العميل:</strong> {{ customer.name }}
+          <strong>الزبون:</strong> {{ customer.name }}
         </div>
         <div>
           <strong>الجوال:</strong> {{ customer.phone or '—' }}
@@ -281,7 +281,7 @@
     {% endif %}
   </div>
 
-  <!-- 👤 بطاقة معلومات العميل -->
+  <!-- 👤 بطاقة معلومات الزبون -->
   <div class="card shadow-sm border mb-4 card-hover">
   <div class="card-body">
     <div class="row align-items-center">
@@ -865,11 +865,11 @@
     printWindow.document.write('@page { margin: 0.8cm; size: A4 portrait; }');
     printWindow.document.write('</style></head><body>');
     
-    printWindow.document.write('<h2>كشف حساب عميل</h2>');
+    printWindow.document.write('<h2>كشف حساب زبون</h2>');
     printWindow.document.write('<div class="customer-info">');
     printWindow.document.write('<table><tr>');
     printWindow.document.write('<td style="width: 55%;">');
-    printWindow.document.write('<div><strong>العميل:</strong> ' + printData.customerName + '</div>');
+    printWindow.document.write('<div><strong>الزبون:</strong> ' + printData.customerName + '</div>');
     if (printData.customerPhone) {
       printWindow.document.write('<div><strong>الجوال:</strong> ' + printData.customerPhone + '</div>');
     }

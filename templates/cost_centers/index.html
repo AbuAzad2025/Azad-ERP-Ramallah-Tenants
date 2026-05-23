@@ -20,9 +20,11 @@
         <a href="{{ url_for('advanced.accounting_control') }}" class="btn btn-outline-secondary">
           <i class="fas fa-arrow-left"></i> العودة للوحة التحكم
         </a>
+        {% if has_perm('manage_cost_centers') or has_perm('manage_advanced_accounting') %}
         <a href="{{ url_for('cost_centers.add') }}" class="btn btn-primary">
           <i class="fas fa-plus"></i> إضافة مركز
         </a>
+        {% endif %}
         <a href="{{ url_for('cost_centers.report_summary') }}" class="btn btn-info">
           <i class="fas fa-chart-pie"></i> ملخص المراكز
         </a>

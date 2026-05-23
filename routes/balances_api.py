@@ -12,9 +12,21 @@ balances_api_bp = Blueprint('balances_api', __name__, url_prefix='/api/balances'
 @balances_api_bp.route('/dashboard', methods=['GET'])
 @login_required
 def balances_dashboard():
-    suppliers = Supplier.query.filter_by(is_archived=False).limit(10000).all()
-    partners = Partner.query.filter_by(is_archived=False).limit(10000).all()
-    customers = Customer.query.filter_by(is_archived=False).limit(10000).all()
+    from utils.company_scope import (
+        filter_customers_query,
+        filter_partners_query,
+        filter_suppliers_query,
+    )
+
+    suppliers = filter_suppliers_query(
+        Supplier.query.filter_by(is_archived=False)
+    ).limit(10000).all()
+    partners = filter_partners_query(
+        Partner.query.filter_by(is_archived=False)
+    ).limit(10000).all()
+    customers = filter_customers_query(
+        Customer.query.filter_by(is_archived=False)
+    ).limit(10000).all()
     
     for supplier in suppliers:
         db.session.refresh(supplier)
@@ -78,6 +90,9 @@ def balances_dashboard():
 @balances_api_bp.route('/supplier/<int:supplier_id>', methods=['GET'])
 @login_required
 def get_supplier_balance(supplier_id):
+    from utils.company_scope import assert_supplier_access
+
+    assert_supplier_access(supplier_id)
     supplier = db.get_or_404(Supplier, supplier_id)
     db.session.refresh(supplier)
     breakdown = None
@@ -109,6 +124,9 @@ def get_supplier_balance(supplier_id):
 @balances_api_bp.route('/partner/<int:partner_id>', methods=['GET'])
 @login_required
 def get_partner_balance(partner_id):
+    from utils.company_scope import assert_partner_access
+
+    assert_partner_access(partner_id)
     partner = db.get_or_404(Partner, partner_id)
     breakdown = None
     try:
@@ -140,6 +158,9 @@ def get_partner_balance(partner_id):
 @balances_api_bp.route('/customer/<int:customer_id>', methods=['GET'])
 @login_required
 def get_customer_balance(customer_id):
+    from utils.company_scope import assert_customer_access
+
+    assert_customer_access(customer_id)
     customer = db.get_or_404(Customer, customer_id)
     breakdown = None
     try:
@@ -173,9 +194,21 @@ def get_balances_summary():
     if cached:
         return jsonify(cached)
     
-    suppliers = Supplier.query.filter_by(is_archived=False).limit(10000).all()
-    partners = Partner.query.filter_by(is_archived=False).limit(10000).all()
-    customers = Customer.query.filter_by(is_archived=False).limit(10000).all()
+    from utils.company_scope import (
+        filter_customers_query,
+        filter_partners_query,
+        filter_suppliers_query,
+    )
+
+    suppliers = filter_suppliers_query(
+        Supplier.query.filter_by(is_archived=False)
+    ).limit(10000).all()
+    partners = filter_partners_query(
+        Partner.query.filter_by(is_archived=False)
+    ).limit(10000).all()
+    customers = filter_customers_query(
+        Customer.query.filter_by(is_archived=False)
+    ).limit(10000).all()
     
     for supplier in suppliers:
         db.session.refresh(supplier)

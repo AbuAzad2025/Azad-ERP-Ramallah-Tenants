@@ -19,7 +19,7 @@
   async function fetchProductInfo(pid, wid, targetCurrency){
     if(!(pid && wid)) return {};
     try{
-      let url = `/api/products/${pid}/info?warehouse_id=${wid}`;
+      let url = (window.gmPath || function(p){ return p; })(`/api/products/${pid}/info?warehouse_id=${wid}`);
       if(targetCurrency) url += `&currency=${encodeURIComponent(targetCurrency)}`;
       const res=await fetch(url, {headers:{'Accept':'application/json'}});
       return await res.json();
@@ -368,7 +368,7 @@
 
         if ($wh.length) {
           initAjaxSelect($wh, {
-            endpoint: () => $wh.data('endpoint') || '/api/warehouses',
+            endpoint: () => $wh.data('endpoint') || (window.gmPath || function(p){ return p; })('/api/search_warehouses'),
             placeholder: $wh.data('placeholder') || '#'
           });
           
@@ -379,7 +379,8 @@
         const initProducts = () => {
           if (!$pd.length) return;
           const wid = $wh.val();
-          const endpoint = wid ? `/api/warehouses/${wid}/products` : ($pd.data('endpoint') || '/api/products');
+          const gp = window.gmPath || function(p){ return p; };
+          const endpoint = wid ? gp(`/api/warehouses/${wid}/products`) : ($pd.data('endpoint') || gp('/api/products'));
           initAjaxSelect($pd, {
             endpoint: () => endpoint,
             placeholder: $pd.data('placeholder') || 'اختر الصنف'
@@ -505,7 +506,7 @@
     }
     const recalcDebounced = debounce(recalc,150);
 
-    // تهيئة Select2 للعناصر الرأسية (العميل والموظف)
+    // تهيئة Select2 للعناصر الرأسية (الزبون والموظف)
     select2Ready.then(()=>{
       if(!(window.jQuery && window.jQuery.fn && window.jQuery.fn.select2)) return;
       const $ = window.jQuery;

@@ -11,14 +11,14 @@ from extensions import db
 
 
 def analyze_customer_health(customer_id: int = None) -> Dict[str, Any]:
-    """تحليل ذكي لصحة العملاء - يدرك المشاكل والفرص"""
+    """تحليل ذكي لصحة الزبائن - يدرك المشاكل والفرص"""
     from models import Customer, Invoice, Payment
     
     if customer_id:
-        # تحليل عميل واحد
+        # تحليل زبون واحد
         customer = db.session.get(Customer, customer_id)
         if not customer:
-            return {'error': 'العميل غير موجود'}
+            return {'error': 'الزبون غير موجود'}
         
         # حساب الأرقام
         total_invoices = db.session.query(func.sum(Invoice.total_amount)).filter(
@@ -48,7 +48,7 @@ def analyze_customer_health(customer_id: int = None) -> Dict[str, Any]:
         if balance > 5000:
             analysis['status'] = '⚠️ خطر'
             analysis['alerts'].append(f'رصيد مرتفع جداً: {balance:.2f}₪')
-            analysis['recommendations'].append('اتصل بالعميل فوراً لتحصيل المستحقات')
+            analysis['recommendations'].append('اتصل بالزبون فوراً لتحصيل المستحقات')
         elif balance > 1000:
             analysis['status'] = '⚠️ انتباه'
             analysis['alerts'].append(f'رصيد متوسط: {balance:.2f}₪')
@@ -64,7 +64,7 @@ def analyze_customer_health(customer_id: int = None) -> Dict[str, Any]:
         ).scalar() or 0
         
         if invoices_count > 10:
-            analysis['opportunities'].append('عميل مميز - قدم له برنامج ولاء!')
+            analysis['opportunities'].append('زبون مميز - قدم له برنامج ولاء!')
         
         # آخر معاملة
         last_invoice = db.session.query(Invoice).filter(
@@ -81,10 +81,10 @@ def analyze_customer_health(customer_id: int = None) -> Dict[str, Any]:
         return analysis
     
     else:
-        # تحليل عام لجميع العملاء
+        # تحليل عام لجميع الزبائن
         total_customers = Customer.query.count()
         
-        # عملاء بأرصدة مرتفعة (خطر)
+        # زبائن بأرصدة مرتفعة (خطر)
         high_risk = db.session.query(Customer).join(Invoice).group_by(Customer.id).having(
             func.sum(Invoice.total_amount) > 5000
         ).count()
@@ -93,7 +93,7 @@ def analyze_customer_health(customer_id: int = None) -> Dict[str, Any]:
             'total_customers': total_customers,
             'high_risk': high_risk,
             'recommendations': [
-                f'{high_risk} عميل برصيد خطر - راجع تقرير AR Aging',
+                f'{high_risk} زبون برصيد خطر - راجع تقرير AR Aging',
                 'تابع التحصيلات بانتظام'
             ]
         }
@@ -212,7 +212,7 @@ def analyze_sales_performance(period_days: int = 30) -> Dict[str, Any]:
         analysis['insights'].append('انخفاض ملحوظ - يحتاج تدخل فوري!')
         analysis['recommendations'].extend([
             'راجع أسعارك - هل ارتفعت كثيراً؟',
-            'تحقق من رضا العملاء',
+            'تحقق من رضا الزبائن',
             'قارن مع المنافسين',
             'قدم عروض خاصة لتحفيز المبيعات'
         ])
@@ -267,7 +267,7 @@ def analyze_business_risks() -> Dict[str, Any]:
         risks['medium'].append(f'{low_stock_count} منتج تحت الحد الأدنى')
         risks['overall_score'] -= 1
     
-    # 3️⃣ خطر العملاء غير النشطين
+    # 3️⃣ خطر الزبائن غير النشطين
     ninety_days_ago = datetime.now(timezone.utc) - timedelta(days=90)
     inactive_customers = db.session.query(func.count(Customer.id)).filter(
         ~Customer.id.in_(
@@ -278,7 +278,7 @@ def analyze_business_risks() -> Dict[str, Any]:
     ).scalar() or 0
     
     if inactive_customers > 50:
-        risks['medium'].append(f'{inactive_customers} عميل غير نشط (90+ يوم)')
+        risks['medium'].append(f'{inactive_customers} زبون غير نشط (90+ يوم)')
         risks['overall_score'] -= 1
     
     # الحكم النهائي
@@ -298,10 +298,10 @@ def smart_recommendations(context: str = 'general') -> List[str]:
     
     recommendations = []
     
-    # تحليل العملاء
+    # تحليل الزبائن
     total_customers = Customer.query.count()
     if total_customers < 10:
-        recommendations.append('🎯 عدد العملاء قليل - ركز على التسويق واكتساب عملاء جدد')
+        recommendations.append('🎯 عدد الزبائن قليل - ركز على التسويق واكتساب زبائن جدد')
     
     # تحليل المخزون
     total_products = Product.query.count()
@@ -363,8 +363,8 @@ def think_and_deduce(query: str, db_data: Dict[str, Any]) -> Dict[str, Any]:
     query_lower = query.lower()
     
     # فهم النية
-    if 'عملاء' in query_lower or 'customer' in query_lower:
-        deductions['understanding'] = 'أفهم أنك مهتم بالعملاء...'
+    if 'زبائن' in query_lower or 'customer' in query_lower:
+        deductions['understanding'] = 'أفهم أنك مهتم بالزبائن...'
         
         # الاستنتاج
         total_customers = Customer.query.count()
@@ -373,10 +373,10 @@ def think_and_deduce(query: str, db_data: Dict[str, Any]) -> Dict[str, Any]:
         ).scalar() or 0
         
         if active_customers < total_customers * 0.3:
-            deductions['analysis'].append(f'فقط {active_customers} من {total_customers} عميل نشط (30 يوم)')
-            deductions['conclusions'].append('🚨 معدل النشاط منخفض - معظم العملاء غير نشطين!')
+            deductions['analysis'].append(f'فقط {active_customers} من {total_customers} زبون نشط (30 يوم)')
+            deductions['conclusions'].append('🚨 معدل النشاط منخفض - معظم الزبائن غير نشطين!')
             deductions['next_steps'].extend([
-                'اتصل بالعملاء غير النشطين',
+                'اتصل بالزبائن غير النشطين',
                 'قدم عروض لإعادة التفاعل',
                 'راجع أسباب عدم النشاط'
             ])
@@ -430,11 +430,11 @@ def calculate_and_judge(metric: str, value: float, context: Dict = None) -> Dict
             'critical': (0, '🚨 حرج - راجع استراتيجيتك فوراً!')
         },
         'customer_retention': {
-            'excellent': (90, '🎉 ممتاز! عملاء مخلصون'),
+            'excellent': (90, '🎉 ممتاز! زبائن مخلصون'),
             'good': (80, '✅ جيد جداً'),
             'average': (70, '👍 متوسط'),
             'poor': (60, '⚠️ منخفض - تحسين مطلوب'),
-            'critical': (0, '🚨 خطير - تخسر عملاء!')
+            'critical': (0, '🚨 خطير - تخسر زبائن!')
         },
         'ar_ratio': {
             'excellent': (10, '✅ ممتاز - تحصيل سريع'),
@@ -500,7 +500,7 @@ def innovate_solution(problem: str) -> Dict[str, Any]:
         'implementation': []
     }
     
-    # مشكلة: عملاء لا يدفعون
+    # مشكلة: زبائن لا يدفعون
     if 'لا يدفع' in problem_lower or 'متأخر' in problem_lower:
         innovations['creative_solutions'] = [
             '💡 برنامج خصم للدفع المبكر (5% خصم خلال 7 أيام)',
@@ -509,7 +509,7 @@ def innovate_solution(problem: str) -> Dict[str, Any]:
         ]
         innovations['out_of_box_ideas'] = [
             '🎯 اجعل الدفع المبكر يتيح ميزة (أولوية في المواعيد)',
-            '🎯 قدم "بطاقة عميل VIP" للدفع المنتظم',
+            '🎯 قدم "بطاقة زبون VIP" للدفع المنتظم',
         ]
     
     # مشكلة: مبيعات منخفضة
@@ -522,7 +522,7 @@ def innovate_solution(problem: str) -> Dict[str, Any]:
         innovations['out_of_box_ideas'] = [
             '🎯 تعاون مع شركات سيارات للصيانة الدورية',
             '🎯 خدمة توصيل واستلام السيارة من المنزل',
-            '🎯 "يوم العميل" - خصومات خاصة',
+            '🎯 "يوم الزبون" - خصومات خاصة',
         ]
     
     return innovations

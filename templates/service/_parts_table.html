@@ -1,4 +1,4 @@
-{# ========================================== #}
+﻿{# ========================================== #}
 {# جدول قطع الغيار - نسخة منظمة بدون مشاكل Modal #}
 {# ========================================== #}
 
@@ -22,7 +22,7 @@
             <th><i class="fas fa-dollar-sign"></i> سعر الوحدة</th>
             <th><i class="fas fa-tags"></i> الخصم (₪)</th>
             <th><i class="fas fa-calculator"></i> الإجمالي</th>
-            {% if current_user.has_permission('manage_service') and service.status.value != 'COMPLETED' %}
+            {% if has_perm('manage_service') and service.status.value != 'COMPLETED' %}
             <th style="width:100px"><i class="fas fa-cogs"></i> إجراء</th>
             {% endif %}
           </tr>
@@ -56,7 +56,7 @@
               <td class="text-end">
                 <strong class="text-success">{{ '%.2f'|format((line or 0)|float) }} ₪</strong>
               </td>
-              {% if current_user.has_permission('manage_service') and service.status.value != 'COMPLETED' %}
+              {% if has_perm('manage_service') and service.status.value != 'COMPLETED' %}
               <td>
                 <div class="btn-group btn-group-sm">
                   <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#editPartModal{{ part.id }}" title="تعديل">
@@ -82,7 +82,7 @@
             <th class="text-end">
               <strong class="text-success fs-5">{{ '%.2f'|format((parts_total or 0)|float) }} ₪</strong>
             </th>
-            {% if current_user.has_permission('manage_service') %}<th></th>{% endif %}
+            {% if has_perm('manage_service') %}<th></th>{% endif %}
           </tr>
         </tfoot>
       </table>
@@ -100,7 +100,7 @@
 {# ========================================== #}
 {# Modals منفصلة خارج الجدول #}
 {# ========================================== #}
-{% if current_user.has_permission('manage_service') and service.status.value != 'COMPLETED' %}
+{% if has_perm('manage_service') and service.status.value != 'COMPLETED' %}
   {% for part in service.parts %}
   <!-- Modal تعديل القطعة {{ part.id }} -->
   <div class="modal fade" id="editPartModal{{ part.id }}" tabindex="-1" role="dialog" aria-labelledby="editPartModalLabel{{ part.id }}" aria-hidden="true">
@@ -154,7 +154,7 @@
 {# ========================================== #}
 {# JavaScript لمنع الاهتزاز #}
 {# ========================================== #}
-{% if current_user.has_permission('manage_service') and service.status.value != 'COMPLETED' %}
+{% if has_perm('manage_service') and service.status.value != 'COMPLETED' %}
 <script>
   // منع الاهتزاز عند فتح Modal
   $(document).ready(function() {

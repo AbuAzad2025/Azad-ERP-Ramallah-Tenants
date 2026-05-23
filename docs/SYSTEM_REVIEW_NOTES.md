@@ -68,7 +68,7 @@
 | الأولوية | الحالة | البند | سبب التأجيل | أين نعود له |
 |---|---|---|---|---|
 | HIGH | TODO | `csrf.exempt(ledger_bp)` | مرتبط بدفتر الأستاذ وقد يكسر عمليات مالية إذا أزيل عشوائيًا. | بعد دراسة `routes/ledger_blueprint.py`. |
-| MEDIUM | TODO | `login_manager.session_protection = None` | قد يكون مرتبطًا ببيئة PythonAnywhere/proxy أو جلسات العملاء. | بعد دراسة `routes/auth.py` والجلسات. |
+| MEDIUM | TODO | `login_manager.session_protection = None` | قد يكون مرتبطًا ببيئة PythonAnywhere/proxy أو جلسات الزبائن. | بعد دراسة `routes/auth.py` والجلسات. |
 | HIGH | TODO | أسرار التكاملات من DB | يجب معرفة من يستطيع رؤيتها وتعديلها وهل تعرض في الواجهة. | `SystemSettings` + شاشات security/settings. |
 | MEDIUM | TODO | تكرار seed/init logic | يوجد `SystemInitializer`, إضافة العملات، إضافة الأدوار، و`bootstrap_database`. | بعد دراسة `services/system_initializer.py`. |
 | HIGH | TODO | ACL والصلاحيات المركزية | حماية routes لا تفهم من `app.py` وحده. | `acl.py` و`permissions_config/blueprint_guards.py`. |
@@ -133,13 +133,13 @@
 | MEDIUM | TODO | `Customer.password` قد يقبل قيمة فارغة حسب مسار الاستدعاء. |
 | HIGH | IN_REVIEW | الماستر كي يبقى يعمل، لكن يحتاج audit وحماية من كشف السر. |
 
-## 5.4 العملاء والموردون والشركاء
+## 5.4 الزبائن والموردون والشركاء
 
 | الأولوية | الحالة | البند |
 |---|---|---|
 | HIGH | TODO | أعمدة الأرصدة المخزنة في Customer/Supplier/Partner تحتاج مطابقة مع دوال إعادة الحساب. |
 | HIGH | TODO | properties مثل `total_paid`, `total_invoiced`, employee totals قد تسبب N+1. |
-| HIGH | DEFERRED | opening balance GL للعميل/المورد/الشريك يكتب قيود GL من داخل model events. |
+| HIGH | DEFERRED | opening balance GL للزبون/المورد/الشريك يكتب قيود GL من داخل model events. |
 | HIGH | TODO | الربط التلقائي Supplier/Partner مع Customer قد يخلط الكيانات إن لم يظهر بوضوح. |
 | HIGH | DEFERRED | اعتماد PartnerSettlement يغير `opening_balance` للشريك مباشرة. |
 

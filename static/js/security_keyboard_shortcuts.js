@@ -126,7 +126,9 @@
         
         // التنقل بعد 300ms
         setTimeout(() => {
-          window.location.href = shortcuts[key].url;
+          var nav = shortcuts[key].url;
+          if (typeof window.gmPath === 'function') nav = window.gmPath(nav);
+          window.location.href = nav;
         }, 300);
       }
     }

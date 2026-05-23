@@ -67,7 +67,11 @@ def index():
             'progress': (completed_phases / phases_count * 100) if phases_count else 0
         })
     
-    customers = Customer.query.filter_by(is_active=True).order_by(Customer.name).all()
+    from utils.company_scope import filter_customers_query
+
+    customers = filter_customers_query(
+        Customer.query.filter_by(is_active=True)
+    ).order_by(Customer.name).all()
     
     return render_template('projects/index.html',
                          projects=projects_data,
@@ -140,7 +144,11 @@ def add_project():
             current_app.logger.exception('internal error')
             utils.flash_error()
     
-    customers = Customer.query.filter_by(is_active=True).order_by(Customer.name).all()
+    from utils.company_scope import filter_customers_query
+
+    customers = filter_customers_query(
+        Customer.query.filter_by(is_active=True)
+    ).order_by(Customer.name).all()
     cost_centers = CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all()
     from models import User, Branch
     users = User.query.all()
@@ -193,7 +201,11 @@ def edit_project(id):
             current_app.logger.exception('internal error')
             utils.flash_error()
     
-    customers = Customer.query.filter_by(is_active=True).order_by(Customer.name).all()
+    from utils.company_scope import filter_customers_query
+
+    customers = filter_customers_query(
+        Customer.query.filter_by(is_active=True)
+    ).order_by(Customer.name).all()
     cost_centers = CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all()
     from models import User, Branch
     users = User.query.all()

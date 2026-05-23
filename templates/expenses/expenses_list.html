@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}المصاريف{% endblock %}
 
 {% block page_title %}المصاريف{% endblock %}
@@ -307,10 +307,11 @@
   {% endif %}
 {%- endmacro %}
 
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
   <!-- رأس الطباعة -->
   <div class="print-header d-none d-print-block">
-    <h2>نظام أزاد لإدارة الكراج</h2>
+    <h2>{{ system_settings.company_name or system_settings.system_name }}</h2>
     <div class="company-info">
       رام الله - فلسطين 🇵🇸 | تاريخ الطباعة: {{ "now"|format_datetime("%Y-%m-%d") }}
     </div>
@@ -363,7 +364,7 @@
         <button class="btn btn-light btn-sm shadow-sm text-primary fw-bold" onclick="window.print()">
           <i class="fas fa-print ml-1"></i>طباعة القائمة
         </button>
-        {% if current_user.has_permission('manage_expenses') %}
+        {% if has_perm('manage_expenses') %}
         <a href="{{ url_for('expenses_bp.create_expense') }}" class="btn btn-light btn-sm shadow-sm text-success fw-bold">
           <i class="fas fa-plus ml-1"></i>إضافة مصروف
         </a>
@@ -572,13 +573,13 @@
             {% if e.supplier %}
               {% set payee = namespace(label='المورد', name=e.supplier.name, chip='supplier', guessed=False) %}
             {% elif e.customer %}
-              {% set payee = namespace(label='العميل', name=e.customer.name, chip='customer', guessed=False) %}
+              {% set payee = namespace(label='الزبون', name=e.customer.name, chip='customer', guessed=False) %}
             {% elif e.partner %}
               {% set payee = namespace(label='الشريك', name=e.partner.name, chip='partner', guessed=False) %}
             {% elif e.employee %}
               {% set payee = namespace(label='الموظف', name=e.employee.name, chip='employee', guessed=False) %}
             {% elif pt == 'CUSTOMER' %}
-              {% set payee = namespace(label='العميل', name=e.payee_name or ('عميل #' ~ e.payee_entity_id if e.payee_entity_id else '—'), chip='customer', guessed=False) %}
+              {% set payee = namespace(label='الزبون', name=e.payee_name or ('زبون #' ~ e.payee_entity_id if e.payee_entity_id else '—'), chip='customer', guessed=False) %}
             {% elif pt == 'SUPPLIER' %}
               {% set payee = namespace(label='المورد', name=e.payee_name or ('مورد #' ~ e.payee_entity_id if e.payee_entity_id else '—'), chip='supplier', guessed=False) %}
             {% elif pt == 'PARTNER' %}
@@ -649,7 +650,7 @@
             <td class="text-nowrap text-center">
               <div class="btn-group">
                 <a href="{{ url_for('expenses_bp.detail', exp_id=e.id) }}" class="btn btn-sm btn-info" title="تفاصيل"><i class="fas fa-eye"></i></a>
-                {% if current_user.has_permission('manage_expenses') %}
+                {% if has_perm('manage_expenses') %}
                   <a href="{{ url_for('expenses_bp.edit', exp_id=e.id) }}" class="btn btn-sm btn-warning" title="تعديل"><i class="fas fa-edit"></i></a>
                   {% if e.is_archived %}
                   <button type="button" class="btn btn-action-restore btn-action-sm" title="استعادة" onclick="restoreExpense({{ e.id }})">
@@ -666,7 +667,7 @@
                   </form>
                   
                 {% endif %}
-                {% if current_user.has_permission('manage_payments') and not e.is_paid and e.balance and e.balance > 0 %}
+                {% if has_perm('manage_payments') and not e.is_paid and e.balance and e.balance > 0 %}
                   <a href="{{ url_for('expenses_bp.pay', exp_id=e.id) }}" class="btn btn-sm btn-outline-success" title="دفع ({{ '%.2f'|format(e.balance) }} ₪)"><i class="fas fa-money-bill-wave"></i></a>
                 {% endif %}
               </div>

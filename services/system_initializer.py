@@ -36,9 +36,11 @@ class SystemInitializer:
                 # لا نوقف النظام، ولكن نسجل الخطأ
     
     def _ensure_settings(self):
+        from utils.branding_scope import PLATFORM_DEFAULT_COMPANY_NAME, PLATFORM_DEFAULT_SYSTEM_NAME
+
         defaults = {
-            'system_name': ('نظام الحازم', 'اسم النظام'),
-            'company_name': ('شركة الحازم للأنظمة الذكية', 'اسم الشركة'),
+            'system_name': (PLATFORM_DEFAULT_SYSTEM_NAME, 'اسم النظام (منصة أزاد)'),
+            'company_name': (PLATFORM_DEFAULT_COMPANY_NAME, 'اسم الشركة (منصة أزاد)'),
             'login_title': ('مرحباً بك', 'عنوان صفحة الدخول'),
             'login_subtitle': ('سجل دخولك للمتابعة', 'وصف صفحة الدخول'),
             'footer_text': ('جميع الحقوق محفوظة © 2026', 'نص التذييل'),
@@ -114,7 +116,7 @@ class SystemInitializer:
             ('1000_CASH', 'النقدية في الصندوق', AccountType.ASSET),
             ('1010_BANK_ILS', 'البنك - شيقل', AccountType.ASSET),
             ('1020_BANK_USD', 'البنك - دولار', AccountType.ASSET),
-            ('1100_AR', 'الذمم المدينة (العملاء)', AccountType.ASSET),
+            ('1100_AR', 'الذمم المدينة (الزبائن)', AccountType.ASSET),
             ('1200_INVENTORY', 'المخزون', AccountType.ASSET),
             ('1300_FIXED_ASSETS', 'الأصول الثابتة', AccountType.ASSET),
             
@@ -221,7 +223,7 @@ class SystemInitializer:
             if admin_role:
                 user = User(
                     username='admin',
-                    email='admin@alhazem.com',
+                    email='admin@azad-platform.local',
                     role=admin_role,
                     is_active=True,
                     is_system_account=True

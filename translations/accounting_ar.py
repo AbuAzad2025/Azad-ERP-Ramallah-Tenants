@@ -82,7 +82,7 @@ COST_CENTER_FORM_LABELS_AR = {
 PROJECT_FORM_LABELS_AR = {
     'code': 'رمز المشروع',
     'name': 'اسم المشروع',
-    'client_id': 'العميل',
+    'client_id': 'الزبون',
     'start_date': 'تاريخ البدء',
     'end_date': 'تاريخ الانتهاء',
     'planned_end_date': 'تاريخ الانتهاء المخطط',

@@ -1,0 +1,236 @@
+/**
+ * مكوّنات الثيم — محاذاة مركزية، فوتر، أنماط خلفية، جداول لاصقة
+ */
+
+/* ─── خلفية زخرفية خفيفة ─── */
+body.gm-pro-ui .content-wrapper {
+  position: relative;
+}
+
+body.gm-pro-ui .content-wrapper::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+}
+
+html[data-gm-pattern="palestinian"] body.gm-pro-ui .content-wrapper::before,
+html[data-gm-variant="palestinian"] body.gm-pro-ui .content-wrapper::before {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l5 10 11 2-8 8 2 11-10-5-10 5 2-11-8-8 11-2z' fill='%23006B3F'/%3E%3C/svg%3E");
+  background-size: 48px 48px;
+}
+
+html[data-gm-variant="gulf"] body.gm-pro-ui .content-wrapper::before {
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 20h40M20 0v40' stroke='%23063B5B' stroke-width='0.5'/%3E%3Ccircle cx='20' cy='20' r='2' fill='%23C9A24A'/%3E%3C/svg%3E");
+  background-size: 40px 40px;
+}
+
+body.gm-pro-ui .content {
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── حقول: نص في المنتصف ─── */
+body.gm-pro-ui .form-control,
+body.gm-pro-ui .form-select,
+body.gm-pro-ui .custom-select,
+body.gm-pro-ui input.form-control,
+body.gm-pro-ui select.form-control,
+body.gm-pro-ui textarea.form-control {
+  text-align: center !important;
+  padding-inline: var(--gm-space-inline, 16px) !important;
+  min-height: var(--gm-field-height, 44px) !important;
+  border-radius: var(--gm-radius-input, 10px) !important;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+body.gm-pro-ui textarea.form-control {
+  white-space: pre-wrap;
+  text-align: start !important;
+  min-height: calc(var(--gm-field-height, 44px) * 2) !important;
+}
+
+body.gm-pro-ui .input-group-text {
+  text-align: center;
+}
+
+body.gm-pro-ui .tenant-branch-select,
+body.gm-pro-ui .navbar .form-control[name="gm_search_global"] {
+  text-align: start !important;
+}
+
+/* ─── جداول: رأس وخلايا متمركزة ─── */
+body.gm-pro-ui .table thead th {
+  text-align: center !important;
+  vertical-align: middle !important;
+  min-height: var(--gm-table-header-height, 48px);
+  padding: 14px 16px !important;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--gm-surface-alt) !important;
+  color: var(--gm-text) !important;
+  box-shadow: 0 1px 0 var(--gm-border);
+}
+
+body.gm-pro-ui .table tbody td {
+  text-align: center !important;
+  vertical-align: middle !important;
+  min-height: var(--gm-table-row-height, 52px);
+  padding: 14px 16px !important;
+}
+
+body.gm-pro-ui .table-responsive {
+  border-radius: var(--gm-radius-lg);
+  border: 1px solid var(--gm-border);
+}
+
+/* ─── أزرار ─── */
+body.gm-pro-ui .btn {
+  text-align: center;
+  justify-content: center;
+  white-space: nowrap;
+  padding-inline: var(--gm-space-btn-inline, 20px) !important;
+  font-weight: 700;
+  border-radius: var(--gm-radius-input, 10px) !important;
+  min-height: var(--gm-btn-min-height, 44px);
+}
+
+/* ─── بطاقات KPI ─── */
+body.gm-pro-ui .card,
+body.gm-pro-ui .small-box,
+body.gm-pro-ui .info-box {
+  border-radius: var(--gm-radius-lg) !important;
+  padding: 0;
+  box-shadow: var(--gm-shadow-card) !important;
+}
+
+body.gm-pro-ui .card-body {
+  padding: 20px !important;
+}
+
+body.gm-pro-ui .small-box .inner {
+  padding: 1rem 1.15rem;
+  text-align: center;
+}
+
+/* ─── فوتر المنصة فقط (أزاد + المطوّر) ─── */
+body.gm-pro-ui .main-footer.gm-platform-footer {
+  min-height: var(--gm-footer-height, 88px);
+  padding: 1rem 1.5rem !important;
+  background: var(--gm-footer-bg) !important;
+  color: var(--gm-footer-text) !important;
+  border-top: 3px solid var(--gm-gold, var(--gm-accent));
+}
+
+body.gm-pro-ui .gm-platform-footer .gm-footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  text-align: center;
+}
+
+body.gm-pro-ui .gm-platform-footer .gm-footer-developer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+body.gm-pro-ui .gm-platform-footer .gm-footer-platform-logo {
+  height: 48px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+}
+
+body.gm-pro-ui .gm-platform-footer .gm-footer-developer-name {
+  font-weight: 800;
+  font-size: 1rem;
+  color: #fff;
+}
+
+body.gm-pro-ui .gm-platform-footer .gm-footer-developer-tagline {
+  font-size: 0.82rem;
+  opacity: 0.9;
+}
+
+body.gm-pro-ui .gm-platform-footer .gm-footer-developer-person {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  opacity: 0.92;
+}
+
+body.gm-pro-ui .gm-platform-footer .gm-footer-contact-link {
+  color: var(--gm-footer-text);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+body.gm-pro-ui .gm-platform-footer .gm-footer-contact-link:hover {
+  color: var(--gm-gold, #fff);
+  text-decoration: underline;
+}
+
+body.gm-pro-ui .gm-platform-footer .gm-footer-copyright {
+  font-size: 0.8rem;
+  opacity: 0.88;
+}
+
+/* ─── هيدر: مستخدم ─── */
+body.gm-pro-ui .main-header .navbar-nav .nav-link .font-weight-bold {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.gm-pro-ui .gm-navbar-user-role {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  margin-inline-start: 0.35rem;
+}
+
+/* ─── موبايل ─── */
+@media (max-width: 767.98px) {
+  body.gm-pro-ui .gm-platform-footer .gm-footer-developer {
+    flex-direction: column;
+  }
+
+  body.gm-pro-ui .table thead th {
+    position: static;
+  }
+}
+
+/* ─── حالات ─── */
+body.gm-pro-ui .alert {
+  border-radius: var(--gm-radius);
+  text-align: center;
+}
+
+body.gm-pro-ui .gm-empty-state {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  color: var(--gm-text-muted);
+}
+
+body.gm-pro-ui .modal-content {
+  border-radius: var(--gm-radius-lg);
+  background: var(--gm-surface);
+  color: var(--gm-text);
+  border: 1px solid var(--gm-border);
+}
+
+body.gm-pro-ui .dropdown-menu {
+  z-index: var(--gm-z-dropdown, 1000);
+}

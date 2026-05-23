@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}طلبات الصيانة{% endblock %}
 {% block page_title %}طلبات الصيانة{% endblock %}
@@ -176,7 +176,7 @@
       transform: translateY(-3px);
     }
     
-    /* تصغير حجم العميل والمركبة */
+    /* تصغير حجم الزبون والمركبة */
     .customer-name {
       font-size: 0.85rem;
       font-weight: 500;
@@ -204,7 +204,9 @@
   <li class="breadcrumb-item active">طلبات الصيانة</li>
 {% endblock %}
 
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
+{{ readonly_banner('view_service', 'manage_service', 'الصيانة') }}
 <div class="content">
 
   <!-- عنوان للطباعة -->
@@ -222,7 +224,7 @@
     'COMPLETED':'مكتمل','CANCELLED':'ملغي','ON_HOLD':'مؤجّل'
   } %}
 
-  {% if current_user.has_permission('manage_service') %}
+  {% if has_perm('manage_service') %}
   <div class="card border-0 shadow-lg mb-4 no-print" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <div class="card-body text-white">
       <div class="d-flex flex-wrap gap-3 align-items-center">
@@ -337,7 +339,7 @@
 
           <!-- الصف الأول من الفلاتر -->
           <div class="col-md-3 col-sm-6">
-            <label class="filter-label"><i class="fas fa-user me-1"></i> العميل</label>
+            <label class="filter-label"><i class="fas fa-user me-1"></i> الزبون</label>
             <div class="input-group input-group-sm">
               <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
               <input name="customer" class="form-control border-start-0" value="{{ filter_values.customer or '' }}" placeholder="اسم أو رقم جوال">
@@ -456,7 +458,7 @@
           <thead>
             <tr>
               <th class="py-3 ps-3">رقم الطلب</th>
-              <th class="py-3">العميل</th>
+              <th class="py-3">الزبون</th>
               <th class="py-3">المركبة</th>
               <th class="py-3">تاريخ الاستلام</th>
               <th class="py-3">تاريخ الإكمال</th>

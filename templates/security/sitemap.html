@@ -1,4 +1,4 @@
-{% extends 'security/base_security.html' %}
+﻿{% extends 'security/base_security.html' %}
 
 {% block tour_name %}sitemap{% endblock %}
 
@@ -12,7 +12,6 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/security_responsive.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/security_dark_mode.css') }}">
 <style>
   .sitemap-tree {
     list-style: none;
@@ -276,7 +275,7 @@
           <li><a href="{{ url_for('security.card_vault') }}"><i class="fas fa-credit-card"></i> خزنة الكروت</a></li>
           <li><a href="{{ url_for('security.emergency_tools') }}"><i class="fas fa-exclamation-triangle text-danger"></i> أدوات الطوارئ</a></li>
           <li><a href="{{ url_for('security.data_export') }}"><i class="fas fa-download"></i> تصدير البيانات</a></li>
-          {% if current_user.is_authenticated and current_user.has_permission('access_owner_dashboard') %}
+          {% if current_user.is_authenticated and has_perm('access_owner_dashboard') %}
             <li><a href="{{ url_for('security.system_cleanup') }}"><i class="fas fa-broom"></i> تنظيف النظام</a></li>
           {% endif %}
           <li><a href="{{ url_for('security.integrations') }}"><i class="fas fa-plug"></i> التكاملات (مباشر)</a></li>

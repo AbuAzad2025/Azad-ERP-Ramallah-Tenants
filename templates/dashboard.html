@@ -41,7 +41,7 @@
       <div class="col-4">
         <a class="gm-action-tile" href="{{ url_for('customers_bp.list_customers') }}">
           <span class="gm-action-icon bg-success"><i class="fas fa-users"></i></span>
-          <span class="gm-action-label">العملاء</span>
+          <span class="gm-action-label">الزبائن</span>
         </a>
       </div>
       {% endif %}
@@ -138,7 +138,7 @@
         <div class="card-header card-header-green">
           <h5 class="card-title mb-0">
             <i class="fas fa-chart-pie"></i>
-            توزيع العملاء
+            توزيع الزبائن
           </h5>
         </div>
         <div class="card-body">
@@ -148,7 +148,7 @@
             data-labels='{{ customer_segment_labels|default([])|tojson }}'
             data-datasets='{{ [
               {
-                "label": "توزيع العملاء",
+                "label": "توزيع الزبائن",
                 "data": customer_segment_values|default([]),
                 "backgroundColor": ["rgba(54,162,235,0.85)","rgba(75,192,192,0.85)","rgba(255,99,132,0.85)"],
                 "borderColor": ["rgba(54,162,235,1)","rgba(75,192,192,1)","rgba(255,99,132,1)"],
@@ -368,7 +368,7 @@
       <div class="card border-0 shadow h-100 card-hover" style="background: linear-gradient(135deg,#283c86,#45a247)">
         <div class="card-body d-flex flex-column align-items-center justify-content-center text-center">
           <i class="fas fa-users fa-3x mb-3" style="color:#fff;"></i>
-          <div class="mb-2" style="color:#fff;font-weight:600;font-size:1.05rem;">إجمالي أرصدة العملاء</div>
+          <div class="mb-2" style="color:#fff;font-weight:600;font-size:1.05rem;">إجمالي أرصدة الزبائن</div>
           <div class="metric-value-sm text-white">{{ total_customer_balance|default(0)|format_currency }}</div>
         </div>
       </div>

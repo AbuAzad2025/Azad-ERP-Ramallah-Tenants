@@ -1,0 +1,12 @@
+{# مصطلحات وواجهة موحّدة — استخدم: {% from 'macros/ux_ar.html' import zb, ui_label %} #}
+{% macro zb(key) -%}
+  {{- ZB.get(key, key) -}}
+{%- endmacro %}
+
+{% macro ui_label(key) -%}
+  {{- UI_LABELS.get(key, key) -}}
+{%- endmacro %}
+
+{% macro zb_select_placeholder() -%}
+  {{- UI_LABELS.select_placeholder -}}
+{%- endmacro %}

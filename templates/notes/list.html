@@ -1,8 +1,8 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}الملاحظات{% endblock %}
 
 {% set entity_labels = {
-  'CUSTOMER': 'عميل',
+  'CUSTOMER': 'زبون',
   'SALE': 'بيع',
   'PRODUCT': 'منتج',
   'SUPPLIER': 'مورد',
@@ -20,7 +20,9 @@
   'URGENT': 'عاجلة'
 } %}
 
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
+{{ readonly_banner('view_notes', 'manage_notes', 'الملاحظات') }}
 
 <!-- إحصائيات سريعة -->
 <div class="row mb-4">

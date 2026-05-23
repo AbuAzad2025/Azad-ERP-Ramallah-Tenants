@@ -1,11 +1,14 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}الميزانيات{% endblock %}
 {% block page_title %}💰 إدارة الميزانيات - {{ fiscal_year }}{% endblock %}
 
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
+{{ readonly_banner('view_ledger', 'manage_ledger', 'الميزانيات') }}
 <div class="container-fluid">
   
   <div class="mb-3">
+    {% if has_perm('manage_ledger') %}
     <a href="{{ url_for('budgets.add') }}" class="btn btn-primary">
       <i class="fas fa-plus"></i> إضافة ميزانية
     </a>
@@ -15,6 +18,7 @@
     <a href="{{ url_for('budgets.budget_vs_actual') }}" class="btn btn-secondary">
       <i class="fas fa-chart-bar"></i> تقرير المخطط مقابل الفعلي
     </a>
+    {% endif %}
   </div>
 
   <div class="card border-0 shadow-sm">

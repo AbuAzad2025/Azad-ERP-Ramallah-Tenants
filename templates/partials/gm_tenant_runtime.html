@@ -1,0 +1,17 @@
+{# بادئة التينانت + إعادة كتابة fetch/XHR — للقوالب المستقلة التي لا ترث base.html #}
+<script>
+(function () {
+  if (window.__GM_PREFIX_INIT__) return;
+  window.__GM_PREFIX_INIT__ = true;
+  window.GM_PREFIX = {{ (gm_url_prefix or '')|tojson }};
+  window.gmPath = window.gmPath || function (p) {
+    if (!p) return window.GM_PREFIX || '/';
+    if (/^https?:\/\//i.test(p)) return p;
+    var path = (p.charAt(0) === '/') ? p : ('/' + p);
+    if (path.indexOf('/static/') === 0) return path;
+    return (window.GM_PREFIX || '') + path;
+  };
+  window.gmU = window.gmPath;
+})();
+</script>
+<script src="{{ static_url('js/gm-tenant-network.js') }}"></script>

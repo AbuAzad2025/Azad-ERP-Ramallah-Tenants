@@ -1,10 +1,10 @@
 <aside class="main-sidebar sidebar-dark-primary elevation-4" dir="rtl">
-  <div class="garage-brand-area" style="text-align: center; padding: 10px 0; border-bottom: 1px solid #4b545c;">
-    <a href="{{ user_home_url or url_for('main.dashboard') }}" class="garage-brand-link" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
-      <img src="{{ system_settings.custom_logo_url }}" alt="{{ system_settings.company_name or system_settings.system_name or 'النظام' }}" class="garage-brand-image" loading="lazy" decoding="async" style="height: 60px; max-width: 150px; object-fit: contain; margin-bottom: 5px;">
-      <span class="garage-brand-text" style="font-size: 1.1rem; font-weight: bold; color: #fff;">{{ system_settings.company_name or system_settings.system_name or 'النظام' }}</span>
+  <div class="garage-brand-area">
+    <a href="{{ user_home_url or url_for('main.dashboard') }}" class="garage-brand-link">
+      <img src="{{ system_settings.custom_logo_url }}" alt="{{ system_settings.company_name or system_settings.system_name or 'النظام' }}" class="garage-brand-image gm-brand-mark" loading="lazy" decoding="async">
+      <span class="garage-brand-text">{{ system_settings.company_name or system_settings.system_name or 'النظام' }}</span>
     </a>
-    <button type="button" class="gm-sidebar-close" aria-label="إغلاق القائمة" style="position: absolute; left: 10px; top: 15px;">
+    <button type="button" class="gm-sidebar-close d-lg-none" aria-label="إغلاق القائمة">
       <i class="fas fa-times"></i>
     </button>
   </div>
@@ -47,7 +47,7 @@
             <li class="nav-item">
               <a href="{{ url_for('customers_bp.list_customers') }}" class="nav-link {% if request.blueprint == 'customers_bp' %}active{% endif %}">
                 <i class="far fa-circle nav-icon text-success"></i>
-                <p>العملاء</p>
+                <p>الزبائن</p>
               </a>
             </li>
             {% endif %}
@@ -90,15 +90,13 @@
               </a>
             </li>
             {% endif %}
-            {% if has_perm('manage_sales') %}
-            {% if current_user.role_name_l in ['owner', 'developer'] %}
+            {% if can_ep('recurring.index') or has_perm('access_owner_dashboard') %}
             <li class="nav-item">
               <a href="{{ url_for('recurring.index') }}" class="nav-link {% if request.blueprint == 'recurring' %}active{% endif %}">
                 <i class="far fa-circle nav-icon text-primary"></i>
                 <p>الفواتير المتكررة</p>
               </a>
             </li>
-            {% endif %}
             {% endif %}
             {% endif %}
           </ul>
@@ -161,9 +159,9 @@
         {% endif %}
 
         {# --- المحاسبة (Basic) --- #}
-        {% if has_perm('manage_payments') or has_perm('view_payments') or has_perm('manage_expenses') or has_perm('manage_ledger') or has_perm('manage_currencies') %}
-        <li class="nav-item has-treeview {% if request.blueprint in ['payments', 'checks', 'expenses_bp', 'ledger', 'currencies'] %}menu-open{% endif %}">
-          <a href="#" class="nav-link {% if request.blueprint in ['payments', 'checks', 'expenses_bp', 'ledger', 'currencies'] %}active{% endif %}">
+        {% if has_perm('manage_payments') or has_perm('view_payments') or has_perm('manage_expenses') or has_perm('manage_ledger') or has_perm('manage_currencies') or has_perm('manage_branches') %}
+        <li class="nav-item has-treeview {% if request.blueprint in ['payments', 'checks', 'expenses_bp', 'ledger', 'currencies', 'companies_bp', 'branches_bp'] %}menu-open{% endif %}">
+          <a href="#" class="nav-link {% if request.blueprint in ['payments', 'checks', 'expenses_bp', 'ledger', 'currencies', 'companies_bp', 'branches_bp'] %}active{% endif %}">
             <i class="nav-icon fas fa-calculator text-warning"></i>
             <p>
               المحاسبة
@@ -172,7 +170,7 @@
           </a>
           <ul class="nav nav-treeview">
             {% if is_module_enabled('payments') %}
-            {% if has_perm('manage_payments') %}
+            {% if has_perm('view_payments') or has_perm('manage_payments') %}
             <li class="nav-item">
               <a href="{{ url_for('payments.index') }}" class="nav-link {% if request.blueprint == 'payments' %}active{% endif %}">
                 <i class="far fa-circle nav-icon text-success"></i>
@@ -233,8 +231,23 @@
             {% endif %}
             {% endif %}
 
+            {% if has_perm('manage_branches') %}
+            <li class="nav-item">
+              <a href="{{ url_for('companies_bp.index') }}" class="nav-link {% if request.blueprint == 'companies_bp' %}active{% endif %}">
+                <i class="far fa-circle nav-icon text-secondary"></i>
+                <p>الشركات</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ url_for('branches_bp.list_branches') }}" class="nav-link {% if request.blueprint == 'branches_bp' %}active{% endif %}">
+                <i class="far fa-circle nav-icon text-dark"></i>
+                <p>الفروع</p>
+              </a>
+            </li>
+            {% endif %}
+
             {% if is_module_enabled('ledger') %}
-            {% if has_perm('manage_ledger') %}
+            {% if has_perm('view_ledger') or has_perm('manage_ledger') %}
             <li class="nav-item">
               <a href="{{ url_for('ledger_control.index') }}" class="nav-link {% if request.blueprint in ['ledger_control', 'ledger'] %}active{% endif %}">
                 <i class="far fa-circle nav-icon text-primary"></i>
@@ -284,7 +297,6 @@
 
         {# --- المحاسبة المتقدمة (Advanced) --- #}
         {% if has_perm('manage_advanced_accounting') or has_perm('manage_bank') or has_perm('view_bank') or has_perm('manage_cost_centers') or has_perm('manage_engineering') or has_perm('manage_projects') or has_perm('view_projects') or has_perm('manage_workflows') or has_perm('view_workflows') %}
-        {% if current_user.role_name_l in ['owner', 'developer'] %}
         <li class="nav-item has-treeview {% if request.blueprint in ['bank', 'cost_centers', 'projects', 'workflows'] or (request.endpoint and (request.endpoint.startswith('bank.') or request.endpoint.startswith('cost_centers.') or request.endpoint.startswith('projects.') or request.endpoint.startswith('workflows.'))) %}menu-open{% endif %}">
           <a href="#" class="nav-link {% if request.blueprint in ['bank', 'cost_centers', 'projects', 'workflows'] or (request.endpoint and (request.endpoint.startswith('bank.') or request.endpoint.startswith('cost_centers.') or request.endpoint.startswith('projects.') or request.endpoint.startswith('workflows.'))) %}active{% endif %}">
             <i class="nav-icon fas fa-chart-pie" style="color: #667eea;"></i>
@@ -456,10 +468,9 @@
           </ul>
         </li>
         {% endif %}
-        {% endif %}
 
         {# --- التقارير والملاحظات --- #}
-        {% if has_perm('view_reports') or has_perm('manage_reports') or has_any('manage_customers','manage_service','manage_sales','manage_reports') %}
+        {% if has_perm('view_reports') or has_perm('manage_reports') or has_perm('view_notes') or has_perm('manage_notes') %}
         <li class="nav-item has-treeview {% if request.blueprint in ['reports_bp', 'notes_bp'] %}menu-open{% endif %}">
           <a href="#" class="nav-link {% if request.blueprint in ['reports_bp', 'notes_bp'] %}active{% endif %}">
             <i class="nav-icon fas fa-chart-line text-danger"></i>
@@ -477,7 +488,7 @@
               </a>
             </li>
             {% endif %}
-            {% if has_any('manage_customers','manage_service','manage_sales','manage_reports') %}
+            {% if has_perm('view_notes') or has_perm('manage_notes') %}
             <li class="nav-item">
               <a href="{{ url_for('notes_bp.list_notes') }}" class="nav-link {% if request.blueprint == 'notes_bp' %}active{% endif %}">
                 <i class="far fa-circle nav-icon text-warning"></i>
@@ -500,8 +511,7 @@
         {% endif %}
 
         {# --- المساعد الذكي (للمالك ومن لديه صلاحية) --- #}
-        {% if has_perm('access_ai_assistant') %}
-        {% if current_user.role_name_l in ['owner', 'developer'] %}
+        {% if has_perm('access_ai_assistant') or can('access_ai_assistant') %}
         <li class="nav-item">
           <a href="{{ url_for('ai.hub') }}" class="nav-link {% if request.blueprint == 'ai' %}active{% endif %}">
             <i class="nav-icon fas fa-robot" style="color: #a855f7;"></i>
@@ -509,11 +519,9 @@
           </a>
         </li>
         {% endif %}
-        {% endif %}
 
         {# --- المتجر الإلكتروني --- #}
         {% if has_perm('view_shop') or has_perm('manage_shop') %}
-        {% if current_user.role_name_l in ['owner', 'developer'] %}
         <li class="nav-item has-treeview {% if request.blueprint == 'shop' %}menu-open{% endif %}">
           <a href="#" class="nav-link {% if request.blueprint == 'shop' %}active{% endif %}">
             <i class="nav-icon fas fa-store text-warning"></i>
@@ -548,9 +556,8 @@
           </ul>
         </li>
         {% endif %}
-        {% endif %}
 
-        {% if is_tenant_scope %}
+        {% if is_tenant_scope and (can_ep('tenant_console.index') or has_perm('access_tenant_console')) %}
         <li class="nav-header text-muted small px-3">مالك التينانت</li>
         <li class="nav-item">
           <a href="{{ url_for('tenant_console.index') }}" class="nav-link {% if request.blueprint == 'tenant_console' %}active{% endif %}">
@@ -577,36 +584,46 @@
             <p>لوحة مالك المنصة<i class="right fas fa-angle-left"></i></p>
           </a>
           <ul class="nav nav-treeview">
+            {% if can_ep('security.index') or has_perm('access_owner_dashboard') %}
             <li class="nav-item">
               <a href="{{ url_for('security.index') }}" class="nav-link {% if request.endpoint == 'security.index' %}active{% endif %}">
                 <i class="far fa-circle nav-icon text-warning"></i>
                 <p>الرئيسية</p>
               </a>
             </li>
+            {% endif %}
+            {% if can_ep('security.owner_branding') or has_perm('access_owner_dashboard') %}
             <li class="nav-item">
               <a href="{{ url_for('security.owner_branding') }}" class="nav-link {% if request.endpoint == 'security.owner_branding' %}active{% endif %}">
                 <i class="far fa-circle nav-icon text-info"></i>
                 <p>الهوية والترويسة</p>
               </a>
             </li>
+            {% endif %}
+            {% if can_ep('security.settings_center') or has_perm('access_owner_dashboard') %}
             <li class="nav-item">
               <a href="{{ url_for('security.settings_center') }}" class="nav-link {% if request.endpoint == 'security.settings_center' %}active{% endif %}">
                 <i class="far fa-circle nav-icon text-primary"></i>
                 <p>مركز العمليات</p>
               </a>
             </li>
+            {% endif %}
+            {% if can_ep('advanced.owner_hub') or has_perm('manage_tenants') %}
             <li class="nav-item">
               <a href="{{ url_for('advanced.owner_hub') }}" class="nav-link {% if request.endpoint == 'advanced.owner_hub' %}active{% endif %}">
                 <i class="far fa-circle nav-icon text-success"></i>
                 <p>مركز SaaS</p>
               </a>
             </li>
+            {% endif %}
+            {% if can_ep('security.audit_log_viewer') or has_perm('view_audit_logs') %}
             <li class="nav-item">
               <a href="{{ url_for('security.audit_log_viewer') }}" class="nav-link {% if request.endpoint == 'security.audit_log_viewer' %}active{% endif %}">
                 <i class="far fa-circle nav-icon text-secondary"></i>
                 <p>سجل التدقيق</p>
               </a>
             </li>
+            {% endif %}
           </ul>
         </li>
         {% endif %}

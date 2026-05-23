@@ -13,6 +13,7 @@ import utils
 from utils import _get_or_404, permission_required
 from permissions_config.enums import SystemPermissions
 from barcodes import normalize_barcode, generate_barcode_image
+from utils.warehouse_defaults import get_default_warehouse_id
 from datetime import datetime, timezone
 import json
 
@@ -534,7 +535,9 @@ def inventory_update_by_barcode():
 def get_warehouses():
     """الحصول على جميع المستودعات"""
     try:
-        warehouses = Warehouse.query.filter_by(is_active=True).all()
+        from utils.company_scope import filter_warehouses_query
+
+        warehouses = filter_warehouses_query(Warehouse.query.filter_by(is_active=True)).all()
         return jsonify({
             "success": True,
             "warehouses": [
@@ -676,10 +679,13 @@ def check_product_exists():
             })
         
         # الحصول على المخزون الحالي
-        stock = StockLevel.query.filter_by(
-            product_id=product.id,
-            warehouse_id=request.args.get("warehouse_id", 1, type=int)
-        ).first()
+        warehouse_id = request.args.get("warehouse_id", type=int) or get_default_warehouse_id()
+        stock = None
+        if warehouse_id:
+            stock = StockLevel.query.filter_by(
+                product_id=product.id,
+                warehouse_id=warehouse_id,
+            ).first()
         
         current_quantity = stock.quantity if stock else 0
         
@@ -846,7 +852,9 @@ def bulk_import_products():
     try:
         data = request.get_json()
         products_data = data.get("products", [])
-        warehouse_id = data.get("warehouse_id", 1)
+        warehouse_id = data.get("warehouse_id") or get_default_warehouse_id()
+        if not warehouse_id:
+            return jsonify({"error": "لم يُعثر على مستودع افتراضي نشط"}), 400
         existing_product_action = data.get("existing_product_action", "add_quantity")
         
         # الحقول الديناميكية
@@ -1068,7 +1076,9 @@ def bulk_import_products():
 @login_required
 def bulk_scan_page():
     """صفحة المسح الجماعي"""
-    warehouses = Warehouse.query.filter_by(is_active=True).all()
+    from utils.company_scope import filter_warehouses_query
+
+    warehouses = filter_warehouses_query(Warehouse.query.filter_by(is_active=True)).all()
     return render_template("barcode_scanner/bulk_scan.html", warehouses=warehouses)
 
 

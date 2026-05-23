@@ -73,8 +73,8 @@ def _http_tests(app) -> list[str]:
 
     cases = [
         ("platform", "/auth/login", None, "security.index"),
-        ("tenant_nasrallah", "/t/nasrallah/auth/login", "nasrallah", "tenant_console.index"),
-        ("tenant_alhazem", "/t/alhazem/auth/login", "alhazem", "tenant_console.index"),
+        ("tenant_nasrallah", "/t/nasrallah/auth/login", "nasrallah", "tenant_console.control"),
+        ("tenant_alhazem", "/t/alhazem/auth/login", "alhazem", "tenant_console.control"),
     ]
 
     for label, path, slug, expected_ep in cases:
@@ -112,7 +112,7 @@ def _http_tests(app) -> list[str]:
             expected_path = ""
         if expected_ep == "security.index":
             ok_loc = "/security" in loc
-        elif expected_ep == "tenant_console.index":
+        elif expected_ep in ("tenant_console.index", "tenant_console.control"):
             ok_loc = "tenant" in loc.lower() or (slug and f"/t/{slug}" in loc)
         else:
             ok_loc = bool(loc)

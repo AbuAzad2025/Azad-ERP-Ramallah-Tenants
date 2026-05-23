@@ -58,7 +58,7 @@
 {% block content %}
   <!-- رأس الطباعة -->
   <div class="print-header d-none d-print-block">
-    <h2>نظام أزاد لإدارة الكراج</h2>
+    <h2>{{ system_settings.company_name or system_settings.system_name }}</h2>
     <div class="company-info">
       رام الله - فلسطين 🇵🇸 | تاريخ الطباعة: {{ "now"|format_datetime("%Y-%m-%d") }}
     </div>
@@ -101,7 +101,7 @@
         <button class="btn btn-light btn-sm shadow-sm text-primary fw-bold" onclick="window.print()">
           <i class="fas fa-print ml-1"></i>طباعة القائمة
         </button>
-        {% if current_user.has_permission('manage_expenses') %}
+        {% if has_perm('manage_expenses') %}
         <a href="{{ url_for('expenses_bp.add_employee') }}" class="btn btn-light btn-sm shadow-sm text-success fw-bold">
           <i class="fas fa-plus ml-1"></i>إضافة موظف
         </a>
@@ -204,7 +204,7 @@
               <a href="{{ url_for('expenses_bp.employee_statement', emp_id=e.id) }}" class="btn btn-sm btn-info" title="كشف الحساب">
                 <i class="fas fa-file-invoice"></i>
               </a>
-              {% if current_user.has_permission('manage_expenses') %}
+              {% if has_perm('manage_expenses') %}
               <a href="{{ url_for('expenses_bp.edit_employee', emp_id=e.id) }}" class="btn btn-sm btn-warning" title="تعديل">
                 <i class="fas fa-edit"></i>
               </a>

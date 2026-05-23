@@ -345,7 +345,9 @@ def api_warehouse_info():
         wid = request.args.get("id", type=int)
         if not wid:
             return jsonify({"error": "id_required"}), 400
-        w = Warehouse.query.filter_by(id=wid).first()
+        from utils.company_scope import filter_warehouses_query
+
+        w = filter_warehouses_query(Warehouse.query).filter_by(id=wid).first()
         if not w:
             return jsonify({"error": "not_found"}), 404
         if hasattr(w.warehouse_type, 'value'):
@@ -428,7 +430,9 @@ def api_prepare_online_fields():
         wid = request.args.get("warehouse_id", type=int)
         if not wid:
             return jsonify({"ok": False, "error": "warehouse_id_required"}), 400
-        w = Warehouse.query.filter_by(id=wid).first()
+        from utils.company_scope import filter_warehouses_query
+
+        w = filter_warehouses_query(Warehouse.query).filter_by(id=wid).first()
         if not w:
             return jsonify({"ok": False, "error": "not_found"}), 404
         wt = getattr(w.warehouse_type, "value", w.warehouse_type)
@@ -732,7 +736,9 @@ def _is_online_wh(w: Warehouse) -> bool:
 @warehouse_bp.route("/", methods=["GET"], endpoint="list")
 @login_required
 def list_warehouses():
-    q = Warehouse.query
+    from utils.company_scope import filter_warehouses_query
+
+    q = filter_warehouses_query(Warehouse.query)
     type_ = (request.args.get("type") or "").strip()
     if type_:
         q = q.filter(Warehouse.warehouse_type == type_.upper())
@@ -960,6 +966,9 @@ def delete_warehouse(warehouse_id):
 @warehouse_bp.route("/<int:warehouse_id>", methods=["GET"], endpoint="detail")
 @login_required
 def warehouse_detail(warehouse_id):
+    from utils.company_scope import assert_warehouse_access
+
+    assert_warehouse_access(warehouse_id)
     w = _get_or_404(Warehouse, warehouse_id)
     stock_totals = (
         db.session.query(
@@ -1027,10 +1036,13 @@ def inventory_summary():
     per_page = request.args.get("per_page", 50, type=int)
     per_page = min(200, max(10, per_page))
     selected_ids = request.args.getlist("warehouse_ids", type=int)
-    if not selected_ids:
-        selected_ids = [w.id for w in Warehouse.query.order_by(Warehouse.name).all()]
+    from utils.company_scope import filter_warehouses_query
 
-    whs = Warehouse.query.filter(Warehouse.id.in_(selected_ids)).order_by(Warehouse.name.asc()).all()
+    _wh_base = filter_warehouses_query(Warehouse.query)
+    if not selected_ids:
+        selected_ids = [w.id for w in _wh_base.order_by(Warehouse.name).all()]
+
+    whs = _wh_base.filter(Warehouse.id.in_(selected_ids)).order_by(Warehouse.name.asc()).all()
     wh_ids = [w.id for w in whs]
 
     if (request.args.get("export") or "").lower() == "csv":
@@ -1160,8 +1172,11 @@ def inventory_summary():
 @warehouse_bp.route("/<int:id>/products", methods=["GET"], endpoint="products")
 @login_required
 def products(id):
+    from utils.company_scope import assert_warehouse_access, filter_warehouses_query
+
+    assert_warehouse_access(id)
     base_warehouse = _get_or_404(Warehouse, id)
-    all_whs = Warehouse.query.order_by(Warehouse.name).all()
+    all_whs = filter_warehouses_query(Warehouse.query).order_by(Warehouse.name).all()
     selected_ids = request.args.getlist("warehouse_ids", type=int) or [id]
     selected_ids = sorted(set(selected_ids))
     whs = [w for w in all_whs if w.id in selected_ids]
@@ -1705,7 +1720,9 @@ def add_product(id):
     partner_choices = []
     supplier_choices = []
     if is_partner:
-        partner_q = Partner.query.order_by(Partner.name.asc())
+        from utils.company_scope import filter_partners_query
+
+        partner_q = filter_partners_query(Partner.query).order_by(Partner.name.asc())
         if hasattr(Partner, "is_archived"):
             partner_q = partner_q.filter(Partner.is_archived.is_(False))
         partner_choices = [(p.id, p.name) for p in partner_q.all()]
@@ -1715,7 +1732,9 @@ def add_product(id):
             except Exception:
                 current_app.logger.debug('operation failed in warehouses.py', exc_info=True)
     if is_exchange:
-        supplier_q = Supplier.query.order_by(Supplier.name.asc())
+        from utils.company_scope import filter_suppliers_query
+
+        supplier_q = filter_suppliers_query(Supplier.query).order_by(Supplier.name.asc())
         if hasattr(Supplier, "is_archived"):
             supplier_q = supplier_q.filter(Supplier.is_archived.is_(False))
         supplier_choices = [(s.id, s.name) for s in supplier_q.all()]
@@ -3230,7 +3249,9 @@ def product_card(product_id):
     ).filter_by(id=product_id).first()
     if part is None:
         abort(404)
-    warehouses = Warehouse.query.order_by(Warehouse.name).all()
+    from utils.company_scope import filter_warehouses_query
+
+    warehouses = filter_warehouses_query(Warehouse.query).order_by(Warehouse.name).all()
     wh_ids = [w.id for w in warehouses if getattr(w, "id", None)]
     levels = []
     if wh_ids:
@@ -3549,7 +3570,9 @@ def preorder_convert_to_sale(preorder_id):
         db.session.flush()  # لحساب total_amount من SaleLine
         
         # ربط Payment المرتبط بـ PreOrder بالـ Sale أيضاً
-        prepaid_payment = Payment.query.filter(
+        from utils.company_scope import filter_payments_query
+
+        prepaid_payment = filter_payments_query(Payment.query).filter(
             Payment.preorder_id == preorder.id,
             Payment.direction == PaymentDirection.IN.value,
             Payment.status == PaymentStatus.COMPLETED.value
@@ -3572,7 +3595,7 @@ def preorder_convert_to_sale(preorder_id):
         db.session.flush()
         
         db.session.refresh(sale)
-        sale.balance_due = Decimal(str(sale.total_amount or 0)) - Decimal(str(sale.total_paid or 0))
+        sale.balance_due = Decimal(str(sale.total_amount or 0))
         db.session.add(sale)
         
         preorder._skip_reservation_flow = True
@@ -3603,10 +3626,10 @@ def preorder_convert_to_sale(preorder_id):
         
         utils.flash_success(f"تم إنشاء مبيعة #{sale.id} - أكمل الدفع لإتمام التسليم!", "success")
         
-        # جلب اسم العميل/الجهة
+        # جلب اسم الزبون/الجهة
         entity_name = ''
         if preorder.customer:
-            entity_name = f"عميل: {preorder.customer.name}"
+            entity_name = f"زبون: {preorder.customer.name}"
         elif preorder.supplier:
             entity_name = f"مورد: {preorder.supplier.name}"
         elif preorder.partner:
@@ -3749,7 +3772,7 @@ def api_add_customer():
     data = request.get_json() or {}
     name = (data.get("name") or "").strip()
     if not name:
-        return jsonify({"error": "اسم العميل مطلوب"}), 400
+        return jsonify({"error": "اسم الزبون مطلوب"}), 400
     cust = Customer(name=name, phone=data.get("phone"), email=data.get("email"), address=data.get("address"), whatsapp=data.get("whatsapp"), category=data.get("category", "عادي"), is_active=True)
     db.session.add(cust)
     try:
@@ -4059,7 +4082,9 @@ def api_product_suppliers_update(product_id):
 @login_required
 def api_partners_list():
     try:
-        partners = Partner.query.order_by(Partner.name).all()
+        from utils.company_scope import filter_partners_query
+
+        partners = filter_partners_query(Partner.query).order_by(Partner.name).all()
         return jsonify({
             "success": True,
             "partners": [{"id": p.id, "name": p.name} for p in partners]
@@ -4073,7 +4098,9 @@ def api_partners_list():
 @login_required
 def api_suppliers_list():
     try:
-        suppliers = Supplier.query.order_by(Supplier.name).all()
+        from utils.company_scope import filter_suppliers_query
+
+        suppliers = filter_suppliers_query(Supplier.query).order_by(Supplier.name).all()
         return jsonify({
             "success": True,
             "suppliers": [{"id": s.id, "name": s.name} for s in suppliers]

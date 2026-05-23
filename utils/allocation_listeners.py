@@ -21,7 +21,7 @@ _ALLOC_RUNNING = False
 
 def _allocate(customer_id: int, source: str = "") -> None:
     """
-    دالة بسيطة لتفعيل التوزيع لعميل محدد
+    دالة بسيطة لتفعيل التوزيع لزبون محدد
     """
     if not customer_id:
         return
@@ -38,10 +38,10 @@ def _allocate(customer_id: int, source: str = "") -> None:
         result = apply_customer_credit_to_obligations(customer_id)
 
         if result:
-            logger.info(f"✅ توزيع تلقائي للعميل #{customer_id} ({len(result)} دفعة) - مصدر: {source}")
+            logger.info(f"✅ توزيع تلقائي للزبون #{customer_id} ({len(result)} دفعة) - مصدر: {source}")
 
     except Exception as e:
-        logger.error(f"❌ خطأ في التوزيع للعميل #{customer_id}: {e}")
+        logger.error(f"❌ خطأ في التوزيع للزبون #{customer_id}: {e}")
 
 def _allocate_supplier(supplier_id: int, source: str = "") -> None:
     if not supplier_id:
@@ -169,7 +169,7 @@ def _queue_partner_allocation(target, partner_id: int, source: str = "") -> None
         pass
 
 # =============================================================================
-# مستمعات الالتزامات (Obligations) - للعملاء
+# مستمعات الالتزامات (Obligations) - للزبائن
 # =============================================================================
 
 def on_sale_created(mapper, connection, target):
@@ -220,7 +220,7 @@ def on_invoice_created(mapper, connection, target):
 
 
 # =============================================================================
-# مستمعات الحقوق (Rights) - للعملاء
+# مستمعات الحقوق (Rights) - للزبائن
 # =============================================================================
 
 def on_payment_received(mapper, connection, target):

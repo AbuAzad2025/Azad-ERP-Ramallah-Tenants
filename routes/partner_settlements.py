@@ -10,6 +10,15 @@ import utils
 from models import Partner, PaymentDirection, PaymentMethod, PartnerSettlement, PartnerSettlementStatus, build_partner_settlement_draft, AuditLog, SaleStatus, ServiceStatus, Expense, ExpenseType, ProductPartner, Product, StockLevel, Warehouse
 import json
 
+from utils.company_scope import (
+    assert_partner_access,
+    filter_expenses_query,
+    filter_sale_returns_query,
+    scoped_check_query,
+    scoped_expense_query,
+    scoped_payment_query,
+)
+
 partner_settlements_bp = Blueprint("partner_settlements_bp", __name__, url_prefix="/partners")
 
 def get_unpriced_partner_products():
@@ -142,6 +151,7 @@ def settlements_list():
     return render_template("partner_settlements/list.html")
 
 def _get_partner_or_404(pid: int) -> Partner:
+    assert_partner_access(pid)
     obj = db.session.get(Partner, pid)
     if not obj:
         abort(404)
@@ -402,7 +412,7 @@ def _get_returned_checks_to_partner(partner_id: int, partner: Partner, date_from
     returned_checks_out = Decimal('0.00')
     items = []
     
-    returned_out_direct = session.query(Payment).outerjoin(
+    returned_out_direct = scoped_payment_query(session).outerjoin(
         Check, Check.payment_id == Payment.id
     ).filter(
         Payment.partner_id == partner_id,
@@ -425,7 +435,7 @@ def _get_returned_checks_to_partner(partner_id: int, partner: Partner, date_from
     returned_out_from_preorders = []
     
     if partner.customer_id:
-        returned_out_from_customer = session.query(Payment).outerjoin(
+        returned_out_from_customer = scoped_payment_query(session).outerjoin(
             Check, Check.payment_id == Payment.id
         ).filter(
             Payment.customer_id == partner.customer_id,
@@ -441,7 +451,7 @@ def _get_returned_checks_to_partner(partner_id: int, partner: Partner, date_from
             Payment.payment_date <= date_to
         ).all()
         
-        returned_out_from_sales = session.query(Payment).join(
+        returned_out_from_sales = scoped_payment_query(session).join(
             Sale, Sale.id == Payment.sale_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -459,7 +469,7 @@ def _get_returned_checks_to_partner(partner_id: int, partner: Partner, date_from
             Payment.payment_date <= date_to
         ).all()
         
-        returned_out_from_invoices = session.query(Payment).join(
+        returned_out_from_invoices = scoped_payment_query(session).join(
             Invoice, Invoice.id == Payment.invoice_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -477,7 +487,7 @@ def _get_returned_checks_to_partner(partner_id: int, partner: Partner, date_from
             Payment.payment_date <= date_to
         ).all()
         
-        returned_out_from_services = session.query(Payment).join(
+        returned_out_from_services = scoped_payment_query(session).join(
             ServiceRequest, ServiceRequest.id == Payment.service_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -495,7 +505,7 @@ def _get_returned_checks_to_partner(partner_id: int, partner: Partner, date_from
             Payment.payment_date <= date_to
         ).all()
         
-        returned_out_from_preorders = session.query(Payment).join(
+        returned_out_from_preorders = scoped_payment_query(session).join(
             PreOrder, PreOrder.id == Payment.preorder_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -531,7 +541,7 @@ def _get_returned_checks_to_partner(partner_id: int, partner: Partner, date_from
             "amount_ils": float(amt)
         })
     
-    manual_returned_checks = session.query(Check).filter(
+    manual_returned_checks = scoped_check_query(session).filter(
         Check.partner_id == partner_id,
         Check.payment_id.is_(None),
         Check.direction == PaymentDirection.OUT.value,
@@ -569,7 +579,7 @@ def _get_returned_checks_from_partner(partner_id: int, partner: Partner, date_fr
     returned_checks_in = Decimal('0.00')
     items = []
     
-    returned_in_direct = session.query(Payment).outerjoin(
+    returned_in_direct = scoped_payment_query(session).outerjoin(
         Check, Check.payment_id == Payment.id
     ).filter(
         Payment.partner_id == partner_id,
@@ -592,7 +602,7 @@ def _get_returned_checks_from_partner(partner_id: int, partner: Partner, date_fr
     returned_in_from_preorders = []
     
     if partner.customer_id:
-        returned_in_from_customer = session.query(Payment).outerjoin(
+        returned_in_from_customer = scoped_payment_query(session).outerjoin(
             Check, Check.payment_id == Payment.id
         ).filter(
             Payment.customer_id == partner.customer_id,
@@ -608,7 +618,7 @@ def _get_returned_checks_from_partner(partner_id: int, partner: Partner, date_fr
             Payment.payment_date <= date_to
         ).all()
         
-        returned_in_from_sales = session.query(Payment).join(
+        returned_in_from_sales = scoped_payment_query(session).join(
             Sale, Sale.id == Payment.sale_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -626,7 +636,7 @@ def _get_returned_checks_from_partner(partner_id: int, partner: Partner, date_fr
             Payment.payment_date <= date_to
         ).all()
         
-        returned_in_from_invoices = session.query(Payment).join(
+        returned_in_from_invoices = scoped_payment_query(session).join(
             Invoice, Invoice.id == Payment.invoice_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -644,7 +654,7 @@ def _get_returned_checks_from_partner(partner_id: int, partner: Partner, date_fr
             Payment.payment_date <= date_to
         ).all()
         
-        returned_in_from_services = session.query(Payment).join(
+        returned_in_from_services = scoped_payment_query(session).join(
             ServiceRequest, ServiceRequest.id == Payment.service_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -662,7 +672,7 @@ def _get_returned_checks_from_partner(partner_id: int, partner: Partner, date_fr
             Payment.payment_date <= date_to
         ).all()
         
-        returned_in_from_preorders = session.query(Payment).join(
+        returned_in_from_preorders = scoped_payment_query(session).join(
             PreOrder, PreOrder.id == Payment.preorder_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -698,7 +708,7 @@ def _get_returned_checks_from_partner(partner_id: int, partner: Partner, date_fr
             "amount_ils": float(amt)
         })
     
-    manual_returned_checks = session.query(Check).filter(
+    manual_returned_checks = scoped_check_query(session).filter(
         Check.partner_id == partner_id,
         Check.payment_id.is_(None),
         Check.direction == PaymentDirection.IN.value,
@@ -770,7 +780,7 @@ def _calculate_smart_partner_balance(partner_id: int, date_from: datetime, date_
         preorders_to_partner = _get_partner_preorders_as_customer(partner_id, partner, date_from, date_to)
         damaged_items = _get_partner_damaged_items(partner_id, date_from, date_to)
         expenses_deducted = _get_partner_expenses(partner_id, date_from, date_to)
-        expenses_to_partner = Expense.query.join(ExpenseType).filter(
+        expenses_to_partner = filter_expenses_query(Expense.query).join(ExpenseType).filter(
             or_(
                 Expense.partner_id == partner_id,
                 and_(Expense.payee_type == "PARTNER", Expense.payee_entity_id == partner_id)
@@ -974,7 +984,7 @@ def _calculate_payments_to_partner(partner_id: int, date_from: datetime, date_to
     from models import Payment
     from sqlalchemy import func
     
-    amount = db.session.query(func.sum(Payment.total_amount)).filter(
+    amount = scoped_payment_query().with_entities(func.sum(Payment.total_amount)).filter(
         Payment.partner_id == partner_id,
         Payment.direction == "OUTGOING",
         Payment.status == "COMPLETED",
@@ -989,7 +999,7 @@ def _calculate_payments_from_partner(partner_id: int, date_from: datetime, date_
     from models import Payment
     from sqlalchemy import func
     
-    amount = db.session.query(func.sum(Payment.total_amount)).filter(
+    amount = scoped_payment_query().with_entities(func.sum(Payment.total_amount)).filter(
         Payment.partner_id == partner_id,
         Payment.direction == "INCOMING",
         Payment.status == "COMPLETED",
@@ -1068,7 +1078,7 @@ def _get_partner_operations_details(partner_id: int, date_from: datetime, date_t
         ExchangeTransaction.created_at <= date_to
     ).order_by(desc(ExchangeTransaction.created_at)).limit(10).all()
     
-    recent_payments = db.session.query(Payment).filter(
+    recent_payments = db.scoped_payment_query(session).filter(
         Payment.partner_id == partner_id,
         Payment.payment_date >= date_from,
         Payment.payment_date <= date_to
@@ -1722,7 +1732,7 @@ def _get_partner_sales_returns(partner_id: int, date_from: datetime, date_to: da
     all_returns = []
     total_return_share_ils = Decimal('0.00')
     
-    sale_returns = db.session.query(SaleReturn).filter(
+    sale_returns = filter_sale_returns_query(db.session.query(SaleReturn)).filter(
         SaleReturn.status == 'CONFIRMED',
         SaleReturn.return_date >= date_from,
         SaleReturn.return_date <= date_to
@@ -1821,8 +1831,8 @@ def _get_payments_to_partner(partner_id: int, partner: Partner, date_from: datet
     
     تشمل:
     1. الدفعات المرتبطة مباشرة بـ partner_id
-    2. الدفعات المرتبطة بـ customer_id (العميل المرتبط بالشريك)
-    3. الدفعات المرتبطة بمبيعات للعميل (entity_type = SALE)
+    2. الدفعات المرتبطة بـ customer_id (الزبون المرتبط بالشريك)
+    3. الدفعات المرتبطة بمبيعات للزبون (entity_type = SALE)
     """
     from models import Payment, PaymentDirection, PaymentStatus, PaymentEntityType, Sale, Check
     from sqlalchemy import or_
@@ -1832,7 +1842,7 @@ def _get_payments_to_partner(partner_id: int, partner: Partner, date_from: datet
     items = []
     total_ils = Decimal('0.00')
     
-    direct_payments = session.query(Payment).outerjoin(
+    direct_payments = scoped_payment_query(session).outerjoin(
         Check, Check.payment_id == Payment.id
     ).filter(
         Payment.partner_id == partner_id,
@@ -1861,7 +1871,7 @@ def _get_payments_to_partner(partner_id: int, partner: Partner, date_from: datet
     
     seen_payment_ids = {it.get("payment_id") for it in items if it.get("payment_id")}
     if partner.customer_id:
-        customer_payments = session.query(Payment).outerjoin(
+        customer_payments = scoped_payment_query(session).outerjoin(
             Check, Check.payment_id == Payment.id
         ).filter(
             Payment.customer_id == partner.customer_id,
@@ -1888,7 +1898,7 @@ def _get_payments_to_partner(partner_id: int, partner: Partner, date_from: datet
                 "source": "customer"
             })
         
-        sale_payments = session.query(Payment).join(
+        sale_payments = scoped_payment_query(session).join(
             Sale, Sale.id == Payment.sale_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -1920,7 +1930,7 @@ def _get_payments_to_partner(partner_id: int, partner: Partner, date_from: datet
                 seen_payment_ids.add(payment.id)
     
     from models import Expense
-    expense_payments = session.query(Payment).join(
+    expense_payments = scoped_payment_query(session).join(
         Expense, Expense.id == Payment.expense_id
     ).filter(
         or_(
@@ -1954,7 +1964,7 @@ def _get_payments_to_partner(partner_id: int, partner: Partner, date_from: datet
     
     if partner.customer_id:
         from models import Invoice
-        invoice_payments = session.query(Payment).join(
+        invoice_payments = scoped_payment_query(session).join(
             Invoice, Invoice.id == Payment.invoice_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -1986,7 +1996,7 @@ def _get_payments_to_partner(partner_id: int, partner: Partner, date_from: datet
                 seen_payment_ids.add(payment.id)
         
         from models import ServiceRequest
-        service_payments = session.query(Payment).join(
+        service_payments = scoped_payment_query(session).join(
             ServiceRequest, ServiceRequest.id == Payment.service_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -2018,7 +2028,7 @@ def _get_payments_to_partner(partner_id: int, partner: Partner, date_from: datet
                 seen_payment_ids.add(payment.id)
         
         from models import PreOrder
-        preorder_payments = session.query(Payment).join(
+        preorder_payments = scoped_payment_query(session).join(
             PreOrder, PreOrder.id == Payment.preorder_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -2050,7 +2060,7 @@ def _get_payments_to_partner(partner_id: int, partner: Partner, date_from: datet
                 seen_payment_ids.add(payment.id)
     
     from models import Check, CheckStatus
-    manual_checks = session.query(Check).filter(
+    manual_checks = scoped_check_query(session).filter(
         Check.partner_id == partner_id,
         Check.payment_id.is_(None),
         Check.direction == PaymentDirection.OUT.value,
@@ -2215,7 +2225,7 @@ def _get_partner_preorders_share(partner_id: int, date_from: datetime, date_to: 
 def _get_partner_preorders_prepaid(partner_id: int, partner: Partner, date_from: datetime, date_to: datetime, session=None):
     """
     أرصدة الحجوزات المسبقة (العربون المدفوع) للشريك
-    إذا كان الشريك له عميل مرتبط، نحسب العربون من الحجوزات لذلك العميل
+    إذا كان الشريك له زبون مرتبط، نحسب العربون من الحجوزات لذلك الزبون
     """
     from models import PreOrder, PreOrderStatus
     from types import SimpleNamespace
@@ -2274,7 +2284,7 @@ def _get_partner_expenses(partner_id: int, date_from: datetime, date_to: datetim
     session = session or _db.session
     db = SimpleNamespace(session=session)
     
-    expenses = db.session.query(Expense).join(ExpenseType, Expense.type_id == ExpenseType.id).filter(
+    expenses = scoped_expense_query().join(ExpenseType, Expense.type_id == ExpenseType.id).filter(
         or_(
             Expense.partner_id == partner_id,
             and_(Expense.payee_type == "PARTNER", Expense.payee_entity_id == partner_id)
@@ -2324,8 +2334,8 @@ def _get_partner_payments_received(partner_id: int, partner: Partner, date_from:
     
     تشمل:
     1. الدفعات المرتبطة مباشرة بـ partner_id
-    2. الدفعات المرتبطة بـ customer_id (العميل المرتبط بالشريك)
-    3. الدفعات المرتبطة بمبيعات للعميل (entity_type = SALE)
+    2. الدفعات المرتبطة بـ customer_id (الزبون المرتبط بالشريك)
+    3. الدفعات المرتبطة بمبيعات للزبون (entity_type = SALE)
     """
     from models import Payment, PaymentDirection, PaymentStatus, PaymentEntityType, Sale, Check
     from sqlalchemy import or_
@@ -2336,7 +2346,7 @@ def _get_partner_payments_received(partner_id: int, partner: Partner, date_from:
     session = session or db.session
     
     from models import PreOrder
-    direct_payments = session.query(Payment).outerjoin(
+    direct_payments = scoped_payment_query(session).outerjoin(
         Check, Check.payment_id == Payment.id
     ).outerjoin(
         PreOrder, Payment.preorder_id == PreOrder.id
@@ -2373,7 +2383,7 @@ def _get_partner_payments_received(partner_id: int, partner: Partner, date_from:
     seen_payment_ids = {it.get("payment_id") for it in items if it.get("payment_id")}
     if partner.customer_id:
         from models import PreOrder
-        customer_payments = session.query(Payment).outerjoin(
+        customer_payments = scoped_payment_query(session).outerjoin(
             Check, Check.payment_id == Payment.id
         ).outerjoin(
             PreOrder, Payment.preorder_id == PreOrder.id
@@ -2409,7 +2419,7 @@ def _get_partner_payments_received(partner_id: int, partner: Partner, date_from:
                 })
                 seen_payment_ids.add(payment.id)
         
-        sale_payments = session.query(Payment).join(
+        sale_payments = scoped_payment_query(session).join(
             Sale, Sale.id == Payment.sale_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -2448,7 +2458,7 @@ def _get_partner_payments_received(partner_id: int, partner: Partner, date_from:
                 seen_payment_ids.add(payment.id)
         
         from models import Invoice
-        invoice_payments = session.query(Payment).join(
+        invoice_payments = scoped_payment_query(session).join(
             Invoice, Invoice.id == Payment.invoice_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -2480,7 +2490,7 @@ def _get_partner_payments_received(partner_id: int, partner: Partner, date_from:
                 seen_payment_ids.add(payment.id)
         
         from models import ServiceRequest
-        service_payments = session.query(Payment).join(
+        service_payments = scoped_payment_query(session).join(
             ServiceRequest, ServiceRequest.id == Payment.service_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -2512,7 +2522,7 @@ def _get_partner_payments_received(partner_id: int, partner: Partner, date_from:
                 seen_payment_ids.add(payment.id)
         
         from models import PreOrder
-        preorder_payments = session.query(Payment).join(
+        preorder_payments = scoped_payment_query(session).join(
             PreOrder, PreOrder.id == Payment.preorder_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -2552,7 +2562,7 @@ def _get_partner_payments_received(partner_id: int, partner: Partner, date_from:
         ).all()
         
         for po in preorders_with_prepaid:
-            existing_payment = session.query(Payment).filter(
+            existing_payment = scoped_payment_query(session).filter(
                 Payment.preorder_id == po.id,
                 Payment.direction == PaymentDirection.IN,
                 Payment.status.in_([PaymentStatus.COMPLETED, PaymentStatus.PENDING])
@@ -2580,7 +2590,7 @@ def _get_partner_payments_received(partner_id: int, partner: Partner, date_from:
                 })
     
     from models import Check, CheckStatus
-    manual_checks = session.query(Check).filter(
+    manual_checks = scoped_check_query(session).filter(
         Check.partner_id == partner_id,
         Check.payment_id.is_(None),
         Check.direction == PaymentDirection.IN.value,
@@ -2618,7 +2628,7 @@ def _get_partner_payments_received(partner_id: int, partner: Partner, date_from:
 
 def _get_partner_sales_as_customer(partner_id: int, partner: Partner, date_from: datetime, date_to: datetime, session=None):
     """
-    مبيعات للشريك (كعميل) - تُخصم من حقوقه
+    مبيعات للشريك (كزبون) - تُخصم من حقوقه
     """
     from models import Sale, SaleLine, Product
     session = session or db.session
@@ -2677,7 +2687,7 @@ def _get_partner_sales_as_customer(partner_id: int, partner: Partner, date_from:
 
 def _get_partner_service_fees(partner_id: int, partner: Partner, date_from: datetime, date_to: datetime, session=None):
     """
-    رسوم صيانة على الشريك (كعميل) - تُخصم من حقوقه
+    رسوم صيانة على الشريك (كزبون) - تُخصم من حقوقه
     """
     from models import ServiceRequest
     session = session or db.session
@@ -2736,7 +2746,7 @@ def _get_partner_service_fees(partner_id: int, partner: Partner, date_from: date
 
 def _get_partner_preorders_as_customer(partner_id: int, partner: Partner, date_from: datetime, date_to: datetime, session=None):
     """
-    حجوزات مسبقة للشريك (إذا كان عميلاً) - تُخصم من حقوقه
+    حجوزات مسبقة للشريك (إذا كان زبوناً) - تُخصم من حقوقه
     """
     from models import PreOrder
     session = session or db.session
@@ -3017,7 +3027,7 @@ def partner_inventory(partner_id):
     تقرير مخزون الشريك: يعرض المنتجات التي يملك الشريك حصة فيها
     مع الكميات المتوفرة حالياً وقيمتها.
     """
-    partner = Partner.query.get_or_404(partner_id)
+    partner = _get_partner_or_404(partner_id)
     
     # 1. المنتجات المرتبطة بالشريك عبر ProductPartner (نسبة ثابتة في المنتج)
     pp_items = db.session.query(

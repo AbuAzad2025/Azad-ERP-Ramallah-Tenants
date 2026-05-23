@@ -9,12 +9,12 @@
   const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
   var stripScripts = window.stripScripts || function(html) { return String(html || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ''); };
   const FIELD_LABELS = {
-    name: 'اسم العميل',
+    name: 'اسم الزبون',
     phone: 'رقم الهاتف',
     email: 'البريد الإلكتروني',
     whatsapp: 'رقم الواتساب',
     address: 'العنوان',
-    category: 'تصنيف العميل',
+    category: 'تصنيف الزبون',
     currency: 'العملة',
     discount_rate: 'معدل الخصم',
     credit_limit: 'حد الائتمان',
@@ -143,14 +143,14 @@
     const el = document.createElement('div');
     el.className = 'ajax-success-banner alert alert-success d-flex align-items-center justify-content-between';
     const msg = document.createElement('div');
-    msg.textContent = text || 'تم إنشاء العميل بنجاح';
+    msg.textContent = text || 'تم إنشاء الزبون بنجاح';
     const actions = document.createElement('div');
     actions.className = 'd-flex gap-2';
     if (id) {
       const openBtn = document.createElement('a');
-      openBtn.href = `/customers/${id}`;
+      openBtn.href = (window.gmPath || function(p){ return p; })(`/customers/${id}`);
       openBtn.className = 'btn btn-sm btn-outline-success ml-2';
-      openBtn.textContent = 'فتح العميل';
+      openBtn.textContent = 'فتح الزبون';
       actions.appendChild(openBtn);
     }
     if (rt) {
@@ -198,14 +198,14 @@
     });
   });
 
-  // حذف العملاء يعمل من القوالب مباشرة (list.html & detail.html)
+  // حذف الزبائن يعمل من القوالب مباشرة (list.html & detail.html)
   const bindCustomerDeleteButtons = () => {
     if (!(window.jQuery && window.jQuery.fn)) return;
     window.jQuery(".delete-btn").off("click").on("click", function(e) {
       e.preventDefault();
       const customerId = window.jQuery(this).data("id");
       const url = "/customers/" + customerId + "/delete";
-      if (confirm("هل أنت متأكد من حذف هذا العميل؟\n\nملاحظة: سيتم الحذف فقط إذا لم يكن له معاملات أو رصيد.")) {
+      if (confirm("هل أنت متأكد من حذف هذا الزبون؟\n\nملاحظة: سيتم الحذف فقط إذا لم يكن له معاملات أو رصيد.")) {
         window.jQuery("#deleteForm").attr("action", url).submit();
       }
     });
@@ -224,7 +224,7 @@
     const updateMessagePreview = () => {
       const type = messageType.value;
       const header = qs(".card-header h3");
-      const customerName = header ? header.textContent.replace("إرسال رسالة واتساب إلى", "").trim() : "العميل";
+      const customerName = header ? header.textContent.replace("إرسال رسالة واتساب إلى", "").trim() : "الزبون";
       let msg = "";
       if (type === "balance") {
         const balanceEl = qs(".fw-bold.text-danger, .fw-bold.text-success");
@@ -317,6 +317,7 @@
         return;
       }
       e.preventDefault();
+      if (typeof window.gmRequirePerm === "function" && !window.gmRequirePerm("manage_customers")) return;
       clearFieldErrors(form);
       const host = form.closest('.card-body') || form.parentElement || form;
       const oldSummary = host.querySelector('.ajax-error-summary');
@@ -376,11 +377,11 @@
           return;
         }
         const id = data ? data.id : null;
-        const text = data ? (data.text || form.querySelector('[name="name"]').value || "عميل") : "عميل";
+        const text = data ? (data.text || form.querySelector('[name="name"]').value || "زبون") : "زبون";
         setSubmitBtnState(submitBtn, false);
-        showToast('تم إنشاء العميل بنجاح', 'success');
+        showToast('تم إنشاء الزبون بنجاح', 'success');
         const rt = form.querySelector('input[name="return_to"]')?.value || "";
-        showFormSuccessBanner(form, 'تم إنشاء العميل بنجاح', id, rt);
+        showFormSuccessBanner(form, 'تم إنشاء الزبون بنجاح', id, rt);
         form.dispatchEvent(new CustomEvent("customer:created", { detail: { id, text }, bubbles: true }));
         const m = form.closest(".modal");
         if (m) {
@@ -408,7 +409,7 @@
       const sel = exportForm.querySelector('select[name="customer_ids"]');
       const options = sel ? Array.from(sel.options) : [];
       const selected = options.filter(o => o.selected);
-      if (!selected.length) { e.preventDefault(); alert("يرجى اختيار عملاء على الأقل"); }
+      if (!selected.length) { e.preventDefault(); alert("يرجى اختيار زبائن على الأقل"); }
     });
   }
 
@@ -419,7 +420,7 @@
     if (!sel) return;
     const exists = Array.from(sel.options).some(o => String(o.value) === String(payload.id));
     if (!exists) {
-      const opt = new Option(payload.text || "عميل", payload.id, true, true);
+      const opt = new Option(payload.text || "زبون", payload.id, true, true);
       sel.add(opt);
     } else {
       sel.value = String(payload.id);

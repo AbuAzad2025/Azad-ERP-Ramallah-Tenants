@@ -2,7 +2,7 @@
 صيغ محاسبية موحّدة: حقوق − التزامات (+ افتتاحي) = الرصيد.
 
 الاتجاه:
-- العميل: سالب = عليه لنا، موجب = له عندنا
+- الزبون: سالب = عليه لنا، موجب = له عندنا
 - المورد/الشريك: موجب = له علينا، سالب = عليه لنا
 """
 from __future__ import annotations
@@ -19,7 +19,7 @@ def _d(value: Any) -> Decimal:
 
 
 def customer_rights_total(components: dict) -> Decimal:
-    """حقوق العميل (ما يقلّل ما عليه)."""
+    """حقوق الزبون (ما يقلّل ما عليه)."""
     return (
         _d(components.get("payments_in_balance"))
         + _d(components.get("returns_balance"))
@@ -29,7 +29,7 @@ def customer_rights_total(components: dict) -> Decimal:
 
 
 def customer_obligations_total(components: dict) -> Decimal:
-    """التزامات العميل (ذمم — ما عليه)."""
+    """التزامات الزبون (ذمم — ما عليه)."""
     return (
         _d(components.get("sales_balance"))
         + _d(components.get("invoices_balance"))

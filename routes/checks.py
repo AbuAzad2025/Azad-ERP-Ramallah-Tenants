@@ -15,6 +15,7 @@ except ImportError:
 from models import (
     Payment, PaymentSplit, Expense, PaymentMethod, PaymentStatus, PaymentDirection, 
     Check, CheckStatus, Customer, Supplier, Partner, GLBatch, GLEntry, Account,
+    Currency, SystemSettings,
     _ALLOWED_TRANSITIONS,
 )
 from permissions_config.enums import SystemPermissions
@@ -24,6 +25,8 @@ import json
 import uuid
 
 checks_bp = Blueprint('checks', __name__, url_prefix='/checks')
+
+from utils.company_scope import scoped_check_query, scoped_payment_query
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -381,7 +384,7 @@ def create_check_record(
     if check_due_date_obj < check_date_obj:
         check_due_date_obj = check_date_obj
     if payment and getattr(payment, "id", None):
-        existing = Check.query.filter_by(payment_id=payment.id, check_number=check_number).first()
+        existing = scoped_check_query().filter_by(payment_id=payment.id, check_number=check_number).first()
         if existing:
             return existing, False
     resolved_currency = currency or getattr(payment, "currency", None) or "ILS"
@@ -628,7 +631,7 @@ def _check_manual_gl_on_insert(mapper, connection, target):
                     sa_text("SELECT name FROM customers WHERE id = :id"),
                     {"id": target.customer_id}
                 ).scalar_one_or_none()
-                entity_name = customer or 'عميل'
+                entity_name = customer or 'زبون'
                 entity_id = target.customer_id
                 entity_type = 'CUSTOMER'
             elif target.supplier_id:
@@ -694,7 +697,7 @@ def _check_create_payment_auto(mapper, connection, target):
         if target.customer_id:
             entity_id = target.customer_id
             entity_type = 'CUSTOMER'
-            current_app.logger.info(f"🔍 [CHECK_PAYMENT_AUTO] الشيك #{getattr(target, 'id', '?')} مرتبط بعميل #{entity_id}")
+            current_app.logger.info(f"🔍 [CHECK_PAYMENT_AUTO] الشيك #{getattr(target, 'id', '?')} مرتبط بزبون #{entity_id}")
         elif target.supplier_id:
             entity_id = target.supplier_id
             entity_type = 'SUPPLIER'
@@ -894,7 +897,7 @@ def _check_manual_gl_on_update(mapper, connection, target):
                 sa_text("SELECT name FROM customers WHERE id = :id"),
                 {"id": target.customer_id}
             ).scalar_one_or_none()
-            entity_name = customer or 'عميل'
+            entity_name = customer or 'زبون'
             entity_id = target.customer_id
             entity_type = 'CUSTOMER'
         elif target.supplier_id:
@@ -977,7 +980,7 @@ def ensure_check_accounts(connection=None):
             ('1000_CASH', 'الصندوق', 'ASSET'),
             ('1010_BANK', 'البنك', 'ASSET'),
             ('1020_CARD_CLEARING', 'بطاقات الائتمان', 'ASSET'),
-            ('1100_AR', 'العملاء (ذمم مدينة)', 'ASSET'),
+            ('1100_AR', 'الزبائن (ذمم مدينة)', 'ASSET'),
             ('1150_CHQ_REC', 'شيكات تحت التحصيل', 'ASSET'),
             ('1205_INV_EXCHANGE', 'المخزون - تبادل', 'ASSET'),
             ('2000_AP', 'الموردين (ذمم دائنة)', 'LIABILITY'),
@@ -1316,6 +1319,58 @@ def _create_gl_entries_for_reverse_cancelled(amount_decimal, currency, batch_id,
     return entries
 
 
+def _resolve_gl_amount_ils(amount, currency, connection, *, check_id=None, check_type=None, new_status=None):
+    """تحويل مبلغ الشيك إلى ILS للقيد المحاسبي."""
+    from sqlalchemy import text as sa_text
+    from models import _fx_rate_local_via_connection
+
+    cur = (currency or "ILS").upper()
+    amt = Decimal(str(amount))
+    if cur == "ILS":
+        return amt, "ILS"
+
+    rate = None
+    if check_id and connection is not None:
+        try:
+            row = connection.execute(
+                sa_text(
+                    """
+                    SELECT c.fx_rate_issue, c.fx_rate_cash, c.status, p.fx_rate_used
+                    FROM checks c
+                    LEFT JOIN payments p ON p.id = c.payment_id
+                    WHERE c.id = :cid
+                    LIMIT 1
+                    """
+                ),
+                {"cid": int(check_id)},
+            ).fetchone()
+            if row:
+                status_val = (new_status or row[2] or "").upper()
+                raw_rate = row[1] if status_val == "CASHED" else row[0]
+                if raw_rate is None or float(raw_rate or 0) <= 0:
+                    raw_rate = row[3]
+                if raw_rate is not None and float(raw_rate) > 0:
+                    rate = float(raw_rate)
+        except Exception:
+            rate = None
+
+    if not rate or rate <= 0:
+        try:
+            live = _fx_rate_local_via_connection(connection, cur, "ILS", _utcnow())
+            if live and float(live) > 0:
+                rate = float(live)
+        except Exception:
+            rate = None
+
+    if not rate or rate <= 0:
+        raise CheckAccountingError(
+            f"لا يوجد سعر صرف صالح لتحويل {cur} إلى ILS",
+            code="FX_MISSING",
+        )
+
+    return (amt * Decimal(str(rate))).quantize(Decimal("0.01")), "ILS"
+
+
 def create_gl_entry_for_check(check_id, check_type, amount, currency, direction, 
                                new_status, old_status=None, entity_name='', notes='', 
                                entity_type=None, entity_id=None, connection=None):
@@ -1326,16 +1381,16 @@ def create_gl_entry_for_check(check_id, check_type, amount, currency, direction,
         connection: SQLAlchemy connection object (من event listener) - إذا كان None، يستخدم db.session
     
     القيود المحاسبية:
-    1. عند استلام شيك من عميل (INCOMING):
+    1. عند استلام شيك من زبون (INCOMING):
        - مدين: شيكات تحت التحصيل (أصل)
-       - دائن: العملاء (أصل - تخفيض)
+       - دائن: الزبائن (أصل - تخفيض)
        
     2. عند صرف شيك وارد (CASHED - INCOMING):
        - مدين: البنك (أصل - زيادة)
        - دائن: شيكات تحت التحصيل (أصل - تخفيض)
        
     3. عند إرجاع شيك وارد (RETURNED - INCOMING):
-       - مدين: العملاء (أصل - زيادة)
+       - مدين: الزبائن (أصل - زيادة)
        - دائن: شيكات تحت التحصيل (أصل - تخفيض)
        
     4. عند إعطاء شيك لمورد (OUTGOING):
@@ -1353,6 +1408,15 @@ def create_gl_entry_for_check(check_id, check_type, amount, currency, direction,
     try:
         is_incoming = (direction == 'IN')
         amount_decimal = Decimal(str(amount))
+        if connection is not None:
+            amount_decimal, currency = _resolve_gl_amount_ils(
+                amount_decimal,
+                currency,
+                connection,
+                check_id=check_id,
+                check_type=check_type,
+                new_status=new_status,
+            )
         
         check_type_label = "شيك يدوي" if check_type == "manual" else "شيك"
         
@@ -1541,13 +1605,14 @@ GL_ACCOUNTS_CHECKS = {
 }
 
 CHECK_LIFECYCLE = {
-    'PENDING': ['CASHED', 'RETURNED', 'BOUNCED', 'CANCELLED'],
-    'RETURNED': ['RESUBMITTED', 'CANCELLED', 'PENDING'],
-    'BOUNCED': ['RESUBMITTED', 'CANCELLED'],
-    'RESUBMITTED': ['CASHED', 'RETURNED', 'BOUNCED', 'CANCELLED'],
-    'OVERDUE': ['CASHED', 'RETURNED', 'BOUNCED', 'CANCELLED'],
-    'CASHED': [],
-    'CANCELLED': ['RETURNED', 'PENDING', 'RESUBMITTED']
+    'PENDING': ['CASHED', 'RETURNED', 'BOUNCED', 'CANCELLED', 'ARCHIVED'],
+    'RETURNED': ['RESUBMITTED', 'CANCELLED', 'PENDING', 'ARCHIVED'],
+    'BOUNCED': ['RESUBMITTED', 'CANCELLED', 'ARCHIVED'],
+    'RESUBMITTED': ['CASHED', 'RETURNED', 'BOUNCED', 'CANCELLED', 'ARCHIVED'],
+    'OVERDUE': ['CASHED', 'RETURNED', 'BOUNCED', 'CANCELLED', 'ARCHIVED'],
+    'CASHED': ['ARCHIVED'],
+    'CANCELLED': ['RETURNED', 'PENDING', 'RESUBMITTED', 'ARCHIVED'],
+    'ARCHIVED': [],
 }
 
 def _current_user_is_owner() -> bool:
@@ -1630,14 +1695,14 @@ class CheckActionService:
                         if note_text:
                             details['check_note'] = note_text
                         ctx.split.details = details
-                        chk = Check.query.filter(Check.reference_number == f"PMT-SPLIT-{ctx.split.id}").first()
+                        chk = scoped_check_query().filter(Check.reference_number == f"PMT-SPLIT-{ctx.split.id}").first()
                         if chk:
                             chk.status = status
                             if note_text:
                                 chk.notes = (chk.notes or '') + self._compose_note(status, note_text, f"Split #{ctx.split.id}")
                             self._link_check_to_entity(chk, ctx)
                     elif ctx.kind == 'payment' and ctx.payment:
-                        chk = Check.query.filter(Check.payment_id == ctx.payment.id).first()
+                        chk = scoped_check_query().filter(Check.payment_id == ctx.payment.id).first()
                         if chk and str(getattr(chk, 'status', '')).upper() != status:
                             chk.status = status
                             if note_text:
@@ -1728,7 +1793,7 @@ class CheckActionService:
             if ctx.entity_type == 'CUSTOMER':
                 customer = db.session.get(Customer, ctx.entity_id)
                 if not customer:
-                    raise CheckValidationError(f"العميل #{ctx.entity_id} غير موجود", code='ENTITY_NOT_FOUND')
+                    raise CheckValidationError(f"الزبون #{ctx.entity_id} غير موجود", code='ENTITY_NOT_FOUND')
             elif ctx.entity_type == 'SUPPLIER':
                 supplier = db.session.get(Supplier, ctx.entity_id)
                 if not supplier:
@@ -1852,7 +1917,7 @@ class CheckActionService:
     def _apply_payment(self, ctx, status, note_text):
         self._touch_payment(ctx.payment, status, note_text, None)
         
-        check = Check.query.filter(
+        check = scoped_check_query().filter(
             Check.payment_id == ctx.payment.id
         ).first()
         if check:
@@ -1904,30 +1969,30 @@ class CheckActionService:
             try:
                 # Attempt 1: Try with savepoint protection to avoid aborting the main transaction
                 with db.session.begin_nested():
-                    chk = Check.query.filter(Check.reference_number == ref_exact).first()
+                    chk = scoped_check_query().filter(Check.reference_number == ref_exact).first()
                     if chk:
                         return chk
-                    return Check.query.filter(Check.reference_number.like(ref_like)).first()
+                    return scoped_check_query().filter(Check.reference_number.like(ref_like)).first()
             except SQLAlchemyError as e:
                 current_app.logger.warning(f"⚠️ Transaction error in _safe_get_split_check (nested attempt): {e}")
                 # Savepoint is rolled back automatically by the context manager
                 
                 # Attempt 2: Retry directly
                 try:
-                    chk = Check.query.filter(Check.reference_number == ref_exact).first()
+                    chk = scoped_check_query().filter(Check.reference_number == ref_exact).first()
                     if chk:
                         return chk
-                    return Check.query.filter(Check.reference_number.like(ref_like)).first()
+                    return scoped_check_query().filter(Check.reference_number.like(ref_like)).first()
                 except Exception as retry_e:
                     current_app.logger.error(f"❌ Failed to get split check after retry: {retry_e}")
                     
                     # Attempt 3: Last resort - full rollback and retry
                     try:
                         db.session.rollback()
-                        chk = Check.query.filter(Check.reference_number == ref_exact).first()
+                        chk = scoped_check_query().filter(Check.reference_number == ref_exact).first()
                         if chk:
                             return chk
-                        return Check.query.filter(Check.reference_number.like(ref_like)).first()
+                        return scoped_check_query().filter(Check.reference_number.like(ref_like)).first()
                     except Exception as final_e:
                         current_app.logger.error(f"❌ Failed to get split check after full rollback: {final_e}")
                         return None
@@ -2012,12 +2077,12 @@ class CheckActionService:
         check = None
         if exp.payments:
             for payment in exp.payments:
-                check = Check.query.filter(Check.payment_id == payment.id).first()
+                check = scoped_check_query().filter(Check.payment_id == payment.id).first()
                 if check:
                     break
         
         if not check:
-            check = Check.query.filter(
+            check = scoped_check_query().filter(
                 Check.reference_number.in_([f"EXP-{exp.id}", f"EXPENSE-{exp.id}"])
             ).first()
         
@@ -2136,7 +2201,7 @@ class CheckActionService:
 
     def _auto_refund_payment(self, payment):
         try:
-            existing = Payment.query.filter(
+            existing = scoped_payment_query().filter(
                 Payment.refund_of_id == payment.id,
                 Payment.notes.ilike('%[AUTO_REFUND_FROM_BANK=true]%'),
                 Payment.status != PaymentStatus.CANCELLED.value
@@ -2181,7 +2246,7 @@ class CheckActionService:
                 except Exception:
                     current_app.logger.debug('optional import failed in checks.py', exc_info=True)
             # إعداد ملاحظات العكس
-            reverse_note = f"\nعكس قيد لل{('عميل' if payment.customer_id else ('مورد' if payment.supplier_id else ('شريك' if payment.partner_id else 'جهة')))} {entity_name or ''} بسبب ارجاع الشيك".strip()
+            reverse_note = f"\nعكس قيد لل{('زبون' if payment.customer_id else ('مورد' if payment.supplier_id else ('شريك' if payment.partner_id else 'جهة')))} {entity_name or ''} بسبب ارجاع الشيك".strip()
             if check_num or check_bank:
                 reverse_note += f" (رقم {check_num or '—'} بنك {check_bank or '—'} من البنك)"
             refund = Payment(
@@ -2296,7 +2361,7 @@ class CheckActionService:
 
     def _auto_unrefund_payment(self, payment):
         try:
-            refunds = Payment.query.filter(
+            refunds = scoped_payment_query().filter(
                 Payment.refund_of_id == payment.id,
                 Payment.notes.ilike('%[AUTO_REFUND_FROM_BANK=true]%'),
                 Payment.status == PaymentStatus.COMPLETED.value
@@ -2310,7 +2375,7 @@ class CheckActionService:
 
     def _auto_refund_split(self, payment, split):
         try:
-            existing = Payment.query.filter(
+            existing = scoped_payment_query().filter(
                 Payment.refund_of_id == payment.id,
                 Payment.notes.ilike('%[AUTO_REFUND_FROM_BANK=true]%'),
                 Payment.status != PaymentStatus.CANCELLED.value
@@ -2342,7 +2407,7 @@ class CheckActionService:
                 check_bank = check_bank or (det.get('check_bank') or None)
             except Exception:
                 current_app.logger.debug('optional import failed in checks.py', exc_info=True)
-            reverse_note = f"\nعكس قيد لل{('عميل' if payment.customer_id else ('مورد' if payment.supplier_id else ('شريك' if payment.partner_id else 'جهة')))} {entity_name or ''} بسبب ارجاع الشيك".strip()
+            reverse_note = f"\nعكس قيد لل{('زبون' if payment.customer_id else ('مورد' if payment.supplier_id else ('شريك' if payment.partner_id else 'جهة')))} {entity_name or ''} بسبب ارجاع الشيك".strip()
             if check_num or check_bank:
                 reverse_note += f" (رقم {check_num or '—'} بنك {check_bank or '—'} من البنك)"
             refund = Payment(
@@ -2422,7 +2487,7 @@ class CheckActionService:
 
     def _auto_unrefund_split(self, payment, split):
         try:
-            refunds = Payment.query.filter(
+            refunds = scoped_payment_query().filter(
                 Payment.refund_of_id == payment.id,
                 Payment.notes.ilike('%[AUTO_REFUND_FROM_BANK=true]%'),
                 Payment.status == PaymentStatus.COMPLETED.value
@@ -2443,18 +2508,18 @@ class CheckActionService:
             from sqlalchemy import or_
             ref_exact = f"PMT-SPLIT-{ctx.split.id}"
             ref_like = f"PMT-SPLIT-{ctx.split.id}-%"
-            return Check.query.filter(
+            return scoped_check_query().filter(
                 or_(Check.reference_number == ref_exact, Check.reference_number.like(ref_like))
             ).first()
         if ctx.payment:
-            return Check.query.filter(Check.payment_id == ctx.payment.id).first()
+            return scoped_check_query().filter(Check.payment_id == ctx.payment.id).first()
         if ctx.expense:
             if getattr(ctx.expense, 'payments', None):
                 for payment in ctx.expense.payments:
-                    check = Check.query.filter(Check.payment_id == payment.id).first()
+                    check = scoped_check_query().filter(Check.payment_id == payment.id).first()
                     if check:
                         return check
-            return Check.query.filter(
+            return scoped_check_query().filter(
                 Check.reference_number.in_([f"EXP-{ctx.expense.id}", f"EXPENSE-{ctx.expense.id}"])
             ).first()
         return None
@@ -3002,23 +3067,23 @@ def get_checks():
             def _resolve_entity(payment):
                 if payment.customer:
                     name = (payment.customer.name or "") or ""
-                    return name, 'عميل', f"/customers/{payment.customer.id}", 'CUSTOMER', payment.customer.id
+                    return name, 'زبون', f"/customers/{payment.customer.id}", 'CUSTOMER', payment.customer.id
                 sale = getattr(payment, 'sale', None)
                 if sale and getattr(sale, 'customer', None):
                     name = (sale.customer.name or "") or ""
-                    return name, 'عميل', f"/customers/{sale.customer.id}", 'CUSTOMER', sale.customer.id
+                    return name, 'زبون', f"/customers/{sale.customer.id}", 'CUSTOMER', sale.customer.id
                 invoice = getattr(payment, 'invoice', None)
                 if invoice and getattr(invoice, 'customer', None):
                     name = (invoice.customer.name or "") or ""
-                    return name, 'عميل', f"/customers/{invoice.customer.id}", 'CUSTOMER', invoice.customer.id
+                    return name, 'زبون', f"/customers/{invoice.customer.id}", 'CUSTOMER', invoice.customer.id
                 preorder = getattr(payment, 'preorder', None)
                 if preorder and getattr(preorder, 'customer', None):
                     name = (preorder.customer.name or "") or ""
-                    return name, 'عميل', f"/customers/{preorder.customer.id}", 'CUSTOMER', preorder.customer.id
+                    return name, 'زبون', f"/customers/{preorder.customer.id}", 'CUSTOMER', preorder.customer.id
                 service_request = getattr(payment, 'service', None)
                 if service_request and getattr(service_request, 'customer', None):
                     name = (service_request.customer.name or "") or ""
-                    return name, 'عميل', f"/customers/{service_request.customer.id}", 'CUSTOMER', service_request.customer.id
+                    return name, 'زبون', f"/customers/{service_request.customer.id}", 'CUSTOMER', service_request.customer.id
                 if payment.supplier:
                     name = (payment.supplier.name or "") or ""
                     return name, 'مورد', f"/vendors/{payment.supplier.id}", 'SUPPLIER', payment.supplier.id
@@ -3051,15 +3116,19 @@ def get_checks():
                     return payment.payment_date.date()
                 return None
 
-            payment_query = db.session.query(Payment).options(
-                joinedload(Payment.splits),
-                joinedload(Payment.customer),
-                joinedload(Payment.supplier),
-                joinedload(Payment.partner),
-                joinedload(Payment.sale),
-                joinedload(Payment.invoice),
-                joinedload(Payment.preorder),
-                joinedload(Payment.service),
+            from utils.company_scope import filter_payments_query
+
+            payment_query = filter_payments_query(
+                db.session.query(Payment).options(
+                    joinedload(Payment.splits),
+                    joinedload(Payment.customer),
+                    joinedload(Payment.supplier),
+                    joinedload(Payment.partner),
+                    joinedload(Payment.sale),
+                    joinedload(Payment.invoice),
+                    joinedload(Payment.preorder),
+                    joinedload(Payment.service),
+                )
             )
 
             if direction == 'in':
@@ -3102,7 +3171,7 @@ def get_checks():
 
             if payment_ids:
                 all_checks = (
-                    Check.query.filter(Check.payment_id.in_(payment_ids))
+                    scoped_check_query().filter(Check.payment_id.in_(payment_ids))
                     .order_by(Check.id.asc())
                     .all()
                 )
@@ -3434,8 +3503,10 @@ def get_checks():
             if direction == 'in':
                 expense_checks = []
             else:
-                expense_checks = Expense.query.filter(
-                    Expense.payment_method == 'cheque'
+                from utils.company_scope import filter_expenses_query
+
+                expense_checks = filter_expenses_query(
+                    Expense.query.filter(Expense.payment_method == 'cheque')
                 )
 
             for expense in (expense_checks.all() if hasattr(expense_checks, 'all') else []):
@@ -3544,13 +3615,13 @@ def get_checks():
         
         if not source_filter or source_filter in ['all', 'manual']:
             # عرض الشيكات اليدوية فقط (تخطي الشيكات المرتبطة بـ Splits لأنها تظهر من PaymentSplit)
-            manual_checks_query = Check.query.filter(
+            manual_checks_query = scoped_check_query().filter(
                 and_(
                     Check.payment_id.is_(None),
                     or_(
                         Check.reference_number.is_(None),
-                        ~Check.reference_number.like('PMT-SPLIT-%')
-                    )
+                        ~Check.reference_number.like('PMT-SPLIT-%'),
+                    ),
                 )
             )
 
@@ -3591,7 +3662,7 @@ def get_checks():
                 entity_type = ''
 
                 if entity_type_code_raw == 'customer':
-                    entity_type = 'عميل'
+                    entity_type = 'زبون'
                     entity_link = f'/customers/{check.entity_id}'
                 elif entity_type_code_raw == 'supplier':
                     entity_type = 'مورد'
@@ -3855,7 +3926,7 @@ def get_first_incomplete_check():
                     'payment_id': getattr(split, 'payment_id', None),
                 })
         manual_check = (
-            Check.query
+            scoped_check_query()
             .filter(
                 or_(
                     Check.check_number.is_(None),
@@ -3876,8 +3947,10 @@ def get_first_incomplete_check():
                 'token': token,
                 'id': manual_check.id,
             })
+        from utils.company_scope import filter_expenses_query
+
         expense_check = (
-            Expense.query
+            filter_expenses_query(Expense.query)
             .filter(Expense.payment_method == 'cheque')
             .filter(
                 or_(
@@ -3989,6 +4062,7 @@ def get_current_check_status(check, check_type):
 
 @checks_bp.route('/api/update-status/<check_id>', methods=['POST'])
 @login_required
+@utils.permission_required(SystemPermissions.MANAGE_PAYMENTS)
 def update_check_status(check_id):
     try:
         data = request.get_json() or {}
@@ -4045,7 +4119,7 @@ def update_check_status(check_id):
                     payment_id = ctx.payment.id
                     entity_type = getattr(getattr(ctx.payment, 'entity_type', None), 'value', getattr(ctx.payment, 'entity_type', None))
                     entity_id = getattr(ctx.payment, 'customer_id', None) or getattr(ctx.payment, 'supplier_id', None) or getattr(ctx.payment, 'partner_id', None)
-                    chk = Check.query.filter(Check.payment_id == payment_id).first()
+                    chk = scoped_check_query().filter(Check.payment_id == payment_id).first()
                     check_id_res = chk.id if chk else None
                 elif ctx.kind == 'payment_split' and ctx.split:
                     amount = float(getattr(ctx.split, 'amount', 0) or 0)
@@ -4055,7 +4129,7 @@ def update_check_status(check_id):
                     payment_id = ctx.split.payment_id
                     entity_type = getattr(getattr(ctx.payment, 'entity_type', None), 'value', getattr(ctx.payment, 'entity_type', None)) if ctx.payment else None
                     entity_id = getattr(ctx.payment, 'customer_id', None) or getattr(ctx.payment, 'supplier_id', None) or getattr(ctx.payment, 'partner_id', None) if ctx.payment else None
-                    chk = Check.query.filter(Check.reference_number == f"PMT-SPLIT-{ctx.split.id}").first()
+                    chk = scoped_check_query().filter(Check.reference_number == f"PMT-SPLIT-{ctx.split.id}").first()
                     check_id_res = chk.id if chk else None
                 elif ctx.kind == 'manual' and ctx.manual:
                     amount = float(getattr(ctx.manual, 'amount', 0) or 0)
@@ -4191,7 +4265,7 @@ def mark_check_settled(check_token):
                     else:
                         all_cheque_splits_settled = True
                         for split in cheque_splits:
-                            split_check = Check.query.filter(
+                            split_check = scoped_check_query().filter(
                                 or_(
                                     Check.reference_number == f"PMT-SPLIT-{split.id}",
                                     Check.reference_number.like(f"PMT-SPLIT-{split.id}-%")
@@ -4234,7 +4308,7 @@ def mark_check_settled(check_token):
                     else:
                         all_cheque_splits_settled = True
                         for split in cheque_splits:
-                            split_check = Check.query.filter(
+                            split_check = scoped_check_query().filter(
                                 or_(
                                     Check.reference_number == f"PMT-SPLIT-{split.id}",
                                     Check.reference_number.like(f"PMT-SPLIT-{split.id}-%")
@@ -4324,7 +4398,7 @@ def unsettle_check(check_token):
                     cheque_splits = [s for s in splits if s.method == PaymentMethod.CHEQUE.value] if splits else []
                     all_cheque_splits_returned = True
                     for split in cheque_splits:
-                        split_check = Check.query.filter(
+                        split_check = scoped_check_query().filter(
                             or_(
                                 Check.reference_number == f"PMT-SPLIT-{split.id}",
                                 Check.reference_number.like(f"PMT-SPLIT-{split.id}-%")
@@ -4341,21 +4415,21 @@ def unsettle_check(check_token):
                 entity_type = ctx.entity_type
                 if entity_id and entity_type:
                     if entity_type == 'CUSTOMER':
-                        settlement_payments = Payment.query.filter(
+                        settlement_payments = scoped_payment_query().filter(
                             Payment.customer_id == entity_id,
                             Payment.notes.like(f'%{check_token}%'),
                             Payment.notes.like('%[SETTLED=true]%'),
                             Payment.notes.like('%تم تسوية الشيك مرتجع%')
                         ).all()
                     elif entity_type == 'SUPPLIER':
-                        settlement_payments = Payment.query.filter(
+                        settlement_payments = scoped_payment_query().filter(
                             Payment.supplier_id == entity_id,
                             Payment.notes.like(f'%{check_token}%'),
                             Payment.notes.like('%[SETTLED=true]%'),
                             Payment.notes.like('%تم تسوية الشيك مرتجع%')
                         ).all()
                     elif entity_type == 'PARTNER':
-                        settlement_payments = Payment.query.filter(
+                        settlement_payments = scoped_payment_query().filter(
                             Payment.partner_id == entity_id,
                             Payment.notes.like(f'%{check_token}%'),
                             Payment.notes.like('%[SETTLED=true]%'),
@@ -4407,7 +4481,7 @@ def unsettle_check(check_token):
                     cheque_splits = [s for s in splits if s.method == PaymentMethod.CHEQUE.value] if splits else []
                     all_cheque_splits_returned = True
                     for split in cheque_splits:
-                        split_check = Check.query.filter(
+                        split_check = scoped_check_query().filter(
                             or_(
                                 Check.reference_number == f"PMT-SPLIT-{split.id}",
                                 Check.reference_number.like(f"PMT-SPLIT-{split.id}-%")
@@ -4424,21 +4498,21 @@ def unsettle_check(check_token):
                 entity_type = ctx.entity_type
                 if entity_id and entity_type:
                     if entity_type == 'CUSTOMER':
-                        settlement_payments = Payment.query.filter(
+                        settlement_payments = scoped_payment_query().filter(
                             Payment.customer_id == entity_id,
                             Payment.notes.like(f'%{check_token}%'),
                             Payment.notes.like('%[SETTLED=true]%'),
                             Payment.notes.like('%تم تسوية الشيك مرتجع%')
                         ).all()
                     elif entity_type == 'SUPPLIER':
-                        settlement_payments = Payment.query.filter(
+                        settlement_payments = scoped_payment_query().filter(
                             Payment.supplier_id == entity_id,
                             Payment.notes.like(f'%{check_token}%'),
                             Payment.notes.like('%[SETTLED=true]%'),
                             Payment.notes.like('%تم تسوية الشيك مرتجع%')
                         ).all()
                     elif entity_type == 'PARTNER':
-                        settlement_payments = Payment.query.filter(
+                        settlement_payments = scoped_payment_query().filter(
                             Payment.partner_id == entity_id,
                             Payment.notes.like(f'%{check_token}%'),
                             Payment.notes.like('%[SETTLED=true]%'),
@@ -4535,7 +4609,7 @@ def get_alerts():
         
         alerts = []
         
-        overdue_manual_checks = Check.query.filter(
+        overdue_manual_checks = scoped_check_query().filter(
             and_(
                 Check.status == CheckStatus.PENDING.value,
                 Check.check_due_date < now
@@ -4578,7 +4652,7 @@ def get_alerts():
                 'check_number': check.check_number
             })
         
-        overdue_payment_checks = Payment.query.filter(
+        overdue_payment_checks = scoped_payment_query().filter(
             and_(
                 Payment.method == PaymentMethod.CHEQUE.value,
                 Payment.status == PaymentStatus.PENDING.value,
@@ -4588,7 +4662,7 @@ def get_alerts():
         ).all()
         
         for check in overdue_payment_checks:
-            if Check.query.filter_by(reference_number=f'PMT-{check.id}').first():
+            if scoped_check_query().filter_by(reference_number=f'PMT-{check.id}').first():
                 continue
             
             entity_name = ''
@@ -4627,7 +4701,7 @@ def get_alerts():
                 'link': f'/checks?id={check.id}'
             })
         
-        due_soon_checks = Payment.query.filter(
+        due_soon_checks = scoped_payment_query().filter(
             and_(
                 Payment.method == PaymentMethod.CHEQUE.value,
                 Payment.status == PaymentStatus.PENDING.value,
@@ -4693,6 +4767,7 @@ def get_alerts():
 
 @checks_bp.route("/new", methods=["GET", "POST"])
 @login_required
+@utils.permission_required(SystemPermissions.MANAGE_PAYMENTS)
 def add_check():
     """إضافة شيك يدوي جديد"""
     if request.method == "POST":
@@ -4725,16 +4800,21 @@ def add_check():
             supplier_id_raw = request.form.get("supplier_id") or None
             partner_id_raw = request.form.get("partner_id") or None
             
-            if not check_number or not check_bank or not amount or not direction:
+            if not check_number or not check_bank or not direction:
                 flash("يرجى ملء جميع الحقول المطلوبة", "danger")
                 return redirect(url_for("checks.add_check"))
-            
-            if amount < 0:
-                flash("مبلغ الشيك لا يمكن أن يكون سالباً", "danger")
+
+            if amount <= 0:
+                flash("مبلغ الشيك يجب أن يكون أكبر من صفر", "danger")
                 return redirect(url_for("checks.add_check"))
             
             check_date = datetime.strptime(check_date_str, "%Y-%m-%d") if check_date_str else datetime.now(timezone.utc)
             check_due_date = datetime.strptime(check_due_date_str, "%Y-%m-%d") if check_due_date_str else datetime.now(timezone.utc)
+            if check_due_date.date() < check_date.date():
+                flash("تاريخ الاستحقاق لا يمكن أن يكون قبل تاريخ الشيك", "danger")
+                return redirect(url_for("checks.add_check"))
+
+            currency = (currency or "ILS").strip().upper()
             
             customer_id = int(customer_id_raw) if customer_id_raw else None
             supplier_id = int(supplier_id_raw) if supplier_id_raw else None
@@ -4780,23 +4860,40 @@ def add_check():
             utils.flash_error()
             return redirect(url_for("checks.add_check"))
     
-    customers = Customer.query.filter_by(is_active=True, is_archived=False).order_by(Customer.name).limit(1000).all()
-    suppliers = Supplier.query.order_by(Supplier.name).limit(1000).all()
-    partners = Partner.query.order_by(Partner.name).limit(1000).all()
+    from utils.company_scope import (
+        filter_customers_query,
+        filter_partners_query,
+        filter_suppliers_query,
+    )
+
+    customers = (
+        filter_customers_query(Customer.query.filter_by(is_active=True, is_archived=False))
+        .order_by(Customer.name)
+        .limit(1000)
+        .all()
+    )
+    suppliers = filter_suppliers_query(Supplier.query).order_by(Supplier.name).limit(1000).all()
+    partners = filter_partners_query(Partner.query).order_by(Partner.name).limit(1000).all()
     
-    return render_template("checks/form.html",
-                         customers=customers,
-                         suppliers=suppliers,
-                         partners=partners,
-                         check=None,
-                         currencies=["ILS", "USD", "EUR", "JOD"])
+    active_currencies = [
+        c.code for c in Currency.query.filter_by(is_active=True).order_by(Currency.code).all()
+    ] or ["ILS", "USD", "EUR", "JOD"]
+    return render_template(
+        "checks/form.html",
+        customers=customers,
+        suppliers=suppliers,
+        partners=partners,
+        check=None,
+        currencies=active_currencies,
+    )
 
 
 @checks_bp.route("/edit/<int:check_id>", methods=["GET", "POST"])
 @login_required
+@utils.permission_required(SystemPermissions.MANAGE_PAYMENTS)
 def edit_check(check_id):
     """تعديل شيك"""
-    check = db.get_or_404(Check, check_id)
+    check = scoped_check_query().filter_by(id=check_id).first_or_404()
     
     if request.method == "POST":
         try:
@@ -4809,10 +4906,13 @@ def edit_check(check_id):
                 check.amount = Decimal(amount_raw) if amount_raw else Decimal(0)
             except Exception:
                 check.amount = Decimal(0)
-            if check.amount < 0:
-                flash("مبلغ الشيك لا يمكن أن يكون سالباً", "danger")
+            if check.amount <= 0:
+                flash("مبلغ الشيك يجب أن يكون أكبر من صفر", "danger")
                 return redirect(url_for("checks.edit_check", check_id=check_id))
-            check.currency = request.form.get("currency", "ILS")
+            if check.check_due_date.date() < check.check_date.date():
+                flash("تاريخ الاستحقاق لا يمكن أن يكون قبل تاريخ الشيك", "danger")
+                return redirect(url_for("checks.edit_check", check_id=check_id))
+            check.currency = (request.form.get("currency", "ILS") or "ILS").strip().upper()
             check.direction = request.form.get("direction")
             
             check.drawer_name = request.form.get("drawer_name")
@@ -4842,29 +4942,70 @@ def edit_check(check_id):
             current_app.logger.exception('internal error')
             utils.flash_error()
     
-    customers = Customer.query.filter_by(is_active=True, is_archived=False).order_by(Customer.name).limit(1000).all()
-    suppliers = Supplier.query.order_by(Supplier.name).limit(1000).all()
-    partners = Partner.query.order_by(Partner.name).limit(1000).all()
+    from utils.company_scope import (
+        filter_customers_query,
+        filter_partners_query,
+        filter_suppliers_query,
+    )
+
+    customers = (
+        filter_customers_query(Customer.query.filter_by(is_active=True, is_archived=False))
+        .order_by(Customer.name)
+        .limit(1000)
+        .all()
+    )
+    suppliers = filter_suppliers_query(Supplier.query).order_by(Supplier.name).limit(1000).all()
+    partners = filter_partners_query(Partner.query).order_by(Partner.name).limit(1000).all()
     
-    return render_template("checks/form.html",
-                         check=check,
-                         customers=customers,
-                         suppliers=suppliers,
-                         partners=partners,
-                         currencies=["ILS", "USD", "EUR", "JOD"])
+    active_currencies = [
+        c.code for c in Currency.query.filter_by(is_active=True).order_by(Currency.code).all()
+    ] or ["ILS", "USD", "EUR", "JOD"]
+    return render_template(
+        "checks/form.html",
+        check=check,
+        customers=customers,
+        suppliers=suppliers,
+        partners=partners,
+        currencies=active_currencies,
+    )
 
 
 @checks_bp.route("/detail/<int:check_id>")
 @login_required
 def check_detail(check_id):
     """عرض تفاصيل شيك"""
-    check = db.get_or_404(Check, check_id)
+    check = scoped_check_query().filter_by(id=check_id).first_or_404()
     status_history = check.get_status_history()
     
     return render_template("checks/detail.html",
                          check=check,
                          status_history=status_history,
                          CHECK_STATUS=CHECK_STATUS)
+
+
+@checks_bp.route("/<int:check_id>/print")
+@login_required
+@utils.permission_required(SystemPermissions.MANAGE_PAYMENTS)
+def print_check(check_id):
+    """طباعة شيك بأبعاد قياسية (mm) لورق الشيكات."""
+    check = scoped_check_query().filter_by(id=check_id).first_or_404()
+    layout = {
+        "payee_top_mm": 32,
+        "amount_words_top_mm": 38,
+        "amount_figures_left_mm": 155,
+        "amount_figures_top_mm": 32,
+        "date_top_mm": 18,
+        "date_left_mm": 145,
+    }
+    raw = SystemSettings.get_setting("check_print_layout_json")
+    if raw:
+        try:
+            import json as _json
+
+            layout.update(_json.loads(raw))
+        except Exception:
+            pass
+    return render_template("checks/print_layout.html", check=check, layout=layout)
 
 
 @checks_bp.route("/delete/<int:check_id>", methods=["POST"])
@@ -4902,7 +5043,7 @@ def reports():
     
     current_app.logger.info(f"📊 التقارير - عدد الشيكات: {len(all_checks)}")
     
-    independent_checks = Check.query.limit(10000).all()
+    independent_checks = scoped_check_query().limit(10000).all()
     
     stats_by_status = {}
     for check in all_checks:

@@ -1,6 +1,8 @@
-<!-- File: templates/sales/detail.html -->
+﻿<!-- File: templates/sales/detail.html -->
 {% extends 'base.html' %}
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block title %}تفاصيل فاتورة {{ sale.sale_number }}{% endblock %}
+{% block body_class %}gm-invoice-detail{% endblock %}
 
 {% block head_extra %}
   {{ super() }}
@@ -18,6 +20,30 @@
 {%- endmacro %}
 
 <div class="container py-4">
+  {{ readonly_banner('view_sales', 'manage_sales', 'المبيعات') }}
+
+  {% set inv_grand = (sale.grand_total if sale.grand_total is defined else (sale.total if sale.total is defined else none)) %}
+  <div class="gm-invoice-hero">
+    <div class="gm-invoice-hero__top">
+      <div>
+        <p class="gm-invoice-hero__number mb-1">فاتورة {{ sale.sale_number }}</p>
+        <span class="badge badge-light text-dark">{{ sale.currency }}</span>
+        <span class="badge {{ sale.status_class }} {{ sale.status_class|replace('bg-','badge-') }} ml-1">{{ sale.status_label }}</span>
+      </div>
+    </div>
+    <div class="gm-invoice-hero__amount">
+      {% if inv_grand is not none %}{{ num(inv_grand) }}{% else %}—{% endif %}
+      <small class="d-block" style="font-size:0.75rem;opacity:0.9">{{ sale.currency }}</small>
+    </div>
+  </div>
+
+  <div class="gm-invoice-chips">
+    <div class="gm-invoice-chip"><strong>التاريخ</strong>{{ sale.date_iso }}</div>
+    <div class="gm-invoice-chip"><strong>الزبون</strong>{{ sale.customer_name }}</div>
+    <div class="gm-invoice-chip"><strong>البائع</strong>{{ sale.seller_name }}</div>
+    <div class="gm-invoice-chip"><strong>مدفوع</strong>{{ num(sale.total_paid) }} {{ sale.currency }}</div>
+  </div>
+
   <div class="card rounded">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
       <h3 class="mb-0">
@@ -37,8 +63,8 @@
       {% if receivable and receivable.is_receivable %}
       <div class="alert alert-warning mb-3">
         <i class="fas fa-book mr-1"></i>
-        <strong>ذمة على العميل:</strong> {{ receivable.amount_fmt }} {{ sale.currency }}
-        — التحصيل يُسجَّل كدفعة على <strong>حساب العميل</strong> ولا يُغلق البيع مباشرة.
+        <strong>ذمة على الزبون:</strong> {{ receivable.amount_fmt }} {{ sale.currency }}
+        — التحصيل يُسجَّل كدفعة على <strong>حساب الزبون</strong> ولا يُغلق البيع مباشرة.
         {% if invoice %}
         <span class="d-block mt-1 small text-muted">سجل الفاتورة: {{ invoice.invoice_number }}</span>
         {% endif %}
@@ -46,7 +72,7 @@
       {% endif %}
       <div class="row mb-3">
         <div class="col-md-4"><strong>التاريخ:</strong> {{ sale.date_iso }}</div>
-        <div class="col-md-4"><strong>العميل:</strong> {{ sale.customer_name }}</div>
+        <div class="col-md-4"><strong>الزبون:</strong> {{ sale.customer_name }}</div>
         <div class="col-md-4"><strong>البائع:</strong> {{ sale.seller_name }}</div>
         {% if sale.receiver_name %}
         <div class="col-md-4"><strong><i class="fas fa-user-check mr-1"></i> مستلم البضاعة:</strong> {{ sale.receiver_name }}</div>
@@ -57,12 +83,34 @@
 
       <hr>
 
-      <h5 class="mb-2"><i class="fas fa-list mr-2"></i> تفاصيل البنود</h5>
+      <h5 class="mb-2 gm-invoice-lines-desktop"><i class="fas fa-list mr-2"></i> تفاصيل البنود</h5>
 
       {% set ns = namespace(lines_sum=0.0, lines_discount_sum=0.0) %}
 
-      <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle">
+      <div class="gm-invoice-lines-mobile">
+        <h5 class="mb-2"><i class="fas fa-list mr-2"></i> البنود</h5>
+        {% for line in sale.lines %}
+          <article class="gm-invoice-line-card">
+            <div class="gm-invoice-line-card__title">{{ line.product_name }}</div>
+            <div class="gm-invoice-line-card__grid">
+              <span><strong>كمية</strong> {{ line.quantity }}</span>
+              <span><strong>سعر</strong> {{ num(line.unit_price) }}</span>
+              <span><strong>مخزن</strong> {{ line.warehouse_name }}</span>
+              <span><strong>مستلم</strong> {{ line.line_receiver or '—' }}</span>
+            </div>
+            {% if line.note %}<div class="small text-muted mt-1">{{ line.note }}</div>{% endif %}
+            <div class="gm-invoice-line-card__total">
+              <span>الإجمالي</span>
+              <span>{{ line.line_total_fmt }} {{ sale.currency }}</span>
+            </div>
+          </article>
+        {% else %}
+          <p class="text-muted text-center py-3">لا توجد بنود</p>
+        {% endfor %}
+      </div>
+
+      <div class="table-responsive gm-invoice-lines-desktop">
+        <table class="table table-bordered table-hover align-middle no-mobile-cards">
           <thead class="table-primary">
             <tr>
               <th>#</th>
@@ -134,6 +182,23 @@
         </table>
       </div>
 
+      <div class="gm-invoice-totals-mobile">
+        <div class="row-line"><span>مجموع البنود</span><span>{{ num(ns.lines_sum) }} {{ sale.currency }}</span></div>
+        <div class="row-line"><span>خصم البنود</span><span>{{ num(ns.lines_discount_sum) }} {{ sale.currency }}</span></div>
+        <div class="row-line"><span>خصم الفاتورة</span><span>{{ num(sale.discount_total) }} {{ sale.currency }}</span></div>
+        <div class="row-line"><span>الشحن</span><span>{{ num(sale.shipping_cost) }} {{ sale.currency }}</span></div>
+        {% if sale.tax_amount is defined %}
+        <div class="row-line"><span>الضريبة</span><span>{{ num(sale.tax_amount) }} {{ sale.currency }}</span></div>
+        {% endif %}
+        <div class="row-line grand">
+          <span>الإجمالي النهائي</span>
+          <span>
+            {% if inv_grand is not none %}{{ num(inv_grand) }}{% elif sale.total is defined %}{{ num(sale.total) }}{% else %}{{ num(ns.lines_sum + (sale.shipping_cost or 0)) }}{% endif %}
+            {{ sale.currency }}
+          </span>
+        </div>
+      </div>
+
       <hr>
 
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
@@ -141,22 +206,22 @@
           <i class="fas fa-money-bill-wave mr-2"></i> دفعات مرتبطة مباشرة بالمبيعة
         </h5>
         <div class="d-flex align-items-center flex-wrap">
-          {% if sale.customer_id %}
+          {% if sale.customer_id and has_perm('manage_payments') %}
           <a class="btn btn-success btn-sm ml-2 mb-1" href="{{ url_for('payments.create_payment',
                                                            entity_type='CUSTOMER',
                                                            entity_id=sale.customer_id,
-                                                           reference='دفعة — ' ~ (sale.customer.name if sale.customer else 'عميل'),
+                                                           reference='دفعة — ' ~ (sale.customer.name if sale.customer else 'زبون'),
                                                            notes='مبيعة ' ~ (sale.sale_number or sale.id),
                                                            customer_id=sale.customer_id) }}">
-            <i class="fas fa-plus mr-1"></i> دفعة على حساب العميل
+            <i class="fas fa-plus mr-1"></i> دفعة على حساب الزبون
           </a>
           <a class="btn btn-outline-secondary btn-sm ml-2 mb-1" href="{{ url_for('customers.account_statement', customer_id=sale.customer_id) }}">
-            <i class="fas fa-file-invoice mr-1"></i> كشف حساب العميل
+            <i class="fas fa-file-invoice mr-1"></i> كشف حساب الزبون
           </a>
           {% endif %}
         </div>
       </div>
-      <p class="text-muted small">الدفعات العادية تُخصم من رصيد العميل الإجمالي. لا يُعرض «متبقي البيع» كحالة فتح.</p>
+      <p class="text-muted small">الدفعات العادية تُخصم من رصيد الزبون الإجمالي. لا يُعرض «متبقي البيع» كحالة فتح.</p>
 
       <div class="table-responsive">
         <table class="table table-sm align-middle">
@@ -223,8 +288,20 @@
         </div>
       </div>
 
-      <div class="d-flex justify-content-between mt-4">
+      {% if has_perm('manage_sales') %}
+      <div class="gm-invoice-actions-bar d-lg-none" role="toolbar" aria-label="إجراءات الفاتورة">
+        <a href="{{ url_for('sales_bp.edit_sale', id=sale.id) }}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> تعديل</a>
+        <a href="{{ url_for('sales_bp.generate_invoice', id=sale.id) }}" target="_blank" class="btn btn-info btn-sm text-white"><i class="fas fa-print"></i> طباعة</a>
+        {% if sale.customer_id and has_perm('manage_payments') %}
+        <a href="{{ url_for('payments.create_payment', entity_type='CUSTOMER', entity_id=sale.customer_id, customer_id=sale.customer_id) }}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> دفعة</a>
+        {% endif %}
+        <a href="{{ url_for('sales_bp.list_sales') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-right"></i> القائمة</a>
+      </div>
+      {% endif %}
+
+      <div class="d-flex justify-content-between mt-4 gm-invoice-lines-desktop">
         <div class="d-flex flex-wrap">
+          {% if has_perm('manage_sales') %}
           <a href="{{ url_for('sales_bp.edit_sale', id=sale.id) }}" class="btn btn-warning ml-2 mb-2">
             <i class="fas fa-edit mr-1"></i> تعديل
           </a>
@@ -270,6 +347,7 @@
           <button type="button" class="btn btn-warning mb-2 ml-2" data-toggle="modal" data-target="#archiveModal">
             <i class="fas fa-archive mr-1"></i> أرشفة المبيعة
           </button>
+          {% endif %}
         </div>
 
         <a href="{{ url_for('sales_bp.list_sales') }}" class="btn btn-outline-secondary mb-2">
@@ -307,7 +385,7 @@
           </div>
           <div class="card-body">
             <p><strong>رقم المبيعة:</strong> {{ sale.sale_number }}</p>
-            <p><strong>العميل:</strong> {{ sale.customer_name }}</p>
+            <p><strong>الزبون:</strong> {{ sale.customer_name }}</p>
             <p><strong>المبلغ الإجمالي:</strong> {{ num(sale.grand_total) }} {{ sale.currency }}</p>
             <p><strong>التاريخ:</strong> {{ sale.date_iso }}</p>
             <p><strong>الحالة:</strong> {{ sale.status_label }}</p>

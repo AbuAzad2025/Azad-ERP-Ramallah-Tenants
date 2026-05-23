@@ -309,6 +309,7 @@
   }
   
   window.bulkActivateUsers = function() {
+    if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_users')) return;
     const selected = getSelectedUserIds();
     if (selected.length === 0) return;
     
@@ -323,6 +324,7 @@
   };
   
   window.bulkDeactivateUsers = function() {
+    if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_users')) return;
     const selected = getSelectedUserIds();
     if (selected.length === 0) return;
     
@@ -336,6 +338,7 @@
   };
   
 window.bulkDeleteUsers = function() {
+    if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_users')) return;
     const selected = getSelectedUserIds();
     if (selected.length === 0) return;
     
@@ -478,7 +481,7 @@ window.bulkDeleteUsers = function() {
   function generatePermissionMatrix() {
     const permissions = [
       {name: 'إدارة المستخدمين', owner: true, superadmin: true, admin: true, staff: false, mechanic: false},
-      {name: 'إدارة العملاء', owner: true, superadmin: true, admin: true, staff: true, mechanic: false},
+      {name: 'إدارة الزبائن', owner: true, superadmin: true, admin: true, staff: true, mechanic: false},
       {name: 'إدارة الصيانة', owner: true, superadmin: true, admin: true, staff: true, mechanic: true},
       {name: 'إدارة المبيعات', owner: true, superadmin: true, admin: true, staff: true, mechanic: false},
       {name: 'الوحدة السرية', owner: true, superadmin: false, admin: false, staff: false, mechanic: false},

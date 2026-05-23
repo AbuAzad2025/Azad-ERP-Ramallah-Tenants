@@ -92,25 +92,25 @@ def accounting_standards():
             'double_entry_principle': {
                 'title': 'مبدأ القيد المزدوج',
                 'description': 'كل معاملة محاسبية يجب أن تؤثر على حسابين على الأقل، بحيث يكون إجمالي المدين = إجمالي الدائن',
-                'example': 'عند بيع بمبلغ 1000 شيكل:\n- مدين: حساب العملاء (AR) 1000\n- دائن: حساب المبيعات (Revenue) 1000'
+                'example': 'عند بيع بمبلغ 1000 شيكل:\n- مدين: حساب الزبائن (AR) 1000\n- دائن: حساب المبيعات (Revenue) 1000'
             },
             'opening_balance_rules': {
                 'title': 'قواعد الرصيد الافتتاحي',
-                'customer_positive': 'رصيد موجب للعميل = له علينا → دائن AR + مدين Equity',
-                'customer_negative': 'رصيد سالب للعميل = عليه لنا → مدين AR + دائن Equity',
+                'customer_positive': 'رصيد موجب للزبون = له علينا → دائن AR + مدين Equity',
+                'customer_negative': 'رصيد سالب للزبون = عليه لنا → مدين AR + دائن Equity',
                 'supplier_positive': 'رصيد موجب للمورد = له علينا → دائن AP + مدين Equity',
                 'supplier_negative': 'رصيد سالب للمورد = عليه لنا → مدين AP + دائن Equity'
             },
             'sale_accounting': {
                 'title': 'محاسبة المبيعات',
-                'basic_entry': 'مدين: AR (حساب العملاء) ↔ دائن: Revenue (المبيعات)',
+                'basic_entry': 'مدين: AR (حساب الزبائن) ↔ دائن: Revenue (المبيعات)',
                 'with_partners': 'المبيعات تُقسم حسب نسب الشركاء في المنتج',
                 'with_exchange': 'مدين: COGS (تكلفة البضاعة) + دائن: AP (حساب الموردين)',
                 'trigger': 'تُسجل عند تأكيد البيع (status = CONFIRMED)'
             },
             'payment_accounting': {
                 'title': 'محاسبة المدفوعات',
-                'incoming': 'مدين: Cash/Bank ↔ دائن: AR (للعملاء) أو AP (للموردين)',
+                'incoming': 'مدين: Cash/Bank ↔ دائن: AR (للزبائن) أو AP (للموردين)',
                 'outgoing': 'مدين: AP (للموردين) ↔ دائن: Cash/Bank',
                 'trigger': 'تُسجل عند اكتمال الدفع (status = COMPLETED)'
             },
@@ -158,7 +158,7 @@ def audit_policies():
             'weekly_checks': {
                 'title': 'الفحوصات الأسبوعية',
                 'checks': [
-                    'مراجعة أرصدة العملاء والموردين',
+                    'مراجعة أرصدة الزبائن والموردين',
                     'فحص اتساق الحسابات',
                     'مراجعة المعاملات غير المكتملة',
                     'فحص تكامل البيانات'
@@ -315,7 +315,7 @@ def gl_accounts_reference():
         
         # حسابات GL الأساسية
         basic_gl_accounts = {
-            'AR': '1100_AR - حساب العملاء (Accounts Receivable)',
+            'AR': '1100_AR - حساب الزبائن (Accounts Receivable)',
             'AP': '2000_AP - حساب الموردين (Accounts Payable)',
             'REV': '4000_SALES - حساب المبيعات (Revenue)',
             'CASH': '1000_CASH - النقدية (Cash)',

@@ -172,12 +172,12 @@
                     'data-current': form.customer_id.data or ''
                   }) }}
                   <div class="input-group-append">
-                    <a href="{{ url_for('customers_bp.create_form') }}" target="_blank" class="btn btn-sm btn-success rounded-left-2 btn-modern" title="إضافة عميل جديد">
+                    <a href="{{ url_for('customers_bp.create_form') }}" target="_blank" class="btn btn-sm btn-success rounded-left-2 btn-modern" title="إضافة زبون جديد">
                       <i class="fas fa-plus"></i>
                     </a>
                   </div>
                 </div>
-                <small class="text-muted">اربط المصروف بعميل (اختياري)</small>
+                <small class="text-muted">اربط المصروف بزبون (اختياري)</small>
                 {% for e in form.customer_id.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
               </div>
 

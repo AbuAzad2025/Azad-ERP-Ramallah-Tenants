@@ -1,0 +1,19 @@
+.tenant-scope-badge {
+  font-size: 0.78rem;
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tenant-branch-select {
+  max-width: 220px;
+  min-width: 140px;
+  font-size: 0.78rem;
+  height: calc(1.5em + 0.5rem);
+  padding: 0.15rem 1.5rem 0.15rem 0.5rem;
+}
+
+.tenant-branch-switch-form {
+  vertical-align: middle;
+}

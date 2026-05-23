@@ -11,10 +11,11 @@
   <meta name="format-detection" content="telephone=yes">
   <meta name="theme-color" content="{{ system_settings.primary_color or '#667eea' }}">
 
-  <meta name="description" content="{{ system_settings.system_name or 'نظام إدارة الكراج المتكامل' }} - {{ system_settings.company_name or 'شركة ازاد للأنظمة الذكية' }}">
-  <meta name="keywords" content="نظام إدارة الكراج، إدارة المركبات، صيانة السيارات، {{ system_settings.company_name or 'شركة ازاد' }}">
+  <meta name="description" content="{{ system_settings.system_name or 'منصة أزاد ERP' }} - {{ system_settings.company_name or 'شركة أزاد للأنظمة الذكية' }}">
+  <meta name="keywords" content="ERP، محاسبة، {{ system_settings.company_name or 'شركة أزاد للأنظمة الذكية' }}">
   <meta name="author" content="{{ system_settings.company_name or 'شركة ازاد للأنظمة الذكية' }}">
   <meta name="csrf-token" content="{{ csrf_token() }}">
+  <script>window.GM_AUTH = {{ gm_auth()|tojson }};</script>
   <script>
   (function(){
     try{
@@ -61,19 +62,11 @@
       if (path.indexOf('/static/') === 0) return path;
       return (window.GM_PREFIX || '') + path;
     };
-    (function() {
-      var _fetch = window.fetch;
-      if (!_fetch || !window.GM_PREFIX) return;
-      window.fetch = function(input, init) {
-        if (typeof input === 'string' && input.charAt(0) === '/' && input.indexOf('/static/') !== 0) {
-          input = window.gmPath(input);
-        }
-        return _fetch.call(this, input, init);
-      };
-    })();
-    function submitPost(action){
+    function submitPost(action, perm){
       try{
+        if (perm && typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm(perm)) return;
         action = window.gmPath(action);
+        if (typeof window.GMPermissions !== 'undefined' && window.GMPermissions.requireUrl && !window.GMPermissions.requireUrl(action)) return;
         var f=document.createElement('form');
         f.method='post';
         f.action=action;
@@ -87,40 +80,58 @@
       }catch(e){}
     }
     if(typeof window.archiveExpense!=='function'){
-      window.archiveExpense=function(id){ submitPost(gmPath('/expenses/archive/'+id)); };
+      window.archiveExpense=function(id){ submitPost('/expenses/archive/'+id, 'manage_expenses'); };
     }
     if(typeof window.restoreExpense!=='function'){
-      window.restoreExpense=function(id){ submitPost('/expenses/restore/'+id); };
+      window.restoreExpense=function(id){ submitPost('/expenses/restore/'+id, 'manage_expenses'); };
     }
     if(typeof window.archiveSupplier!=='function'){
-      window.archiveSupplier=function(id){ submitPost('/vendors/suppliers/archive/'+id); };
+      window.archiveSupplier=function(id){ submitPost('/vendors/suppliers/archive/'+id, 'manage_vendors'); };
     }
     if(typeof window.restoreSupplier!=='function'){
-      window.restoreSupplier=function(id){ submitPost('/vendors/suppliers/restore/'+id); };
+      window.restoreSupplier=function(id){ submitPost('/vendors/suppliers/restore/'+id, 'manage_vendors'); };
     }
     if(typeof window.archivePartner!=='function'){
-      window.archivePartner=function(id){ submitPost('/vendors/partners/archive/'+id); };
+      window.archivePartner=function(id){ submitPost('/vendors/partners/archive/'+id, 'manage_vendors'); };
     }
     if(typeof window.restorePartner!=='function'){
-      window.restorePartner=function(id){ submitPost('/vendors/partners/restore/'+id); };
+      window.restorePartner=function(id){ submitPost('/vendors/partners/restore/'+id, 'manage_vendors'); };
     }
     if(typeof window.archiveSale!=='function'){
-      window.archiveSale=function(id){ submitPost('/sales/archive/'+id); };
+      window.archiveSale=function(id){
+        if(window.gmRequirePermAny&&!window.gmRequirePermAny('manage_sales','archive_sale'))return;
+        submitPost('/sales/archive/'+id);
+      };
+    }
+    if(typeof window.restoreSale!=='function'){
+      window.restoreSale=function(id){
+        if(window.gmRequirePermAny&&!window.gmRequirePermAny('manage_sales','archive_sale'))return;
+        submitPost('/sales/restore/'+id);
+      };
     }
     if(typeof window.archiveCustomer!=='function'){
-      window.archiveCustomer=function(id){ submitPost('/customers/archive/'+id); };
+      window.archiveCustomer=function(id){ submitPost('/customers/archive/'+id, 'manage_customers'); };
+    }
+    if(typeof window.restoreCustomer!=='function'){
+      window.restoreCustomer=function(id){ submitPost('/customers/restore/'+id, 'manage_customers'); };
     }
     if(typeof window.archivePayment!=='function'){
-      window.archivePayment=function(id){ submitPost('/payments/archive/'+id); };
+      window.archivePayment=function(id){ submitPost('/payments/archive/'+id, 'manage_payments'); };
     }
     if(typeof window.restorePayment!=='function'){
-      window.restorePayment=function(id){ submitPost('/payments/restore/'+id); };
+      window.restorePayment=function(id){ submitPost('/payments/restore/'+id, 'manage_payments'); };
     }
     if(typeof window.archiveShipment!=='function'){
-      window.archiveShipment=function(id){ submitPost('/shipments/archive/'+id); };
+      window.archiveShipment=function(id){ submitPost('/shipments/archive/'+id, 'manage_shipments'); };
+    }
+    if(typeof window.restoreShipment!=='function'){
+      window.restoreShipment=function(id){ submitPost('/shipments/restore/'+id, 'manage_shipments'); };
     }
     if(typeof window.archiveCheck!=='function'){
-      window.archiveCheck=function(id){ submitPost('/checks/archive/'+id); };
+      window.archiveCheck=function(id){ submitPost('/checks/archive/'+id, 'manage_payments'); };
+    }
+    if(typeof window.restoreCheck!=='function'){
+      window.restoreCheck=function(id){ submitPost('/checks/restore/'+id, 'manage_payments'); };
     }
   })();
   </script>
@@ -160,6 +171,11 @@
   <link rel="preload" href="{{ static_url('css/style.css') }}" as="style">
   <link rel="stylesheet" href="{{ static_url('css/style.css') }}">
   <link rel="stylesheet" href="{{ static_url('css/mobile.css') }}" id="mobile-css" data-default-media="(max-width: 575.98px)" media="(max-width: 575.98px)">
+  <link rel="stylesheet" href="{{ static_url('css/mobile-app.css') }}" id="mobile-app-css" data-default-media="(max-width: 575.98px)" media="(max-width: 575.98px)">
+  <link rel="stylesheet" href="{{ static_url('css/tenant-scope.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/gm-financial-pages.css') }}" id="gm-financial-css" data-default-media="(max-width: 575.98px)" media="(max-width: 575.98px)">
+  <link rel="stylesheet" href="{{ static_url('css/gm-scroll-filters.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/gm-invoice-detail.css') }}" id="gm-invoice-detail-css" data-default-media="(max-width: 575.98px)" media="(max-width: 575.98px)">
   <script>
     (function() {
       const html = document.documentElement;
@@ -182,10 +198,37 @@
       if (link) link.media = effective === 'mobile' ? 'all' : 'not all';
     })();
   </script>
-  <link rel="stylesheet" href="{{ static_url('css/security_dark_mode.css') }}">
   <link rel="stylesheet" href="{{ static_url('css/numbers-fix.css') }}">
   <link rel="stylesheet" href="{{ static_url('css/bs5-utils.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/ux-unified.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/ux-contrast.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/enhancements.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/security_dark_mode.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/gm-theme-tokens.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/gm-design-system.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/gm-spacing-dropdowns.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/gm-security-console.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/gm-theme-components.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/gm-conflict-guard.css') }}">
   <link rel="stylesheet" href="{{ static_url('css/print.css') }}" media="print">
+  <script>
+  (function () {
+    try {
+      var root = document.documentElement;
+      var v = localStorage.getItem("gmVariant");
+      root.setAttribute("data-gm-variant", (v === "gulf") ? "gulf" : "palestinian");
+      root.setAttribute("data-gm-pattern", root.getAttribute("data-gm-variant"));
+      var k = localStorage.getItem("gmTheme");
+      var leg = localStorage.getItem("securityDarkMode");
+      var dark = k === "dark" || (!k && leg === "true");
+      if (!dark && !k && leg !== "false") {
+        dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      }
+      root.setAttribute("data-gm-theme", dark ? "dark" : "light");
+      if (dark) document.body.classList.add("dark-mode");
+    } catch (e) {}
+  })();
+  </script>
   
   <!-- NProgress for loading indicator -->
   <link rel="stylesheet" href="{{ static_url('vendor/nprogress/nprogress.min.css') }}" />
@@ -204,8 +247,10 @@
     }
   </style>
 
+  <script src="{{ static_url('js/dom-safe.js') }}" defer></script>
   <script src="{{ static_url('js/csrf-utils.js') }}" defer></script>
   <script src="{{ static_url('js/event-utils.js') }}" defer></script>
+  <script src="{{ static_url('js/ux-forms.js') }}" defer></script>
   <script>window.__SOCKETIO_ENABLED__ = {{ 'true' if config.get('SOCKETIO_ENABLED', False) else 'false' }};</script>
   {% if config.get('SOCKETIO_ENABLED', False) %}
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
@@ -325,8 +370,6 @@
     
   </style>
   
-  <!-- Safe Enhancements Styles -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/enhancements.css') }}">
   <style>
     /* Global Layout Fixes */
     body {
@@ -391,7 +434,7 @@
   {% endif %}
   <!-- Bootstrap shim already defined at top of <head>; no duplicate needed here. -->
 </head>
-<body class="hold-transition sidebar-mini layout-fixed text-sm layout-navbar-fixed ui-v2 electric-theme {% block body_class %}{% endblock %}">
+<body class="hold-transition sidebar-mini layout-fixed text-sm layout-navbar-fixed ui-v2 electric-theme gm-pro-ui {% block body_class %}{% endblock %}">
 <div class="wrapper">
   {% include 'partials/navbar.html' %}
   <div id="gm-open-in-app-banner" class="gm-open-in-app-banner d-none" role="banner" aria-label="فتح كتطبيق">
@@ -429,7 +472,12 @@
 
 {% if current_user.is_authenticated %}
 <nav class="gm-mobile-bottom-nav d-lg-none" aria-label="التنقل السريع">
-  {% if 'main.dashboard' in current_app.view_functions %}
+  {% if user_home_url %}
+  <a class="gm-tab" href="{{ user_home_url }}">
+    <i class="fas fa-home"></i>
+    <span>{{ user_home_label|default('الرئيسية') }}</span>
+  </a>
+  {% elif 'main.dashboard' in current_app.view_functions %}
   <a class="gm-tab" href="{{ url_for('main.dashboard') }}">
     <i class="fas fa-home"></i>
     <span>الرئيسية</span>
@@ -438,7 +486,7 @@
   {% if (has_perm('view_customers') or has_perm('manage_customers')) and ('customers_bp.list_customers' in current_app.view_functions) %}
   <a class="gm-tab" href="{{ url_for('customers_bp.list_customers') }}">
     <i class="fas fa-users"></i>
-    <span>العملاء</span>
+    <span>الزبائن</span>
   </a>
   {% endif %}
   {% if (has_perm('view_sales') or has_perm('manage_sales')) and ('sales_bp.list_sales' in current_app.view_functions) %}
@@ -459,7 +507,12 @@
     <span>التقارير</span>
   </a>
   {% endif %}
+  <button type="button" class="gm-tab gm-tab-more" id="gm-mobile-more-btn" aria-label="المزيد">
+    <i class="fas fa-th-large"></i>
+    <span>المزيد</span>
+  </button>
 </nav>
+{% include 'partials/mobile_more_sheet.html' %}
 {% endif %}
 
 <script src="{{ static_url('adminlte/plugins/jquery/jquery.min.js') }}"></script>
@@ -467,6 +520,12 @@
 <script src="{{ static_url('adminlte/plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js') }}"></script>
 <script src="{{ static_url('adminlte/js/adminlte.min.js') }}"></script>
 <script src="{{ static_url('js/datatables-arabic.js') }}"></script>
+<script src="{{ static_url('js/gm-tenant-network.js') }}"></script>
+<script src="{{ static_url('js/layout-responsive.js') }}"></script>
+<script src="{{ static_url('js/mobile-app.js') }}"></script>
+<script src="{{ static_url('js/gm-financial-scroll.js') }}"></script>
+<script src="{{ static_url('js/gm-scroll-filters.js') }}"></script>
+<script src="{{ static_url('js/permissions.js') }}"></script>
 <script src="{{ static_url('js/archive.js') }}"></script>
 
 <script>
@@ -485,11 +544,26 @@
         try { $.fn.select2.defaults.set('dir', 'rtl'); } catch (_) {}
       }
     }
+    function initAjaxPermissionFeedback() {
+      if (!window.jQuery) return;
+      $(document).ajaxError(function (_ev, xhr) {
+        if (!xhr || xhr.status !== 403) return;
+        var msg = (xhr.responseJSON && (xhr.responseJSON.message || xhr.responseJSON.error))
+          || 'ليس لديك صلاحية لتنفيذ هذا الإجراء.';
+        if (window.toastr) {
+          toastr.warning(msg, 'صلاحيات');
+        }
+      });
+    }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initCSRF);
+      document.addEventListener('DOMContentLoaded', function () {
+        initCSRF();
+        initAjaxPermissionFeedback();
+      });
     } else {
       if (window.jQuery) {
         initCSRF();
+        initAjaxPermissionFeedback();
       } else {
         window.addEventListener('load', initCSRF);
       }
@@ -505,7 +579,7 @@
 <script src="{{ static_url('js/ux-enhancements.js') }}"></script>
 <script src="{{ static_url('js/confirm_dangerous_operations.js') }}"></script>
 <script src="{{ static_url('js/security_keyboard_shortcuts.js') }}"></script>
-<script src="{{ static_url('js/security_dark_mode.js') }}"></script>
+<script src="{{ static_url('js/gm-theme.js') }}"></script>
 <script src="{{ static_url('js/security_mega_enhancements.js') }}"></script>
 <script src="{{ static_url('js/realtime_logs.js') }}"></script>
 <script src="{{ static_url('js/module_specific_enhancements.js') }}"></script>
@@ -516,22 +590,34 @@
 function applyUIMode(mode, silent) {
   const html = document.documentElement;
   const link = document.getElementById('mobile-css');
+  const appLink = document.getElementById('mobile-app-css');
+  const finLink = document.getElementById('gm-financial-css');
+  const invLink = document.getElementById('gm-invoice-detail-css');
   const stored = (function() {
     try { return mode || localStorage.getItem('ui_mode') || 'auto'; } catch (e) { return mode || 'auto'; }
   })();
   const next = stored === 'mobile' || stored === 'tablet' || stored === 'desktop' ? stored : 'auto';
-  const autoMode = (function() {
-    try {
-      if (window.matchMedia('(max-width: 575.98px)').matches) return 'mobile';
-      if (window.matchMedia('(min-width: 576px) and (max-width: 991.98px)').matches) return 'tablet';
-      return 'desktop';
-    } catch (_) {
-      return 'desktop';
-    }
-  })();
-  const effective = next === 'auto' ? autoMode : next;
-  html.setAttribute('data-ui-mode', effective);
-  if (link) link.media = effective === 'mobile' ? 'all' : 'not all';
+  let effective = next;
+  if (window.GMLayout && typeof window.GMLayout.applyUIMode === 'function') {
+    effective = window.GMLayout.applyUIMode(next) || next;
+  } else {
+    const autoMode = (function() {
+      try {
+        if (window.matchMedia('(max-width: 575.98px)').matches) return 'mobile';
+        if (window.matchMedia('(min-width: 576px) and (max-width: 991.98px)').matches) return 'tablet';
+        return 'desktop';
+      } catch (_) {
+        return 'desktop';
+      }
+    })();
+    effective = next === 'auto' ? autoMode : next;
+    html.setAttribute('data-ui-mode', effective);
+    const compact = effective === 'mobile' || effective === 'tablet';
+    if (link) link.media = compact ? 'all' : (link.getAttribute('data-default-media') || 'not all');
+    if (appLink) appLink.media = compact ? 'all' : (appLink.getAttribute('data-default-media') || 'not all');
+    if (finLink) finLink.media = compact ? 'all' : (finLink.getAttribute('data-default-media') || 'not all');
+    if (invLink) invLink.media = compact ? 'all' : (invLink.getAttribute('data-default-media') || 'not all');
+  }
   if (document.body && effective === 'desktop') {
     document.body.classList.remove('sidebar-open');
     const backdrop = document.getElementById('gm-sidebar-backdrop');
@@ -547,6 +633,12 @@ function applyUIMode(mode, silent) {
   }
   if (!silent) {
     try { window.dispatchEvent(new Event('resize')); } catch (_) {}
+  }
+  try {
+    window.dispatchEvent(new CustomEvent('gm:layout-change', { detail: { mode: effective, stored: next } }));
+  } catch (_) {}
+  if (window.gmInitFinancialScroll) {
+    try { window.gmInitFinancialScroll(document); } catch (_) {}
   }
   try { if (window.AppCharts && typeof window.AppCharts.refresh === 'function') window.AppCharts.refresh(); } catch (_) {}
 }
@@ -1206,7 +1298,6 @@ handleBreakpointChange(desktopQuery, 'desktop');
 </script>
 <script src="{{ static_url('js/enhanced-tabs.js') }}" defer></script>
 <script src="{{ static_url('js/security-favorites.js') }}" defer></script>
-<script src="{{ static_url('js/security_mega_enhancements.js') }}" defer></script>
 </body>
 <script>
 (function(){

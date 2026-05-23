@@ -50,7 +50,9 @@ def suppliers_list():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
     per_page = min(200, max(10, per_page))
-    q = Supplier.query.filter(Supplier.is_archived == False)
+    from utils.company_scope import filter_suppliers_query
+
+    q = filter_suppliers_query(Supplier.query.filter(Supplier.is_archived == False))
     if search_term:
         term = f"%{search_term}%"
         q = q.filter(or_(Supplier.name.ilike(term), Supplier.phone.ilike(term), Supplier.identity_number.ilike(term)))
@@ -551,7 +553,7 @@ def suppliers_statement(supplier_id: int):
         })
         total_debit += returns_supply_total
 
-    # المبيعات للمورد (كعميل) — تُسجّل دائن (تُخفّض ما ندين به)
+    # المبيعات للمورد (كزبون) — تُسجّل دائن (تُخفّض ما ندين به)
     sales_data = []
     if supplier.customer_id:
         from models import Sale, SaleStatus, SaleLine, Product
@@ -611,7 +613,7 @@ def suppliers_statement(supplier_id: int):
             total_debit += amt
             sales_data.append({"ref": ref, "date": d, "amount": amt, "items": items})
     
-    # الصيانة للمورد (كعميل) — تُسجّل مدين
+    # الصيانة للمورد (كزبون) — تُسجّل مدين
     services_data = []
     if supplier.customer_id:
         from models import ServiceRequest, ServicePart, ServiceTask
@@ -1171,7 +1173,9 @@ def suppliers_statement(supplier_id: int):
                 split_check = None
                 if 'check' in split_method_raw or 'cheque' in split_method_raw:
                     from models import Check
-                    split_checks = Check.query.filter(
+                    from utils.company_scope import scoped_check_query
+
+                    split_checks = scoped_check_query().filter(
                         or_(
                             Check.reference_number == f"PMT-SPLIT-{split.id}",
                             Check.reference_number.like(f"PMT-SPLIT-{split.id}-%")
@@ -1341,7 +1345,9 @@ def suppliers_statement(supplier_id: int):
             total_credit += credit_val
             
             if is_bounced:
-                returned_checks = Check.query.filter(
+                from utils.company_scope import scoped_check_query
+
+                returned_checks = scoped_check_query().filter(
                     Check.payment_id == pmt.id,
                     Check.status.in_(['RETURNED', 'BOUNCED'])
                 ).all()
@@ -1439,7 +1445,9 @@ def suppliers_statement(supplier_id: int):
             per_product[pid]["qty_paid"] += 1
             per_product[pid]["val_paid"] += amt
 
-    expense_q = Expense.query.filter(
+    from utils.company_scope import filter_expenses_query
+
+    expense_q = filter_expenses_query(Expense.query).filter(
         or_(
             Expense.supplier_id == supplier.id,
             and_(Expense.payee_type == "SUPPLIER", Expense.payee_entity_id == supplier.id)
@@ -2034,7 +2042,9 @@ def partners_list():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
     per_page = min(200, max(10, per_page))
-    q = Partner.query.filter(Partner.is_archived == False)
+    from utils.company_scope import filter_partners_query
+
+    q = filter_partners_query(Partner.query).filter(Partner.is_archived == False)
     if search_term:
         term = f"%{search_term}%"
         q = q.filter(or_(Partner.name.ilike(term), Partner.phone_number.ilike(term), Partner.identity_number.ilike(term)))
@@ -2663,7 +2673,9 @@ def partners_statement(partner_id: int):
                     split_check = None
                     if 'check' in split_method_raw or 'cheque' in split_method_raw:
                         from models import Check
-                        split_checks = Check.query.filter(
+                        from utils.company_scope import scoped_check_query
+
+                        split_checks = scoped_check_query().filter(
                             or_(
                                 Check.reference_number == f"PMT-SPLIT-{split.id}",
                                 Check.reference_number.like(f"PMT-SPLIT-{split.id}-%")
@@ -2806,7 +2818,9 @@ def partners_statement(partner_id: int):
                     total_credit += amt
 
     from models import ExpenseType
-    expense_q = Expense.query.join(ExpenseType).filter(
+    from utils.company_scope import filter_expenses_query
+
+    expense_q = filter_expenses_query(Expense.query).join(ExpenseType).filter(
         or_(
             Expense.partner_id == partner.id,
             and_(Expense.payee_type == "PARTNER", Expense.payee_entity_id == partner.id)
@@ -3051,7 +3065,9 @@ def partners_statement(partner_id: int):
                     })
                     total_debit += damaged_amount
         
-        service_expenses = Expense.query.join(ExpenseType).filter(
+        from utils.company_scope import filter_expenses_query
+
+        service_expenses = filter_expenses_query(Expense.query).join(ExpenseType).filter(
             or_(
                 Expense.partner_id == partner.id,
                 and_(Expense.payee_type == "PARTNER", Expense.payee_entity_id == partner.id)
@@ -3652,7 +3668,9 @@ def _calculate_supplier_incoming(supplier_id: int, date_from: datetime, date_to:
     from models import convert_amount
     
     # المشتريات (النفقات من نوع مشتريات) - مع تحويل العملات
-    expenses = Expense.query.filter(
+    from utils.company_scope import filter_expenses_query
+
+    expenses = filter_expenses_query(Expense.query).filter(
         or_(
             Expense.supplier_id == supplier_id,
             and_(Expense.payee_type == "SUPPLIER", Expense.payee_entity_id == supplier_id)
@@ -3763,7 +3781,9 @@ def _calculate_partner_outgoing(partner_id: int, date_from: datetime, date_to: d
     from models import convert_amount
     
     # حصة الشريك من المشتريات - مع تحويل العملات
-    expenses = Expense.query.filter(
+    from utils.company_scope import filter_expenses_query
+
+    expenses = filter_expenses_query(Expense.query).filter(
         or_(
             Expense.partner_id == partner_id,
             and_(Expense.payee_type == "PARTNER", Expense.payee_entity_id == partner_id)

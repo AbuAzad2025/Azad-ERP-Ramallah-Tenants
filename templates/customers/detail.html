@@ -1,16 +1,18 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
-{% block title %}تفاصيل العميل{% endblock %}
+{% block title %}تفاصيل الزبون{% endblock %}
 
-{% block page_title %}تفاصيل العميل: {{ customer.name }}{% endblock %}
+{% block page_title %}تفاصيل الزبون: {{ customer.name }}{% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}"><i class="fas fa-home"></i> الرئيسية</a></li>
-<li class="breadcrumb-item"><a href="{{ url_for('customers_bp.list_customers') }}">العملاء</a></li>
+<li class="breadcrumb-item"><a href="{{ url_for('customers_bp.list_customers') }}">الزبائن</a></li>
 <li class="breadcrumb-item active">تفاصيل {{ customer.name }}</li>
 {% endblock %}
 
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
+  {{ readonly_banner('view_customers', 'manage_customers', 'الزبائن') }}
   <div class="d-flex justify-content-end mb-3">
     <div class="btn-group shadow-sm rounded-pill overflow-hidden bg-white">
       <a href="javascript:window.history.back()" class="btn btn-sm text-primary fw-bold border-end" title="رجوع">
@@ -176,7 +178,7 @@
           <div class="alert alert-info mb-0">
             <div class="small text-muted">شيكات قيد التحصيل</div>
             <div class="fw-bold">{{ balance_view.checks.in_progress|format_currency }}</div>
-            <small class="text-muted">على العميل: {{ balance_view.checks.outstanding|format_currency }}</small>
+            <small class="text-muted">على الزبون: {{ balance_view.checks.outstanding|format_currency }}</small>
           </div>
         </div>
         <div class="col-md-4">
@@ -193,7 +195,7 @@
   
   <div class="card shadow-sm rounded">
     <div class="card-header text-white d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
-      <h3 class="card-title h5 mb-0"><i class="fas fa-user ml-2"></i> تفاصيل العميل: {{ customer.name }}</h3>
+      <h3 class="card-title h5 mb-0"><i class="fas fa-user ml-2"></i> تفاصيل الزبون: {{ customer.name }}</h3>
       <div class="btn-group shadow-sm rounded-pill overflow-hidden bg-white">
           <button onclick="window.history.back()" class="btn btn-sm text-primary fw-bold border-end" title="رجوع">
               <i class="fas fa-arrow-right"></i>
@@ -206,7 +208,7 @@
 
     <div class="card-body">
       <dl class="row mb-4">
-        <dt class="col-sm-4 text-end"><i class="fas fa-id-card ml-1"></i> اسم العميل</dt>
+        <dt class="col-sm-4 text-end"><i class="fas fa-id-card ml-1"></i> اسم الزبون</dt>
         <dd class="col-sm-8">{{ customer.name }}</dd>
 
         <dt class="col-sm-4 text-end"><i class="fas fa-phone ml-1"></i> الجوال</dt>
@@ -260,7 +262,7 @@
       </dl>
 
       <hr>
-      <h5 class="mb-3"><i class="fas fa-chart-pie ml-2"></i> نشاط العميل</h5>
+      <h5 class="mb-3"><i class="fas fa-chart-pie ml-2"></i> نشاط الزبون</h5>
       <ul class="list-group mb-4">
         <li class="list-group-item"><b>آخر بيع:</b> 
           {% set last_sale = (customer.sales|default([], true))[-1] if (customer.sales|default([], true)) else None %}
@@ -298,12 +300,14 @@
         <a href="{{ url_for('customers_bp.customer_whatsapp', customer_id=customer.id) }}" class="btn btn-success">
           <i class="fab fa-whatsapp ml-1"></i> واتساب
         </a>
+        {% if has_perm('manage_customers') %}
         <a href="{{ url_for('customers_bp.edit_customer', customer_id=customer.id) }}" class="btn btn-warning">
           <i class="fas fa-edit ml-1"></i> تعديل
         </a>
-        {% if customer.balance and customer.balance > 0 %}
-        {% set payment_reference = 'دفع من عميل: ' ~ customer.name %}
-        {% set payment_notes = 'دفعة من العميل: ' ~ customer.name %}
+        {% endif %}
+        {% if customer.balance and customer.balance > 0 and has_perm('manage_payments') %}
+        {% set payment_reference = 'دفع من زبون: ' ~ customer.name %}
+        {% set payment_notes = 'دفعة من الزبون: ' ~ customer.name %}
         {% if customer.phone %}
           {% set payment_notes = payment_notes ~ ' - هاتف: ' ~ customer.phone %}
         {% endif %}
@@ -318,12 +322,14 @@
           <i class="fas fa-coins ml-1"></i> دفعة جديدة ({{ customer.balance|number_format(2) }} ₪)
         </a>
         {% endif %}
+        {% if has_perm('manage_customers') %}
         <button type="button" class="btn btn-warning delete-btn" 
                 data-id="{{ customer.id }}"
                 data-url="{{ url_for('customers_bp.delete_customer', id=customer.id) }}"
                 title="حذف عادي">
           <i class="fas fa-trash ml-1"></i> حذف
         </button>
+        {% endif %}
         <a href="{{ url_for('customers_bp.export_customer_vcf', customer_id=customer.id) }}" class="btn btn-outline-success">
           <i class="fas fa-download ml-1"></i> VCF
         </a>
@@ -354,9 +360,9 @@
       $('.delete-btn').off('click').on('click', function(e) {
         e.preventDefault();
         var customerId = $(this).data('id');
-        var url = '/customers/' + customerId + '/delete';
+        var url = (window.gmPath||window.gmU||function(p){return p;})('/customers/') + customerId + '/delete';
         
-        if (confirm('هل أنت متأكد من حذف هذا العميل؟\n\nملاحظة: سيتم الحذف فقط إذا لم يكن له معاملات أو رصيد.')) {
+        if (confirm('هل أنت متأكد من حذف هذا الزبون؟\n\nملاحظة: سيتم الحذف فقط إذا لم يكن له معاملات أو رصيد.')) {
           $('#deleteForm').attr('action', url).submit();
         }
       });

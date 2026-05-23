@@ -25,6 +25,12 @@
 {% endblock %}
 
 {% block content %}
+{% if currency_filter %}
+<div class="alert alert-info">
+  عرض أسعار الصرف المرتبطة بالعملة: <strong>{{ currency_filter }}</strong>
+  <a href="{{ url_for('currencies.exchange_rates') }}" class="btn btn-sm btn-outline-secondary mr-2">عرض الكل</a>
+</div>
+{% endif %}
 <div class="row">
     <div class="col-12">
         <div class="card">

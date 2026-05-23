@@ -75,7 +75,7 @@ def _recalculate_customer_balance(customer_id):
         session.commit()
     except Exception as e:
         session.rollback()
-        current_app.logger.error(f"خطأ في إعادة حساب رصيد العميل {customer_id}: {e}")
+        current_app.logger.error(f"خطأ في إعادة حساب رصيد الزبون {customer_id}: {e}")
     finally:
         session.close()
 class CustomEncoder(json.JSONEncoder):
@@ -128,10 +128,14 @@ def log_customer_action(cust, action, old_data=None, new_data=None):
 @customers_bp.route("/", methods=["GET"], endpoint="list_customers")
 @login_required
 def list_customers():
-    # عرض جميع العملاء مع فلتر افتراضي لاستبعاد المؤرشفين إلا إذا طلب خلاف ذلك
-    q = Customer.query.options(
+    from utils.company_scope import filter_customers_query
+
+    # عرض جميع الزبائن مع فلتر افتراضي لاستبعاد المؤرشفين إلا إذا طلب خلاف ذلك
+    q = filter_customers_query(
+        Customer.query.options(
         selectinload(Customer.supplier_link).load_only(Supplier.id, Supplier.name),
         selectinload(Customer.partner_link).load_only(Partner.id, Partner.name),
+        )
     )
 
     # تطبيق فلتر الأرشفة إلا إذا تم طلب عرض الأرشيف صراحة
@@ -263,14 +267,17 @@ def list_customers():
 
     total_pages = math.ceil(total_filtered / per_page) if per_page else 1
 
+    scoped_customer_ids = filter_customers_query(
+        Customer.query.filter(Customer.is_archived.is_(False))
+    ).with_entities(Customer.id)
     summary_query = db.session.query(
         func.count(Customer.id).label('total_customers'),
         func.coalesce(func.sum(Customer.current_balance), 0).label('total_balance'),
         func.coalesce(func.sum(Customer.total_invoiced), 0).label('total_sales'),
         func.coalesce(func.sum(Customer.total_paid), 0).label('total_payments'),
         func.sum(case((Customer.current_balance < 0, 1), else_=0)).label('customers_with_debt'),
-        func.sum(case((Customer.current_balance > 0, 1), else_=0)).label('customers_with_credit')
-    ).filter(Customer.is_archived.is_(False))
+        func.sum(case((Customer.current_balance > 0, 1), else_=0)).label('customers_with_credit'),
+    ).filter(Customer.id.in_(scoped_customer_ids))
 
     summary_result = summary_query.first()
     
@@ -430,7 +437,7 @@ def balances_recalculate():
     if not customer_ids:
         if request.accept_mimetypes.best == "application/json":
             return jsonify({"success": False, "message": "no_customer_ids"}), 400
-        flash("أدخل أرقام العملاء لتحديث الأرصدة.", "warning")
+        flash("أدخل أرقام الزبائن لتحديث الأرصدة.", "warning")
         return redirect(url_for("customers_bp.list_customers"))
 
     try:
@@ -453,7 +460,7 @@ def balances_recalculate():
             session.close()
         if request.accept_mimetypes.best == "application/json":
             return jsonify({"success": True, "updated": updated})
-        flash(f"تم تحديث أرصدة {updated} عميل.", "success")
+        flash(f"تم تحديث أرصدة {updated} زبون.", "success")
         return redirect(url_for("customers_bp.list_customers"))
     except Exception as e:
         if request.accept_mimetypes.best == "application/json":
@@ -466,6 +473,9 @@ def balances_recalculate():
 @customers_bp.route("/<int:customer_id>", methods=["GET"], endpoint="customer_detail")
 @login_required
 def customer_detail(customer_id):
+    from utils.company_scope import assert_customer_access
+
+    assert_customer_access(customer_id)
     customer = db.session.get(Customer, customer_id) or abort(404)
     balance_breakdown = None
     rights_items = []
@@ -492,6 +502,9 @@ def customer_detail(customer_id):
 @customers_bp.route("/<int:customer_id>/analytics", methods=["GET"])
 @login_required
 def customer_analytics(customer_id):
+    from utils.company_scope import assert_customer_access
+
+    assert_customer_access(customer_id)
     try:
         db.session.rollback()
     except Exception:
@@ -541,10 +554,14 @@ def customer_analytics(customer_id):
     invoices = Invoice.query.filter_by(customer_id=customer_id).options(
         load_only(Invoice.id, Invoice.invoice_date, Invoice.total_amount, Invoice.currency, Invoice.cancelled_at)
     ).all()
-    sales = Sale.query.filter_by(customer_id=customer_id).options(
+    from utils.company_scope import filter_sales_query, filter_service_requests_query
+
+    sales = filter_sales_query(Sale.query.filter_by(customer_id=customer_id)).options(
         load_only(Sale.id, Sale.sale_date, Sale.total_amount, Sale.currency, Sale.status)
     ).all()
-    services = ServiceRequest.query.filter_by(customer_id=customer_id).options(
+    services = filter_service_requests_query(
+        ServiceRequest.query.filter_by(customer_id=customer_id)
+    ).options(
         selectinload(ServiceRequest.parts),
         selectinload(ServiceRequest.tasks),
         load_only(ServiceRequest.id, ServiceRequest.received_at, ServiceRequest.total_amount, ServiceRequest.currency, ServiceRequest.parts_total, ServiceRequest.labor_total, ServiceRequest.discount_total, ServiceRequest.tax_rate)
@@ -558,8 +575,10 @@ def customer_analytics(customer_id):
     docs_count = len(invoices) + len(sales) + len(services)
     avg_purchase = (total_purchases / docs_count) if docs_count else D(0)
 
-    # تحسين: استعلام واحد لجلب جميع الدفعات المكتملة للعميل (مباشرة أو مرتبطة)
-    all_payments = db.session.query(Payment).outerjoin(
+    from utils.company_scope import filter_payments_query
+
+    # تحسين: استعلام واحد لجلب جميع الدفعات المكتملة للزبون (مباشرة أو مرتبطة)
+    all_payments = filter_payments_query(db.session.query(Payment)).outerjoin(
         Sale, Payment.sale_id == Sale.id
     ).outerjoin(
         Invoice, Payment.invoice_id == Invoice.id
@@ -771,7 +790,7 @@ def create_customer():
         if "email" in detail.lower():
             field_errs["email"] = ["هذا البريد مستخدم مسبقًا"]
         if "phone" in detail.lower() or "whatsapp" in detail.lower():
-            # البحث عن هوية العميل الموجود لإظهار رابط فتحه على الواجهة
+            # البحث عن هوية الزبون الموجود لإظهار رابط فتحه على الواجهة
             try:
                 existing_obj = db.session.query(Customer.id).filter(Customer.phone == cust.phone).first()
                 existing_id = existing_obj.id if existing_obj else None
@@ -794,8 +813,8 @@ def create_customer():
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError while creating customer")
         if is_ajax:
-            return jsonify({"ok": False, "message": "خطأ أثناء إضافة العميل"}), 500
-        utils.flash_error("خطأ أثناء إضافة العميل")
+            return jsonify({"ok": False, "message": "خطأ أثناء إضافة الزبون"}), 500
+        utils.flash_error("خطأ أثناء إضافة الزبون")
         # إبقاء المستخدم على نفس الصفحة مع عرض الخطأ بشكل ودي
         return render_template("customers/new.html", form=form, return_to=request.form.get("return_to"))
     if is_ajax:
@@ -804,7 +823,7 @@ def create_customer():
         except Exception:
             pass
         return jsonify({"ok": True, "id": cust.id, "text": cust.name}), 201
-    flash("تم إنشاء العميل بنجاح", "success")
+    flash("تم إنشاء الزبون بنجاح", "success")
     return_to = request.form.get("return_to") or request.args.get("return_to")
     if return_to:
         return redirect(return_to)
@@ -813,6 +832,9 @@ def create_customer():
 @customers_bp.route("/<int:customer_id>/edit", methods=["GET", "POST"], endpoint="edit_customer")
 @login_required
 def edit_customer(customer_id):
+    from utils.company_scope import assert_customer_access
+
+    assert_customer_access(customer_id)
     cust = db.session.get(Customer, customer_id) or abort(404)
     form = CustomerForm(obj=cust)
     if request.method == "POST":
@@ -841,15 +863,15 @@ def edit_customer(customer_id):
                 db.session.refresh(cust)
             except IntegrityError:
                 db.session.rollback()
-                flash("البريد أو رقم الهاتف مستخدم مسبقاً لعميل آخر.", "danger")
+                flash("البريد أو رقم الهاتف مستخدم مسبقاً لزبون آخر.", "danger")
                 current_app.logger.exception("IntegrityError while editing customer")
                 return render_template("customers/edit.html", form=form, customer=cust), 409
             except SQLAlchemyError:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError while editing customer")
-                utils.flash_error("خطأ أثناء تعديل العميل")
+                utils.flash_error("خطأ أثناء تعديل الزبون")
                 return render_template("customers/edit.html", form=form, customer=cust), 500
-            flash("تم تعديل بيانات العميل", "success")
+            flash("تم تعديل بيانات الزبون", "success")
             return redirect(url_for("customers_bp.customer_detail", customer_id=customer_id))
         current_app.logger.warning("CustomerForm errors (edit): %s", form.errors)
         if form.errors:
@@ -872,14 +894,14 @@ def delete_customer(id):
     has_opening_balance = (customer.opening_balance and float(customer.opening_balance) != 0)
     
     if has_invoices or has_payments or has_sales or has_services or has_preorders or has_opening_balance:
-        utils.flash_error("لا يمكن حذف العميل لأنه مرتبط بمعاملات أو له رصيد افتتاحي.")
+        utils.flash_error("لا يمكن حذف الزبون لأنه مرتبط بمعاملات أو له رصيد افتتاحي.")
         return redirect(url_for("customers_bp.list_customers"))
     
     try:
         name = customer.name
         db.session.delete(customer)
         db.session.commit()
-        utils.flash_success(f"تم حذف العميل: {name}", "success")
+        utils.flash_success(f"تم حذف الزبون: {name}", "success")
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
@@ -931,7 +953,9 @@ def import_customers():
             discount_rate = float(discount_rate_raw) if discount_rate_raw else 0.0
             if not (0.0 <= discount_rate <= 100.0):
                 raise ValueError("معدل الخصم يجب أن يكون بين 0 و100")
-            if Customer.query.filter(or_(Customer.phone == phone, Customer.email == email)).first():
+            from utils.company_scope import filter_customers_query as _fcq
+
+            if _fcq(Customer.query).filter(or_(Customer.phone == phone, Customer.email == email)).first():
                 raise ValueError("هاتف أو بريد مستخدم مسبقًا")
             is_active = str(row.get("is_active", "True")).strip().lower() in ("true", "1", "yes", "y", "on")
             c = Customer(
@@ -964,7 +988,7 @@ def import_customers():
     except SQLAlchemyError as e:
         db.session.rollback()
         errors.append(f"فشل حفظ الدفعة: {e}")
-    flash(f"تم استيراد {count} عميل", "success")
+    flash(f"تم استيراد {count} زبون", "success")
     if errors:
         flash("; ".join(errors), "warning")
     return redirect(url_for("customers_bp.list_customers"))
@@ -975,7 +999,7 @@ def import_customers():
 def customer_whatsapp(customer_id):
     c = db.session.get(Customer, customer_id) or abort(404)
     if not c.whatsapp:
-        flash("لا يوجد رقم واتساب للعميل", "warning")
+        flash("لا يوجد رقم واتساب للزبون", "warning")
         return redirect(url_for("customers_bp.customer_detail", customer_id=customer_id))
     ok, info = utils.send_whatsapp_message(c.whatsapp, f"رصيدك الحالي: {getattr(c, 'balance', 0):,.2f}")
     if ok:
@@ -995,6 +1019,9 @@ def export_customer_vcf(customer_id):
 @customers_bp.route("/<int:customer_id>/account_statement", methods=["GET"], endpoint="account_statement")
 @login_required
 def account_statement(customer_id):
+    from utils.company_scope import assert_customer_access
+
+    assert_customer_access(customer_id)
     if getattr(current_user, "__tablename__", "") == "customers":
         abort(403)
     from models import Check, CheckStatus
@@ -1188,8 +1215,10 @@ def account_statement(customer_id):
             "currency": getattr(inv, 'currency', None) or (getattr(c, 'currency', None) or 'ILS'),
         })
 
+    from utils.company_scope import filter_payments_query, filter_sales_query
+
     sales = (
-        Sale.query.filter_by(customer_id=customer_id)
+        filter_sales_query(Sale.query.filter_by(customer_id=customer_id))
         .filter(Sale.status.in_(SALE_OBLIGATION_STATUSES))
         .options(
             joinedload(Sale.lines).load_only(
@@ -1261,6 +1290,12 @@ def account_statement(customer_id):
                 'note': ''
             })
         
+        sale_debit = D(s.total_amount or 0)
+        prepaid_applied = D(0)
+        if getattr(s, "preorder_id", None) and getattr(s, "preorder", None):
+            prepaid_applied = D(getattr(s.preorder, "prepaid_amount", 0) or 0)
+        sale_debit = max(D(0), sale_debit - prepaid_applied)
+
         entries.append({
             "date": getattr(s, "sale_date", None) or getattr(s, "created_at", None),
             "type": "SALE",
@@ -1268,15 +1303,30 @@ def account_statement(customer_id):
             "model": "sale",
             "ref": getattr(s, "sale_number", None) or f"SALE-{s.id}",
             "statement": generate_statement("SALE", s),
-            "debit": D(s.total_amount or 0),  # البيع = عليه (مدين)
+            "debit": sale_debit,
             "credit": D(0),
             "items": items,  # إضافة البنود المباعة
             "notes": getattr(s, 'notes', '') or '',
             "currency": getattr(s, 'currency', None) or (getattr(c, 'currency', None) or 'ILS'),
         })
+        if prepaid_applied > 0:
+            entries.append({
+                "date": getattr(s, "sale_date", None) or getattr(s, "created_at", None),
+                "type": "PREPAID_APPLIED",
+                "id": s.id,
+                "model": "sale",
+                "ref": getattr(s, "sale_number", None) or f"SALE-{s.id}",
+                "statement": f"عربون مُطبّق على البيع {getattr(s, 'sale_number', s.id)}",
+                "debit": D(0),
+                "credit": prepaid_applied,
+                "notes": "",
+                "currency": getattr(s, 'currency', None) or (getattr(c, 'currency', None) or 'ILS'),
+            })
+
+    from utils.company_scope import filter_sale_returns_query, filter_service_requests_query
 
     sale_returns = (
-        SaleReturn.query
+        filter_sale_returns_query(SaleReturn.query)
         .filter(SaleReturn.customer_id == customer_id)
         .filter(SaleReturn.status == 'CONFIRMED')
         .filter(SaleReturn.return_date >= start_date)
@@ -1299,7 +1349,7 @@ def account_statement(customer_id):
         })
 
     services = (
-        ServiceRequest.query
+        filter_service_requests_query(ServiceRequest.query)
         .filter(ServiceRequest.customer_id == customer_id)
         .filter(ServiceRequest.completed_at >= start_date)
         .filter(ServiceRequest.completed_at <= end_date)
@@ -1405,14 +1455,19 @@ def account_statement(customer_id):
     
     # ✅ إضافة joinedload(Payment.splits) لجميع استعلامات الدفعات لضمان تحميل splits
     # ✅ إضافة selectinload(Payment.related_check) لتحميل الشيكات المرتبطة وتجنب N+1 queries
-    # ✅ البحث عن جميع الدفعات المباشرة للعميل (بما في ذلك entity_type == 'CUSTOMER')
-    # تحسين كبير: استعلام واحد لجلب جميع الدفعات المرتبطة بالعميل
+    # ✅ البحث عن جميع الدفعات المباشرة للزبون (بما في ذلك entity_type == 'CUSTOMER')
+    # تحسين كبير: استعلام واحد لجلب جميع الدفعات المرتبطة بالزبون
     # يجمع الدفعات المباشرة، ودفعات المبيعات، والفواتير، والخدمات، والطلبات المسبقة، والمصاريف
     # يستخدم Outer Joins لتجنب الاستعلامات المتعددة (N+1 queries are handled via eager loading)
     
     from models import Expense
-    # نحتاج لمعرفة مصاريف العميل لتضمين دفعاتها
-    expense_ids_with_customer = [e.id for e in Expense.query.filter(Expense.customer_id == customer_id).all()]
+    # نحتاج لمعرفة مصاريف الزبون لتضمين دفعاتها
+    from utils.company_scope import filter_expenses_query
+
+    expense_ids_with_customer = [
+        e.id
+        for e in filter_expenses_query(Expense.query.filter(Expense.customer_id == customer_id)).all()
+    ]
     
     # بناء شروط البحث
     payment_criteria = [
@@ -1450,7 +1505,7 @@ def account_statement(customer_id):
         )
 
     all_payments_query = (
-        Payment.query
+        filter_payments_query(Payment.query)
         .outerjoin(Sale, Payment.sale_id == Sale.id)
         .outerjoin(Invoice, Payment.invoice_id == Invoice.id)
         .outerjoin(ServiceRequest, Payment.service_id == ServiceRequest.id)
@@ -1492,9 +1547,11 @@ def account_statement(customer_id):
     
     # البحث فقط إذا كان هناك دفعات
     if all_payments:
-        potential_split_checks = Check.query.filter(
+        from utils.company_scope import scoped_check_query
+
+        potential_split_checks = scoped_check_query().filter(
             Check.customer_id == customer_id,
-            Check.reference_number.like('PMT-SPLIT-%')
+            Check.reference_number.like('PMT-SPLIT-%'),
         ).all()
         
         for chk in potential_split_checks:
@@ -1809,9 +1866,9 @@ def account_statement(customer_id):
             continue
         
         # حساب debit/credit
-        # في محاسبة العملاء:
-        # - الدفعة الواردة (IN) = العميل دفع لنا = له (حق له = تقليل ما عليه) = credit (دائن)
-        # - الدفعة الصادرة (OUT) = دفعنا للعميل = عليه (التزام عليه = يجب أن يعيد المبلغ) = debit (مدين)
+        # في محاسبة الزبائن:
+        # - الدفعة الواردة (IN) = الزبون دفع لنا = له (حق له = تقليل ما عليه) = credit (دائن)
+        # - الدفعة الصادرة (OUT) = دفعنا للزبون = عليه (التزام عليه = يجب أن يعيد المبلغ) = debit (مدين)
         
         returned_checks_amount = D(0)
         returned_checks_list = []
@@ -2022,14 +2079,15 @@ def account_statement(customer_id):
                         }],
                     },
                     "notes": check.notes or notes or '',
+                    "affects_balance": True,
                 })
 
-    manual_checks = Check.query.filter(
+    manual_checks = scoped_check_query().filter(
         Check.customer_id == customer_id,
         Check.payment_id.is_(None),
         Check.check_date >= start_date,
         Check.check_date <= end_date,
-        ~Check.status.in_([CheckStatus.CANCELLED.value, CheckStatus.ARCHIVED.value])
+        ~Check.status.in_([CheckStatus.CANCELLED.value, CheckStatus.ARCHIVED.value]),
     ).order_by(Check.check_date, Check.id).all()
     
     for check in manual_checks:
@@ -2056,8 +2114,8 @@ def account_statement(customer_id):
                 current_app.logger.debug('Currency conversion skipped')
         
         # حساب debit/credit للشيكات اليدوية
-        # الشيك الوارد (IN) = العميل دفع لنا = credit (دائن) = تقليل ما عليه
-        # الشيك الصادر (OUT) = دفعنا للعميل = debit (مدين) = زيادة ما عليه
+        # الشيك الوارد (IN) = الزبون دفع لنا = credit (دائن) = تقليل ما عليه
+        # الشيك الصادر (OUT) = دفعنا للزبون = debit (مدين) = زيادة ما عليه
         is_in = not is_out
         
         if is_legal or is_settled:
@@ -2143,7 +2201,13 @@ def account_statement(customer_id):
             "notes": check.notes or "شيك يدوي",
         })
 
-    expenses = Expense.query.filter_by(customer_id=customer_id).filter(Expense.date >= start_date).filter(Expense.date <= end_date).order_by(Expense.date, Expense.id).all()
+    expenses = (
+        filter_expenses_query(Expense.query.filter_by(customer_id=customer_id))
+        .filter(Expense.date >= start_date)
+        .filter(Expense.date <= end_date)
+        .order_by(Expense.date, Expense.id)
+        .all()
+    )
     for exp in expenses:
         amt = D(exp.amount or 0)
         if exp.currency and exp.currency != "ILS":
@@ -2178,7 +2242,7 @@ def account_statement(customer_id):
 
         try:
             linked_payments = (
-                Payment.query
+                filter_payments_query(Payment.query)
                 .filter(Payment.expense_id == exp.id)
                 .filter(Payment.status.in_([PaymentStatus.COMPLETED.value, PaymentStatus.PENDING.value]))
                 .order_by(Payment.payment_date, Payment.id)
@@ -2253,8 +2317,20 @@ def account_statement(customer_id):
         })
 
     # Calculate opening balance (brought forward)
-    from utils.balance_calculator import calculate_balance_before_date
-    opening_balance = D(calculate_balance_before_date(c.id, start_date))
+    from utils.balance_as_of import calculate_balance_before_date
+    from utils.period_close_service import get_opening_balance_for_entity
+
+    opening_balance = None
+    if start_date:
+        snap_open = get_opening_balance_for_entity(
+            "CUSTOMER",
+            c.id,
+            start_date.date() if hasattr(start_date, "date") else start_date,
+        )
+        if snap_open is not None:
+            opening_balance = D(snap_open)
+    if opening_balance is None:
+        opening_balance = D(calculate_balance_before_date(c.id, start_date))
     
     if opening_balance != 0:
         opening_date = start_date or c.created_at
@@ -2386,7 +2462,7 @@ def account_statement(customer_id):
         diff_val2 = abs(float(current_balance - final_running_balance))
         if diff_val2 > 0.01:
             current_app.logger.warning(
-                f"⚠️ عدم تطابق الرصيد في كشف حساب العميل {customer_id}: "
+                f"⚠️ عدم تطابق الرصيد في كشف حساب الزبون {customer_id}: "
                 f"current_balance={current_balance}, calculated_balance={final_running_balance}, "
                 f"difference={diff_val2}"
             )
@@ -2515,7 +2591,9 @@ def account_statement(customer_id):
 @login_required
 def advanced_filter():
     import io, csv
-    q = Customer.query
+    from utils.company_scope import filter_customers_query
+
+    q = filter_customers_query(Customer.query)
 
     balance_min = request.args.get("balance_min")
     balance_max = request.args.get("balance_max")
@@ -2605,8 +2683,12 @@ def advanced_filter():
 @customers_bp.route("/export", methods=["GET"], endpoint="export_customers")
 @login_required
 def export_customers():
+    from utils.company_scope import filter_customers_query
+
     format_type = request.args.get("format", "excel")
-    customers = Customer.query.filter(Customer.is_archived == False).limit(10000).all()
+    customers = filter_customers_query(
+        Customer.query.filter(Customer.is_archived == False)
+    ).limit(10000).all()
     if format_type == "pdf":
         # PDF export not implemented yet
         flash("تصدير PDF غير متاح حالياً. سيتم التصدير إلى Excel", "warning")
@@ -2631,20 +2713,27 @@ def export_customers():
 @customers_bp.route("/export/contacts", methods=["GET", "POST"], endpoint="export_contacts")
 @login_required
 def export_contacts():
+    from utils.company_scope import filter_customers_query
+
     form = ExportContactsForm()
-    form.customer_ids.choices = [(c.id, f"{c.name} — {c.phone or ''}") for c in Customer.query.order_by(Customer.name).all()]
+    scoped_cust = filter_customers_query(Customer.query).order_by(Customer.name)
+    form.customer_ids.choices = [(c.id, f"{c.name} — {c.phone or ''}") for c in scoped_cust.all()]
     if form.validate_on_submit():
         ids = form.customer_ids.data
         fields = form.fields.data
         fmt = form.format.data
-        customers = Customer.query.filter(Customer.id.in_(ids)).all()
+        customers = filter_customers_query(Customer.query.filter(Customer.id.in_(ids))).all()
         if fmt == "vcf":
             return utils.generate_vcf(customers, fields)
         elif fmt == "csv":
             return utils.generate_csv_contacts(customers, fields)
         else:
             return utils.generate_excel_contacts(customers, fields)
-    return render_template("customers/vcf_export.html", form=form, customers=Customer.query.order_by(Customer.name).all())
+    return render_template(
+        "customers/vcf_export.html",
+        form=form,
+        customers=filter_customers_query(Customer.query).order_by(Customer.name).all(),
+    )
 
 @customers_bp.route("/archive/<int:customer_id>", methods=["POST"])
 @login_required
@@ -2659,9 +2748,9 @@ def archive_customer(customer_id):
         utils.archive_record(customer, reason, current_user.id)
         
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': True, 'message': f'تم أرشفة العميل {customer.name} بنجاح'})
+            return jsonify({'success': True, 'message': f'تم أرشفة الزبون {customer.name} بنجاح'})
             
-        flash(f'تم أرشفة العميل {customer.name} بنجاح', 'success')
+        flash(f'تم أرشفة الزبون {customer.name} بنجاح', 'success')
         return redirect(url_for('customers_bp.list_customers'))
         
     except Exception as e:
@@ -2682,8 +2771,8 @@ def restore_customer(customer_id):
         
         if not customer.is_archived:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({'success': False, 'message': 'العميل غير مؤرشف'}), 400
-            flash('العميل غير مؤرشف', 'warning')
+                return jsonify({'success': False, 'message': 'الزبون غير مؤرشف'}), 400
+            flash('الزبون غير مؤرشف', 'warning')
             return redirect(url_for('customers_bp.list_customers'))
         
         from models import Archive
@@ -2701,9 +2790,9 @@ def restore_customer(customer_id):
             db.session.commit()
             
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': True, 'message': f'تم استعادة العميل {customer.name} بنجاح'})
+            return jsonify({'success': True, 'message': f'تم استعادة الزبون {customer.name} بنجاح'})
             
-        flash(f'تم استعادة العميل {customer.name} بنجاح', 'success')
+        flash(f'تم استعادة الزبون {customer.name} بنجاح', 'success')
         return redirect(url_for('customers_bp.list_customers'))
         
     except Exception as e:
@@ -2728,9 +2817,9 @@ def _generate_smart_password(customer):
 @customers_bp.route('/reset-passwords', methods=['POST'])
 @login_required
 def reset_passwords():
-    """تعيين كلمة مرور فريدة عشوائية لكل عميل لا يملك كلمة مرور.
-    يولّد كلمة مرور ذكية لكل عميل على حدة ويعرض قائمة البيانات للمدير.
-    إذا مرّر المستخدم `default_password` عبر النموذج، يُستخدم لجميع العملاء بدلاً من التوليد.
+    """تعيين كلمة مرور فريدة عشوائية لكل زبون لا يملك كلمة مرور.
+    يولّد كلمة مرور ذكية لكل زبون على حدة ويعرض قائمة البيانات للمدير.
+    إذا مرّر المستخدم `default_password` عبر النموذج، يُستخدم لجميع الزبائن بدلاً من التوليد.
     """
     try:
         from werkzeug.security import generate_password_hash
@@ -2739,7 +2828,11 @@ def reset_passwords():
         updated = 0
         total_candidates = 0
         credentials = []
-        q = Customer.query.filter((Customer.password_hash.is_(None)) | (Customer.password_hash == ''))
+        from utils.company_scope import filter_customers_query
+
+        q = filter_customers_query(Customer.query).filter(
+            (Customer.password_hash.is_(None)) | (Customer.password_hash == '')
+        )
         customers = q.all()
         total_candidates = len(customers)
         for cust in customers:
@@ -2755,7 +2848,10 @@ def reset_passwords():
                 cust.is_online = True
                 if not (cust.email and str(cust.email).strip()) and (cust.phone and str(cust.phone).strip()):
                     target_email = f"AZAD@{str(cust.phone).strip()}"
-                    exists = Customer.query.filter(func.lower(Customer.email) == target_email.lower(), Customer.id != cust.id).first()
+                    exists = filter_customers_query(Customer.query).filter(
+                        func.lower(Customer.email) == target_email.lower(),
+                        Customer.id != cust.id,
+                    ).first()
                     if not exists:
                         cust.email = target_email
                 updated += 1
@@ -2766,10 +2862,10 @@ def reset_passwords():
         db.session.commit()
 
         if total_candidates == 0:
-            utils.flash_info('لا يوجد عملاء بحاجة لتعيين كلمة مرور (الحقل موجود بالفعل).', 'info')
+            utils.flash_info('لا يوجد زبائن بحاجة لتعيين كلمة مرور (الحقل موجود بالفعل).', 'info')
             return redirect(url_for('customers_bp.list_customers'))
 
-        utils.flash_success(f'تم تعيين كلمة مرور فريدة لعدد {updated} عميل من أصل {total_candidates}.', 'success')
+        utils.flash_success(f'تم تعيين كلمة مرور فريدة لعدد {updated} زبون من أصل {total_candidates}.', 'success')
         from markupsafe import escape as _esc
         rows_html = ''.join(
             f"<tr><td>{c['id']}</td><td>{_esc(c['name'])}</td><td>{_esc(c['phone'])}</td><td style='font-family:monospace'>{_esc(c['password'])}</td></tr>"
@@ -2800,17 +2896,22 @@ def reset_passwords():
 def make_online_all():
     try:
         from werkzeug.security import generate_password_hash
+        from utils.company_scope import filter_customers_query
+
         manual_password = (request.form.get('default_password') or '').strip()
         updated = 0
         new_passwords = []
-        customers = Customer.query.all()
+        customers = filter_customers_query(Customer.query).all()
         for cust in customers:
             try:
                 cust.is_online = True
                 cust.is_active = True
                 if not (cust.email and str(cust.email).strip()) and (cust.phone and str(cust.phone).strip()):
                     target_email = f"AZAD@{str(cust.phone).strip()}"
-                    exists = Customer.query.filter(func.lower(Customer.email) == target_email.lower(), Customer.id != cust.id).first()
+                    exists = filter_customers_query(Customer.query).filter(
+                        func.lower(Customer.email) == target_email.lower(),
+                        Customer.id != cust.id,
+                    ).first()
                     if not exists:
                         cust.email = target_email
                 if not (cust.password_hash and str(cust.password_hash).strip()):
@@ -2830,7 +2931,7 @@ def make_online_all():
         db.session.commit()
 
         if new_passwords:
-            utils.flash_success(f'تم تحويل {updated} عميل للأونلاين. تم توليد كلمات مرور لـ {len(new_passwords)} عميل.', 'success')
+            utils.flash_success(f'تم تحويل {updated} زبون للأونلاين. تم توليد كلمات مرور لـ {len(new_passwords)} زبون.', 'success')
             from markupsafe import escape as _esc
             rows_html = ''.join(
                 f"<tr><td>{c['id']}</td><td>{_esc(c['name'])}</td><td>{_esc(c['phone'])}</td><td style='font-family:monospace'>{_esc(c['password'])}</td></tr>"
@@ -2840,7 +2941,7 @@ def make_online_all():
                 "{{ html_content|safe }}",
                 html_content=(
                     "<div class='container py-3'>"
-                    "<h4><i class='fas fa-key'></i> كلمات المرور المولّدة للعملاء الجدد</h4>"
+                    "<h4><i class='fas fa-key'></i> كلمات المرور المولّدة للزبائن الجدد</h4>"
                     "<div class='alert alert-warning'>احفظ هذه القائمة الآن — لن تظهر مرة أخرى.</div>"
                     "<table class='table table-striped table-bordered'>"
                     "<thead><tr><th>ID</th><th>الاسم</th><th>الجوال</th><th>كلمة المرور</th></tr></thead>"
@@ -2850,12 +2951,12 @@ def make_online_all():
                 )
             )
 
-        utils.flash_success(f'تم تحويل جميع العملاء ({updated}) إلى وضع الأونلاين.', 'success')
+        utils.flash_success(f'تم تحويل جميع الزبائن ({updated}) إلى وضع الأونلاين.', 'success')
         return redirect(url_for('customers_bp.list_customers'))
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error("خطأ في تحويل العملاء للأونلاين: %s", e)
-        utils.flash_error('خطأ أثناء تحويل العملاء للأونلاين')
+        current_app.logger.error("خطأ في تحويل الزبائن للأونلاين: %s", e)
+        utils.flash_error('خطأ أثناء تحويل الزبائن للأونلاين')
         return redirect(url_for('customers_bp.list_customers'))
 
 
@@ -2863,9 +2964,13 @@ def make_online_all():
 @login_required
 def set_default_emails():
     try:
+        from utils.company_scope import filter_customers_query
+
         updated = 0
         skipped = 0
-        q = Customer.query.filter((Customer.email.is_(None)) | (Customer.email == ''))
+        q = filter_customers_query(Customer.query).filter(
+            (Customer.email.is_(None)) | (Customer.email == '')
+        )
         customers = q.all()
         for cust in customers:
             phone = (cust.phone or '').strip()
@@ -2873,14 +2978,17 @@ def set_default_emails():
                 skipped += 1
                 continue
             target_email = f"AZAD@{phone}"
-            exists = Customer.query.filter(func.lower(Customer.email) == target_email.lower(), Customer.id != cust.id).first()
+            exists = filter_customers_query(Customer.query).filter(
+                func.lower(Customer.email) == target_email.lower(),
+                Customer.id != cust.id,
+            ).first()
             if exists:
                 skipped += 1
                 continue
             cust.email = target_email
             updated += 1
         db.session.commit()
-        utils.flash_success(f'تم ضبط بريد افتراضي لـ {updated} عميل. تم تخطي {skipped} بسبب تعارض أو عدم وجود هاتف.', 'success')
+        utils.flash_success(f'تم ضبط بريد افتراضي لـ {updated} زبون. تم تخطي {skipped} بسبب تعارض أو عدم وجود هاتف.', 'success')
         return redirect(url_for('customers_bp.list_customers'))
     except Exception as e:
         db.session.rollback()
@@ -2891,7 +2999,9 @@ def set_default_emails():
 @customers_bp.route('/export-online-credentials', methods=['GET'])
 @login_required
 def export_online_credentials():
-    customers = Customer.query.order_by(Customer.id.asc()).all()
+    from utils.company_scope import filter_customers_query
+
+    customers = filter_customers_query(Customer.query).order_by(Customer.id.asc()).all()
     rows = []
     for c in customers:
         phone = (c.phone or '').strip()
@@ -2907,7 +3017,7 @@ def export_online_credentials():
         })
     html = [
         "<div class='container py-3'>",
-        "<h4><i class='fas fa-id-card'></i> حسابات دخول العملاء</h4>",
+        "<h4><i class='fas fa-id-card'></i> حسابات دخول الزبائن</h4>",
         "<div class='alert alert-info'>كلمات المرور مُشفّرة ولا يمكن عرضها. استخدم 'تعيين كلمات المرور' لتوليد جديدة.</div>",
         "<table class='table table-striped table-bordered'>",
         "<thead><tr><th>ID</th><th>الاسم</th><th>الجوال</th><th>اسم المستخدم</th><th>حالة كلمة المرور</th></tr></thead>",

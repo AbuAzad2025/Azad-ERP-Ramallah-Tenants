@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}إدارة المستخدمين{% endblock %}
 
 {% block breadcrumb %}
@@ -52,6 +52,7 @@
 </style>
 {% endblock %}
 
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
 <div class="container-fluid">
   <div class="d-flex gap-2 mb-3">
@@ -61,7 +62,7 @@
       </a>
     {% endif %}
     <a href="{{ url_for('users_bp.registered_customers') }}" class="btn btn-primary">
-      <i class="fas fa-id-card"></i> العملاء المسجلون
+      <i class="fas fa-id-card"></i> الزبائن المسجلون
     </a>
   </div>
   <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap">

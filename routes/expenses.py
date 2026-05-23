@@ -46,6 +46,7 @@ import utils
 from utils import D, q0, _get_or_404, archive_record, restore_record
 from routes.payments import _ensure_payment_number
 from routes.checks import create_check_record
+from utils.company_scope import filter_expenses_query
 
 expenses_bp = Blueprint(
     "expenses_bp",
@@ -337,7 +338,9 @@ def _ensure_expense_type_supplier(type_name: str):
     name = f"حساب مصروف - {type_name}".strip()
     if not name:
         return None
-    q = Supplier.query.filter(Supplier.name == name)
+    from utils.company_scope import filter_suppliers_query
+
+    q = filter_suppliers_query(Supplier.query).filter(Supplier.name == name)
     if hasattr(Supplier, "is_archived"):
         active = q.filter(Supplier.is_archived.is_(False)).first()
         if active:
@@ -541,7 +544,7 @@ class LegacyEntityResolver:
         sources = [
             ("SUPPLIER", "المورد", "supplier", "supplier_id", Supplier),
             ("PARTNER", "الشريك", "partner", "partner_id", Partner),
-            ("CUSTOMER", "العميل", "customer", "customer_id", Customer),
+            ("CUSTOMER", "الزبون", "customer", "customer_id", Customer),
             ("EMPLOYEE", "الموظف", "employee", "employee_id", Employee),
         ]
         for kind, label, chip, field_name, model in sources:
@@ -615,7 +618,8 @@ def _base_query_with_filters(include_relations=True):
         show_archived = True
     else:
         show_archived = True
-    q = Expense.query
+
+    q = filter_expenses_query(Expense.query)
     if not show_archived:
         q = q.filter(Expense.is_archived == False)
     if include_relations:
@@ -785,7 +789,7 @@ def employee_statement(emp_id):
     advance_type = ExpenseType.query.filter_by(code='EMPLOYEE_ADVANCE').first()
     advances = []
     if advance_type:
-        advances = Expense.query.filter_by(employee_id=emp_id, type_id=advance_type.id).order_by(Expense.date.desc()).all()
+        advances = filter_expenses_query(Expense.query).filter_by(employee_id=emp_id, type_id=advance_type.id).order_by(Expense.date.desc()).all()
         for adv in advances:
             adv.installments = EmployeeAdvanceInstallment.query.filter_by(advance_expense_id=adv.id).order_by(EmployeeAdvanceInstallment.installment_number).all()
     
@@ -794,7 +798,7 @@ def employee_statement(emp_id):
     salary_type = ExpenseType.query.filter_by(code='SALARY').first()
     salaries = []
     if salary_type:
-        salaries = Expense.query.filter_by(employee_id=emp_id, type_id=salary_type.id).order_by(Expense.date.desc()).all()
+        salaries = filter_expenses_query(Expense.query).filter_by(employee_id=emp_id, type_id=salary_type.id).order_by(Expense.date.desc()).all()
     
     return render_template(
         "expenses/employee_statement.html",
@@ -953,7 +957,7 @@ def generate_salary(emp_id):
         utils.flash_error("نوع المصروف 'SALARY' غير موجود في النظام", "danger")
         return redirect(url_for('expenses_bp.employee_statement', emp_id=emp_id))
     
-    existing_salary = Expense.query.filter(
+    existing_salary = filter_expenses_query(Expense.query).filter(
         Expense.employee_id == emp_id,
         Expense.type_id == salary_type.id,
         Expense.period_start == period_start
@@ -1186,7 +1190,7 @@ def salary_receipt(salary_exp_id):
 @utils.permission_required(SystemPermissions.MANAGE_EXPENSES)
 def delete_employee(emp_id):
     e = _get_or_404(Employee, emp_id)
-    if Expense.query.filter_by(employee_id=emp_id).first():
+    if filter_expenses_query(Expense.query).filter_by(employee_id=emp_id).first():
         utils.flash_error("لا يمكن حذف الموظف؛ مرتبط بمصاريف.")
     else:
         try:
@@ -1245,7 +1249,7 @@ def edit_type(type_id):
 @utils.permission_required(SystemPermissions.MANAGE_EXPENSES)
 def delete_type(type_id):
     t = _get_or_404(ExpenseType, type_id)
-    if Expense.query.filter_by(type_id=type_id).first():
+    if filter_expenses_query(Expense.query).filter_by(type_id=type_id).first():
         utils.flash_error("لا يمكن حذف النوع؛ مرتبط بمصاريف.")
     else:
         try:
@@ -1281,7 +1285,7 @@ def index():
     entity_meta = {
         "SUPPLIER": (Supplier, "مورد"),
         "PARTNER": (Partner, "شريك"),
-        "CUSTOMER": (Customer, "عميل"),
+        "CUSTOMER": (Customer, "زبون"),
         "EMPLOYEE": (Employee, "موظف"),
     }
     for exp in expenses:
@@ -1832,7 +1836,9 @@ def detail(exp_id):
                 if 'check' in (str(split.method) or '').lower() or 'cheque' in (str(split.method) or '').lower():
                     from models import Check
                     from sqlalchemy import or_
-                    split_checks = Check.query.filter(
+                    from utils.company_scope import scoped_check_query
+
+                    split_checks = scoped_check_query().filter(
                         or_(
                             Check.reference_number == f"PMT-SPLIT-{split.id}",
                             Check.reference_number.like(f"PMT-SPLIT-{split.id}-%")
@@ -1955,9 +1961,25 @@ def add():
         form.site_id.choices = [(0, '-- بدون موقع --')]
     form.employee_id.choices = [(0, '-- اختر موظفاً --')] + [(e.id, e.name) for e in Employee.query.order_by(Employee.name).limit(200).all()]
     form.utility_account_id.choices = [(0, '-- اختر حساب --')] + [(u.id, f"{u.provider} - {u.account_no or u.alias or u.utility_type}") for u in UtilityAccount.query.filter_by(is_active=True).order_by(UtilityAccount.provider).limit(100).all()]
-    form.warehouse_id.choices = [(0, '-- اختر مستودع --')] + [(w.id, w.name) for w in Warehouse.query.filter_by(is_active=True).order_by(Warehouse.name).limit(100).all()]
-    form.partner_id.choices = [(0, '-- اختر شريك --')] + [(p.id, p.name) for p in Partner.query.filter_by(is_archived=False).order_by(Partner.name).limit(100).all()]
-    form.supplier_id.choices = [(0, '-- اختر مورد --')] + [(s.id, s.name) for s in Supplier.query.filter_by(is_archived=False).order_by(Supplier.name).limit(100).all()]
+    from utils.company_scope import filter_customers_query, filter_warehouses_query
+
+    form.warehouse_id.choices = [(0, '-- اختر مستودع --')] + [
+        (w.id, w.name)
+        for w in filter_warehouses_query(Warehouse.query.filter_by(is_active=True))
+        .order_by(Warehouse.name)
+        .limit(100)
+        .all()
+    ]
+    from utils.company_scope import filter_partners_query, filter_shipments_query, filter_suppliers_query
+
+    form.partner_id.choices = [(0, '-- اختر شريك --')] + [
+        (p.id, p.name)
+        for p in filter_partners_query(Partner.query.filter_by(is_archived=False)).order_by(Partner.name).limit(100).all()
+    ]
+    form.supplier_id.choices = [(0, '-- اختر مورد --')] + [
+        (s.id, s.name)
+        for s in filter_suppliers_query(Supplier.query.filter_by(is_archived=False)).order_by(Supplier.name).limit(100).all()
+    ]
     if service_supplier and all(choice_id != service_supplier.id for choice_id, _ in form.supplier_id.choices):
         form.supplier_id.choices.append((service_supplier.id, f"✓ {service_supplier.name}"))
     if service_supplier:
@@ -1966,12 +1988,15 @@ def add():
         form.partner_id.choices.append((service_partner.id, f"✓ {service_partner.name}"))
     if service_partner:
         form.partner_id.data = service_partner.id
-    customers_query = Customer.query
+    customers_query = filter_customers_query(Customer.query)
     if hasattr(Customer, 'is_archived'):
         customers_query = customers_query.filter_by(is_archived=False)
     customers = customers_query.order_by(Customer.name).limit(100).all()
-    form.customer_id.choices = [(0, '-- اختر عميل --')] + [(c.id, c.name) for c in customers]
-    form.shipment_id.choices = [(0, '-- اختر شحنة --')] + [(s.id, f"شحنة #{s.id}") for s in Shipment.query.order_by(Shipment.id.desc()).limit(50).all()]
+    form.customer_id.choices = [(0, '-- اختر زبون --')] + [(c.id, c.name) for c in customers]
+    form.shipment_id.choices = [(0, '-- اختر شحنة --')] + [
+        (s.id, f"شحنة #{s.id}")
+        for s in filter_shipments_query(Shipment.query).order_by(Shipment.id.desc()).limit(50).all()
+    ]
     form.stock_adjustment_id.choices = [(0, '-- اختر تسوية --')] + [(sa.id, f"تسوية #{sa.id}") for sa in StockAdjustment.query.order_by(StockAdjustment.id.desc()).limit(50).all()]
     
     types_meta = {t.id: _merge_type_meta(t) for t in _types}
@@ -2262,7 +2287,7 @@ def add():
             error_msg = str(err).lower()
             
             if "expense.entity_required" in error_msg:
-                utils.flash_error("يجب اختيار جهة للمصروف (مورد/عميل/شريك/موظف) قبل الحفظ.")
+                utils.flash_error("يجب اختيار جهة للمصروف (مورد/زبون/شريك/موظف) قبل الحفظ.")
             elif "foreign key mismatch" in error_msg:
                 utils.flash_warning("يوجد خطأ في إعدادات قاعدة البيانات - يرجى التواصل مع الدعم الفني")
                 current_app.logger.error(f"Foreign key mismatch في المصروفات: {err}")
@@ -2581,8 +2606,9 @@ def quick_partner_service_pay():
 @utils.permission_required(SystemPermissions.MANAGE_EXPENSES)
 def edit(exp_id):
     from models import Branch, Site
-    
-    exp = _get_or_404(Expense, exp_id)
+    from utils.company_scope import assert_expense_access, filter_customers_query, filter_warehouses_query
+
+    exp = assert_expense_access(exp_id)
     before_pairs = _expense_related_entity_pairs(exp)
     form = ExpenseForm(obj=exp)
     
@@ -2603,41 +2629,48 @@ def edit(exp_id):
         form.utility_account_id.choices.append((exp.utility_account.id, f"✓ {exp.utility_account.provider} - {exp.utility_account.account_no or exp.utility_account.alias}"))
     form.utility_account_id.choices += [(u.id, f"{u.provider} - {u.account_no or u.alias or u.utility_type}") for u in utilities]
     
-    warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.name).limit(100).all()
+    warehouses = (
+        filter_warehouses_query(Warehouse.query.filter_by(is_active=True))
+        .order_by(Warehouse.name)
+        .limit(100)
+        .all()
+    )
     form.warehouse_id.choices = [(0, '-- اختر مستودع --')]
     if exp.warehouse_id and exp.warehouse and exp.warehouse not in warehouses:
         form.warehouse_id.choices.append((exp.warehouse.id, f"✓ {exp.warehouse.name or '—'}"))
     form.warehouse_id.choices += [(w.id, w.name or '—') for w in warehouses]
     
-    shipments = Shipment.query.order_by(Shipment.id.desc()).limit(50).all()
+    from utils.company_scope import filter_partners_query, filter_shipments_query, filter_suppliers_query
+
+    shipments = filter_shipments_query(Shipment.query).order_by(Shipment.id.desc()).limit(50).all()
     form.shipment_id.choices = [(0, '-- اختر شحنة --')]
     if exp.shipment_id and exp.shipment and exp.shipment not in shipments:
         form.shipment_id.choices.append((exp.shipment.id, f"✓ شحنة #{exp.shipment.id}"))
     form.shipment_id.choices += [(s.id, f"شحنة #{s.id}") for s in shipments]
     
-    partners = Partner.query.filter_by(is_archived=False).order_by(Partner.name).limit(100).all()
+    partners = filter_partners_query(Partner.query.filter_by(is_archived=False)).order_by(Partner.name).limit(100).all()
     form.partner_id.choices = [(0, '-- اختر شريك --')]
     if exp.partner_id and exp.partner and exp.partner not in partners:
         form.partner_id.choices.append((exp.partner.id, f"✓ {exp.partner.name or '—'}"))
     form.partner_id.choices += [(p.id, p.name or '—') for p in partners]
     
-    suppliers = Supplier.query.filter_by(is_archived=False).order_by(Supplier.name).limit(100).all()
+    suppliers = filter_suppliers_query(Supplier.query.filter_by(is_archived=False)).order_by(Supplier.name).limit(100).all()
     form.supplier_id.choices = [(0, '-- اختر مورد --')]
     if exp.supplier_id and exp.supplier and exp.supplier not in suppliers:
         form.supplier_id.choices.append((exp.supplier.id, f"✓ {exp.supplier.name or '—'}"))
     form.supplier_id.choices += [(s.id, s.name or '—') for s in suppliers]
     
-    customers_query = Customer.query
+    customers_query = filter_customers_query(Customer.query)
     if hasattr(Customer, 'is_archived'):
         customers_query = customers_query.filter_by(is_archived=False)
     customers = customers_query.order_by(Customer.name).limit(100).all()
-    form.customer_id.choices = [(0, '-- اختر عميل --')]
+    form.customer_id.choices = [(0, '-- اختر زبون --')]
     current_customer_id = exp.customer_id or (exp.payee_entity_id if getattr(exp, 'payee_type', '').upper() == 'CUSTOMER' else None)
     if current_customer_id:
         if exp.customer_id and exp.customer and exp.customer not in customers:
             form.customer_id.choices.append((exp.customer.id, f"✓ {exp.customer.name or '—'}"))
         elif not any(c.id == current_customer_id for c in customers):
-            form.customer_id.choices.append((current_customer_id, f"✓ {exp.payee_name or f'عميل #{current_customer_id}'}"))
+            form.customer_id.choices.append((current_customer_id, f"✓ {exp.payee_name or f'زبون #{current_customer_id}'}"))
         form.customer_id.data = current_customer_id
     form.customer_id.choices += [(c.id, c.name or '—') for c in customers]
     
@@ -2698,7 +2731,7 @@ def edit(exp_id):
             db.session.rollback()
             perr_msg = str(perr)
             if "expense.entity_required" in perr_msg:
-                utils.flash_error("يجب اختيار جهة للمصروف (مورد/عميل/شريك/موظف) قبل الحفظ.")
+                utils.flash_error("يجب اختيار جهة للمصروف (مورد/زبون/شريك/موظف) قبل الحفظ.")
             else:
                 flash(perr_msg, "danger")
         except SQLAlchemyError as err:
@@ -2902,7 +2935,7 @@ def print_list():
     query, filt = _base_query_with_filters()
     rows = query.limit(50000).all()
     
-    totals_query = Expense.query
+    totals_query = filter_expenses_query(Expense.query)
     raw_show_archived = (request.args.get("show_archived") or "").strip().lower()
     if raw_show_archived not in ("1", "true", "yes"):
         totals_query = totals_query.filter(Expense.is_archived == False)
@@ -3080,7 +3113,7 @@ def payroll_monthly():
         if year < today.year:
             already_paid = True
         elif salary_type:
-            existing = Expense.query.filter(
+            existing = filter_expenses_query(Expense.query).filter(
                 Expense.employee_id == emp.id,
                 Expense.type_id == salary_type.id,
                 sql_extract('month', Expense.date) == month,
@@ -3164,7 +3197,7 @@ def generate_all_salaries():
     
     for emp in employees:
         try:
-            existing = Expense.query.filter(
+            existing = filter_expenses_query(Expense.query).filter(
                 Expense.employee_id == emp.id,
                 Expense.type_id == salary_type.id,
                 or_(

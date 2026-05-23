@@ -31,9 +31,11 @@
       <span class="input-group-text"><i class="fas fa-search"></i></span>
       <input id="searchBox" type="text" class="form-control" placeholder="ابحث بالاسم أو SKU...">
     </div>
+    {% if has_perm('manage_shop') %}
     <a href="{{ url_for('shop.admin_product_new') }}" class="btn btn-primary">
       <i class="fas fa-plus ml-1"></i> إضافة منتج
     </a>
+    {% endif %}
     <a href="{{ url_for('shop.catalog') }}" class="btn btn-outline-secondary">
       <i class="fas fa-store ml-1"></i> المتجر
     </a>
@@ -299,7 +301,7 @@
         
         try {
           // رفع الصورة
-          const uploadRes = await fetch('/warehouses/api/upload_product_image', {
+          const uploadRes = await fetch((window.gmPath || function(p){return p;})('/warehouses/api/upload_product_image'), {
             method: 'POST',
             headers: { 'X-CSRFToken': csrfToken },
             body: formData

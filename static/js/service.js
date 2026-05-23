@@ -34,7 +34,7 @@
       var $btn = $(this);
       showLoading($btn);
       setTimeout(function () {
-        window.location.assign('/service/export/csv');
+        window.location.assign((window.gmPath || function(p){ return p; })('/service/export/csv'));
         hideLoading($btn);
       }, 500);
     });
@@ -94,6 +94,7 @@
 
   function smartPost(url) {
     if (!url) return;
+    if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_service')) return;
     var token = $('input[name="csrf_token"]').first().val() || $('meta[name="csrf-token"]').attr('content') || '';
     var $f = $('<form>', { method: 'POST', action: url, style: 'display:none' });
     if (token) $f.append($('<input>', { type: 'hidden', name: 'csrf_token', value: token }));
@@ -130,6 +131,7 @@
   }
 
   function initSelect2Ajax($el, url) {
+    url = (window.gmRewriteUrl || window.gmPath || function (p) { return p; })(url);
     $el.select2({
       theme: 'bootstrap4', width: '100%',
       ajax: {
@@ -340,15 +342,16 @@
 
   function bindDynamicRows() {
     $('#addPartBtn, #add-part').on('click', function () {
-      var tpl =
+      var gp = window.gmPath || function (p) { return p; };
+    var tpl =
         '<div class="row g-2 align-items-end mb-2 part-line">' +
           '<div class="col-md-3">' +
             '<label class="form-label d-block">المستودع</label>' +
-            '<select class="form-select select2" name="warehouse_id" data-endpoint="/api/search_warehouses"></select>' +
+            '<select class="form-select select2" name="warehouse_id" data-endpoint="' + gp('/api/search_warehouses') + '"></select>' +
           '</div>' +
           '<div class="col-md-3">' +
             '<label class="form-label d-block">القطعة</label>' +
-            '<select class="form-select select2" name="part_id" data-endpoint-by-warehouse="/api/warehouses/0/products" data-product-info="/api/products/0/info"></select>' +
+            '<select class="form-select select2" name="part_id" data-endpoint-by-warehouse="' + gp('/api/warehouses/0/products') + '" data-product-info="' + gp('/api/products/0/info') + '"></select>' +
           '</div>' +
           '<div class="col-md-2"><label class="form-label">الكمية</label><input type="number" min="1" class="form-control" name="quantity" value="1"></div>' +
           '<div class="col-md-2"><label class="form-label">سعر الوحدة</label><input type="number" step="0.01" min="0" class="form-control" name="unit_price"></div>' +

@@ -1,5 +1,5 @@
 """
-تدقيق محاسبي صارم: حقوق / التزامات / رصيد — عميل، مورد، شريك.
+تدقيق محاسبي صارم: حقوق / التزامات / رصيد — زبون، مورد، شريك.
 """
 from __future__ import annotations
 
@@ -65,7 +65,7 @@ def audit_entity_balances(*, limit: int = 0, include_archived: bool = False, fix
         if len(report[bucket]["issues"]) < 30:
             report[bucket]["issues"].append(item)
 
-    # ——— عملاء ———
+    # ——— زبائن ———
     cq = Customer.query.order_by(Customer.id.asc())
     if not include_archived:
         cq = cq.filter(Customer.is_archived == False)  # noqa: E712
@@ -321,7 +321,7 @@ def _audit_invoice_double_count(report: dict) -> None:
 def format_audit_report_text(report: dict) -> str:
     lines = [
         "=== تدقيق محاسبي صارم ===",
-        f"عملاء: فُحص {report['customers']['checked']} | متطابق {report['customers']['formula_ok']} | فرق مخزّن {report['customers']['stored_mismatch']}",
+        f"زبائن: فُحص {report['customers']['checked']} | متطابق {report['customers']['formula_ok']} | فرق مخزّن {report['customers']['stored_mismatch']}",
         f"موردون: فُحص {report['suppliers']['checked']} | متطابق {report['suppliers']['formula_ok']} | فرق مخزّن {report['suppliers']['stored_mismatch']}",
         f"شركاء: فُحص {report['partners']['checked']} | متطابق {report['partners']['formula_ok']} | فرق مخزّن {report['partners']['stored_mismatch']}",
         f"سياسة: دفعات مربوطة بمستندات {report['policy']['payment_document_links']} | مُصلَحة {report['policy'].get('fixed', 0)} | فواتير مربوطة بمبيعات {report['policy']['invoice_sale_double_count']}",

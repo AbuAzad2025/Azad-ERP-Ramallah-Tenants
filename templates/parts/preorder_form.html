@@ -130,10 +130,10 @@
 
         <hr class="my-4">
 
-        <!-- العميل والحالة -->
+        <!-- الزبون والحالة -->
         <div class="mb-4">
           <h6 class="text-muted mb-3">
-            <i class="fas fa-user ml-2"></i>العميل والحالة
+            <i class="fas fa-user ml-2"></i>الزبون والحالة
           </h6>
           <div class="row g-3">
             <div class="col-md-3">
@@ -151,14 +151,14 @@
                 <span class="text-danger">*</span>
               </label>
               <div class="input-group">
-                {{ form.customer_id(class="custom-select select2", id=form.customer_id.id, data_endpoint=url_for('api.search_customers'), data_placeholder="ابحث عن العميل") }}
+                {{ form.customer_id(class="custom-select select2", id=form.customer_id.id, data_endpoint=url_for('api.search_customers'), data_placeholder="ابحث عن الزبون") }}
                 <a href="{{ url_for('customers_bp.create_form', return_to=url_for('warehouse_bp.preorder_create')) }}"
-                   class="btn btn-outline-primary" title="إضافة عميل جديد" target="_blank">
+                   class="btn btn-outline-primary" title="إضافة زبون جديد" target="_blank">
                   <i class="fa fa-user-plus"></i>
                 </a>
               </div>
               {% for e in form.customer_id.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-              <small class="text-muted">اختر عميلاً من القائمة أو أضف عميلاً جديداً</small>
+              <small class="text-muted">اختر زبوناً من القائمة أو أضف زبوناً جديداً</small>
             </div>
           </div>
         </div>
@@ -515,7 +515,7 @@
         dropdownParent: $('#preorderForm'),
         minimumInputLength: 0,
         ajax: {
-              url: '/api/warehouses/' + String(wid) + '/products',
+              url: (window.gmPath||window.gmU||function(p){return p;})('/api/warehouses/') + String(wid) + '/products',
               dataType: 'json',
               delay: 200,
               headers: { 'Accept': 'application/json' },

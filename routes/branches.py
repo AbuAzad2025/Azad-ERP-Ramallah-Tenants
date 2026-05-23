@@ -20,6 +20,13 @@ from permissions_config.enums import SystemPermissions
 branches_bp = Blueprint('branches_bp', __name__, url_prefix='/branches')
 
 
+def _branch_or_404(branch_id: int) -> Branch:
+    from utils.company_scope import assert_branch_access
+
+    assert_branch_access(branch_id)
+    return _get_or_404(Branch, branch_id)
+
+
 # ═══════════════════════════════════════════════════════════════
 # إدارة الفروع - Branches Management
 # ═══════════════════════════════════════════════════════════════
@@ -32,7 +39,9 @@ def list_branches():
     search = request.args.get('q', '').strip()
     active_filter = request.args.get('active', '')
     
-    query = Branch.query
+    from utils.company_scope import filter_branches_query
+
+    query = filter_branches_query(Branch.query)
     
     if search:
         query = query.filter(
@@ -50,11 +59,13 @@ def list_branches():
     
     branches = query.order_by(Branch.is_active.desc(), Branch.name).all()
     
+    from utils.company_scope import branch_expenses_query, branch_warehouses_query
+
     # إحصائيات
     for b in branches:
         b.employees_count = Employee.query.filter_by(branch_id=b.id).count()
-        b.expenses_count = Expense.query.filter_by(branch_id=b.id).count()
-        b.warehouses_count = Warehouse.query.filter_by(branch_id=b.id).count()
+        b.expenses_count = branch_expenses_query(b.id).count()
+        b.warehouses_count = branch_warehouses_query(b.id).count()
         b.sites_count = Site.query.filter_by(branch_id=b.id).count()
     
     return render_template('branches/list.html', branches=branches, search=search, active_filter=active_filter)
@@ -67,7 +78,17 @@ def create_branch():
     """إنشاء فرع جديد"""
     if request.method == 'POST':
         try:
+            from utils.branch_context import resolve_branch_id
+            from utils.company_scope import assert_company_access, default_company
+
+            company_id = request.form.get('company_id', type=int)
+            if not company_id:
+                dc = default_company()
+                company_id = dc.id if dc else None
+            if company_id:
+                assert_company_access(int(company_id))
             b = Branch(
+                company_id=int(company_id) if company_id else None,
                 name=request.form.get('name', '').strip(),
                 code=request.form.get('code', '').strip().upper(),
                 address=request.form.get('address', '').strip() or None,
@@ -106,8 +127,19 @@ def create_branch():
             current_app.logger.exception('internal error')
             utils.flash_error("خطأ في إنشاء الفرع")
     
+    from models import Company
+    from utils.company_scope import default_company, filter_companies_query
+
     employees = Employee.query.order_by(Employee.name).all()
-    return render_template('branches/form.html', branch=None, employees=employees)
+    companies = filter_companies_query(Company.query.filter_by(is_active=True).order_by(Company.name)).all()
+    dc = default_company()
+    return render_template(
+        'branches/form.html',
+        branch=None,
+        employees=employees,
+        companies=companies,
+        default_company_id=dc.id if dc else None,
+    )
 
 
 @branches_bp.route('/<int:branch_id>/edit', methods=['GET', 'POST'], endpoint='edit_branch')
@@ -115,10 +147,16 @@ def create_branch():
 @permission_required(SystemPermissions.MANAGE_BRANCHES)
 def edit_branch(branch_id):
     """تعديل فرع"""
-    b = _get_or_404(Branch, branch_id)
+    b = _branch_or_404(branch_id)
     
     if request.method == 'POST':
         try:
+            from utils.company_scope import assert_company_access
+
+            company_id = request.form.get('company_id', type=int)
+            if company_id and b.code != 'MAIN':
+                assert_company_access(int(company_id))
+                b.company_id = int(company_id)
             b.name = request.form.get('name', '').strip()
             b.code = request.form.get('code', '').strip().upper()
             
@@ -161,8 +199,12 @@ def edit_branch(branch_id):
             current_app.logger.exception('internal error')
             utils.flash_error("خطأ في تحديث الفرع")
     
+    from models import Company
+    from utils.company_scope import filter_companies_query
+
     employees = Employee.query.order_by(Employee.name).all()
-    return render_template('branches/form.html', branch=b, employees=employees)
+    companies = filter_companies_query(Company.query.filter_by(is_active=True).order_by(Company.name)).all()
+    return render_template('branches/form.html', branch=b, employees=employees, companies=companies, default_company_id=b.company_id)
 
 
 @branches_bp.route('/<int:branch_id>/archive', methods=['POST'], endpoint='archive_branch')
@@ -170,7 +212,7 @@ def edit_branch(branch_id):
 @permission_required(SystemPermissions.MANAGE_BRANCHES)
 def archive_branch(branch_id):
     """أرشفة فرع (soft delete)"""
-    b = _get_or_404(Branch, branch_id)
+    b = _branch_or_404(branch_id)
     
     if b.code == 'MAIN':
         utils.flash_error("لا يمكن أرشفة الفرع الرئيسي")
@@ -198,7 +240,7 @@ def archive_branch(branch_id):
 @permission_required(SystemPermissions.MANAGE_BRANCHES)
 def restore_branch(branch_id):
     """استعادة فرع من الأرشيف"""
-    b = _get_or_404(Branch, branch_id)
+    b = _branch_or_404(branch_id)
     b.is_archived = False
     b.archived_at = None
     b.archived_by = None
@@ -221,13 +263,15 @@ def restore_branch(branch_id):
 @permission_required(SystemPermissions.MANAGE_BRANCHES)
 def branch_dashboard(branch_id):
     """لوحة تحكم متقدمة للفرع"""
-    branch = _get_or_404(Branch, branch_id)
+    from utils.company_scope import branch_expenses_query, branch_warehouses_query
+
+    branch = _branch_or_404(branch_id)
     
     # إحصائيات
     stats = {
         'employees_count': Employee.query.filter_by(branch_id=branch_id).count(),
         'sites_count': Site.query.filter_by(branch_id=branch_id).count(),
-        'warehouses_count': Warehouse.query.filter_by(branch_id=branch_id).count(),
+        'warehouses_count': branch_warehouses_query(branch_id).count(),
         'monthly_expenses': 0.0
     }
     
@@ -237,8 +281,7 @@ def branch_dashboard(branch_id):
     from models import convert_amount
     
     start_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    month_expenses = Expense.query.filter(
-        Expense.branch_id == branch_id,
+    month_expenses = branch_expenses_query(branch_id).filter(
         Expense.date >= start_of_month
     ).all()
     
@@ -257,7 +300,7 @@ def branch_dashboard(branch_id):
     
     # قوائم
     employees = Employee.query.filter_by(branch_id=branch_id).order_by(Employee.name).all()
-    recent_expenses = Expense.query.filter_by(branch_id=branch_id).order_by(Expense.date.desc()).limit(10).all()
+    recent_expenses = branch_expenses_query(branch_id).order_by(Expense.date.desc()).limit(10).all()
     
     return render_template('branches/dashboard.html', 
                          branch=branch, 
@@ -275,12 +318,14 @@ def branch_dashboard(branch_id):
 @permission_required(SystemPermissions.MANAGE_BRANCHES)
 def list_sites(branch_id):
     """قائمة المواقع لفرع معين"""
-    branch = _get_or_404(Branch, branch_id)
+    from utils.company_scope import branch_expenses_query
+
+    branch = _branch_or_404(branch_id)
     sites = Site.query.filter_by(branch_id=branch_id).order_by(Site.is_active.desc(), Site.name).all()
     
     for s in sites:
         s.employees_count = Employee.query.filter_by(site_id=s.id).count()
-        s.expenses_count = Expense.query.filter_by(site_id=s.id).count()
+        s.expenses_count = branch_expenses_query(branch_id).filter_by(site_id=s.id).count()
     
     return render_template('branches/sites_list.html', branch=branch, sites=sites)
 
@@ -290,7 +335,7 @@ def list_sites(branch_id):
 @permission_required(SystemPermissions.MANAGE_BRANCHES)
 def create_site(branch_id):
     """إنشاء موقع جديد"""
-    branch = _get_or_404(Branch, branch_id)
+    branch = _branch_or_404(branch_id)
     
     if request.method == 'POST':
         try:
@@ -417,14 +462,16 @@ def branch_report(branch_id):
     """تقرير مفصل لفرع: نفقات، موظفين، مستودعات، مواقع"""
     from sqlalchemy import func
     
-    branch = _get_or_404(Branch, branch_id)
+    from utils.company_scope import branch_expenses_query, branch_warehouses_query
+
+    branch = _branch_or_404(branch_id)
     
     # إحصائيات
     from decimal import Decimal
     from models import convert_amount
     
     # حساب إجمالي المصاريف مع تحويل العملات
-    all_branch_expenses = Expense.query.filter_by(branch_id=branch_id).all()
+    all_branch_expenses = branch_expenses_query(branch_id).all()
     expenses_total_ils = Decimal('0.00')
     for exp in all_branch_expenses:
         amt = Decimal(str(exp.amount or 0))
@@ -439,13 +486,13 @@ def branch_report(branch_id):
     stats = {
         'employees_count': Employee.query.filter_by(branch_id=branch_id).count(),
         'sites_count': Site.query.filter_by(branch_id=branch_id, is_active=True).count(),
-        'warehouses_count': Warehouse.query.filter_by(branch_id=branch_id).count(),
+        'warehouses_count': branch_warehouses_query(branch_id).count(),
         'expenses_count': len(all_branch_expenses),
         'expenses_total': float(expenses_total_ils),
     }
     
     # أعلى 5 نفقات
-    top_expenses = Expense.query.filter_by(branch_id=branch_id).order_by(Expense.amount.desc()).limit(5).all()
+    top_expenses = branch_expenses_query(branch_id).order_by(Expense.amount.desc()).limit(5).all()
     
     # نفقات حسب النوع مع تحويل العملات
     from models import ExpenseType

@@ -83,6 +83,22 @@
               </div>
             </div>
 
+            <div class="row">
+              <div class="col-md-7">
+                <div class="form-group mb-3">
+                  {{ form.branch_ids.label(class="form-label") }}
+                  {{ form.branch_ids(class="custom-select", multiple=true, size="4") }}
+                  <small class="text-muted d-block">حدّد الفروع التي يرى بياناتها هذا المستخدم.</small>
+                </div>
+              </div>
+              <div class="col-md-5">
+                <div class="form-group mb-3">
+                  {{ form.primary_branch_id.label(class="form-label") }}
+                  {{ form.primary_branch_id(class="custom-select") }}
+                </div>
+              </div>
+            </div>
+
             <div class="form-text text-muted">إن تركت كلمة المرور فارغة أثناء التعديل فلن تتغيّر.</div>
           </div>
         </div>

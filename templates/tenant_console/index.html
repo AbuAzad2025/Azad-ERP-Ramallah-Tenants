@@ -4,18 +4,38 @@
 {% block tenant_console_content %}
 <div class="tenant-console-hero d-flex flex-wrap align-items-center justify-content-between gap-3">
   <div>
-    <h4 class="mb-1 font-weight-bold">لوحة مالك التينانت</h4>
+    <h4 class="mb-1 font-weight-bold">
+      {{ tenant_meta.display_name|default(system_settings.company_name)|default(gm_tenant_slug) }}
+    </h4>
     <p class="text-muted mb-0 small">{{ hub_tagline }}</p>
-    <p class="mb-0 small mt-1">
-      نطاق معزول عن <strong>منصة أزاد</strong> — بياناتك في schema
-      <code>{{ gm_tenant_slug }}</code>
+    <p class="mb-0 small mt-1 text-muted">
+      <code>/t/{{ gm_tenant_slug }}</code>
+      {% if tenant_meta.schema_name %}
+      · schema <code>{{ tenant_meta.schema_name }}</code>
+      {% endif %}
+      {% if owner_stats.open_fiscal_label %}
+      · فترة مفتوحة: <strong>{{ owner_stats.open_fiscal_label }}</strong>
+      {% endif %}
     </p>
   </div>
-  {% if not is_tenant_session %}
-  <div class="alert alert-warning mb-0 py-2 px-3 small">
-    للتعديل على الهوية والترويسة سجّل الدخول كـ <strong>مالك التينانت</strong>.
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    {% if tenant_meta.is_active %}
+    <span class="badge badge-success">نشط</span>
+    {% else %}
+    <span class="badge badge-danger">موقوف</span>
+    {% endif %}
+    {% if not is_tenant_session %}
+    <div class="alert alert-warning mb-0 py-2 px-3 small">
+      للتعديل على الهوية سجّل الدخول كـ <strong>مالك التينانت</strong>.
+    </div>
+    {% endif %}
+    <a href="{{ control_url }}" class="btn btn-danger btn-sm">
+      <i class="fas fa-sliders-h"></i> مركز التحكم
+    </a>
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary btn-sm">
+      <i class="fas fa-tachometer-alt"></i> لوحة التشغيل
+    </a>
   </div>
-  {% endif %}
 </div>
 
 <div class="row g-3 mb-4">
@@ -34,18 +54,20 @@
         <div class="h6 mb-0">
           {% if print_settings.use_letterhead_image %}صورة ترويسة{% elif print_settings.use_built_header %}هيدر مبني{% else %}افتراضي{% endif %}
         </div>
+        <a href="{{ url_for('tenant_console.branding') }}" class="small">تعديل الهوية →</a>
       </div>
     </div>
   </div>
   <div class="col-md-4">
     <div class="card border-0 shadow-sm h-100">
       <div class="card-body">
-        <div class="text-muted small">مسار الأصول</div>
-        <code class="small">branding/tenants/{{ gm_tenant_slug }}/</code>
+        <div class="text-muted small">الزبائن / الفريق</div>
+        <div class="h6 mb-0">{{ owner_stats.customers_total|default(0) }} زبون</div>
+        <a href="{{ url_for('tenant_console.business_settings') }}" class="small">إعدادات المحاسبة →</a>
       </div>
     </div>
   </div>
 </div>
 
-{% include 'partials/owner_hub_cards.html' %}
+{% include 'tenant_console/_dashboard_widgets.html' %}
 {% endblock %}

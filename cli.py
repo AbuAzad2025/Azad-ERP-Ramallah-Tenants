@@ -3736,7 +3736,7 @@ def gl_recreate_payments(dry_run, payment_id, from_date, to_date, force, list_on
                 expense_ledger_ctx = _payment_expense_ledger(db.session, payment) if payment.expense_id else None
                 
                 entity_account = GL_ACCOUNTS.get("AR", "1100_AR")
-                entity_name = "عميل"
+                entity_name = "زبون"
                 
                 if payment.entity_type == PaymentEntityType.SUPPLIER.value or payment.supplier_id:
                     entity_account = GL_ACCOUNTS.get("AP", "2000_AP")
@@ -4218,11 +4218,11 @@ def fiscal_period_close(period_key, scope, no_gl, no_carry, no_lock):
 @click.command("accounting-audit")
 @click.option("--limit", type=int, default=0, show_default=True, help="0 = كل الجهات")
 @click.option("--fix", is_flag=True, help="إعادة حساب الأرصدة المخزّنة عند الفروقات")
-@click.option("--fix-policy", is_flag=True, help="فك ربط الدفعات القديمة من المبيعات وربطها بالعميل فقط")
+@click.option("--fix-policy", is_flag=True, help="فك ربط الدفعات القديمة من المبيعات وربطها بالزبون فقط")
 @click.option("--include-archived", is_flag=True)
 @with_appcontext
 def accounting_audit(limit, fix, fix_policy, include_archived):
-    """تدقيق محاسبي صارم: حقوق / التزامات / رصيد للعميل والمورد والشريك."""
+    """تدقيق محاسبي صارم: حقوق / التزامات / رصيد للزبون والمورد والشريك."""
     from utils.accounting_audit import audit_entity_balances, format_audit_report_text
 
     report = audit_entity_balances(
@@ -4235,6 +4235,77 @@ def accounting_audit(limit, fix, fix_policy, include_archived):
     s = report.get("summary", {})
     if any(s.get(k, 0) for k in s):
         raise SystemExit(1)
+
+
+@click.command("comprehensive-audit")
+@click.option("--json-out", type=click.Path(), default=None, help="حفظ التقرير JSON")
+@with_appcontext
+def comprehensive_audit_cmd(json_out):
+    """تدقيق شامل: DB، FK، موديلات، endpoints، قوالب، JavaScript."""
+    from flask import current_app
+    from utils.comprehensive_audit import run_comprehensive_audit, format_audit_report_text
+
+    report = run_comprehensive_audit(current_app)
+    click.echo(format_audit_report_text(report))
+    if json_out:
+        import json as _json
+
+        with open(json_out, "w", encoding="utf-8") as f:
+            _json.dump(report, f, ensure_ascii=False, indent=2, default=str)
+        click.echo(f"JSON: {json_out}")
+    if not report.get("ok"):
+        raise SystemExit(1)
+
+
+@click.command("integration-audit")
+@with_appcontext
+def integration_audit_cmd():
+    """تدقيق تكامل سريع (فروع، فترات، سياسة دفعات)."""
+    from flask import current_app
+    from utils.integration_audit import run_integration_audit
+
+    report = run_integration_audit(current_app)
+    for iss in report.get("issues", []):
+        click.echo(f"[{iss.get('level', 'info')}] {iss.get('msg', '')}")
+    if report.get("ok"):
+        click.echo("OK — integration audit passed.")
+    else:
+        raise SystemExit(1)
+
+
+@click.command("fix-sale-obligations")
+@click.option("--dry-run", is_flag=True, help="عرض عدد السجلات دون تحديث")
+@with_appcontext
+def fix_sale_obligations(dry_run):
+    """محاذاة sales.balance_due مع total_amount (ذمة المستند، open-item على الزبون)."""
+    from sqlalchemy import text
+    from extensions import db
+
+    count_sql = text(
+        """
+        SELECT COUNT(*) FROM sales
+        WHERE ABS(COALESCE(balance_due, 0) - COALESCE(total_amount, 0)) > 0.01
+        """
+    )
+    n = int(db.session.execute(count_sql).scalar() or 0)
+    if dry_run:
+        click.echo(f"سجلات تحتاج تصحيح: {n}")
+        return
+    if n == 0:
+        click.echo("OK — لا توجد مبيعات تحتاج تصحيح balance_due.")
+        return
+    db.session.execute(
+        text(
+            """
+            UPDATE sales
+            SET balance_due = COALESCE(total_amount, 0),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE ABS(COALESCE(balance_due, 0) - COALESCE(total_amount, 0)) > 0.01
+            """
+        )
+    )
+    db.session.commit()
+    click.echo(f"تم تصحيح balance_due لـ {n} مبيعة.")
 
 
 @click.command("audit-integrity")
@@ -5092,6 +5163,88 @@ def branding_audit():
     click.echo(json.dumps(audit_branding_tree(), ensure_ascii=False, indent=2))
 
 
+@branding_group.command("sync-files")
+@with_appcontext
+def branding_sync_files():
+    """توحيد أسماء ملفات الشعارات وربطها بقاعدة البيانات."""
+    from utils.branding_assets import (
+        assert_garage_manager_only,
+        ensure_branding_canonical_files,
+        wire_database_branding_paths,
+        bump_assets_version,
+    )
+    from utils.branding_generate import cleanup_redundant_copies, generate_all_missing_branding
+
+    assert_garage_manager_only()
+    gen = generate_all_missing_branding()
+    report = ensure_branding_canonical_files()
+    removed = cleanup_redundant_copies()
+    changes = wire_database_branding_paths(db.session)
+    bump_assets_version(db.session)
+    db.session.commit()
+    click.echo("generated:")
+    click.echo(gen)
+    click.echo("canonical:")
+    click.echo(report)
+    if removed:
+        click.echo("removed_duplicates:")
+        click.echo(removed)
+    click.echo("db:")
+    click.echo(changes or "(no changes)")
+
+
+@branding_group.command("generate-missing")
+@click.option("--force", is_flag=True, help="إعادة توليد حتى لو الملف موجود")
+@with_appcontext
+def branding_generate_missing(force):
+    """توليد favicon / ترويسة / خلفية دخول الناقصة من الشعارات الحالية."""
+    from utils.branding_assets import assert_garage_manager_only, bump_assets_version, wire_database_branding_paths
+    from utils.branding_generate import cleanup_redundant_copies, generate_all_missing_branding
+
+    assert_garage_manager_only()
+    report = generate_all_missing_branding(force=force)
+    cleanup_redundant_copies()
+    changes = wire_database_branding_paths(db.session)
+    bump_assets_version(db.session)
+    db.session.commit()
+    click.echo(report)
+    click.echo(f"db: {changes or '(no changes)'}")
+
+
+@branding_group.command("cleanup")
+@click.option("--dry-run", is_flag=True, help="عرض ما سيُحذف دون تنفيذ")
+@with_appcontext
+def branding_cleanup(dry_run):
+    """حذف شعارات/صور مكررة وملفات كاش التطوير."""
+    from utils.branding_assets import assert_garage_manager_only, prune_branding_redundancy
+
+    assert_garage_manager_only()
+    report = prune_branding_redundancy(dry_run=dry_run)
+    if not dry_run:
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+    click.echo(report)
+
+
+@branding_group.command("repair-platform-identity")
+@with_appcontext
+def branding_repair_platform_identity():
+    """تصحيح اسم/شركة المنصة إذا خُلطت مع تينانت (الحازم) أو نصوص إدارة الكراج."""
+    from utils.branding_assets import assert_garage_manager_only, repair_platform_identity_settings
+
+    assert_garage_manager_only()
+    changed = repair_platform_identity_settings(db.session)
+    db.session.commit()
+    if changed:
+        click.echo("تم التصحيح:")
+        for k, v in changed.items():
+            click.echo(f"  {k} = {v}")
+    else:
+        click.echo("لا حاجة لتصحيح — إعدادات المنصة سليمة.")
+
+
 @tenants_group.command("setup-production")
 @click.option("--owner-email", envvar="TENANT_OWNER_EMAIL", required=True)
 @click.option("--owner-password", envvar="TENANT_OWNER_PASSWORD", required=True)
@@ -5164,7 +5317,7 @@ def register_cli(app) -> None:
         workflow_check_timeouts, gl_recreate_payments, sync_balances, backfill_sale_invoices,
         fiscal_periods_sync, fiscal_period_close, tenants_ensure_fiscal_tables,
         tenants_ensure_org_structure, tenants_sync_permissions,
-        accounting_audit, audit_integrity, checks_sync_due,
+        accounting_audit, audit_integrity, comprehensive_audit_cmd, integration_audit_cmd, fix_sale_obligations, checks_sync_due,
         seed_product_categories, restore_product_categories,
         restore_upgrade_production,
         upgrade_production,

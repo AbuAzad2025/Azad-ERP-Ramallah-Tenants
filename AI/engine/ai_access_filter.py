@@ -71,7 +71,7 @@ def filter_context(data: Dict[str, Any], access: Optional[Dict[str, Any]] = None
         "total_users": "المستخدمون",
         "active_users": "النشطون",
         "total_services": "الصيانة",
-        "total_customers": "العملاء",
+        "total_customers": "الزبائن",
         "total_suppliers": "الموردون",
         "total_products": "المنتجات",
         "products_in_stock": "منتجات بالمخزون",

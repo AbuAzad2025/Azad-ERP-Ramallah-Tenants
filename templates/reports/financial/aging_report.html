@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
+{% from 'macros/gm_mobile_ui.html' import financial_scroll_shell %}
 
 {% block title %}تقرير الذمم المعمرة{% endblock %}
+{% block body_class %}gm-financial-report{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
@@ -21,7 +23,7 @@
                     <div class="btn-group w-100" role="group">
                         <a href="{{ url_for('financial_reports.aging_report', type='ar') }}" 
                            class="btn {% if report_type == 'ar' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-                            📥 ذمم العملاء (AR)
+                            📥 ذمم الزبائن (AR)
                         </a>
                         <a href="{{ url_for('financial_reports.aging_report', type='ap') }}" 
                            class="btn {% if report_type == 'ap' %}btn-primary{% else %}btn-outline-primary{% endif %}">
@@ -70,11 +72,12 @@
             
             
 
-            <table class="table table-striped table-hover table-rounded">
+            {% call financial_scroll_shell('تفاصيل الذمم') %}
+            <table class="table table-striped table-hover table-rounded no-mobile-cards mb-0">
                 <thead class="table-dark">
                     <tr>
                         <th>#</th>
-                        <th>{% if report_type == 'ar' %}العميل{% else %}الجهة{% endif %}</th>
+                        <th>{% if report_type == 'ar' %}الزبون{% else %}الجهة{% endif %}</th>
                         <th>المبلغ</th>
                         <th>العمر (يوم)</th>
                         <th>التصنيف</th>
@@ -127,8 +130,7 @@
                     </tr>
                 </tfoot>
             </table>
-            
-            
+            {% endcall %}
 
             <div class="row mt-3">
                 <div class="col-md-6">
@@ -148,7 +150,7 @@ function updateReport() {
     const fromDate = document.getElementById('from_date').value;
     const toDate = document.getElementById('to_date').value;
     const type = '{{ report_type }}';
-    window.location.href = `/financial-reports/aging-report?type=${type}&from_date=${fromDate}&to_date=${toDate}`;
+    window.location.href = (window.gmPath||window.gmU||function(p){return p;})(`/financial-reports/aging-report?type=${type}&from_date=${fromDate}&to_date=${toDate}`);
 }
 
 function exportToExcel() {

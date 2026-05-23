@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}استيراد عملاء{% endblock %}
+{% block title %}استيراد زبائن{% endblock %}
 
 {% block breadcrumb %}
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb bg-white px-3 py-2 rounded mb-4">
     <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">الرئيسية</a></li>
-    <li class="breadcrumb-item"><a href="{{ url_for('customers_bp.list_customers') }}">العملاء</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('customers_bp.list_customers') }}">الزبائن</a></li>
     <li class="breadcrumb-item active">استيراد</li>
   </ol>
 </nav>
@@ -15,7 +15,7 @@
 {% block content %}
   <div class="card shadow-sm rounded">
     <div class="card-header text-white d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
-      <h5 class="card-title m-0"><i class="fas fa-file-import ml-2"></i> استيراد عملاء من ملف CSV</h5>
+      <h5 class="card-title m-0"><i class="fas fa-file-import ml-2"></i> استيراد زبائن من ملف CSV</h5>
       <div class="btn-group shadow-sm rounded-pill overflow-hidden bg-white">
           <button onclick="window.history.back()" class="btn btn-sm text-primary fw-bold border-end" title="رجوع">
               <i class="fas fa-arrow-right"></i>

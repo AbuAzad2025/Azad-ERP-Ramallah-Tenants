@@ -112,10 +112,10 @@ def register_ai_listeners(app):
             except Exception as e:
                 print(f"[AI Monitor] Error checking GL batch: {e}")
         
-        # 5. مراقبة العملاء
+        # 5. مراقبة الزبائن
         @event.listens_for(Customer, 'after_update')
         def check_customer_on_update(mapper, connection, customer):
-            """فحص العميل بعد التحديث"""
+            """فحص الزبون بعد التحديث"""
             try:
                 monitor = get_realtime_monitor()
                 if monitor is None:

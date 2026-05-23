@@ -73,8 +73,9 @@ class SystemPermissions(str, Enum):
     # Shipments
     MANAGE_SHIPMENTS = 'manage_shipments'
 
-    # Branches
+    # Branches / Companies
     MANAGE_BRANCHES = 'manage_branches'
+    VIEW_ALL_BRANCHES = 'view_all_branches'
 
     # SaaS
     MANAGE_SAAS = 'manage_saas'

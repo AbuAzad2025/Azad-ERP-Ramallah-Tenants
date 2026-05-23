@@ -1,0 +1,8 @@
+{# رابط جانبي في لوحة الأمان — يُعرض فقط إذا can_ep #}
+{% macro link(endpoint, url, icon, label, active=False, danger=False) %}
+{% if can_ep(endpoint) %}
+<a href="{{ url }}" class="nav-link {% if danger %}danger-link{% endif %} {% if active %}active{% endif %}">
+  <i class="{{ icon }}"></i> <span>{{ label }}</span>
+</a>
+{% endif %}
+{% endmacro %}

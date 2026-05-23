@@ -36,9 +36,11 @@
           </button>
       </div>
   </div>
+  {% if has_perm('manage_shipments') %}
   <a href="{{ url_for('shipments_bp.create_shipment', destination_id=warehouse.id) if warehouse else url_for('shipments_bp.create_shipment') }}" class="btn btn-success btn-sm btn-modern">
     <i class="fa fa-plus"></i> إضافة شحنة
   </a>
+  {% endif %}
 </div>
 
 <div class="card shadow-sm mb-4 card-hover">

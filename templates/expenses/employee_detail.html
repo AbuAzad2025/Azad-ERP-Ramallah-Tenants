@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}تفاصيل الموظف {{ employee.name }}{% endblock %}
 
 {% block content %}
@@ -22,7 +22,7 @@
         <a href="{{ url_for('expenses_bp.employees_list') }}" class="btn btn-outline-secondary">
           <i class="fas fa-arrow-right"></i> رجوع
         </a>
-        {% if current_user.has_permission('manage_expenses') %}
+        {% if has_perm('manage_expenses') %}
         <a href="{{ url_for('expenses_bp.edit_employee', emp_id=employee.id) }}" class="btn btn-warning">
           <i class="fas fa-edit ml-1"></i> تعديل
         </a>
@@ -148,7 +148,7 @@
                 <a href="{{ url_for('expenses_bp.detail', exp_id=e.id) }}" class="btn btn-sm btn-info">
                   <i class="fas fa-eye"></i>
                 </a>
-                {% if current_user.has_permission('manage_expenses') %}
+                {% if has_perm('manage_expenses') %}
                 <a href="{{ url_for('expenses_bp.edit', exp_id=e.id) }}" class="btn btn-sm btn-warning">
                   <i class="fas fa-edit"></i>
                 </a>
@@ -157,7 +157,7 @@
                   <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
                 </form>
                 {% endif %}
-                {% if current_user.has_permission('manage_payments') and not e.is_paid %}
+                {% if has_perm('manage_payments') and not e.is_paid %}
                 <a href="{{ url_for('expenses_bp.pay', exp_id=e.id) }}" class="btn btn-sm btn-outline-success">
                   <i class="fas fa-money-bill-wave"></i>
                 </a>

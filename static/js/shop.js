@@ -219,6 +219,9 @@
   };
 
   const postJSON = async (url, payload = {}) => {
+    if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_shop')) {
+      return { ok: false, data: { message: 'ليس لديك صلاحية لهذا الإجراء.' } };
+    }
     const r = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf(), 'X-CSRF-Token': csrf() },

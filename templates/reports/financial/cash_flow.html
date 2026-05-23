@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
+{% from 'macros/gm_mobile_ui.html' import financial_scroll_shell %}
 
 {% block title %}قائمة التدفقات النقدية{% endblock %}
+{% block body_class %}gm-financial-report{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
@@ -33,7 +35,8 @@
                 </div>
             </div>
             
-            <table class="table table-bordered table-rounded table-hover">
+            {% call financial_scroll_shell('التدفقات النقدية') %}
+            <table class="table table-bordered table-rounded table-hover no-mobile-cards mb-0">
                 
 
                 <thead class="table-success">
@@ -43,7 +46,7 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td>تدفقات نقدية واردة (من العملاء)</td>
+                        <td>تدفقات نقدية واردة (من الزبائن)</td>
                         <td class="text-end text-success fw-bold">+{{ "{:,.2f}".format(operating.inflows) }} ₪</td>
                     </tr>
                     <tr>
@@ -123,8 +126,7 @@
                     </tr>
                 </tfoot>
             </table>
-            
-            
+            {% endcall %}
 
             <div class="row mt-3">
                 <div class="col-md-6">
@@ -143,7 +145,7 @@
 function updateReport() {
     const fromDate = document.getElementById('from_date').value;
     const toDate = document.getElementById('to_date').value;
-    window.location.href = `/reports/financial/cash-flow?start_date=${fromDate}&end_date=${toDate}`;
+    window.location.href = (window.gmPath||window.gmU||function(p){return p;})(`/reports/financial/cash-flow?start_date=${fromDate}&end_date=${toDate}`);
 }
 
 function exportToExcel() {

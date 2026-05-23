@@ -32,6 +32,22 @@
   }
   .owner-hub-card { transition: transform .15s, box-shadow .15s; }
   .owner-hub-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.1) !important; }
+  .tenant-stat-card {
+    display: block; position: relative; overflow: hidden;
+    border-radius: 10px; padding: 1rem 1.1rem; color: #fff;
+    min-height: 100px; box-shadow: 0 2px 8px rgba(0,0,0,.12);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .tenant-stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.18); color: #fff; }
+  .tenant-stat-card--green { background: linear-gradient(135deg, #38a169 0%, #276749 100%); }
+  .tenant-stat-card--blue { background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%); }
+  .tenant-stat-card--amber { background: linear-gradient(135deg, #d69e2e 0%, #b7791f 100%); }
+  .tenant-stat-card--purple { background: linear-gradient(135deg, #805ad5 0%, #553c9a 100%); }
+  .tenant-stat-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+  .tenant-stat-label { font-size: 0.8rem; opacity: .95; }
+  .tenant-stat-icon {
+    position: absolute; left: 12px; bottom: 8px; font-size: 2rem; opacity: .2;
+  }
   @media (max-width: 991px) {
     .tenant-console-wrap { flex-direction: column; }
     .tenant-console-sidebar { width: 100%; }
@@ -59,12 +75,15 @@
       </a>
       {% endif %}
       {% for group in tenant_console_nav_groups or [] %}
-      <div class="nav-header">{{ group.title }}</div>
-      {% for item in group.items %}
-      <a href="{{ url_for(item.endpoint) }}"
-         class="{% if request.endpoint == item.endpoint or (item.endpoint == 'tenant_fiscal_bp.index' and request.endpoint and request.endpoint.startswith('tenant_fiscal_bp.')) %}active{% endif %}">
-        <i class="fas {{ item.icon }}"></i> {{ item.label }}
+      <div class="nav-header">{{ group['title'] }}</div>
+      {% for item in group['items'] %}
+      {% set item_href = safe_url_for(item['endpoint']) %}
+      {% if item_href %}
+      <a href="{{ item_href }}"
+         class="{% if request.endpoint == item['endpoint'] or (item['endpoint'] == 'tenant_fiscal_bp.index' and request.endpoint and request.endpoint.startswith('tenant_fiscal_bp.')) or (item['endpoint'] in ('tenant_console.activity', 'tenant_console.control') and request.endpoint == item['endpoint']) %}active{% endif %}">
+        <i class="fas {{ item['icon'] }}"></i> {{ item['label'] }}
       </a>
+      {% endif %}
       {% endfor %}
       {% endfor %}
       <div class="nav-header mt-2">المنصة</div>

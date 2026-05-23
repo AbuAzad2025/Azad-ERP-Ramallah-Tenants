@@ -130,9 +130,9 @@
   <input type="date" name="end_date" value="{{ request.args.get('end_date', '') }}" class="form-control form-control-modern">
 </div>
 <div class="col-md-3">
-  <label class="form-label"><i class="fas fa-user"></i> العميل</label>
+  <label class="form-label"><i class="fas fa-user"></i> الزبون</label>
   <select name="customer_id" class="form-select form-control-modern">
-    <option value="">جميع العملاء</option>
+    <option value="">جميع الزبائن</option>
     {% for cust in all_customers %}
     <option value="{{ cust.id }}" {% if request.args.get('customer_id') == cust.id|string %}selected{% endif %}>{{ cust.name }}</option>
     {% endfor %}
@@ -177,7 +177,7 @@
   <th class="text-center">#</th>
   <th>رقم الفاتورة</th>
   <th>التاريخ</th>
-  <th>العميل</th>
+  <th>الزبون</th>
   <th class="text-center">عدد الأصناف</th>
   <th class="text-end">الإجمالي</th>
   <th class="text-center">الحالة</th>
@@ -202,7 +202,7 @@
     <br><small class="text-muted"><i class="fas fa-phone"></i> {{ sale.customer.phone or '—' }}</small>
     {% endif %}
     {% else %}
-    <span class="text-muted">بدون عميل</span>
+    <span class="text-muted">بدون زبون</span>
     {% endif %}
   </td>
   <td class="text-center">

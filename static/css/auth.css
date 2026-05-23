@@ -10,9 +10,9 @@
   --text-muted: #7f8c8d;
 }
 
-body {
+body.auth-page {
   font-family: 'Tajawal', sans-serif;
-  background: url("../branding/platform/auth/login_bg.webp") no-repeat center center fixed;
+  background: var(--primary-gradient) no-repeat center center fixed;
   background-size: cover;
   min-height: 100vh;
   margin: 0;
@@ -101,6 +101,16 @@ body::before {
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: floatUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: hidden;
+}
+
+.auth-brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 56px;
+  margin: 0 auto 1rem;
+  overflow: hidden;
 }
 
 @keyframes floatUp {
@@ -108,15 +118,16 @@ body::before {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.auth-logo {
-  max-width: 100px;
-  max-height: 48px;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  margin: 0 auto 1rem;
+body.auth-page .auth-logo,
+body.auth-page .gm-brand-mark.auth-logo {
   display: block;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  max-width: 120px !important;
+  max-height: 48px !important;
+  width: auto !important;
+  height: auto !important;
+  object-fit: contain !important;
+  margin: 0 auto;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .auth-title {
@@ -423,11 +434,13 @@ body::before {
   opacity: 0.9;
 }
 
-.footer-logo {
-  height: 24px;
-  width: auto;
-  max-width: 80px;
-  object-fit: contain;
+body.auth-page .footer-logo,
+body.auth-page .gm-brand-mark.footer-logo {
+  height: 24px !important;
+  width: auto !important;
+  max-width: 80px !important;
+  max-height: 24px !important;
+  object-fit: contain !important;
   filter: brightness(1.05);
 }
 

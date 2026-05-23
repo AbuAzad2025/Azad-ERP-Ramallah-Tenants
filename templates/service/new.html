@@ -25,10 +25,10 @@
   <form method="POST" id="serviceForm" autocomplete="off" action="{{ url_for('service.create_request') }}">
     {{ form.hidden_tag() }}
 
-    <!-- معلومات العميل -->
+    <!-- معلومات الزبون -->
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-header bg-gradient-primary text-white">
-        <h5 class="mb-0"><i class="fas fa-user"></i> معلومات العميل</h5>
+        <h5 class="mb-0"><i class="fas fa-user"></i> معلومات الزبون</h5>
       </div>
       <div class="card-body">
         {% if form.errors %}
@@ -52,17 +52,17 @@
                 id=form.customer_id.id,
                 **{
                   'data-endpoint': url_for('api.customers'),
-                  'data-placeholder': 'اختر العميل',
+                  'data-placeholder': 'اختر الزبون',
                   'data-allow-clear': 1
                 }
               ) }}
               <a href="{{ url_for('customers_bp.create_form', return_to=url_for('service.create_request')) }}" 
-                 class="btn btn-outline-primary" title="إضافة عميل جديد" target="_blank">
+                 class="btn btn-outline-primary" title="إضافة زبون جديد" target="_blank">
                 <i class="fa fa-user-plus"></i>
               </a>
             </div>
             {% for e in form.customer_id.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-            <div class="form-text">اختر عميلًا أو أنشئ عميلًا جديدًا من زر (+).</div>
+            <div class="form-text">اختر زبونًا أو أنشئ زبونًا جديدًا من زر (+).</div>
           </div>
         </div>
       </div>

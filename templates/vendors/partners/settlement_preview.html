@@ -730,7 +730,7 @@ section.content .container-fluid .col-md-12 {
                                     <th>النوع</th>
                                     <th>الرقم</th>
                                     <th>التاريخ</th>
-                                    <th>العميل</th>
+                                    <th>الزبون</th>
                                     <th>القطعة</th>
                                     <th class="text-end">الكمية</th>
                                     <th class="text-end">السعر</th>
@@ -882,12 +882,12 @@ section.content .container-fluid .col-md-12 {
                 <i class="fas fa-file-invoice-dollar text-danger"></i> التزامات الشريك - ما عليه لنا
             </h4>
             
-            <!-- مبيعات للشريك (كعميل) -->
+            <!-- مبيعات للشريك (كزبون) -->
             {% if balance_data.obligations.sales_to_partner.get('items', [])|length > 0 %}
             <div class="card settlement-detail-card">
                 <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        <i class="fas fa-shopping-cart"></i> مبيعات للشريك (كعميل)
+                        <i class="fas fa-shopping-cart"></i> مبيعات للشريك (كزبون)
                         <span class="badge bg-light text-dark">{{ balance_data.obligations.sales_to_partner.count }}</span>
                     </h5>
                     <button class="btn btn-sm btn-light no-print" onclick="printTable('salesToPartnerTable', 'المبيعات للشريك')">

@@ -15,7 +15,7 @@ notes_bp = Blueprint('notes_bp', __name__, url_prefix='/notes', template_folder=
 
 ENTITY_TYPES = [
     ('', '-- اختر --'),
-    ('CUSTOMER', 'عميل'),
+    ('CUSTOMER', 'زبون'),
     ('SALE', 'بيع'),
     ('PRODUCT', 'منتج'),
     ('SUPPLIER', 'مورد'),

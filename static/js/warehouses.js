@@ -48,6 +48,9 @@
   };
 
   function postJSON(url, payload) {
+    if (typeof window.gmRequirePermAny === 'function' && !window.gmRequirePermAny('manage_warehouses', 'manage_inventory')) {
+      return Promise.reject(new Error('ليس لديك صلاحية لهذا الإجراء.'));
+    }
     return fetchWithTimeout(url, {
       method: 'POST',
       headers: {
@@ -72,6 +75,9 @@
   }
 
   function postForm(url, formElem) {
+    if (typeof window.gmRequirePermAny === 'function' && !window.gmRequirePermAny('manage_warehouses', 'manage_inventory')) {
+      return Promise.reject(new Error('ليس لديك صلاحية لهذا الإجراء.'));
+    }
     var fd = new FormData(formElem);
     var csrf = getCSRFToken();
     if (csrf && !fd.get('csrf_token')) fd.append('csrf_token', csrf);
@@ -228,7 +234,7 @@
       var qty = form.querySelector('[name="quantity"]')?.value;
       var date = form.querySelector('[name="date"]')?.value || '';
       var notes = form.querySelector('[name="notes"]')?.value || '';
-      var endpoint = '/warehouses/' + (sid || '').toString().trim() + '/transfer';
+      var endpoint = (window.gmPath || function(p){ return p; })('/warehouses/' + (sid || '').toString().trim() + '/transfer');
       if (!pid || !sid || !did || !qty || sid === did) {
         showNotification('تحقق من المدخلات: اختر الصنف، المصدر، الوجهة، والكمية أكبر من صفر.', 'warning');
         if (btn) btn.disabled = false;
@@ -272,7 +278,7 @@
       var unit_cost = form.querySelector('[name="unit_cost"]')?.value;
       var partner_id = form.querySelector('[name="partner_id"]')?.value || null;
       var notes = form.querySelector('[name="notes"]')?.value || '';
-      var endpoint = '/warehouses/' + (wid || '').toString().trim() + '/exchange';
+      var endpoint = (window.gmPath || function(p){ return p; })('/warehouses/' + (wid || '').toString().trim() + '/exchange');
       if (!wid || !pid || !qty || !dir) {
         showNotification('تحقق من المدخلات: اختر الصنف والاتجاه والكمية.', 'warning');
         if (btn) btn.disabled = false;

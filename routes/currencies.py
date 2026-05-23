@@ -1,12 +1,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 from decimal import Decimal
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for, current_app
 from flask_login import current_user, login_required
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, or_
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from extensions import db
@@ -82,36 +82,51 @@ def list_exchange_rates():
     """قائمة أسعار الصرف"""
     page = request.args.get("page", 1, type=int)
     per_page = 20
-    
-    exchange_rates = ExchangeRate.query.order_by(
-        desc(ExchangeRate.valid_from), 
-        ExchangeRate.base_code, 
-        ExchangeRate.quote_code
+    currency_filter = (request.args.get("currency") or "").strip().upper()
+
+    query = ExchangeRate.query
+    if currency_filter:
+        query = query.filter(
+            or_(
+                ExchangeRate.base_code == currency_filter,
+                ExchangeRate.quote_code == currency_filter,
+            )
+        )
+    exchange_rates = query.order_by(
+        desc(ExchangeRate.valid_from),
+        ExchangeRate.base_code,
+        ExchangeRate.quote_code,
     ).paginate(page=page, per_page=per_page, error_out=False)
-    
-    # إضافة أسعار السوق الحالية لكل سعر
+
     market_rates = {}
+    pair_cache: dict[tuple[str, str], dict] = {}
+    now = datetime.now(timezone.utc)
     for rate in exchange_rates.items:
-        try:
-            from models import _fetch_external_fx_rate
-            from datetime import datetime
-            
-            # محاولة جلب السعر من السيرفرات العالمية مباشرة
-            external_rate = _fetch_external_fx_rate(rate.base_code, rate.quote_code, datetime.now(timezone.utc))
-            
-            if external_rate and external_rate > 0:
-                market_rates[rate.id] = {
-                    'success': True,
-                    'rate': float(external_rate),
-                    'source': 'external',
-                    'base': rate.base_code,
-                    'quote': rate.quote_code,
-                    'timestamp': datetime.now(timezone.utc)
+        pair_key = (rate.base_code, rate.quote_code)
+        if pair_key not in pair_cache:
+            try:
+                from models import _fetch_external_fx_rate
+
+                external_rate = _fetch_external_fx_rate(rate.base_code, rate.quote_code, now)
+                if external_rate and external_rate > 0:
+                    pair_cache[pair_key] = {
+                        "success": True,
+                        "rate": float(external_rate),
+                        "source": "external",
+                        "base": rate.base_code,
+                        "quote": rate.quote_code,
+                        "timestamp": now,
+                    }
+                else:
+                    pair_cache[pair_key] = {"success": False, "rate": 0, "source": "failed"}
+            except Exception:
+                pair_cache[pair_key] = {
+                    "success": False,
+                    "rate": 0,
+                    "source": "error",
+                    "error": "تعذر تنفيذ العملية. حاول مرة أخرى.",
                 }
-            else:
-                market_rates[rate.id] = {'success': False, 'rate': 0, 'source': 'failed'}
-        except Exception as e:
-            market_rates[rate.id] = {'success': False, 'rate': 0, 'source': 'error', 'error': 'تعذر تنفيذ العملية. حاول مرة أخرى.'}
+        market_rates[rate.id] = pair_cache[pair_key]
     
     # دالة للحصول على اسم العملة بالعربي
     def get_currency_name(code):
@@ -127,10 +142,13 @@ def list_exchange_rates():
         }
         return currency_names.get(code, code)
     
-    return render_template("currencies/exchange_rates.html", 
-                         exchange_rates=exchange_rates, 
-                         market_rates=market_rates,
-                         get_currency_name=get_currency_name)
+    return render_template(
+        "currencies/exchange_rates.html",
+        exchange_rates=exchange_rates,
+        market_rates=market_rates,
+        get_currency_name=get_currency_name,
+        currency_filter=currency_filter,
+    )
 
 
 @currencies_bp.route("/exchange-rates/new", methods=["GET", "POST"], endpoint="new_exchange_rate")
@@ -141,12 +159,20 @@ def new_exchange_rate():
     
     if form.validate_on_submit():
         try:
-            # إنشاء سعر الصرف الجديد
+            valid_from_raw = form.valid_from.data
+            if valid_from_raw:
+                if isinstance(valid_from_raw, datetime):
+                    valid_from_dt = valid_from_raw
+                else:
+                    valid_from_dt = datetime.combine(valid_from_raw, time.min, tzinfo=timezone.utc)
+            else:
+                valid_from_dt = datetime.now(timezone.utc)
+
             exchange_rate = ExchangeRate(
                 base_code=form.base_code.data,
                 quote_code=form.quote_code.data,
                 rate=form.rate.data,
-                valid_from=form.valid_from.data or datetime.now(timezone.utc).date(),
+                valid_from=valid_from_dt,
                 source=form.source.data or "Manual",
                 is_active=form.is_active.data
             )
@@ -183,7 +209,14 @@ def edit_exchange_rate(rate_id):
         try:
             # تحديث البيانات
             exchange_rate.rate = form.rate.data
-            exchange_rate.valid_from = form.valid_from.data or exchange_rate.valid_from
+            valid_from_raw = form.valid_from.data
+            if valid_from_raw:
+                if isinstance(valid_from_raw, datetime):
+                    exchange_rate.valid_from = valid_from_raw
+                else:
+                    exchange_rate.valid_from = datetime.combine(
+                        valid_from_raw, time.min, tzinfo=timezone.utc
+                    )
             exchange_rate.source = form.source.data or "Manual"
             exchange_rate.is_active = form.is_active.data
             

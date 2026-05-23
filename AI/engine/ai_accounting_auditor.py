@@ -308,7 +308,7 @@ class AccountingAuditor:
             max_cancel = _safe_int(limits.get("max_voids_or_cancellations_per_user"), 5)
             for uid, count in cancellation_by_user.items():
                 if uid and count >= max_cancel:
-                    self._add_finding(report, code="MANY_CANCELLATIONS", severity="HIGH", title="إلغاءات/عكس حركات كثيرة", message=f"المستخدم رقم {uid} لديه {count} حركة إلغاء/عكس/استرجاع.", evidence={"count": count}, recommendation="افحص أسباب الإلغاء وهل تتكرر على نفس العميل أو نفس المبلغ.", user_id=uid)
+                    self._add_finding(report, code="MANY_CANCELLATIONS", severity="HIGH", title="إلغاءات/عكس حركات كثيرة", message=f"المستخدم رقم {uid} لديه {count} حركة إلغاء/عكس/استرجاع.", evidence={"count": count}, recommendation="افحص أسباب الإلغاء وهل تتكرر على نفس الزبون أو نفس المبلغ.", user_id=uid)
             for row in settings_events[:100]:
                 self._add_finding(report, code="SYSTEM_ADMIN_CHANGE", severity="HIGH", title="تغيير إداري أو أمني حساس", message=f"حركة إدارية حساسة: {_value(row, 'action', 'event', default='')}", evidence={"at": _iso(_value(row, "created_at")), "details": str(_value(row, "details", "description", "message", default=""))[:500]}, recommendation="راجع من أعطى الصلاحية ولماذا، واحتفظ بموافقة مكتوبة للتغييرات الحساسة.", user_id=_value(row, "user_id", "actor_id"), model="AuditLog", record_id=getattr(row, "id", None))
         except Exception as exc:

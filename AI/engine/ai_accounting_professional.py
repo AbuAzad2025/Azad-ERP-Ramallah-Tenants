@@ -43,8 +43,8 @@ DOUBLE_ENTRY_SYSTEM = {
     },
     "examples": {
         "sale_cash": {"description": "بيع نقدي", "entries": ["مدين: نقدية", "دائن: مبيعات"], "explanation": "زادت النقدية وزاد الإيراد."},
-        "sale_credit": {"description": "بيع آجل", "entries": ["مدين: ذمم العملاء", "دائن: مبيعات/ضريبة حسب الإعدادات"], "explanation": "زاد حق المنشأة على العميل وزاد الإيراد."},
-        "payment_received": {"description": "تحصيل من عميل", "entries": ["مدين: نقدية/بنك", "دائن: ذمم العملاء"], "explanation": "زادت النقدية وانخفضت الذمم."},
+        "sale_credit": {"description": "بيع آجل", "entries": ["مدين: ذمم الزبائن", "دائن: مبيعات/ضريبة حسب الإعدادات"], "explanation": "زاد حق المنشأة على الزبون وزاد الإيراد."},
+        "payment_received": {"description": "تحصيل من زبون", "entries": ["مدين: نقدية/بنك", "دائن: ذمم الزبائن"], "explanation": "زادت النقدية وانخفضت الذمم."},
         "purchase_credit": {"description": "شراء على الحساب", "entries": ["مدين: مخزون/مصروف", "دائن: ذمم الموردين"], "explanation": "زاد الأصل/المصروف وزاد الالتزام."},
         "expense_cash": {"description": "مصروف نقدي", "entries": ["مدين: مصروف", "دائن: نقدية/بنك"], "explanation": "زاد المصروف ونقص النقد."},
     },
@@ -63,7 +63,7 @@ CHART_OF_ACCOUNTS = {
     "accounts": {
         "1000_CASH": {"name": "النقدية", "type": "ASSET", "normal_balance": "DEBIT"},
         "1010_BANK": {"name": "البنك", "type": "ASSET", "normal_balance": "DEBIT"},
-        "1100_AR": {"name": "ذمم العملاء", "type": "ASSET", "normal_balance": "DEBIT"},
+        "1100_AR": {"name": "ذمم الزبائن", "type": "ASSET", "normal_balance": "DEBIT"},
         "1200_INVENTORY": {"name": "المخزون", "type": "ASSET", "normal_balance": "DEBIT"},
         "2000_AP": {"name": "ذمم الموردين", "type": "LIABILITY", "normal_balance": "CREDIT"},
         "2100_VAT_PAYABLE": {"name": "ضريبة قيمة مضافة مستحقة", "type": "LIABILITY", "normal_balance": "CREDIT", "note": "النسبة والقواعد تعتمد على الإعدادات والقانون الساري."},
@@ -88,12 +88,12 @@ class BalanceFormula:
 
 BALANCE_FORMULAS = {
     "customer": BalanceFormula(
-        entity="Customer - العميل",
+        entity="Customer - الزبون",
         formula="الرصيد = أثر المبيعات/الفواتير/الخدمات ± الدفعات ± القيود الافتتاحية/التسويات حسب سياسة النظام",
         components=["مبيعات", "فواتير", "خدمات", "دفعات", "أرصدة افتتاحية", "قيود GL"],
         positive_meaning="قد يعني عليه أو له حسب سياسة عرض الرصيد في النظام؛ لا تفسره دون الرجوع للصفحة/الدالة المعتمدة.",
         negative_meaning="قد يعني عليه أو له حسب سياسة عرض الرصيد في النظام؛ لا تفسره دون الرجوع للصفحة/الدالة المعتمدة.",
-        examples=[{"scenario": "رصيد عميل", "meaning": "اعتمد تفسير النظام، لا افتراض المساعد."}],
+        examples=[{"scenario": "رصيد زبون", "meaning": "اعتمد تفسير النظام، لا افتراض المساعد."}],
     ),
     "supplier": BalanceFormula(
         entity="Supplier - المورد",
@@ -155,7 +155,7 @@ def get_professional_accounting_knowledge() -> Dict[str, Any]:
             "شرح المعادلة المحاسبية",
             "شرح القيد المزدوج",
             "شرح دليل الحسابات كهيكل عام مع الرجوع للدليل الفعلي",
-            "شرح أرصدة العملاء والموردين دون افتراض اتجاه الإشارة",
+            "شرح أرصدة الزبائن والموردين دون افتراض اتجاه الإشارة",
             "شرح القوائم المالية الأساسية",
             "كشف مفاهيمي لأخطاء التوازن في القيود",
         ],

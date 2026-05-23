@@ -88,9 +88,10 @@ def list_returns():
     customer_id = request.args.get('customer_id', 0, type=int)
     search = request.args.get('search', '').strip()
     
-    # Build query
-    query = SaleReturn.query
-    
+    from utils.company_scope import filter_customers_query, filter_sale_returns_query
+
+    query = filter_sale_returns_query(SaleReturn.query)
+
     # Apply filters
     if status and status in ['DRAFT', 'CONFIRMED', 'CANCELLED']:
         query = query.filter_by(status=status)
@@ -111,8 +112,11 @@ def list_returns():
     query = query.order_by(desc(SaleReturn.created_at))
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     
-    # Get all customers for filter
-    customers = Customer.query.filter_by(is_archived=False).order_by(Customer.name).all()
+    customers = (
+        filter_customers_query(Customer.query.filter_by(is_archived=False))
+        .order_by(Customer.name)
+        .all()
+    )
     
     return render_template(
         'sale_returns/list.html',
@@ -130,12 +134,13 @@ def list_returns():
 @login_required
 def create_return(sale_id=None):
     """إنشاء مرتجع جديد"""
-    
+    from utils.company_scope import assert_sale_access, assert_warehouse_access
+
     form = SaleReturnForm()
     sale = None
-    
-    # إذا تم تمرير sale_id، حمل بيانات البيع
+
     if sale_id:
+        assert_sale_access(sale_id)
         sale = db.get_or_404(Sale, sale_id)
         
         if request.method == 'GET':
@@ -167,7 +172,10 @@ def create_return(sale_id=None):
 
     if form.validate_on_submit():
         try:
-            # إنشاء المرتجع
+            if form.sale_id.data:
+                assert_sale_access(int(form.sale_id.data))
+            if form.warehouse_id.data:
+                assert_warehouse_access(int(form.warehouse_id.data))
             sale_return = SaleReturn(
                 sale_id=form.sale_id.data if form.sale_id.data else None,
                 customer_id=form.customer_id.data,
@@ -291,7 +299,11 @@ def create_return(sale_id=None):
     products = Product.query.filter_by(is_active=True).order_by(Product.name).limit(500).all()
     product_choices = [(p.id, f"{p.name} ({p.barcode or 'بدون باركود'})") for p in products]
     
-    warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.name).all()
+    from utils.company_scope import filter_warehouses_query
+
+    warehouses = filter_warehouses_query(
+        Warehouse.query.filter_by(is_active=True)
+    ).order_by(Warehouse.name).all()
     warehouse_choices = [(w.id, w.name) for w in warehouses]
     
     return render_template(
@@ -308,7 +320,9 @@ def create_return(sale_id=None):
 @login_required
 def view_return(return_id):
     """عرض تفاصيل مرتجع"""
-    
+    from utils.company_scope import assert_sale_return_access
+
+    assert_sale_return_access(return_id)
     sale_return = db.get_or_404(SaleReturn, return_id)
     breakdown = None
     try:
@@ -363,7 +377,9 @@ def view_return(return_id):
 @login_required
 def edit_return(return_id):
     """تعديل مرتجع"""
-    
+    from utils.company_scope import assert_sale_return_access
+
+    assert_sale_return_access(return_id)
     sale_return = db.get_or_404(SaleReturn, return_id)
     
     if sale_return.status == 'CANCELLED':
@@ -511,7 +527,11 @@ def edit_return(return_id):
     products = Product.query.filter_by(is_active=True).order_by(Product.name).limit(500).all()
     product_choices = [(p.id, f"{p.name} ({p.barcode or 'بدون باركود'})") for p in products]
     
-    warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.name).all()
+    from utils.company_scope import filter_warehouses_query
+
+    warehouses = filter_warehouses_query(
+        Warehouse.query.filter_by(is_active=True)
+    ).order_by(Warehouse.name).all()
     warehouse_choices = [(w.id, w.name) for w in warehouses]
     
     return render_template(
@@ -528,7 +548,9 @@ def edit_return(return_id):
 @login_required
 def confirm_return(return_id):
     """تأكيد المرتجع"""
-    
+    from utils.company_scope import assert_sale_return_access
+
+    assert_sale_return_access(return_id)
     sale_return = db.get_or_404(SaleReturn, return_id)
     
     if sale_return.status == 'CONFIRMED':
@@ -575,7 +597,9 @@ def confirm_return(return_id):
 @login_required
 def cancel_return(return_id):
     """إلغاء المرتجع"""
-    
+    from utils.company_scope import assert_sale_return_access
+
+    assert_sale_return_access(return_id)
     sale_return = db.get_or_404(SaleReturn, return_id)
     
     if sale_return.status == 'CANCELLED':
@@ -621,7 +645,9 @@ def cancel_return(return_id):
 @login_required
 def delete_return(return_id):
     """حذف المرتجع"""
-    
+    from utils.company_scope import assert_sale_return_access
+
+    assert_sale_return_access(return_id)
     sale_return = db.get_or_404(SaleReturn, return_id)
     
     # فقط المسودات يمكن حذفها
@@ -666,6 +692,9 @@ def delete_return(return_id):
 def get_sale_items(sale_id):
     """الحصول على بنود البيع لتسهيل إنشاء المرتجع"""
     try:
+        from utils.company_scope import assert_sale_access
+
+        assert_sale_access(sale_id)
         sale = db.get_or_404(Sale, sale_id)
 
         # احسب الكمية المتاحة للإرجاع = كمية البيع - مجموع المرتجعات المؤكدة
@@ -724,10 +753,13 @@ def get_sale_items(sale_id):
 @returns_bp.route('/api/customer/<int:customer_id>/sales')
 @login_required
 def get_customer_sales(customer_id: int):
-    """إرجاع آخر المبيعات المؤكدة لعميل محدد لتصفية قائمة الفواتير في المرتجع"""
+    """إرجاع آخر المبيعات المؤكدة لزبون محدد لتصفية قائمة الفواتير في المرتجع"""
     try:
+        from utils.company_scope import assert_customer_access, filter_sales_query
+
+        assert_customer_access(customer_id)
         sales = (
-            Sale.query
+            filter_sales_query(Sale.query)
             .filter_by(customer_id=customer_id, status='CONFIRMED')
             .order_by(Sale.id.desc())
             .limit(100)

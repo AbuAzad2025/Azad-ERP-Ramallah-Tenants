@@ -139,7 +139,7 @@
   <input type="text" name="invoice_number" value="{{ request.args.get('invoice_number', '') }}" class="form-control form-control-modern" placeholder="INV-...">
 </div>
 <div class="col-md-2">
-  <label class="form-label"><i class="fas fa-user"></i> العميل</label>
+  <label class="form-label"><i class="fas fa-user"></i> الزبون</label>
   <select name="customer_id" class="form-select form-control-modern">
     <option value="">الكل</option>
     {% for c in all_customers %}
@@ -198,7 +198,7 @@
   <th class="text-center">#</th>
   <th>رقم الفاتورة</th>
   <th>التاريخ</th>
-  <th>العميل/المورد</th>
+  <th>الزبون/المورد</th>
   <th>النوع</th>
   <th>البائع</th>
   <th class="text-end">الإجمالي</th>

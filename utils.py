@@ -782,6 +782,9 @@ _PERMISSION_ALIASES = {
     "add_partner": {"add_partner", "manage_vendors"},
     "manage_shipments": {"manage_shipments", "manage_inventory", "manage_warehouses"},
     "manage_payments": {"manage_payments", "manage_sales"},
+    "archive_sale": {"archive_sale", "manage_sales"},
+    "view_payments": {"view_payments", "manage_payments"},
+    "manage_checks": {"manage_checks", "manage_payments"},
     "backup_database": {"backup_database", "backup", "backup_db", "download_backup", "db_backup"},
     "restore_database": {"restore_database", "restore", "restore_db", "upload_backup", "db_restore"},
     "view_shop": {"view_shop", "browse_products"},
@@ -819,7 +822,7 @@ def get_cached_exchange_rates():
 
 @cache.memoize(timeout=180)  # 3 دقائق
 def get_cached_customer_balance(customer_id):
-    """الحصول على رصيد العميل من التخزين المؤقت"""
+    """الحصول على رصيد الزبون من التخزين المؤقت"""
     from models import Customer
     customer = db.session.get(Customer, customer_id)
     if customer:
@@ -1468,7 +1471,7 @@ _ENUM_AR = {
     "PaymentStatus": {"PENDING": "قيد الانتظار", "COMPLETED": "مكتملة", "FAILED": "فاشلة", "REFUNDED": "مُرجعة"},
     "PaymentDirection": {"IN": "وارد", "OUT": "صادر"},
     "PaymentEntityType": {
-        "CUSTOMER": "عميل", "SUPPLIER": "مورد", "PARTNER": "شريك", "SHIPMENT": "شحنة",
+        "CUSTOMER": "زبون", "SUPPLIER": "مورد", "PARTNER": "شريك", "SHIPMENT": "شحنة",
         "EXPENSE": "مصروف", "LOAN": "قرض", "SALE": "بيع", "INVOICE": "فاتورة",
         "PREORDER": "حجز", "SERVICE": "صيانة"
     },

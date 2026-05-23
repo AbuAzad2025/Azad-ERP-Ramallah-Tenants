@@ -40,9 +40,9 @@
           </div>
           <div class="col-md-6">
             <div class="form-group">
-              <label><i class="fas fa-user-circle"></i> العميل <span class="text-danger">*</span></label>
+              <label><i class="fas fa-user-circle"></i> الزبون <span class="text-danger">*</span></label>
               <select name="customer_id" class="form-control" required>
-                <option value="">اختر العميل...</option>
+                <option value="">اختر الزبون...</option>
                 {% for customer in customers %}
                 <option value="{{ customer.id }}" 
                   {% if is_edit and template.customer_id == customer.id %}selected{% endif %}>
@@ -50,7 +50,7 @@
                 </option>
                 {% endfor %}
               </select>
-              <small class="text-info"><i class="fas fa-info-circle"></i> إجباري - العميل المستفيد</small>
+              <small class="text-info"><i class="fas fa-info-circle"></i> إجباري - الزبون المستفيد</small>
             </div>
           </div>
         </div>

@@ -107,9 +107,9 @@
             <div class="row">
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label>العميل</label>
+                        <label>الزبون</label>
                         <select name="customer_id" class="form-control">
-                            <option value="">اختر العميل</option>
+                            <option value="">اختر الزبون</option>
                             {% for customer in customers %}
                             <option value="{{ customer.id }}" {% if task and task.customer_id == customer.id %}selected{% endif %}>
                                 {{ customer.name }}

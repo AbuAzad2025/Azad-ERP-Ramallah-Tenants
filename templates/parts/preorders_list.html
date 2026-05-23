@@ -1,4 +1,4 @@
-{% extends 'warehouses/base.html' %}
+﻿{% extends 'warehouses/base.html' %}
 {% block title %}الحجوزات المسبقة{% endblock %}
 {% block page_title %}الحجوزات المسبقة{% endblock %}
 
@@ -101,7 +101,7 @@
                          or p.supplier and p.supplier.name
                          or p.partner and p.partner.name
                          or 'غير محدد' %}
-      {% set entity_type = p.customer and 'عميل'
+      {% set entity_type = p.customer and 'زبون'
                          or p.supplier and 'مورد'
                          or p.partner and 'شريك'
                          or '' %}
@@ -142,7 +142,7 @@
               {% set balance = total - prepaid %}
               
               {# زر تسليم المنتج - يظهر فقط بعد دفع عربون #}
-              {% if current_user.has_permission('manage_sales') and prepaid > 0 %}
+              {% if has_perm('manage_sales') and prepaid > 0 %}
               <form method="post" 
                     action="{{ url_for('warehouse_bp.preorder_convert_to_sale', preorder_id=p.id) }}" 
                     class="d-inline"
@@ -155,7 +155,7 @@
               {% endif %}
               
               {# زر إلغاء #}
-              {% if current_user.has_permission('delete_preorder') %}
+              {% if has_perm('delete_preorder') %}
               <form method="post" 
                     action="{{ url_for('warehouse_bp.preorder_cancel', preorder_id=p.id) }}" 
                     class="d-inline" 
@@ -199,7 +199,7 @@
         $('#preorders-table').DataTable({
           pageLength: 25,
           order: [[8, 'desc']],
-          language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json' }
+          language: { url: (window.gmPath||window.gmU||function(p){return p;})('//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json') }
         });
       }
     })();

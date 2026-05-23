@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
-{% block title %}تحليلات العميل{% endblock %}
+{% block title %}تحليلات الزبون{% endblock %}
 
 {% block breadcrumb %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <nav aria-label="breadcrumb" class="flex-grow-1">
     <ol class="breadcrumb bg-white px-3 py-2 rounded mb-0">
       <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">الرئيسية</a></li>
-      <li class="breadcrumb-item"><a href="{{ url_for('customers_bp.list_customers') }}">العملاء</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('customers_bp.list_customers') }}">الزبائن</a></li>
       <li class="breadcrumb-item active">تحليلات {{ customer.name }}</li>
     </ol>
   </nav>

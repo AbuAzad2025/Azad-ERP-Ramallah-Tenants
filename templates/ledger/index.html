@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}دفتر الأستاذ العام{% endblock %}
 
@@ -652,7 +652,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
             font-size: 8pt;
         }
         @bottom-left {
-            content: "نظام أزاد لإدارة الكراج";
+            content: "{{ system_settings.company_name or system_settings.system_name }}";
             font-size: 8pt;
         }
     }
@@ -700,7 +700,9 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
 </style>
 {% endblock %}
 
+{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
+{{ readonly_banner('view_ledger', 'manage_ledger', 'دفتر الأستاذ') }}
 <section class="content">
     <div class="container-fluid">
         
@@ -734,9 +736,11 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                         </a>
                     </li>
                     <li class="nav-item">
+                        {% if has_perm('manage_ledger') %}
                         <a class="nav-link" id="manual-entry-tab" data-toggle="tab" href="#manual-entry" role="tab">
                             <i class="fas fa-pen-alt"></i> قيد يدوي
                         </a>
+                        {% endif %}
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" id="cogs-audit-tab" data-toggle="tab" href="#cogs-audit" role="tab">
@@ -1020,8 +1024,15 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                                     </div>
                                 </div>
                             </div>
+                            <div class="gm-financial-card mb-2">
+                              <div class="gm-financial-card__head gm-financial-card__head--compact-only">
+                                <span><i class="fas fa-book ml-1"></i> قيود الدفتر</span>
+                                <span class="text-muted small">تمرير أفقي</span>
+                              </div>
+                              <div class="gm-hscroll" data-gm-hscroll>
+                                <div class="gm-hscroll__track">
                             <div class="table-responsive">
-                                <table class="table table-bordered table-hover table-sm" id="ledger-table">
+                                <table class="table table-bordered table-hover table-sm no-mobile-cards" id="ledger-table">
                                     <thead class="table-light">
                                         <tr>
                                             <th style="width: 7%;">
@@ -1102,6 +1113,15 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                                         </tr>
                                     </tfoot>
                                 </table>
+                            </div>
+                                </div>
+                                <div class="gm-hscroll__fade gm-hscroll__fade--start" aria-hidden="true"></div>
+                                <div class="gm-hscroll__fade gm-hscroll__fade--end" aria-hidden="true"></div>
+                                <div class="gm-hscroll__hint d-lg-none">
+                                  <i class="fas fa-arrows-alt-h"></i>
+                                  <span>اسحب أفقياً لعرض كل الأعمدة</span>
+                                </div>
+                              </div>
                             </div>
                             <div class="ledger-pagination-wrapper d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 d-none">
                                 <div class="text-muted small" id="ledger-pagination-summary"></div>
@@ -1339,6 +1359,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                     </div><!-- End Trial Balance Tab -->
                     
                     <!-- Tab 6: Manual Entry -->
+                    {% if has_perm('manage_ledger') %}
                     <div class="tab-pane fade" id="manual-entry" role="tabpanel">
                         
             <!-- القيد اليدوي -->
@@ -1398,7 +1419,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                                             <optgroup label="💰 الأصول (ما تملكه)">
                                                 <option value="1000_CASH">الصندوق النقدي</option>
                                                 <option value="1010_BANK">البنك الحالي</option>
-                                                <option value="1100_AR">العملاء - ذمم مدينة</option>
+                                                <option value="1100_AR">الزبائن - ذمم مدينة</option>
                                                 <option value="1200_INVENTORY">المخزون</option>
                                                 <option value="1300_CHECKS_RECEIVABLE">شيكات واردة</option>
                                             </optgroup>
@@ -1438,7 +1459,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                                             <optgroup label="💰 الأصول (ما تملكه)">
                                                 <option value="1000_CASH">الصندوق النقدي</option>
                                                 <option value="1010_BANK">البنك الحالي</option>
-                                                <option value="1100_AR">العملاء - ذمم مدينة</option>
+                                                <option value="1100_AR">الزبائن - ذمم مدينة</option>
                                                 <option value="1200_INVENTORY">المخزون</option>
                                                 <option value="1300_CHECKS_RECEIVABLE">شيكات واردة</option>
                                             </optgroup>
@@ -1541,6 +1562,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
             </div>
             
                     </div><!-- End Manual Entry Tab -->
+                    {% endif %}
                     
                     <!-- Tab 7: COGS Audit -->
                     <div class="tab-pane fade" id="cogs-audit" role="tabpanel">
@@ -1879,7 +1901,7 @@ function updateLedgerTable(data, totals) {
         if (entry.entity_name && entry.entity_name !== '—' && entry.entity_name !== 'غير محدد') {
             let badgeColor = 'secondary';
             let icon = 'fa-user';
-            if (entry.entity_type === 'عميل') {
+            if (entry.entity_type === 'زبون') {
                 badgeColor = 'primary';
                 icon = 'fa-user-check';
             } else if (entry.entity_type === 'مورد') {
@@ -1921,6 +1943,9 @@ function updateLedgerTable(data, totals) {
         $('#total-debit').text(formatCurrency(totals.total_debit));
         $('#total-credit').text(formatCurrency(totals.total_credit));
         $('#final-balance').text(formatCurrency(totals.final_balance));
+    }
+    if (window.gmInitFinancialScroll) {
+        try { window.gmInitFinancialScroll(document); } catch (_) {}
     }
 }
 
@@ -2000,6 +2025,7 @@ function buildLedgerActions(entry) {
 }
 
 async function restoreLedgerPayment(paymentId) {
+    if (typeof window.gmRequirePerm === 'function' && !window.gmRequirePerm('manage_payments')) return;
     if (!confirm('تأكيد استعادة الدفعة #' + paymentId + '؟')) return;
     const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
     try {
@@ -2771,7 +2797,7 @@ function getTransactionDescription(entry) {
             serviceInfo += `<i class="fas fa-hashtag"></i> رقم الصيانة: ${pd.service_number}<br>`;
         }
         if (pd.service_customer) {
-            serviceInfo += `<i class="fas fa-user-check"></i> العميل: ${pd.service_customer}<br>`;
+            serviceInfo += `<i class="fas fa-user-check"></i> الزبون: ${pd.service_customer}<br>`;
         }
         if (pd.service_vehicle) {
             serviceInfo += `<i class="fas fa-car-side"></i> المركبة: ${pd.service_vehicle}<br>`;
@@ -3255,7 +3281,7 @@ $('#manual-entry-form').on('submit', function(e) {
     
     // حفظ
     $.ajax({
-        url: '/ledger/manual-entry',
+        url: (window.gmPath||window.gmU||function(p){return p;})('/ledger/manual-entry'),
         method: 'POST',
         contentType: 'application/json',
         data: JSON.stringify(data),
@@ -3302,7 +3328,7 @@ $('#smart-query').on('keypress', function(e) {
 // عرض تفاصيل القيد المحاسبي
 function viewGLBatchDetails(batchId) {
     $.ajax({
-        url: `/ledger/batch/${batchId}`,
+        url: (window.gmPath||window.gmU||function(p){return p;})(`/ledger/batch/${batchId}`),
         type: 'GET',
         success: function(response) {
             if (response.success) {

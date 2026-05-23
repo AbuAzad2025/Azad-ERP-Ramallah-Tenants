@@ -124,12 +124,12 @@ html,body{font-family:"DejaVu Sans","Amiri","Tahoma","Arial",sans-serif;directio
 
   <div class="section">
     <div class="section-title">
-      ملفات العميل والمركبة
-      <span class="badge-chip">{{ service.customer.name if service.customer else 'بدون عميل' }}</span>
+      ملفات الزبون والمركبة
+      <span class="badge-chip">{{ service.customer.name if service.customer else 'بدون زبون' }}</span>
     </div>
     <div class="info-grid">
       <div class="data-card">
-        <span class="data-label">العميل</span>
+        <span class="data-label">الزبون</span>
         <span class="data-value">{{ service.customer.name if service.customer else '—' }}</span>
         <span class="data-note">{{ service.customer.phone if service.customer else 'بدون رقم' }}</span>
       </div>

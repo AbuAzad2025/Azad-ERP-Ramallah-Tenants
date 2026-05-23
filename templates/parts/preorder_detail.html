@@ -1,4 +1,4 @@
-{% extends 'warehouses/base.html' %}
+﻿{% extends 'warehouses/base.html' %}
 {% block title %}تفاصيل الحجز{% endblock %}
 {% block page_title %}تفاصيل الحجز{% endblock %}
 
@@ -112,7 +112,7 @@
       {% if preorder.status not in ('CANCELLED', 'FULFILLED') %}
         
         {# زر تسليم المنتج المحجوز - يظهر فقط بعد دفع العربون #}
-        {% if current_user.has_permission('manage_sales') and prepaid > 0 %}
+        {% if has_perm('manage_sales') and prepaid > 0 %}
         <form method="post" action="{{ url_for('warehouse_bp.preorder_convert_to_sale', preorder_id=preorder.id) }}" class="d-inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="btn btn-success" onclick="return confirm('تحويل الحجز إلى مبيعة وشحن البضاعة؟');" title="تسليم المنتج - المبلغ المتبقي: {{ '%.2f'|format(balance) }} {{ currency }}">
@@ -122,7 +122,7 @@
         {% endif %}
 
         {# زر إلغاء الحجز #}
-        {% if current_user.has_permission('delete_preorder') %}
+        {% if has_perm('delete_preorder') %}
         <form method="post" action="{{ url_for('warehouse_bp.preorder_cancel', preorder_id=preorder.id) }}" class="d-inline" onsubmit="return confirm('إلغاء الحجز؟');">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-danger"><i class="fas fa-times ml-1"></i> إلغاء</button>

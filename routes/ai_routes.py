@@ -322,7 +322,7 @@ def _get_recent_conversations(limit: int = 5) -> List[Dict[str, Any]]:
 
 
 def _get_ai_suggestions():
-    suggestions = [{"type": "info", "title": "💡 تلميح", "action": "اسأل عن صفحة أو عميل أو منتج أو قيد، وسأستخدم البيانات المفهرسة والمتاحة فقط."}]
+    suggestions = [{"type": "info", "title": "💡 تلميح", "action": "اسأل عن صفحة أو زبون أو منتج أو قيد، وسأستخدم البيانات المفهرسة والمتاحة فقط."}]
     try:
         live = get_live_ai_stats()
         training = live.get("training", {}) if isinstance(live, dict) else {}

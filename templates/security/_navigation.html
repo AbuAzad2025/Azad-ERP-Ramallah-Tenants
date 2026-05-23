@@ -2,38 +2,53 @@
 <nav aria-label="breadcrumb" class="mb-2">
   <ol class="breadcrumb bg-light p-2 rounded">
     <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}"><i class="fas fa-home"></i> الرئيسية</a></li>
+    {% if can_ep('security.index') %}
     <li class="breadcrumb-item"><a href="{{ url_for('security.index') }}"><i class="fas fa-shield-alt"></i> الوحدة السرية</a></li>
+    {% endif %}
     {% block breadcrumb_items %}{% endblock %}
   </ol>
 </nav>
 
-<!-- أزرار التنقل للأمان - Owner فقط -->
 <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap">
   <div class="mb-2 mb-md-0">
     <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary btn-sm">
       <i class="fas fa-home"></i> الرئيسية
     </a>
+    {% if can_ep('security.index') %}
     <a href="{{ url_for('security.index') }}" class="btn btn-primary btn-sm">
       <i class="fas fa-shield-alt"></i> لوحة التحكم
     </a>
+    {% endif %}
+    {% if can_ep('security.user_control') %}
     <a href="{{ url_for('security.user_control') }}" class="btn btn-danger btn-sm">
       <i class="fas fa-users-cog"></i> إدارة المستخدمين
     </a>
+    {% endif %}
+    {% if can_ep('permissions.list') %}
     <a href="{{ url_for('permissions.list') }}" class="btn btn-warning btn-sm">
       <i class="fas fa-key"></i> إدارة الصلاحيات
     </a>
+    {% endif %}
+    {% if can_ep('security.tools_center') %}
     <a href="{{ url_for('security.tools_center') }}" class="btn btn-dark btn-sm">
       <i class="fas fa-toolbox"></i> مركز الأدوات
     </a>
+    {% endif %}
+    {% if can_ep('advanced.accounting_control') %}
     <a href="{{ url_for('advanced.accounting_control') }}" class="btn btn-purple btn-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white;">
       <i class="fas fa-calculator"></i> المحاسبة المتقدمة
     </a>
+    {% endif %}
+    {% if can_ep('security.help_page') %}
     <a href="{{ url_for('security.help_page') }}" class="btn btn-info btn-sm">
       <i class="fas fa-question-circle"></i> مساعدة
     </a>
+    {% endif %}
+    {% if can_ep('security.sitemap') %}
     <a href="{{ url_for('security.sitemap') }}" class="btn btn-outline-secondary btn-sm">
       <i class="fas fa-sitemap"></i> خريطة
     </a>
+    {% endif %}
   </div>
   <div>
     <span class="badge bg-success">{{ stats.system_version if stats and stats.system_version else '1.0.0' }}</span>

@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
-{% block title %}العملاء المسجلون (الأونلاين){% endblock %}
+{% block title %}الزبائن المسجلون (الأونلاين){% endblock %}
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">الرئيسية</a></li>
 {% if has_perm('manage_users') %}
   <li class="breadcrumb-item"><a href="{{ url_for('users_bp.list_users') }}">المستخدمون</a></li>
 {% endif %}
-<li class="breadcrumb-item active">العملاء المسجلون</li>
+<li class="breadcrumb-item active">الزبائن المسجلون</li>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="mb-0">قائمة العملاء المسجلين (is_online = True)</h5>
+    <h5 class="mb-0">قائمة الزبائن المسجلين (is_online = True)</h5>
     <form class="d-flex" method="get" action="{{ url_for('users_bp.registered_customers') }}">
       <input type="text" name="search" class="form-control" value="{{ search or '' }}" placeholder="بحث بالاسم/الهاتف/الإيميل">
       <button class="btn btn-primary ms-2" type="submit"><i class="fas fa-search"></i></button>

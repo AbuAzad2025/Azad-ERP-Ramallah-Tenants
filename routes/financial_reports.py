@@ -636,8 +636,14 @@ def cash_flow():
 def balances_summary():
     """تقرير الأرصدة المجمعة"""
     try:
-        # أرصدة العملاء
-        customers = Customer.query.all()
+        from utils.company_scope import (
+            filter_customers_query,
+            filter_partners_query,
+            filter_suppliers_query,
+        )
+
+        # أرصدة الزبائن
+        customers = filter_customers_query(Customer.query).all()
         customer_balances = []
         total_customer_balance = 0
         
@@ -652,7 +658,7 @@ def balances_summary():
             total_customer_balance += float(balance)
         
         # أرصدة الموردين
-        suppliers = Supplier.query.all()
+        suppliers = filter_suppliers_query(Supplier.query).all()
         supplier_balances = []
         total_supplier_balance = 0
         
@@ -667,7 +673,7 @@ def balances_summary():
             total_supplier_balance += float(balance)
         
         # أرصدة الشركاء
-        partners = Partner.query.all()
+        partners = filter_partners_query(Partner.query).all()
         partner_balances = []
         total_partner_balance = 0
         
@@ -738,7 +744,9 @@ def validation_report():
         })
         
         # فحص المدفوعات المعلقة
-        pending_payments = Payment.query.filter_by(status='PENDING').count()
+        from utils.company_scope import filter_payments_query
+
+        pending_payments = filter_payments_query(Payment.query.filter_by(status='PENDING')).count()
         validation_results.append({
             'check': 'المدفوعات المعلقة',
             'status': 'INFO',
@@ -748,7 +756,9 @@ def validation_report():
         
         # فحص الشيكات المعلقة
         from models import Check
-        pending_checks = Check.query.filter_by(status='PENDING').count()
+        from utils.company_scope import filter_checks_query
+
+        pending_checks = filter_checks_query(Check.query.filter_by(status='PENDING')).count()
         validation_results.append({
             'check': 'الشيكات المعلقة',
             'status': 'INFO',
@@ -873,9 +883,9 @@ def trial_balance():
         customers_total = db.session.query(
             func.coalesce(func.sum(Customer.current_balance), 0)
         ).scalar() or 0
-        # الرصيد في المودل موجب يعني أن العميل مدين لنا (أصل)
-        # ولكن في قاعدة البيانات (customers table) الرصيد الموجب يعني أن العميل له رصيد عندنا (التزام)
-        # والسالب يعني أن العميل عليه رصيد لنا (أصل)
+        # الرصيد في المودل موجب يعني أن الزبون مدين لنا (أصل)
+        # ولكن في قاعدة البيانات (customers table) الرصيد الموجب يعني أن الزبون له رصيد عندنا (التزام)
+        # والسالب يعني أن الزبون عليه رصيد لنا (أصل)
         # بينما في GL (1100_AR) الرصيد المدين (الأصل) موجب
         # لذلك يجب عكس إشارة رصيد المودل ليتطابق مع GL
         ar_model_balance = -float(customers_total)
@@ -891,7 +901,7 @@ def trial_balance():
         ap_model_balance = float(suppliers_total) + float(partners_total)
         
         # حساب التسويات اليدوية (Manual Adjustments) لحسابات الذمم
-        # هذا ضروري لأن القيود اليدوية لا تحدث أرصدة العملاء/الموردين في المودل
+        # هذا ضروري لأن القيود اليدوية لا تحدث أرصدة الزبائن/الموردين في المودل
         manual_ar_adjustments = db.session.query(
             func.coalesce(func.sum(GLEntry.debit - GLEntry.credit), 0)
         ).join(GLBatch).filter(
@@ -970,6 +980,12 @@ def trial_balance():
 @permission_required(SystemPermissions.VIEW_REPORTS)
 def aging_report():
     try:
+        from utils.company_scope import (
+            filter_customers_query,
+            filter_partners_query,
+            filter_suppliers_query,
+        )
+
         report_type = request.args.get('type', 'ar')
         as_of_date = request.args.get('as_of_date')
         if as_of_date:
@@ -980,7 +996,7 @@ def aging_report():
         aging_data = []
         
         if report_type == 'ar':
-            customers = Customer.query.all()
+            customers = filter_customers_query(Customer.query).all()
             for customer in customers:
                 db.session.refresh(customer)
                 balance = float(customer.current_balance or 0)
@@ -1044,7 +1060,7 @@ def aging_report():
                         'currency': customer.currency or 'ILS'
                     })
         else:
-            suppliers = Supplier.query.all()
+            suppliers = filter_suppliers_query(Supplier.query).all()
             for supplier in suppliers:
                 db.session.refresh(supplier)
                 balance = float(supplier.current_balance or 0)
@@ -1090,7 +1106,7 @@ def aging_report():
             
             include_partners = request.args.get('include_partners', 'false').lower() == 'true'
             if include_partners or report_type == 'partners':
-                partners = Partner.query.all()
+                partners = filter_partners_query(Partner.query).all()
                 for partner in partners:
                     db.session.refresh(partner)
                     balance = float(partner.current_balance or 0)
@@ -1302,6 +1318,12 @@ def expense_breakdown():
 @permission_required(SystemPermissions.VIEW_REPORTS)
 def receivables_payables():
     try:
+        from utils.company_scope import (
+            filter_customers_query,
+            filter_partners_query,
+            filter_suppliers_query,
+        )
+
         report_type = request.args.get('type', 'receivables')
         include_partners = request.args.get('include_partners', 'false').lower() == 'true'
         as_of_date = request.args.get('as_of_date')
@@ -1316,7 +1338,7 @@ def receivables_payables():
         as_of_dt = datetime.combine(as_of_date, datetime.max.time())
         
         if report_type == 'receivables':
-            customers = Customer.query.all()
+            customers = filter_customers_query(Customer.query).all()
             for customer in customers:
                 db.session.refresh(customer)
                 balance = float(customer.current_balance or 0)
@@ -1349,7 +1371,7 @@ def receivables_payables():
                     })
                     total_balance += balance
         else:
-            suppliers = Supplier.query.all()
+            suppliers = filter_suppliers_query(Supplier.query).all()
             for supplier in suppliers:
                 db.session.refresh(supplier)
                 balance = float(supplier.current_balance or 0)
@@ -1383,7 +1405,7 @@ def receivables_payables():
                     total_balance += balance
             
             if include_partners or report_type == 'partners':
-                partners = Partner.query.all()
+                partners = filter_partners_query(Partner.query).all()
                 for partner in partners:
                     db.session.refresh(partner)
                     balance = float(partner.current_balance or 0)

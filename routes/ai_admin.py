@@ -29,12 +29,23 @@ ai_admin_bp = Blueprint('ai_admin', __name__, url_prefix='/ai-admin')
 
 @ai_admin_bp.before_request
 def restrict_to_owner():
-    """تقييد الوصول للمالك فقط"""
+    """منصة أزاد فقط + مالك المنصة أو صلاحية إدارة الذكاء."""
+    from utils.branding_scope import require_platform_console
+    from permissions_config.enums import SystemPermissions
+    from permissions_config.role_policy import is_platform_owner_role
+
+    guard = require_platform_console()
+    if guard is not None:
+        return guard
     if not current_user.is_authenticated:
         return redirect(url_for('auth.login'))
-    
-    if not current_user.is_system:
-        utils.flash_error('هذه اللوحة خاصة بالمالك فقط', 'danger')
+    if not (
+        is_platform_owner_role(current_user)
+        or getattr(current_user, "is_system", False)
+        or getattr(current_user, "is_system_account", False)
+        or current_user.has_permission(SystemPermissions.MANAGE_AI.value)
+    ):
+        utils.flash_error('هذه اللوحة خاصة بمالك المنصة أو من يملك صلاحية إدارة الذكاء.', 'danger')
         return redirect(url_for('main.dashboard'))
 
 

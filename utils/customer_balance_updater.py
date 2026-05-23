@@ -77,19 +77,19 @@ def update_customer_balance_components(customer_id, session=None):
                 # الرصيد = الرصيد الافتتاحي + الحقوق - الالتزامات
                 # سالب = عليه لنا (يجب أن يدفع)، موجب = له عندنا (دفع زيادة)
                 #
-                # الحقوق (Rights): ما قبضناه من العميل
+                # الحقوق (Rights): ما قبضناه من الزبون
                 # - payments_in_balance: دفعات واردة (ما قبضناه)
                 # - returns_balance: مرتجعات (تقلل ما عليه)
                 # - returned_checks_out_balance: شيكات مرتجعة صادرة (تقلل ما عليه)
                 # - service_expenses_balance: مصروفات توريد خدمات (حق له)
                 #
                 # الحقوق (Rights): ما له عندنا
-                # - payments_in_balance: دفعات واردة (العميل دفع لنا = حق له = تقليل ما عليه)
+                # - payments_in_balance: دفعات واردة (الزبون دفع لنا = حق له = تقليل ما عليه)
                 # - returns_balance: مرتجعات (تقلل ما عليه)
                 # - returned_checks_out_balance: شيكات مرتجعة صادرة (تقلل ما عليه)
                 # - service_expenses_balance: مصروفات توريد خدمات (حق له)
                 #
-                # الالتزامات (Obligations): ما على العميل
+                # الالتزامات (Obligations): ما على الزبون
                 # - sales_balance: مبيعات (يشمل المبيعات الناتجة من الحجوزات المسبقة عند التسليم)
                 # - invoices_balance: فواتير مستقلة (غير المرتبطة ببيع/خدمة/حجز)
                 # - services_balance: خدمات

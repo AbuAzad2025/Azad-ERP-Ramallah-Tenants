@@ -129,9 +129,17 @@ def _ok_not_found(msg: str = "السند غير موجود"):
     return make_response(html, 200)
 
 def _safe_get_payment(payment_id: int, *, all_rels: bool = False) -> Payment | None:
+    from utils.company_scope import get_accessible_branch_ids, payment_id_in_accessible_branches
+
+    try:
+        pid = int(payment_id)
+    except (TypeError, ValueError):
+        return None
+    if get_accessible_branch_ids() is not None and not payment_id_in_accessible_branches(pid):
+        return None
     try:
         opts = _FULL_LOAD_OPTIONS if all_rels else (joinedload(Payment.customer), joinedload(Payment.supplier))
-        stmt = select(Payment).options(*opts).where(Payment.id == int(payment_id))
+        stmt = select(Payment).options(*opts).where(Payment.id == pid)
         return db.session.execute(stmt).unique().scalar_one_or_none()
     except Exception:
         return None
@@ -588,7 +596,9 @@ def index():
         Payment.is_archived.is_(None),
         and_(Payment.is_archived.is_(True), Payment.archived_at.is_(None)),
     )
-    base_q = (
+    from utils.company_scope import filter_payments_query
+
+    base_q = filter_payments_query(
         Payment.query.filter(active_filter)
         .filter(*filters)
         .options(
@@ -774,7 +784,7 @@ def index():
                     return f"مورد: {supplier_obj.name if supplier_obj else ''}"
                 elif check_entity_type == "CUSTOMER":
                     customer_obj = db.session.get(Customer, check_entity_id)
-                    return f"عميل: {customer_obj.name if customer_obj else ''}"
+                    return f"زبون: {customer_obj.name if customer_obj else ''}"
                 return "شيك يدوي"
         
         mock_payment = MockPayment(check)
@@ -1219,7 +1229,7 @@ def create_payment():
                         pre_amount = balance
                     if not preset_currency:
                         form.currency.data = getattr(c, "currency", "ILS")
-                    # ملء اسم العميل في search field
+                    # ملء اسم الزبون في search field
                     if hasattr(form, 'customer_search'):
                         form.customer_search.data = c.name
             elif et == "SUPPLIER" and eid is not None:
@@ -1603,6 +1613,12 @@ def create_payment():
             except Exception:
                 _auto_allocate_payments = False
                 normalize_customer_payment_booking = None
+            from utils.company_scope import (
+                filter_expenses_query,
+                filter_sales_query,
+                filter_service_requests_query,
+            )
+
             target_kwargs = {}
             if etype == "CUSTOMER":
                 target_kwargs["customer_id"] = target_id
@@ -1752,7 +1768,7 @@ def create_payment():
                 obligations = []
                 try:
                     open_services = (
-                        ServiceRequest.query.filter(
+                        filter_service_requests_query(ServiceRequest.query).filter(
                             ServiceRequest.customer_id == final_customer_id,
                             ServiceRequest.is_archived == False,
                             ServiceRequest.cancelled_at.is_(None),
@@ -1783,7 +1799,7 @@ def create_payment():
                     pass
                 try:
                     open_sales = (
-                        Sale.query.filter(
+                        filter_sales_query(Sale.query).filter(
                             Sale.customer_id == final_customer_id,
                             Sale.balance_due > 0.01,
                             Sale.is_archived == False,
@@ -1851,7 +1867,7 @@ def create_payment():
                     obligations = []
                     try:
                         open_services = (
-                            ServiceRequest.query.filter(
+                            filter_service_requests_query(ServiceRequest.query).filter(
                                 ServiceRequest.customer_id == linked_customer_id,
                                 ServiceRequest.is_archived == False,
                                 ServiceRequest.cancelled_at.is_(None),
@@ -1882,7 +1898,7 @@ def create_payment():
                         pass
                     try:
                         open_sales = (
-                            Sale.query.filter(
+                            filter_sales_query(Sale.query).filter(
                                 Sale.customer_id == linked_customer_id,
                                 Sale.balance_due > 0.01,
                                 Sale.is_archived == False,
@@ -1950,7 +1966,7 @@ def create_payment():
                     obligations = []
                     try:
                         open_services = (
-                            ServiceRequest.query.filter(
+                            filter_service_requests_query(ServiceRequest.query).filter(
                                 ServiceRequest.customer_id == linked_customer_id,
                                 ServiceRequest.is_archived == False,
                                 ServiceRequest.cancelled_at.is_(None),
@@ -1981,7 +1997,7 @@ def create_payment():
                         pass
                     try:
                         open_sales = (
-                            Sale.query.filter(
+                            filter_sales_query(Sale.query).filter(
                                 Sale.customer_id == linked_customer_id,
                                 Sale.balance_due > 0.01,
                                 Sale.is_archived == False,
@@ -2069,7 +2085,7 @@ def create_payment():
                     pass
                 try:
                     rows = (
-                        Expense.query.filter(
+                        filter_expenses_query(Expense.query).filter(
                             or_(
                                 Expense.supplier_id == final_supplier_id,
                                 and_(Expense.payee_type == "SUPPLIER", Expense.payee_entity_id == final_supplier_id),
@@ -2127,7 +2143,7 @@ def create_payment():
                     pass
                 try:
                     rows = (
-                        Expense.query.filter(
+                        filter_expenses_query(Expense.query).filter(
                             or_(
                                 Expense.partner_id == final_partner_id,
                                 and_(Expense.payee_type == "PARTNER", Expense.payee_entity_id == final_partner_id),
@@ -2658,7 +2674,7 @@ def update_payment_status(payment_id: int):
                     update_customer_balance_components(payment.customer_id, db.session)
                 except Exception as bal_err:
                     import logging
-                    logging.getLogger(__name__).warning(f"فشل تحديث رصيد العميل {payment.customer_id}: {bal_err}")
+                    logging.getLogger(__name__).warning(f"فشل تحديث رصيد الزبون {payment.customer_id}: {bal_err}")
             if payment.supplier_id:
                 utils.update_entity_balance("supplier", payment.supplier_id)
             if payment.partner_id:
@@ -2675,7 +2691,7 @@ def update_payment_status(payment_id: int):
                     update_customer_balance_components(payment.customer_id, db.session)
                 except Exception as bal_err:
                     import logging
-                    logging.getLogger(__name__).warning(f"فشل تحديث رصيد العميل {payment.customer_id}: {bal_err}")
+                    logging.getLogger(__name__).warning(f"فشل تحديث رصيد الزبون {payment.customer_id}: {bal_err}")
             if payment.supplier_id:
                 utils.update_entity_balance("supplier", payment.supplier_id)
             if payment.partner_id:
@@ -3004,8 +3020,18 @@ def get_entities(entity_type):
     limit = utils._query_limit(20, 100)
     
     try:
+        from utils.company_scope import (
+            filter_customers_query,
+            filter_expenses_query,
+            filter_partners_query,
+            filter_sales_query,
+            filter_suppliers_query,
+        )
+
         if entity_type == "CUSTOMER":
-            query = Customer.query.filter_by(is_active=True).options(
+            query = filter_customers_query(
+                Customer.query.filter_by(is_active=True)
+            ).options(
                 load_only(Customer.id, Customer.name, Customer.phone, Customer.email)
             )
             if search:
@@ -3030,7 +3056,9 @@ def get_entities(entity_type):
             })
             
         elif entity_type == "SUPPLIER":
-            query = Supplier.query.filter_by(is_archived=False).options(
+            query = filter_suppliers_query(
+                Supplier.query.filter_by(is_archived=False)
+            ).options(
                 load_only(Supplier.id, Supplier.name, Supplier.phone, Supplier.email)
             )
             if search:
@@ -3055,7 +3083,9 @@ def get_entities(entity_type):
             })
             
         elif entity_type == "PARTNER":
-            query = Partner.query.filter_by(is_archived=False).options(
+            query = filter_partners_query(
+                Partner.query.filter_by(is_archived=False)
+            ).options(
                 load_only(Partner.id, Partner.name, Partner.phone_number, Partner.email)
             )
             if search:
@@ -3080,7 +3110,9 @@ def get_entities(entity_type):
             })
             
         elif entity_type == "SALE":
-            query = Sale.query.filter_by(status="CONFIRMED").options(
+            query = filter_sales_query(
+                Sale.query.filter_by(status="CONFIRMED")
+            ).options(
                 joinedload(Sale.customer).load_only(Customer.id, Customer.name),
                 load_only(Sale.id, Sale.sale_number, Sale.sale_date, Sale.total_amount, Sale.currency)
             )
@@ -3134,7 +3166,7 @@ def get_entities(entity_type):
             })
         
         elif entity_type == "EXPENSE":
-            query = Expense.query
+            query = filter_expenses_query(Expense.query)
             if search:
                 query = query.filter(
                     or_(
@@ -3189,7 +3221,7 @@ def get_entities(entity_type):
 @payments_bp.route("/api/related-party", methods=["GET"], endpoint="get_related_party")
 @login_required
 def get_related_party():
-    """API لجلب الجهة المرتبطة (العميل أو المورد) بناءً على الكيان"""
+    """API لجلب الجهة المرتبطة (الزبون أو المورد) بناءً على الكيان"""
     entity_type = request.args.get("entity_type", "").strip().upper()
     entity_id = request.args.get("entity_id", "").strip()
     
@@ -3212,7 +3244,7 @@ def get_related_party():
                     result["customer_id"] = customer.id
                     result["customer_name"] = customer.name
                     
-                    # البحث عن المورد المرتبط بالعميل
+                    # البحث عن المورد المرتبط بالزبون
                     supplier = db.session.query(Supplier).filter_by(customer_id=customer.id).first()
                     if supplier:
                         result["supplier_id"] = supplier.id
@@ -3268,15 +3300,25 @@ def get_related_party():
 def search_entities():
     """البحث الذكي عن الجهات المرتبطة للدفعات"""
     try:
+        from utils.company_scope import (
+            filter_customers_query,
+            filter_expenses_query,
+            filter_partners_query,
+            filter_sales_query,
+            filter_service_requests_query,
+            filter_shipments_query,
+            filter_suppliers_query,
+        )
+
         entity_type = request.args.get("type", "").strip().lower()
         query = request.args.get("q", "").strip()
         
         if not entity_type or not query:
             return jsonify([])
         
-        # البحث في العملاء
+        # البحث في الزبائن
         if entity_type == "customer":
-            customers = Customer.query.filter(
+            customers = filter_customers_query(Customer.query).filter(
                 or_(
                     Customer.name.ilike(f"%{query}%"),
                     Customer.phone.ilike(f"%{query}%"),
@@ -3294,7 +3336,7 @@ def search_entities():
         
         # البحث في الموردين
         elif entity_type == "supplier":
-            suppliers = Supplier.query.filter(
+            suppliers = filter_suppliers_query(Supplier.query).filter(
                 or_(
                     Supplier.name.ilike(f"%{query}%"),
                     Supplier.contact.ilike(f"%{query}%"),
@@ -3312,7 +3354,7 @@ def search_entities():
         
         # البحث في الشركاء
         elif entity_type == "partner":
-            partners = Partner.query.filter(
+            partners = filter_partners_query(Partner.query).filter(
                 or_(
                     Partner.name.ilike(f"%{query}%"),
                     Partner.contact.ilike(f"%{query}%"),
@@ -3330,7 +3372,7 @@ def search_entities():
         
         # البحث في المبيعات
         elif entity_type == "sale":
-            sales = Sale.query.join(Customer).filter(
+            sales = filter_sales_query(Sale.query.join(Customer)).filter(
                 or_(
                     Sale.sale_number.ilike(f"%{query}%"),
                     Customer.name.ilike(f"%{query}%")
@@ -3347,7 +3389,7 @@ def search_entities():
         
         # البحث في طلبات الصيانة
         elif entity_type == "service":
-            services = ServiceRequest.query.join(Customer).filter(
+            services = filter_service_requests_query(ServiceRequest.query.join(Customer)).filter(
                 or_(
                     ServiceRequest.service_number.ilike(f"%{query}%"),
                     Customer.name.ilike(f"%{query}%")
@@ -3363,7 +3405,7 @@ def search_entities():
         
         # البحث في الشحنات
         elif entity_type == "shipment":
-            shipments = Shipment.query.join(Supplier).filter(
+            shipments = filter_shipments_query(Shipment.query.join(Supplier)).filter(
                 or_(
                     Shipment.shipment_number.ilike(f"%{query}%"),
                     Supplier.name.ilike(f"%{query}%")
@@ -3379,7 +3421,7 @@ def search_entities():
         
         # البحث في النفقات
         elif entity_type == "expense":
-            expenses = Expense.query.filter(
+            expenses = filter_expenses_query(Expense.query).filter(
                 or_(
                     Expense.description.ilike(f"%{query}%"),
                     Expense.tax_invoice_number.ilike(f"%{query}%")
@@ -3598,7 +3640,7 @@ def shop_process_payment():
         payment.status = PaymentStatus.COMPLETED.value
         payment.payment_date = _utc_now_naive()
         
-        # تحديث رصيد العميل إذا كان موجود
+        # تحديث رصيد الزبون إذا كان موجود
         if payment.customer_id:
             try:
                 from utils.customer_balance_updater import update_customer_balance_components
@@ -3705,7 +3747,7 @@ def shop_refund():
             original_payment.is_refunded = True
             db.session.add(original_payment)
         
-        # تحديث رصيد العميل
+        # تحديث رصيد الزبون
         if original_payment.customer_id:
             try:
                 from utils.customer_balance_updater import update_customer_balance_components
@@ -4019,7 +4061,7 @@ def _collect_partner_obligations(partner: Partner, date_from: datetime, date_to:
         entries.append(
             LedgerEntry.create(
                 date=datetime.strptime(item.get("date") or date_from.strftime("%Y-%m-%d"), "%Y-%m-%d"),
-                label="مبيعات للشريك كعميل",
+                label="مبيعات للشريك كزبون",
                 amount=amount,
                 direction="debit",
                 category="obligations_sales",

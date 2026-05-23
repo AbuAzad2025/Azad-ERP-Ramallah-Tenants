@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}{{ company and 'تعديل شركة' or 'شركة جديدة' }}{% endblock %}
+{% block content %}
+<div class="container py-3" dir="rtl" style="max-width:720px">
+  <h4>{{ company and 'تعديل' or 'إضافة' }} شركة</h4>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group"><label>الرمز *</label><input name="code" class="form-control" value="{{ company.code if company else '' }}" {% if company %}readonly{% endif %} required></div>
+    <div class="form-group"><label>الاسم *</label><input name="name" class="form-control" value="{{ company.name if company else '' }}" required></div>
+    <div class="form-group"><label>الاسم القانوني</label><input name="legal_name" class="form-control" value="{{ company.legal_name if company else '' }}"></div>
+    <div class="form-group"><label>الرقم الضريبي</label><input name="tax_id" class="form-control" value="{{ company.tax_id if company else '' }}"></div>
+    <div class="form-group"><label>بداية السنة المالية (شهر)</label><input name="fiscal_year_start_month" type="number" min="1" max="12" class="form-control" value="{{ company.fiscal_year_start_month if company else 1 }}"></div>
+    <div class="form-group"><label>عملة</label><input name="currency" class="form-control" value="{{ company.currency if company else 'ILS' }}"></div>
+    {% if company %}<div class="form-check my-2"><input type="checkbox" name="is_active" class="form-check-input" {% if company.is_active %}checked{% endif %}><label class="form-check-label">نشطة</label></div>{% endif %}
+    <button class="btn btn-primary">حفظ</button>
+    <a href="{{ url_for('companies_bp.index') }}" class="btn btn-secondary">رجوع</a>
+  </form>
+</div>
+{% endblock %}

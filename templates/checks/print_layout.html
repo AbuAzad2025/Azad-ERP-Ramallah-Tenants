@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>طباعة شيك {{ check.check_number }}</title>
+  <style>
+    @page { size: 175mm 80mm; margin: 0; }
+    body { margin: 0; font-family: Tahoma, Arial, sans-serif; }
+    .field { position: absolute; font-size: 11pt; }
+    .payee { top: {{ layout.payee_top_mm }}mm; right: 25mm; width: 120mm; }
+    .amount-words { top: {{ layout.amount_words_top_mm }}mm; right: 25mm; width: 120mm; }
+    .amount-fig { top: {{ layout.amount_figures_top_mm }}mm; left: {{ layout.amount_figures_left_mm }}mm; }
+    .date { top: {{ layout.date_top_mm }}mm; left: {{ layout.date_left_mm }}mm; }
+    @media print { .no-print { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="padding:8px"><button onclick="window.print()">طباعة</button></div>
+  <div class="field date">{{ check.check_date.strftime('%d/%m/%Y') if check.check_date else '' }}</div>
+  <div class="field payee">{{ check.payee_name or '' }}</div>
+  <div class="field amount-fig">{{ check.amount }} {{ check.currency }}</div>
+  <div class="field amount-words">{{ check.amount|amount_in_words(check.currency) }}</div>
+</body>
+</html>

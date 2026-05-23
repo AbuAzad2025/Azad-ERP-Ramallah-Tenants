@@ -139,8 +139,10 @@ def entity_balance_verification():
     try:
         verification_results = []
         
-        # فحص أرصدة العملاء
-        customers = Customer.query.limit(10).all()  # عينة من العملاء
+        from utils.company_scope import filter_customers_query
+
+        # فحص أرصدة الزبائن
+        customers = filter_customers_query(Customer.query).limit(10).all()  # عينة من الزبائن
         for customer in customers:
             try:
                 # حساب الرصيد من GL
@@ -321,31 +323,46 @@ def periodic_audit():
             audit_date = datetime.fromisoformat(audit_date).date()
         
         audit_results = []
-        
+
+        from utils.company_scope import (
+            filter_customers_query,
+            filter_partners_query,
+            filter_payments_query,
+            filter_sales_query,
+            filter_suppliers_query,
+        )
+        from utils.gl_company_scope import apply_gl_branch_filter, resolve_branch_filter
+
         # إحصائيات عامة
         total_accounts = Account.query.count()
         active_accounts = Account.query.filter_by(is_active=True).count()
-        total_gl_batches = GLBatch.query.count()
-        posted_batches = GLBatch.query.filter_by(status='POSTED').count()
-        total_gl_entries = GLEntry.query.count()
+        gl_batches_q = apply_gl_branch_filter(GLBatch.query)
+        total_gl_batches = gl_batches_q.count()
+        posted_batches = gl_batches_q.filter_by(status='POSTED').count()
+        branch_ids = resolve_branch_filter()
+        if branch_ids is not None:
+            from utils.gl_company_scope import gl_entries_as_of
+            from datetime import datetime as _dt
+
+            as_of = _dt.combine(audit_date, _dt.max.time())
+            total_gl_entries = gl_entries_as_of(branch_ids, as_of).count()
+        else:
+            total_gl_entries = GLEntry.query.count()
         
         # إحصائيات المعاملات
-        total_sales = Sale.query.filter(Sale.created_at <= audit_date).count()
-        confirmed_sales = Sale.query.filter(
-            Sale.status == 'CONFIRMED',
-            Sale.created_at <= audit_date
-        ).count()
+        audit_end = datetime.combine(audit_date, datetime.max.time())
+        sales_q = filter_sales_query(Sale.query).filter(Sale.created_at <= audit_end)
+        total_sales = sales_q.count()
+        confirmed_sales = sales_q.filter(Sale.status == 'CONFIRMED').count()
         
-        total_payments = Payment.query.filter(Payment.created_at <= audit_date).count()
-        completed_payments = Payment.query.filter(
-            Payment.status == 'COMPLETED',
-            Payment.created_at <= audit_date
-        ).count()
+        payments_q = filter_payments_query(Payment.query).filter(Payment.created_at <= audit_end)
+        total_payments = payments_q.count()
+        completed_payments = payments_q.filter(Payment.status == 'COMPLETED').count()
         
         # إحصائيات الأرصدة
-        customers_count = Customer.query.count()
-        suppliers_count = Supplier.query.count()
-        partners_count = Partner.query.count()
+        customers_count = filter_customers_query(Customer.query).count()
+        suppliers_count = filter_suppliers_query(Supplier.query).count()
+        partners_count = filter_partners_query(Partner.query).count()
         
         audit_results.append({
             'category': 'الحسابات المحاسبية',
