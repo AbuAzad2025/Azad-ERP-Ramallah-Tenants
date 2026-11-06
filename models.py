@@ -5948,6 +5948,44 @@ def _sale_gl_upsert_core(connection, target: "Sale") -> None:
     """منطق إنشاء/تحديث قيد GL للبيع (يُستدعى من معاملة منفصلة بعد commit)."""
     from decimal import Decimal, ROUND_HALF_UP
     from sqlalchemy import select as sa_select
+    _sale_status = getattr(getattr(target, "status", None), "value", getattr(target, "status", None))
+    if _sale_status in (SaleStatus.CANCELLED.value, SaleStatus.REFUNDED.value):
+        try:
+            _existing_rev = connection.execute(sa_text("SELECT id FROM gl_batches WHERE source_type='SALE_REVERSAL' AND source_id=:sid AND purpose='REVERSAL' AND status='POSTED' ORDER BY id DESC LIMIT 1"), {"sid": int(target.id)}).scalar()
+            if _existing_rev:
+                return
+            _orig = connection.execute(sa_text("SELECT id FROM gl_batches WHERE source_type IN ('SALE','SALE_PARTNER_SHARE') AND source_id=:sid AND status='POSTED'"), {"sid": int(target.id)}).fetchall()
+            _orig_ids = [int(b[0]) for b in _orig]
+            if not _orig_ids:
+                return
+            _rev_entries = []
+            for _bid in _orig_ids:
+                _rows = connection.execute(sa_text("SELECT account, debit, credit FROM gl_entries WHERE batch_id=:bid ORDER BY id"), {"bid": _bid}).fetchall()
+                for _acc, _d, _c in _rows:
+                    _d_f = float(_d or 0); _c_f = float(_c or 0)
+                    if _d_f <= 0 and _c_f <= 0:
+                        continue
+                    _rev_entries.append((str(_acc or "").strip().upper(), _c_f, _d_f))
+            if not _rev_entries:
+                return
+            _gl_reverse_posted_batches(
+                connection,
+                source_type="SALE",
+                source_id=target.id,
+                reversal_source_type="SALE_REVERSAL",
+                memo_prefix=f"Reversal - cancelled/refunded sale #{target.sale_number or target.id}",
+                purposes=["REVENUE"],
+            )
+            _gl_reverse_posted_batches(
+                connection,
+                source_type="SALE_PARTNER_SHARE",
+                source_id=target.id,
+                reversal_source_type="SALE_REVERSAL",
+                memo_prefix=f"Reversal - cancelled/refunded sale #{target.sale_number or target.id}",
+            )
+        except Exception:
+            pass
+        return
     if target.status != SaleStatus.CONFIRMED.value:
         return
     amount = Decimal(str(target.total_amount or 0))
@@ -7251,6 +7289,10 @@ def _invoice_delete_tax_entry(mapper, connection, target: "Invoice"):
 # ===== إنشاء قيود GL تلقائية للفواتير =====
 def _invoice_gl_upsert_core(connection, target: "Invoice") -> None:
     """منطق إنشاء/تحديث قيد GL للفاتورة (يُستدعى من معاملة منفصلة بعد commit)."""
+    # الفاتورة المرتبطة بمبيعة (sale_id) هي مستند ذمة فقط — الإيراد سُجّل عبر SALE/REVENUE.
+    # ترحيل قيد INVOICE هنا يضاعف الإيراد. نُبقي القيد فقط للفواتير المستقلة.
+    if getattr(target, "sale_id", None):
+        return
     if target.cancelled_at:
         _gl_reverse_posted_batches(
             connection,
@@ -8073,6 +8115,29 @@ def _payment_gl_upsert_core(connection, target: "Payment") -> None:
             entity_type_for_gl = exp_entity_type
             entity_id_for_gl = exp_entity_id
 
+    # استبدال عند التعديل (منع stale) + حارس قفل على القديم
+    try:
+        _pay_old = connection.execute(
+            sa_text("SELECT id, posted_at FROM gl_batches WHERE source_type='PAYMENT' AND source_id=:pid AND purpose IN ('PAYMENT','PREORDER_PAYMENT') AND status='POSTED'"),
+            {"pid": int(target.id)},
+        ).fetchall()
+        for _obid, _obposted in _pay_old:
+            try:
+                _cs = _obposted.date()
+            except Exception:
+                _cs = _obposted
+            if _cs:
+                _lk = connection.execute(sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"), {"d": _cs}).first()
+                if _lk:
+                    raise ValueError("قيد الدفع الأصلي في فترة مقفلة")
+        for _obid, _obposted in _pay_old:
+            connection.execute(sa_text("DELETE FROM gl_entries WHERE batch_id=:bid"), {"bid": int(_obid)})
+            connection.execute(sa_text("DELETE FROM gl_batches WHERE id=:bid"), {"bid": int(_obid)})
+    except ValueError:
+        raise
+    except Exception:
+        pass
+
     _gl_upsert_batch_and_entries(
         connection,
         source_type="PAYMENT",
@@ -8084,6 +8149,7 @@ def _payment_gl_upsert_core(connection, target: "Payment") -> None:
         ref=target.payment_number or f"PMT-{target.id}",
         entity_type=entity_type_for_gl,
         entity_id=entity_id_for_gl,
+        posted_at=getattr(target, "payment_date", None) or datetime.now(timezone.utc),
     )
 
 
@@ -14277,9 +14343,31 @@ def _gl_upsert_batch_and_entries(
     entity_type: str | None,
     entity_id: int | None,
     branch_id: int | None = None,
+    posted_at: datetime | None = None,
 ):
     if not entries:
         raise ValueError("entries required")
+    effective_posted_at = posted_at or datetime.now(timezone.utc)
+    # منع الترحيل لفترة مقفلة (ما عدا الإقفال/العكس/الافتتاح)
+    _src_up = (source_type or "").upper()
+    _exempt = (
+        _src_up in ("CLOSING_ENTRY", "PERIOD_CLOSE", "OPENING_BALANCE")
+        or "REVERSAL" in _src_up
+        or "CANCELLATION" in _src_up
+    )
+    if not _exempt:
+        try:
+            _cd = effective_posted_at.date() if isinstance(effective_posted_at, datetime) else effective_posted_at
+            _lr = connection.execute(
+                sa_text("SELECT period_key, name_ar FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"),
+                {"d": _cd},
+            ).mappings().first()
+            if _lr:
+                raise ValueError(f"الفترة {_lr.get('name_ar')} ({_lr.get('period_key')}) مقفلة — لا يمكن الترحيل بتاريخ {_cd}")
+        except ValueError:
+            raise
+        except Exception:
+            pass
     batch_table, entry_table = _gl_table_names(connection)
     parsed = []
     for item in entries:
@@ -14349,7 +14437,7 @@ def _gl_upsert_batch_and_entries(
     )
 
     batch_code = f"{source_type}-{source_id}-{purpose}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
-    posted_at = datetime.now(timezone.utc)
+    posted_at = effective_posted_at
     if branch_id is None:
         try:
             from utils.gl_branch_resolver import resolve_branch_for_gl
