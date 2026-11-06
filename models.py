@@ -14352,6 +14352,8 @@ def _gl_upsert_batch_and_entries(
     if not entries:
         raise ValueError("entries required")
     effective_posted_at = posted_at or datetime.now(timezone.utc)
+    if company_id is None:
+        company_id = 1
     # منع الترحيل لفترة مقفلة (ما عدا الإقفال/العكس/الافتتاح)
     _src_up = (source_type or "").upper()
     _exempt = (
