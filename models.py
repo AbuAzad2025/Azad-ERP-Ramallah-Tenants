@@ -14264,11 +14264,25 @@ def _gl_delete_batches(connection, *, source_type: str, source_id: int, purposes
     purpose_set = {str(p) for p in (purposes or [])}
     rows = connection.execute(
         sa_text(f"""
-            SELECT id, purpose FROM {batch_table}
+            SELECT id, purpose, posted_at FROM {batch_table}
              WHERE source_type = :st AND source_id = :sid
         """),
         {"st": source_type, "sid": int(source_id)},
     ).mappings().all()
+    # حارس قفل: لا تحذف قيداً في فترة مقفلة (ما عدا الإقفال/العكس/الافتتاح)
+    _src_up = (source_type or "").upper()
+    _exempt = _src_up in ("CLOSING_ENTRY", "PERIOD_CLOSE", "OPENING_BALANCE") or "REVERSAL" in _src_up or "CANCELLATION" in _src_up
+    if not _exempt:
+        for row in rows:
+            _cs = row.get("posted_at")
+            try:
+                _cs = _cs.date() if hasattr(_cs, "date") else _cs
+            except Exception:
+                pass
+            if _cs:
+                _lk = connection.execute(sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"), {"d": _cs}).first()
+                if _lk:
+                    raise ValueError("لا يمكن حذف قيد في فترة مقفلة")
     for row in rows:
         purpose = str(row.get("purpose") or "")
         if purpose_set and purpose not in purpose_set:

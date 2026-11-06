@@ -1048,8 +1048,11 @@ def ensure_check_accounts(connection=None):
         current_app.logger.error(f"❌ خطأ في إنشاء حسابات دفتر الأستاذ: {str(e)}")
 
 
-def _create_gl_batch(connection, batch_code, check_type, check_id, currency, entity_name, notes, entity_type, entity_id, check_type_label):
+def _create_gl_batch(connection, batch_code, check_type, check_id, currency, entity_name, notes, entity_type, entity_id, check_type_label, posted_at=None):
     from sqlalchemy import text as sa_text
+    from datetime import datetime as _dt, timezone as _tz
+    if posted_at is None:
+        posted_at = _dt.now(_tz.utc)
     batch_data = {
         "code": batch_code,
         "source_type": f'check_{check_type}',
@@ -1059,13 +1062,14 @@ def _create_gl_batch(connection, batch_code, check_type, check_id, currency, ent
         "memo": f"قيد {check_type_label}: {entity_name} - {notes}",
         "entity_type": entity_type,
         "entity_id": entity_id,
+        "posted_at": posted_at,
         "created_at": _utcnow(),
         "updated_at": _utcnow()
     }
     result = connection.execute(
         sa_text("""
-            INSERT INTO gl_batches (code, source_type, source_id, currency, status, memo, entity_type, entity_id, created_at, updated_at)
-            VALUES (:code, :source_type, :source_id, :currency, :status, :memo, :entity_type, :entity_id, :created_at, :updated_at)
+            INSERT INTO gl_batches (code, source_type, source_id, currency, status, memo, entity_type, entity_id, posted_at, created_at, updated_at)
+            VALUES (:code, :source_type, :source_id, :currency, :status, :memo, :entity_type, :entity_id, :posted_at, :created_at, :updated_at)
             RETURNING id
         """),
         batch_data
