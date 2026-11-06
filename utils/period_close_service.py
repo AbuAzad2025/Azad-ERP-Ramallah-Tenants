@@ -21,7 +21,7 @@ from utils.fiscal_calendar import (
 
 
 def assert_posting_allowed(posted_at: datetime) -> None:
-    """يرفع ValueError إذا كان تاريخ الترحيل داخل فترة LOCKED."""
+    """يرفع ValueError إذا كان تاريخ الترحيل داخل فترة مقفلة (LOCKED أو CLOSED)."""
     from models import FiscalPeriod
 
     if posted_at is None:
@@ -31,7 +31,7 @@ def assert_posting_allowed(posted_at: datetime) -> None:
     d = posted_at.date() if isinstance(posted_at, datetime) else posted_at
     locked = (
         FiscalPeriod.query.filter(
-            FiscalPeriod.status == "LOCKED",
+            FiscalPeriod.status.in_(["LOCKED", "CLOSED"]),
             FiscalPeriod.start_date <= d,
             FiscalPeriod.end_date >= d,
         ).first()
@@ -161,7 +161,14 @@ def generate_closing_entries_for_period(period_id: int) -> Dict[str, Any]:
         raise ValueError("تم إقفال هذه الفترة مسبقاً — أعد فتحها أولاً إن لزم")
 
     revenues = _period_gl_balances(period, "4", revenue=True)
-    expenses = _period_gl_balances(period, "5", revenue=False)
+    # المصروفات تشمل 5xxx (مصروفات تشغيلية/COGS) و 6xxx (رواتب/ضرائب/أخرى) — يجب إقفالها كلها
+    expenses_5 = _period_gl_balances(period, "5", revenue=False)
+    expenses_6 = _period_gl_balances(period, "6", revenue=False)
+    # دمج القوائم (الحسابات مميزة بالبادئة فلا تداخل)
+    _exp_by_acc: dict = {}
+    for _acc, _bal in (expenses_5 + expenses_6):
+        _exp_by_acc[_acc] = _exp_by_acc.get(_acc, Decimal("0")) + _bal
+    expenses = [(a, b) for a, b in _exp_by_acc.items() if abs(b) > Decimal("0.01")]
     total_revenue = sum((b for _, b in revenues), Decimal("0"))
     total_expenses = sum((b for _, b in expenses), Decimal("0"))
     net_income = total_revenue - total_expenses

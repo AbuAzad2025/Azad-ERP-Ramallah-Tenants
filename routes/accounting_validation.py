@@ -407,16 +407,42 @@ def periodic_audit():
         current_app.logger.exception('API error')
         return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
-@accounting_validation_bp.route('/fix-unbalanced-batches')
+@accounting_validation_bp.route('/fix-unbalanced-batches', methods=['GET', 'POST'])
 @permission_required(SystemPermissions.VALIDATE_ACCOUNTING)
 def fix_unbalanced_batches():
-    """إصلاح القيود غير المتوازنة"""
+    """إصلاح القيود غير المتوازنة — GET للتشخيص فقط (بدون تعديل)، POST للإصلاح الفعلي."""
     try:
         # العثور على القيود غير المتوازنة
         batches = db.session.query(GLBatch).filter(
             GLBatch.status == 'POSTED'
         ).all()
-        
+
+        # تشخيص فقط في GET — لا يعدّل قاعدة البيانات
+        if request.method == 'GET':
+            unbalanced = []
+            for batch in batches:
+                total_debit = sum(float(entry.debit) for entry in batch.entries)
+                total_credit = sum(float(entry.credit) for entry in batch.entries)
+                difference = total_debit - total_credit
+                if abs(difference) > 0.01:
+                    unbalanced.append({
+                        'batch_id': batch.id,
+                        'batch_code': batch.code,
+                        'difference': difference,
+                        'posted_at': batch.posted_at.isoformat() if batch.posted_at else None,
+                    })
+            return jsonify({
+                'success': True,
+                'action': 'diagnose_unbalanced_batches',
+                'dry_run': True,
+                'message': 'GET لا يعدّل البيانات — استخدم POST للإصلاح الفعلي.',
+                'summary': {
+                    'total_batches': len(batches),
+                    'unbalanced_batches': len(unbalanced),
+                },
+                'unbalanced_batches': unbalanced,
+            })
+
         fixed_batches = []
         unfixable_batches = []
         

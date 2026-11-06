@@ -5451,6 +5451,7 @@ def _preorder_gl_upsert_core(connection, target: "PreOrder") -> None:
             ref=f"REV-PRE-{target.id}",
             entity_type="CUSTOMER",
             entity_id=target.customer_id,
+            posted_at=getattr(target, "cancelled_at", None) or getattr(target, "preorder_date", None) or datetime.now(timezone.utc),
         )
         return
     prepaid = float(target.prepaid_amount or 0)
@@ -5476,6 +5477,25 @@ def _preorder_gl_upsert_core(connection, target: "PreOrder") -> None:
     ar_account = GL_ACCOUNTS.get("AR", "1100_AR")
     advance_account = GL_ACCOUNTS.get("ADVANCE", "2300_ADV_PAY")
     entries = [(ar_account, amount_ils, 0), (advance_account, 0, amount_ils)]
+    # استبدال عند التعديل (منع stale) مع حارس فترة مقفلة على القديم
+    try:
+        _pre_old = connection.execute(sa_text("SELECT id, posted_at FROM gl_batches WHERE source_type='PREORDER' AND source_id=:sid AND purpose='PREORDER' AND status='POSTED'"), {"sid": int(target.id)}).fetchall()
+        for _obid, _obposted in _pre_old:
+            try:
+                _cs = _obposted.date()
+            except Exception:
+                _cs = _obposted
+            if _cs:
+                _lk = connection.execute(sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"), {"d": _cs}).first()
+                if _lk:
+                    raise ValueError("قيد الحجز الأصلي في فترة مقفلة")
+        for _obid, _obposted in _pre_old:
+            connection.execute(sa_text("DELETE FROM gl_entries WHERE batch_id=:bid"), {"bid": int(_obid)})
+            connection.execute(sa_text("DELETE FROM gl_batches WHERE id=:bid"), {"bid": int(_obid)})
+    except ValueError:
+        raise
+    except Exception:
+        pass
     _gl_upsert_batch_and_entries(
         connection,
         source_type="PREORDER",
@@ -5487,6 +5507,7 @@ def _preorder_gl_upsert_core(connection, target: "PreOrder") -> None:
         ref=target.reference or f"PRE-{target.id}",
         entity_type="CUSTOMER" if target.customer_id else "SUPPLIER",
         entity_id=target.customer_id or target.supplier_id,
+        posted_at=getattr(target, "preorder_date", None) or datetime.now(timezone.utc),
     )
 
 
@@ -6018,6 +6039,55 @@ def _sale_gl_upsert_core(connection, target: "Sale") -> None:
     """منطق إنشاء/تحديث قيد GL للبيع (يُستدعى من معاملة منفصلة بعد commit)."""
     from decimal import Decimal, ROUND_HALF_UP
     from sqlalchemy import select as sa_select
+    _sale_status = getattr(getattr(target, "status", None), "value", getattr(target, "status", None))
+    if _sale_status in (SaleStatus.CANCELLED.value, SaleStatus.REFUNDED.value):
+        # قيد عكسي: عكس كل قيود SALE/SALE_PARTNER_SHARE المُرحّلة حتى لا يبقى إيراد وهمي
+        try:
+            _existing_rev = connection.execute(
+                sa_text("SELECT id FROM gl_batches WHERE source_type='SALE_REVERSAL' AND source_id=:sid AND purpose='REVERSAL' AND status='POSTED' ORDER BY id DESC LIMIT 1"),
+                {"sid": int(target.id)},
+            ).scalar()
+            if _existing_rev:
+                return
+            _orig_batches = connection.execute(
+                sa_text("SELECT id FROM gl_batches WHERE source_type IN ('SALE','SALE_PARTNER_SHARE') AND source_id=:sid AND status='POSTED'"),
+                {"sid": int(target.id)},
+            ).fetchall()
+            _orig_ids = [int(b[0]) for b in _orig_batches]
+            if not _orig_ids:
+                return
+            _rev_entries: list = []
+            for _bid in _orig_ids:
+                _rows = connection.execute(
+                    sa_text("SELECT account, debit, credit FROM gl_entries WHERE batch_id=:bid ORDER BY id"),
+                    {"bid": _bid},
+                ).fetchall()
+                for _acc, _d, _c in _rows:
+                    _d_f = float(_d or 0)
+                    _c_f = float(_c or 0)
+                    if _d_f <= 0 and _c_f <= 0:
+                        continue
+                    _rev_entries.append((str(_acc or "").strip().upper(), _c_f, _d_f))
+            if not _rev_entries:
+                return
+            _rev_posted = getattr(target, "cancelled_at", None) or datetime.now(timezone.utc)
+            _gl_upsert_batch_and_entries(
+                connection,
+                source_type="SALE_REVERSAL",
+                source_id=target.id,
+                purpose="REVERSAL",
+                currency=DEFAULT_CURRENCY,
+                memo=f"Reversal - cancelled/refunded sale #{target.sale_number or target.id}",
+                entries=_rev_entries,
+                ref=f"REV-SALE-{target.id}",
+                entity_type="CUSTOMER",
+                entity_id=target.customer_id,
+                posted_at=_rev_posted,
+            )
+        except Exception:
+            # لا نكسر معاملة الإلغاء لخطأ GL — يُسجّل كتحذير في run_sale_gl_sync
+            raise
+        return
     if target.status != SaleStatus.CONFIRMED.value:
         return
     amount = Decimal(str(target.total_amount or 0))
@@ -6209,11 +6279,20 @@ def _sale_gl_upsert_core(connection, target: "Sale") -> None:
         entries.append((GL_ACCOUNTS.get("INVENTORY", "1200_INVENTORY"), Decimal(0), total_cogs_inv_amt))
     customer_name = getattr(getattr(target, "customer", None), "name", None) or "Customer"
     memo = f"Sale #{target.sale_number or target.id} - {customer_name}"
-    batch_ids = connection.execute(
-        sa_text("SELECT id FROM gl_batches WHERE source_type = 'SALE' AND source_id = :sid AND purpose = 'REVENUE'"),
+    _sale_batch_rows = connection.execute(
+        sa_text("SELECT id, posted_at FROM gl_batches WHERE source_type = 'SALE' AND source_id = :sid AND purpose = 'REVENUE'"),
         {"sid": target.id},
     ).fetchall()
-    for (bid,) in batch_ids:
+    for _bid, _bposted in _sale_batch_rows:
+        _cs = _bposted.date() if isinstance(_bposted, datetime) else _bposted
+        if _cs:
+            _lock = connection.execute(
+                sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"),
+                {"d": _cs},
+            ).first()
+            if _lock:
+                raise ValueError("القيد الأصلي في فترة مقفلة — لا يمكن إعادة إنشائه")
+    for (bid, _bp) in _sale_batch_rows:
         connection.execute(sa_text("DELETE FROM gl_entries WHERE batch_id = :bid"), {"bid": int(bid)})
         connection.execute(sa_text("DELETE FROM gl_batches WHERE id = :bid"), {"bid": int(bid)})
     _gl_upsert_batch_and_entries(
@@ -6227,13 +6306,24 @@ def _sale_gl_upsert_core(connection, target: "Sale") -> None:
         ref=target.sale_number or f"SALE-{target.id}",
         entity_type="CUSTOMER",
         entity_id=target.customer_id,
+        posted_at=sale_at,
+        cost_center_id=getattr(target, "cost_center_id", None),
     )
 
-    batch_ids_ps = connection.execute(
-        sa_text("SELECT id FROM gl_batches WHERE source_type = 'SALE_PARTNER_SHARE' AND source_id = :sid"),
+    _ps_rows = connection.execute(
+        sa_text("SELECT id, posted_at FROM gl_batches WHERE source_type = 'SALE_PARTNER_SHARE' AND source_id = :sid"),
         {"sid": target.id},
     ).fetchall()
-    for (bid,) in batch_ids_ps:
+    for _bid, _bposted in _ps_rows:
+        _cs = _bposted.date() if isinstance(_bposted, datetime) else _bposted
+        if _cs:
+            _lock = connection.execute(
+                sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"),
+                {"d": _cs},
+            ).first()
+            if _lock:
+                raise ValueError("قيد الشريك الأصلي في فترة مقفلة — لا يمكن إعادة إنشائه")
+    for (bid, _bp) in _ps_rows:
         connection.execute(sa_text("DELETE FROM gl_entries WHERE batch_id = :bid"), {"bid": int(bid)})
         connection.execute(sa_text("DELETE FROM gl_batches WHERE id = :bid"), {"bid": int(bid)})
     for partner_id, amount in total_revenue_partners.items():
@@ -6253,6 +6343,7 @@ def _sale_gl_upsert_core(connection, target: "Sale") -> None:
                 ref=f"SALE-{target.id}-P{partner_id}",
                 entity_type="PARTNER",
                 entity_id=partner_id,
+                posted_at=sale_at,
             )
 
 
@@ -6349,6 +6440,7 @@ def run_sale_gl_reversal_after_delete(snapshot: dict) -> None:
                     ref=ref,
                     entity_type=entity_type,
                     entity_id=entity_id,
+                    posted_at=snapshot.get("sale_date") or datetime.now(timezone.utc),
                 )
     except Exception as e:
         if current_app:
@@ -6650,7 +6742,7 @@ def _srl_after_insert(mapper, connection, t: "SaleReturnLine"):
             connection.execute(update(SaleReturn).where(SaleReturn.id == t.sale_return_id).values(total_amount=q(total)))
         
         sr_row = connection.execute(
-            sa_text("SELECT id, status, customer_id, total_amount FROM sale_returns WHERE id=:id"),
+            sa_text("SELECT id, status, customer_id, total_amount, return_date, created_at FROM sale_returns WHERE id=:id"),
             {"id": int(t.sale_return_id)},
         ).mappings().first()
         if sr_row and str(sr_row.get("status") or "").upper() == "CONFIRMED" and float(sr_row.get("total_amount") or 0) > 0:
@@ -6670,13 +6762,24 @@ def _srl_after_insert(mapper, connection, t: "SaleReturnLine"):
                 ref=str(f"RET-{sr_row.get('id')}"),
                 entity_type="CUSTOMER",
                 entity_id=int(sr_row.get("customer_id") or 0) or None,
+                posted_at=sr_row.get("return_date") or sr_row.get("created_at") or datetime.now(timezone.utc),
             )
         else:
+            # حارس قفل على القيد القديم قبل الحذف
             bids = connection.execute(
-                sa_text("SELECT id FROM gl_batches WHERE source_type='SALE_RETURN' AND source_id=:sid AND purpose='RETURN'"),
+                sa_text("SELECT id, posted_at FROM gl_batches WHERE source_type='SALE_RETURN' AND source_id=:sid AND purpose='RETURN'"),
                 {"sid": int(t.sale_return_id)},
             ).fetchall()
-            for (bid,) in bids:
+            for _bid, _bposted in bids:
+                try:
+                    _cs = _bposted.date()
+                except Exception:
+                    _cs = _bposted
+                if _cs:
+                    _lk = connection.execute(sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"), {"d": _cs}).first()
+                    if _lk:
+                        raise ValueError("قيد المرتجع في فترة مقفلة")
+            for (bid, _bp) in bids:
                 connection.execute(sa_text("DELETE FROM gl_entries WHERE batch_id=:bid"), {"bid": int(bid)})
                 connection.execute(sa_text("DELETE FROM gl_batches WHERE id=:bid"), {"bid": int(bid)})
     
@@ -6790,7 +6893,7 @@ def _srl_after_delete(mapper, connection, t: "SaleReturnLine"):
             connection.execute(update(SaleReturn).where(SaleReturn.id == t.sale_return_id).values(total_amount=q(total)))
         
         sr_row = connection.execute(
-            sa_text("SELECT id, status, customer_id, total_amount FROM sale_returns WHERE id=:id"),
+            sa_text("SELECT id, status, customer_id, total_amount, return_date, created_at FROM sale_returns WHERE id=:id"),
             {"id": int(t.sale_return_id)},
         ).mappings().first()
         if sr_row and str(sr_row.get("status") or "").upper() == "CONFIRMED" and float(sr_row.get("total_amount") or 0) > 0:
@@ -6810,13 +6913,24 @@ def _srl_after_delete(mapper, connection, t: "SaleReturnLine"):
                 ref=str(f"RET-{sr_row.get('id')}"),
                 entity_type="CUSTOMER",
                 entity_id=int(sr_row.get("customer_id") or 0) or None,
+                posted_at=sr_row.get("return_date") or sr_row.get("created_at") or datetime.now(timezone.utc),
             )
         else:
+            # حارس قفل على القيد القديم قبل الحذف
             bids = connection.execute(
-                sa_text("SELECT id FROM gl_batches WHERE source_type='SALE_RETURN' AND source_id=:sid AND purpose='RETURN'"),
+                sa_text("SELECT id, posted_at FROM gl_batches WHERE source_type='SALE_RETURN' AND source_id=:sid AND purpose='RETURN'"),
                 {"sid": int(t.sale_return_id)},
             ).fetchall()
-            for (bid,) in bids:
+            for _bid, _bposted in bids:
+                try:
+                    _cs = _bposted.date()
+                except Exception:
+                    _cs = _bposted
+                if _cs:
+                    _lk = connection.execute(sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"), {"d": _cs}).first()
+                    if _lk:
+                        raise ValueError("قيد المرتجع في فترة مقفلة")
+            for (bid, _bp) in bids:
                 connection.execute(sa_text("DELETE FROM gl_entries WHERE batch_id=:bid"), {"bid": int(bid)})
                 connection.execute(sa_text("DELETE FROM gl_batches WHERE id=:bid"), {"bid": int(bid)})
 
@@ -7337,6 +7451,13 @@ def _invoice_delete_tax_entry(mapper, connection, target: "Invoice"):
 # ===== إنشاء قيود GL تلقائية للفواتير =====
 def _invoice_gl_upsert_core(connection, target: "Invoice") -> None:
     """منطق إنشاء/تحديث قيد GL للفاتورة (يُستدعى من معاملة منفصلة بعد commit)."""
+    # الفاتورة المرتبطة بمبيعة (sale_id) هي مستند ذمة/مستند فقط — الإيراد سُجّل أصلاً
+    # عبر قيد SALE/REVENUE في _sale_gl_upsert_core. ترحيل قيد INVOICE هنا يضاعف الإيراد.
+    # نُبقي القيد فقط للفواتير المستقلة (خدمات/مشتريات) بدون sale_id.
+    if getattr(target, "sale_id", None):
+        # إذا كانت الفاتورة ملغاة وكانت قد سجلت قيداً مستقلاً سابقاً (قبل ربطها بمبيعة)
+        # يترك عكس الإلغاء للمسار الآخر — هنا نتخطى لمنع الازدواج المستقبلي.
+        return
     if target.cancelled_at:
         amount = float(target.total_amount or 0)
         if amount <= 0:
@@ -7374,6 +7495,7 @@ def _invoice_gl_upsert_core(connection, target: "Invoice") -> None:
             ref=f"REV-INV-{target.id}",
             entity_type=entity_type,
             entity_id=entity_id,
+            posted_at=getattr(target, "cancelled_at", None) or getattr(target, "invoice_date", None) or datetime.now(timezone.utc),
         )
         return
     amount = float(target.total_amount or 0)
@@ -7409,6 +7531,25 @@ def _invoice_gl_upsert_core(connection, target: "Invoice") -> None:
     else:
         entries = [(GL_ACCOUNTS.get("PURCHASES", "5100_PURCHASES"), amount_ils, 0), (ar_account, 0, amount_ils)]
         memo = f"Invoice purchase - {target.invoice_number}"
+    # استبدال قيد الفاتورة عند التعديل (منع stale) مع حارس فترة مقفلة على القديم
+    try:
+        _inv_old = connection.execute(
+            sa_text("SELECT id, posted_at FROM gl_batches WHERE source_type='INVOICE' AND source_id=:sid AND purpose='INVOICE' AND status='POSTED'"),
+            {"sid": int(target.id)},
+        ).fetchall()
+        for _obid, _obposted in _inv_old:
+            _cs = _obposted.date() if hasattr(_obposted, "date") else _obposted
+            if _cs:
+                _lk = connection.execute(sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"), {"d": _cs}).first()
+                if _lk:
+                    raise ValueError("قيد الفاتورة الأصلي في فترة مقفلة")
+        for _obid, _obposted in _inv_old:
+            connection.execute(sa_text("DELETE FROM gl_entries WHERE batch_id=:bid"), {"bid": int(_obid)})
+            connection.execute(sa_text("DELETE FROM gl_batches WHERE id=:bid"), {"bid": int(_obid)})
+    except ValueError:
+        raise
+    except Exception:
+        pass
     _gl_upsert_batch_and_entries(
         connection,
         source_type="INVOICE",
@@ -7420,6 +7561,7 @@ def _invoice_gl_upsert_core(connection, target: "Invoice") -> None:
         ref=target.invoice_number,
         entity_type=entity_type,
         entity_id=entity_id,
+        posted_at=getattr(target, "invoice_date", None) or datetime.now(timezone.utc),
     )
 
 
@@ -8058,6 +8200,7 @@ def _payment_gl_upsert_core(connection, target: "Payment") -> None:
             ref=f"REV-CANCEL-PAY-{target.id}",
             entity_type=entity_type,
             entity_id=target.customer_id or target.supplier_id or target.partner_id,
+            posted_at=getattr(target, "payment_date", None) or datetime.now(timezone.utc),
         )
         return
     if target.status not in [PaymentStatus.COMPLETED.value, PaymentStatus.PENDING.value]:
@@ -8151,6 +8294,33 @@ def _payment_gl_upsert_core(connection, target: "Payment") -> None:
             entity_type_for_gl = exp_entity_type
             entity_id_for_gl = exp_entity_id
 
+    # تحديث: حذف القيد القديم قبل إعادة الإنشاء حتى لا يبقى مبلغاً stale
+    # (نفس نمط _sale_gl_upsert_core). مع حارس فترة مقفلة على القيد القديم.
+    try:
+        _dialect = getattr(getattr(connection, "dialect", None), "name", "")
+        _bt = "public.gl_batches" if _dialect == "postgresql" else "gl_batches"
+        _et = "public.gl_entries" if _dialect == "postgresql" else "gl_entries"
+        _old_batches = connection.execute(
+            sa_text(f"SELECT id, posted_at FROM {_bt} WHERE source_type='PAYMENT' AND source_id=:sid AND purpose IN ('PAYMENT','PREORDER_PAYMENT') AND status='POSTED'"),
+            {"sid": int(target.id)},
+        ).fetchall()
+        for _bid, _bposted in _old_batches:
+            _cs = _bposted.date() if isinstance(_bposted, datetime) else _bposted
+            if _cs:
+                _lock = connection.execute(
+                    sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"),
+                    {"d": _cs},
+                ).first()
+                if _lock:
+                    raise ValueError("القيد الأصلي في فترة مقفلة — لا يمكن تحديثه")
+        for _bid, _bposted in _old_batches:
+            connection.execute(sa_text(f"DELETE FROM {_et} WHERE batch_id=:bid"), {"bid": int(_bid)})
+            connection.execute(sa_text(f"DELETE FROM {_bt} WHERE id=:bid"), {"bid": int(_bid)})
+    except ValueError:
+        raise
+    except Exception:
+        pass
+
     _gl_upsert_batch_and_entries(
         connection,
         source_type="PAYMENT",
@@ -8162,6 +8332,7 @@ def _payment_gl_upsert_core(connection, target: "Payment") -> None:
         ref=target.payment_number or f"PMT-{target.id}",
         entity_type=entity_type_for_gl,
         entity_id=entity_id_for_gl,
+        posted_at=getattr(target, "payment_date", None) or datetime.now(timezone.utc),
     )
 
 
@@ -8279,6 +8450,7 @@ def run_payment_gl_reversal_after_delete(snapshot: dict) -> None:
                     ref=f"REV-PAY-{payment_id}",
                     entity_type=entity_type,
                     entity_id=entity_id,
+                    posted_at=snapshot.get("payment_date") or datetime.now(timezone.utc),
                 )
     except Exception as e:
         if current_app:
@@ -8899,6 +9071,19 @@ def _payment_split_gl_batch_upsert_by_id(connection, *, split_id: int) -> None:
             if not payment_row:
                 return
 
+            # حذف قيد PAYMENT الأب عند الانتقال لـ splits — مع حارس فترة مقفلة على القديم
+            _par_old = connection.execute(sa_text("SELECT id, posted_at FROM gl_batches WHERE source_type='PAYMENT' AND source_id=:pid AND status='POSTED'"), {"pid": int(split_row["payment_id"])}).fetchall()
+            for _obid, _obposted in _par_old:
+                try:
+                    _cs = _obposted.date()
+                except Exception:
+                    _cs = _obposted
+                if _cs:
+                    _lk = connection.execute(sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"), {"d": _cs}).first()
+                    if _lk:
+                        raise ValueError("قيد الدفع الأصلي في فترة مقفلة")
+            for _obid, _obposted in _par_old:
+                connection.execute(sa_text("DELETE FROM gl_entries WHERE batch_id=:bid"), {"bid": int(_obid)})
             connection.execute(
                 sa_text("DELETE FROM gl_batches WHERE source_type = 'PAYMENT' AND source_id = :pid"),
                 {"pid": int(split_row["payment_id"])},
@@ -9122,6 +9307,7 @@ def _payment_split_gl_batch_upsert_by_id(connection, *, split_id: int) -> None:
                     ref=(f"SPLIT-{split_id}-PMT-{payment_row['payment_number'] or payment_row['id']}")[:50],
                     entity_type=batch_entity_type,
                     entity_id=batch_entity_id,
+                    posted_at=payment_row.get("payment_date") or datetime.now(timezone.utc),
                 )
             else:
                 dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
@@ -9181,6 +9367,7 @@ def _payment_split_gl_batch_upsert_by_id(connection, *, split_id: int) -> None:
                             ref=(f"REV-SPLIT-{split_id}-PMT-{payment_row['payment_number'] or payment_row['id']}")[:50],
                             entity_type=(bmeta or {}).get("entity_type") or batch_entity_type,
                             entity_id=(bmeta or {}).get("entity_id") or batch_entity_id,
+                            posted_at=payment_row.get("payment_date") or datetime.now(timezone.utc),
                         )
     except Exception:
         return
@@ -9922,7 +10109,8 @@ def _shipment_gl_batch_reverse(mapper, connection, target: "Shipment"):
             entries=entries,
             ref=f"REV-SHIP-{target.id}",
             entity_type="SUPPLIER",
-            entity_id=target.supplier_id
+            entity_id=target.supplier_id,
+            posted_at=getattr(target, "date", None) or getattr(target, "shipment_date", None) or datetime.now(timezone.utc),
         )
     except Exception as e:
         from flask import current_app
@@ -9981,6 +10169,7 @@ def _gl_on_shipment_arrived(mapper, connection, target: "Shipment"):
         ref=ref,
         entity_type=None,
         entity_id=None,
+        posted_at=getattr(target, "actual_arrival", None) or getattr(target, "shipment_date", None) or getattr(target, "date", None) or datetime.now(timezone.utc),
     )
 
 class ShipmentPartner(db.Model, TimestampMixin):
@@ -10766,6 +10955,7 @@ def build_service_reversal_snapshot(service: "ServiceRequest") -> dict:
             "currency": service.currency or "ILS",
             "entity_type": "CUSTOMER",
             "entity_id": service.customer_id,
+            "received_at": getattr(service, "received_at", None),
         }
     except Exception:
         return {"service_id": getattr(service, "id", None), "amount": 0}
@@ -10811,6 +11001,7 @@ def run_service_gl_reversal_after_delete(snapshot: dict) -> None:
                     ref=f"REV-SRV-{service_id}",
                     entity_type=entity_type,
                     entity_id=entity_id,
+                    posted_at=snapshot.get("received_at") or datetime.now(timezone.utc),
                 )
     except Exception as e:
         if current_app:
@@ -10967,6 +11158,7 @@ def _service_gl_batch_upsert_sql(connection, service_id: int) -> None:
             ref=service_number or f"SRV-{sid}",
             entity_type="CUSTOMER",
             entity_id=customer_id,
+            posted_at=received_at or datetime.now(timezone.utc),
         )
         ap_code = (GL_ACCOUNTS.get("AP", "2000_AP") or "2000_AP").upper()
         service_rev_code = (GL_ACCOUNTS.get("SERVICE_REV", "4100_SERVICE_REVENUE") or "4100_SERVICE_REVENUE").upper()
@@ -10984,6 +11176,7 @@ def _service_gl_batch_upsert_sql(connection, service_id: int) -> None:
                         (ap_code, 0, amt),
                     ],
                     ref=f"SRV-{sid}-P{partner_id}",
+                    posted_at=received_at or datetime.now(timezone.utc),
                     entity_type="PARTNER",
                     entity_id=partner_id,
                 )
@@ -13114,6 +13307,7 @@ def run_expense_gl_sync_after_commit(expense_id: int) -> bool:
                         Expense.type_id,
                         Expense.amount,
                         Expense.currency,
+                        Expense.date,
                         Expense.supplier_id,
                         Expense.partner_id,
                         Expense.customer_id,
@@ -13161,14 +13355,20 @@ def run_expense_gl_sync_after_commit(expense_id: int) -> bool:
             memo = f"Expense #{expense_id}"
             ref = f"EXP-{expense_id}"
             with conn.begin():
+                # حارس قفل: لا تحذف قيداً في فترة مقفلة
+                _old_exp = conn.execute(sa_text("SELECT id, posted_at FROM gl_batches WHERE source_type='EXPENSE' AND source_id=:eid AND purpose='ACCRUAL' AND status='POSTED'"), {"eid": expense_id}).fetchall()
+                for _obid, _obposted in _old_exp:
+                    try:
+                        _cs = _obposted.date()
+                    except Exception:
+                        _cs = _obposted
+                    if _cs:
+                        _lk = conn.execute(sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"), {"d": _cs}).first()
+                        if _lk:
+                            raise ValueError("قيد المصروف في فترة مقفلة")
                 # استبدال قيد المصروف الحالي (عند التعديل) ليبقى دفتر الأستاذ يعكس البيانات الحالية
-                conn.execute(
-                    sa_text("""
-                        DELETE FROM gl_batches
-                        WHERE source_type = 'EXPENSE' AND source_id = :eid AND purpose = 'ACCRUAL'
-                    """),
-                    {"eid": expense_id}
-                )
+                conn.execute(sa_text("DELETE FROM gl_entries WHERE batch_id IN (SELECT id FROM gl_batches WHERE source_type='EXPENSE' AND source_id=:eid AND purpose='ACCRUAL')"), {"eid": expense_id})
+                conn.execute(sa_text("DELETE FROM gl_batches WHERE source_type='EXPENSE' AND source_id=:eid AND purpose='ACCRUAL'"), {"eid": expense_id})
                 batch_id = _gl_upsert_batch_and_entries(
                     conn,
                     source_type="EXPENSE",
@@ -13180,6 +13380,7 @@ def run_expense_gl_sync_after_commit(expense_id: int) -> bool:
                     ref=ref,
                     entity_type=entity_type,
                     entity_id=entity_id,
+                    posted_at=row.get("date") or datetime.now(timezone.utc),
                 )
         finally:
             conn.close()
@@ -13409,6 +13610,7 @@ def _sale_return_gl_upsert_core(connection, target: "SaleReturn") -> None:
         ref=f"RET-{target.id}",
         entity_type="CUSTOMER",
         entity_id=target.customer_id,
+        posted_at=getattr(target, "return_date", None) or getattr(target, "created_at", None) or datetime.now(timezone.utc),
     )
 
 
@@ -13866,6 +14068,7 @@ class GLBatch(db.Model, TimestampMixin):
     currency = db.Column(db.String(10), default=DEFAULT_CURRENCY, nullable=False)
     entity_type = db.Column(db.String(30), index=True)
     entity_id = db.Column(db.Integer, index=True)
+    branch_id = db.Column(db.Integer, index=True, nullable=True)
     status = db.Column(sa_str_enum(["DRAFT", "POSTED", "VOID"], name="gl_batch_status"), default="DRAFT", nullable=False, index=True)
 
     entries = db.relationship("GLEntry", backref="batch", cascade="all, delete-orphan", passive_deletes=True, order_by="GLEntry.id")
@@ -13895,7 +14098,7 @@ def _assert_gl_batch_not_in_locked_period(target: "GLBatch") -> None:
     if st != "POSTED":
         return
     src = (getattr(target, "source_type", None) or "").upper()
-    if src in ("CLOSING_ENTRY", "REVERSAL", "PERIOD_CLOSE", "OPENING_BALANCE"):
+    if src in ("CLOSING_ENTRY", "PERIOD_CLOSE", "OPENING_BALANCE") or "REVERSAL" in src or "CANCELLATION" in src:
         return
     posted = getattr(target, "posted_at", None)
     if not posted:
@@ -13938,6 +14141,7 @@ class GLEntry(db.Model, TimestampMixin):
     credit = db.Column(db.Numeric(12, 2), default=0, nullable=False)
     currency = db.Column(db.String(10), default=DEFAULT_CURRENCY, nullable=False)
     ref = db.Column(db.String(50))
+    cost_center_id = db.Column(db.Integer, index=True, nullable=True)
 
     __table_args__ = (
         db.CheckConstraint("debit >= 0", name="ck_gl_debit_ge_0"),
@@ -14016,9 +14220,39 @@ def _gl_upsert_batch_and_entries(
     ref: str,
     entity_type: str | None,
     entity_id: int | None,
+    posted_at: datetime | None = None,
+    branch_id: int | None = None,
+    cost_center_id: int | None = None,
 ):
     if not entries:
         raise ValueError("entries required")
+    effective_posted_at = posted_at or datetime.now(timezone.utc)
+    # منع الترحيل لفترة مقفلة عبر مسار SQL الخام (يغطي كل المصادر بما فيها _sale_gl)
+    _src_up = (source_type or "").upper()
+    _exempt_lock = (
+        _src_up in ("CLOSING_ENTRY", "PERIOD_CLOSE", "OPENING_BALANCE")
+        or "REVERSAL" in _src_up
+        or "CANCELLATION" in _src_up
+    )
+    if not _exempt_lock:
+        try:
+            _check_date = effective_posted_at.date() if isinstance(effective_posted_at, datetime) else effective_posted_at
+            _locked_row = connection.execute(
+                sa_text(
+                    "SELECT period_key, name_ar FROM fiscal_periods "
+                    "WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"
+                ),
+                {"d": _check_date},
+            ).mappings().first()
+            if _locked_row:
+                raise ValueError(
+                    f"الفترة {_locked_row.get('name_ar')} ({_locked_row.get('period_key')}) مقفلة — لا يمكن الترحيل بتاريخ {_check_date}"
+                )
+        except ValueError:
+            raise
+        except Exception:
+            # جدول الفترات قد لا يكون متاحاً في سياق tenant — لا نمنع الترحيل لخطأ فحص
+            pass
     dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
     if dialect_name == "postgresql":
         batch_table = "public.gl_batches"
@@ -14086,14 +14320,14 @@ def _gl_upsert_batch_and_entries(
     )
 
     batch_code = f"{source_type}-{source_id}-{purpose}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
-    posted_at = datetime.now(timezone.utc)
-    
+    _insert_posted_at = effective_posted_at
+
     cur = connection.execute(
         sa_text(f"""
             INSERT INTO {batch_table}
-                (code, source_type, source_id, purpose, memo, posted_at, currency, entity_type, entity_id, status, created_at, updated_at)
+                (code, source_type, source_id, purpose, memo, posted_at, currency, entity_type, entity_id, branch_id, status, created_at, updated_at)
             VALUES
-                (:code, :st, :sid, :p, :memo, :posted_at, :cur, :etype, :eid, 'POSTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                (:code, :st, :sid, :p, :memo, :posted_at, :cur, :etype, :eid, :bid2, 'POSTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             RETURNING id
         """),
         {
@@ -14102,10 +14336,11 @@ def _gl_upsert_batch_and_entries(
             "sid": source_id,
             "p": purpose,
             "memo": memo or "",
-            "posted_at": posted_at,
+            "posted_at": _insert_posted_at,
             "cur": (currency or "ILS").upper(),
             "etype": entity_type,
             "eid": entity_id,
+            "bid2": branch_id,
         }
     )
     batch_id = cur.scalar_one()
@@ -14114,11 +14349,11 @@ def _gl_upsert_batch_and_entries(
         connection.execute(
             sa_text(f"""
                 INSERT INTO {entry_table}
-                    (batch_id, account, debit, credit, currency, ref, created_at, updated_at)
+                    (batch_id, account, debit, credit, currency, ref, cost_center_id, created_at, updated_at)
                 VALUES
-                    (:bid, :acc, :d, :c, :cur, :ref, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    (:bid, :acc, :d, :c, :cur, :ref, :ccid, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """),
-            {"bid": batch_id, "acc": acct, "d": debit, "c": credit, "cur": (currency or "ILS").upper(), "ref": (ref or "").strip()}
+            {"bid": batch_id, "acc": acct, "d": debit, "c": credit, "cur": (currency or "ILS").upper(), "ref": (ref or "").strip(), "ccid": cost_center_id}
         )
 
     return int(batch_id)
@@ -15802,7 +16037,8 @@ def _project_cost_gl_batch_create(mapper, connection, target: "ProjectCost"):
             entries=entries,
             ref=f"PCOST-{target.id}",
             entity_type="PROJECT",
-            entity_id=target.project_id
+            entity_id=target.project_id,
+            posted_at=getattr(target, "cost_date", None) or getattr(target, "created_at", None) or datetime.now(timezone.utc),
         )
         
         connection.execute(
@@ -15855,7 +16091,8 @@ def _project_revenue_gl_batch_create(mapper, connection, target: "ProjectRevenue
             entries=entries,
             ref=f"PREV-{target.id}",
             entity_type="PROJECT",
-            entity_id=target.project_id
+            entity_id=target.project_id,
+            posted_at=getattr(target, "revenue_date", None) or getattr(target, "created_at", None) or datetime.now(timezone.utc),
         )
         
         connection.execute(

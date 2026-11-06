@@ -1479,6 +1479,12 @@ def change_status(id: int, status: str):
                     run_invoice_gl_sync_after_commit(inv.id)
             except Exception:
                 pass
+        if status in ("CANCELLED", "REFUNDED"):
+            try:
+                from models import run_sale_gl_sync_after_commit
+                run_sale_gl_sync_after_commit(sale.id)
+            except Exception:
+                current_app.logger.warning(f"Failed to sync sale GL reversal: {sale.id}")
         try:
             from utils.sale_billing import refresh_customer_balance_for_sale
             refresh_customer_balance_for_sale(sale)

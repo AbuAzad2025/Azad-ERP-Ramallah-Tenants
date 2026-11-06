@@ -451,6 +451,19 @@ def _delete_check_gl_batches(connection, check_id):
     from sqlalchemy import text as sa_text
     placeholders = ", ".join(f":st{i}" for i in range(len(CHECK_GL_SOURCE_TYPES)))
     params = {"cid": check_id, **{f"st{i}": st for i, st in enumerate(CHECK_GL_SOURCE_TYPES)}}
+    # حارس قفل: لا تحذف قيداً في فترة مقفلة
+    _old_chk = connection.execute(sa_text(f"SELECT id, posted_at FROM gl_batches WHERE source_id=:cid AND source_type IN ({placeholders}) AND status='POSTED'"), params).fetchall()
+    for _obid, _obposted in _old_chk:
+        try:
+            _cs = _obposted.date()
+        except Exception:
+            _cs = _obposted
+        if _cs:
+            _lk = connection.execute(sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"), {"d": _cs}).first()
+            if _lk:
+                raise ValueError("قيد الشيك الأصلي في فترة مقفلة")
+    for _obid, _obposted in _old_chk:
+        connection.execute(sa_text("DELETE FROM gl_entries WHERE batch_id=:bid"), {"bid": int(_obid)})
     connection.execute(
         sa_text(f"DELETE FROM gl_batches WHERE source_id = :cid AND source_type IN ({placeholders})"),
         params
@@ -493,6 +506,14 @@ def _check_gl_batch_reverse(mapper, connection, target):
             entries = [(ap_account, 0, amount_ils), (bank_account, amount_ils, 0)]
         
         from models import _gl_upsert_batch_and_entries
+        try:
+            _rev_posted = getattr(target, "check_date", None) or getattr(target, "check_due_date", None)
+            from datetime import datetime as _dt, timezone as _tz
+            if _rev_posted is None:
+                _rev_posted = _dt.now(_tz.utc)
+        except Exception:
+            from datetime import datetime as _dt, timezone as _tz
+            _rev_posted = _dt.now(_tz.utc)
         _gl_upsert_batch_and_entries(
             connection,
             source_type="CHECK_REVERSAL",
@@ -503,7 +524,8 @@ def _check_gl_batch_reverse(mapper, connection, target):
             entries=entries,
             ref=f"REV-CHK-{target.id}",
             entity_type="OTHER",
-            entity_id=None
+            entity_id=None,
+            posted_at=_rev_posted,
         )
     except Exception as e:
         try:
