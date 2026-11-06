@@ -14094,6 +14094,7 @@ class GLBatch(db.Model, TimestampMixin):
     entity_type = db.Column(db.String(30), index=True)
     entity_id = db.Column(db.Integer, index=True)
     branch_id = db.Column(db.Integer, db.ForeignKey("branches.id"), nullable=True, index=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True, index=True)
     status = db.Column(sa_str_enum(["DRAFT", "POSTED", "VOID"], name="gl_batch_status"), default="DRAFT", nullable=False, index=True)
 
     entries = db.relationship("GLEntry", backref="batch", cascade="all, delete-orphan", passive_deletes=True, order_by="GLEntry.id")
@@ -14169,6 +14170,8 @@ class GLEntry(db.Model, TimestampMixin):
     currency = db.Column(db.String(10), default=DEFAULT_CURRENCY, nullable=False)
     ref = db.Column(db.String(50))
     cost_center_id = db.Column(db.Integer, db.ForeignKey("cost_centers.id", ondelete="SET NULL"), nullable=True, index=True)
+    fx_rate = db.Column(db.Numeric(12, 6), nullable=True)
+    fx_currency = db.Column(db.String(10), nullable=True)
 
     cost_center = db.relationship("CostCenter", backref=db.backref("gl_entries", lazy="dynamic"))
 
@@ -14344,6 +14347,7 @@ def _gl_upsert_batch_and_entries(
     entity_id: int | None,
     branch_id: int | None = None,
     posted_at: datetime | None = None,
+    company_id: int | None = None,
 ):
     if not entries:
         raise ValueError("entries required")
@@ -14449,9 +14453,9 @@ def _gl_upsert_batch_and_entries(
     cur = connection.execute(
         sa_text(f"""
             INSERT INTO {batch_table}
-                (code, source_type, source_id, purpose, memo, posted_at, currency, entity_type, entity_id, branch_id, status, created_at, updated_at)
+                (code, source_type, source_id, purpose, memo, posted_at, currency, entity_type, entity_id, branch_id, company_id, status, created_at, updated_at)
             VALUES
-                (:code, :st, :sid, :p, :memo, :posted_at, :cur, :etype, :eid, :bid, 'POSTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                (:code, :st, :sid, :p, :memo, :posted_at, :cur, :etype, :eid, :bid, :cid, 'POSTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             RETURNING id
         """),
         {
@@ -14465,6 +14469,7 @@ def _gl_upsert_batch_and_entries(
             "etype": entity_type,
             "eid": entity_id,
             "bid": branch_id,
+            "cid": company_id,
         }
     )
     batch_id = cur.scalar_one()
