@@ -14572,7 +14572,7 @@ def _gl_upsert_batch_and_entries(
             "sid": source_id,
             "p": purpose,
             "memo": memo or "",
-            "posted_at": _insert_posted_at,
+            "posted_at": posted_at,
             "cur": (currency or "ILS").upper(),
             "etype": entity_type,
             "eid": entity_id,
