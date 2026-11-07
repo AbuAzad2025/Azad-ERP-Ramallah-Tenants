@@ -27,7 +27,7 @@
 <!-- إحصائيات سريعة -->
 <div class="row mb-4">
   <div class="col-md-3">
-    <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--primary text-white">
       <div class="card-body text-white text-center">
         <i class="fas fa-sticky-note fa-2x mb-2 opacity-75"></i>
         <h3 class="mb-1">{{ pagination.total if pagination else notes|length }}</h3>
@@ -36,7 +36,7 @@
     </div>
   </div>
   <div class="col-md-3">
-    <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+    <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--danger text-white">
       <div class="card-body text-white text-center">
         <i class="fas fa-thumbtack fa-2x mb-2 opacity-75"></i>
         <h3 class="mb-1">{{ notes|selectattr('is_pinned', 'equalto', true)|list|length }}</h3>
@@ -45,7 +45,7 @@
     </div>
   </div>
   <div class="col-md-3">
-    <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);">
+    <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--warning text-white">
       <div class="card-body text-white text-center">
         <i class="fas fa-exclamation-circle fa-2x mb-2 opacity-75"></i>
         <h3 class="mb-1">{{ notes|selectattr('priority', 'equalto', 'URGENT')|list|length }}</h3>
@@ -54,7 +54,7 @@
     </div>
   </div>
   <div class="col-md-3">
-    <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+    <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--info text-white">
       <div class="card-body text-white text-center">
         <i class="fas fa-user fa-2x mb-2 opacity-75"></i>
         <h3 class="mb-1">{{ notes|map(attribute='author_id')|unique|list|length }}</h3>
@@ -124,11 +124,7 @@
       <div class="col-md-6 col-lg-4 mb-3" id="note-card-{{ n.id }}">
         <div class="card note-card h-100 border-0 shadow-sm {{ 'border-warning' if n.is_pinned }}" 
              style="{% if n.is_pinned %}border: 3px solid #ffc107 !important;{% endif %}">
-          <div class="card-header" style="background: linear-gradient(135deg, 
-            {% if n.priority == 'URGENT' %}#ff6b6b 0%, #ee5a6f 100%
-            {% elif n.priority == 'HIGH' %}#ffd89b 0%, #19547b 100%
-            {% elif n.priority == 'MEDIUM' %}#4facfe 0%, #00f2fe 100%
-            {% else %}#667eea 0%, #764ba2 100%{% endif %});">
+          <div class="card-header erp-card-header-row erp-theme-header--primary">
             <div class="d-flex align-items-center justify-content-between text-white">
               <div class="d-flex align-items-center">
                 <i class="fas fa-user mr-2"></i>

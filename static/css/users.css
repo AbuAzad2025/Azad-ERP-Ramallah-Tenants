@@ -26,6 +26,41 @@
 .user-role.support { background: linear-gradient(135deg, #0dcaf0, #3498db); }
 .user-role.suspended { background: linear-gradient(135deg, #dc3545, #e74c3c); }
 
+.erp-users-page {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.erp-users-page .table-responsive,
+.erp-users-page #users-table_wrapper {
+  max-width: 100%;
+}
+
+/* شريط تصدير DataTables (نسخ / Excel / CSV / طباعة) */
+.erp-users-page .dataTables_wrapper div.dt-buttons {
+  gap: 0.5rem;
+}
+
+.erp-users-page .dataTables_wrapper div.dt-buttons .btn {
+  min-height: 38px;
+  font-weight: 600;
+  color: var(--erp-text, #1f2937) !important;
+  background: var(--erp-surface, #fff) !important;
+  border: 1px solid var(--erp-border, #e5e7eb) !important;
+}
+
+.erp-users-page .dataTables_wrapper div.dt-buttons .btn i {
+  color: inherit !important;
+  opacity: 1 !important;
+}
+
+.erp-users-page .dataTables_wrapper div.dt-buttons .btn:hover,
+.erp-users-page .dataTables_wrapper div.dt-buttons .btn:focus {
+  color: #fff !important;
+  background: var(--erp-primary, #006b3f) !important;
+  border-color: var(--erp-primary, #006b3f) !important;
+}
+
 .table td, .table th { vertical-align: middle !important; }
 .table .btn-sm {
   padding: 0.25rem 0.5rem;

@@ -1,67 +1,13 @@
 {% extends 'warehouses/base.html' %}
 
 {% block page_title %}{{ 'تعديل مستودع' if warehouse else 'مستودع جديد' }}{% endblock %}
+{% block breadcrumb_extra %}
+<li class="breadcrumb-item active">{{ 'تعديل' if warehouse else 'إضافة' }}</li>
+{% endblock %}
 
 {% block head_extra %}
   {{ super() }}
-  <style>
-    .warehouse-type-card {
-      border: 2px solid transparent;
-      transition: all 0.3s ease;
-      cursor: pointer;
-      height: 100%;
-    }
-    .warehouse-type-card:hover {
-      border-color: #007bff;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,123,255,0.2);
-    }
-    .warehouse-type-card.selected {
-      border-color: #28a745;
-      background-color: #f0f9ff;
-    }
-    .warehouse-type-icon {
-      font-size: 2.5rem;
-      margin-bottom: 0.5rem;
-    }
-    .info-tooltip {
-      cursor: help;
-      border-bottom: 1px dotted #6c757d;
-    }
-    .was-validated .form-control:valid {
-      border-color: #28a745;
-    }
-    .was-validated .form-control:invalid {
-      border-color: #dc3545;
-    }
-    #btn-submit:disabled {
-      cursor: not-allowed;
-      opacity: 0.6;
-    }
-    .field-group {
-      background: #f8f9fa;
-      padding: 1rem;
-      border-radius: 0.5rem;
-      border: 1px solid #e9ecef;
-      margin-bottom: 1rem;
-    }
-    .field-help {
-      font-size: 0.85rem;
-      color: #6c757d;
-      margin-top: 0.25rem;
-    }
-    .field-help i {
-      color: #007bff;
-    }
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-      20%, 40%, 60%, 80% { transform: translateX(5px); }
-    }
-    .shake {
-      animation: shake 0.5s;
-    }
-  </style>
+  
 {% endblock %}
 
 {% block content %}
@@ -83,7 +29,7 @@
 
   <!-- قسم 1: اختيار نوع المستودع مع البطاقات التوضيحية -->
   <div class="card shadow-lg rounded-4 border-0 mb-4">
-    <div class="card-header gradient-header text-white">
+    <div class="card-header erp-card-header-row erp-theme-header--primary">
       <i class="fas fa-warehouse ml-2"></i>
       <strong>معلومات المستودع الأساسية</strong>
     </div>
@@ -126,7 +72,7 @@
           {{ form.branch_id.label.text }}
           <small class="text-muted">(اختياري — الافتراضي: الفرع الرئيسي)</small>
         </label>
-        {{ form.branch_id(class="form-select form-control-modern") }}
+        {{ form.branch_id(class="custom-select form-control-modern") }}
       </div>
 
       <!-- بطاقات توضيحية لأنواع المستودعات -->
@@ -239,7 +185,7 @@
   <div class="row g-4 mt-1">
     <div class="col-md-6">
       <div class="card shadow-sm h-100">
-        <div class="card-header bg-secondary text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-secondary text-white">
           <i class="fas fa-map-marker-alt ml-1"></i> الموقع والإعدادات
         </div>
         <div class="card-body">
@@ -303,7 +249,7 @@
 
     <div class="col-md-6">
       <div class="card shadow-sm h-100 card-hover">
-        <div class="card-header bg-info text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
           <i class="fas fa-cogs ml-1"></i> إعدادات متقدمة
         </div>
         <div class="card-body">

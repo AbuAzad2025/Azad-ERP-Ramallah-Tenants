@@ -14,28 +14,28 @@
     'title': 'إجمالي التقارير',
     'value': reports_summary.total if reports_summary else 0,
     'subtitle': 'تقارير متاحة',
-    'gradient': 'linear-gradient(135deg, #4e73df 0%, #224abe 100%)',
+    'tone': 'primary',
     'icon': 'fas fa-chart-bar'
   },
   {
     'title': 'تقارير مالية',
     'value': reports_summary.financial if reports_summary else 0,
     'subtitle': 'مبيعات، دفعات، أرباح، فواتير',
-    'gradient': 'linear-gradient(135deg, #4e73df 0%, #224abe 100%)',
+    'tone': 'success',
     'icon': 'fas fa-dollar-sign'
   },
   {
     'title': 'تقارير المخزون',
     'value': reports_summary.inventory if reports_summary else 0,
     'subtitle': 'جرد، حد أدنى، قيمة',
-    'gradient': 'linear-gradient(135deg, #4e73df 0%, #224abe 100%)',
+    'tone': 'info',
     'icon': 'fas fa-boxes'
   },
   {
     'title': 'تقارير تحليلية',
     'value': reports_summary.analytics if reports_summary else 0,
     'subtitle': 'ذمم، شركاء، مؤشرات',
-    'gradient': 'linear-gradient(135deg, #4e73df 0%, #224abe 100%)',
+    'tone': 'warning',
     'icon': 'fas fa-chart-line'
   }
 ] %}
@@ -51,26 +51,22 @@
         </button>
     </div>
   </div>
-  {% for card in summary_cards %}
-  <div class="col-lg-3 col-md-6">
-    <div class="card border-0 shadow-lg text-white card-hover" style="background: {{ card.gradient }};">
-      <div class="card-body">
-        <div class="d-flex justify-content-between">
+  <div class="col-12">
+    <div class="summary-cards erp-summary-grid no-print mb-0">
+    {% for card in summary_cards %}
+      <div class="summary-card summary-card--{{ card.tone }} card-hover">
+        <div class="summary-card__row">
           <div>
-            <h6 class="mb-1" style="color: rgba(255,255,255,0.9); font-weight: 600;">{{ card.title }}</h6>
-            <h3 class="mb-0 fw-bold" style="color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
-              {{ card.value }}
-            </h3>
-            <small style="color: rgba(255,255,255,0.8);">{{ card.subtitle }}</small>
+            <h6>{{ card.title }}</h6>
+            <h3>{{ card.value }}</h3>
+            <small>{{ card.subtitle }}</small>
           </div>
-          <div class="align-self-center">
-            <i class="{{ card.icon }} fa-2x" style="opacity: 0.4; color: white;"></i>
-          </div>
+          <i class="{{ card.icon }} summary-card__icon"></i>
         </div>
       </div>
+    {% endfor %}
     </div>
   </div>
-  {% endfor %}
 </div>
 
 <div class="row g-3">

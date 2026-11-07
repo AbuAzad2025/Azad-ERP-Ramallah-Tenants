@@ -1,3 +1,4 @@
+{# قالب وسيط للمستودعات — لا يستبدل content في base.html (تجنّب تداخل قالبين) #}
 {% extends 'base.html' %}
 
 {% block title %}
@@ -10,78 +11,19 @@
   {{ super() }}
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <link rel="stylesheet" href="{{ static_url('css/warehouses.css') }}">
-  <style>
-    /* Warehouse specific tweaks - kept minimal to respect global theme */
-    .warehouse-nav-buttons .btn {
-      font-weight: 600;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    /* Ensure pointer events don't interfere with button clicks */
-    .warehouse-nav-buttons .btn *,
-    .table .btn * {
-      pointer-events: none;
-    }
-  </style>
   {% block dt_styles %}{% endblock %}
 {% endblock %}
 
-{% set ep = request.endpoint or '' %}
-{% macro is_active(prefix) -%}{% if ep.startswith(prefix) %}active{% endif %}{%- endmacro %}
-
 {% block breadcrumb %}
-  {% set DEFAULT_WID = gm_default_warehouse_id if gm_default_warehouse_id is defined and gm_default_warehouse_id else none %}
-  {% set wid =
-    (warehouse.id if warehouse is defined else
-     active_warehouse_id if active_warehouse_id is defined else
-     (request.view_args.get('id') if request.view_args and request.view_args.get('id') is not none else
-      (request.view_args.get('warehouse_id') if request.view_args and request.view_args.get('warehouse_id') is not none else none)))
-  %}
-
-  <!-- أزرار التنقل محسّنة -->
-  <div class="warehouse-nav-buttons d-flex flex-wrap align-items-center gap-2 mb-3">
-    <a class="btn btn-sm btn-primary shadow-sm fw-bold" 
-       href="{{ url_for('warehouse_bp.list') }}">
-      <i class="fas fa-warehouse ml-1"></i> قائمة المستودعات
-    </a>
-
-    <a class="btn btn-sm btn-info text-white shadow-sm fw-bold" 
-       href="{{ url_for('warehouse_bp.products', id=(wid or DEFAULT_WID)) }}">
-      <i class="fas fa-box-open ml-1"></i> منتجاتي
-    </a>
-
-    <a class="btn btn-sm btn-dark shadow-sm fw-bold" 
-       href="{{ url_for('warehouse_bp.inventory_summary') }}">
-      <i class="fas fa-table ml-1"></i> كشف المخزون
-    </a>
-
-    <span class="text-muted mx-2">|</span>
-
-    <a class="btn btn-sm btn-success shadow-sm fw-bold" 
-       href="{% if wid or DEFAULT_WID %}{{ url_for('warehouse_bp.add_product', id=(wid or DEFAULT_WID)) }}{% else %}{{ url_for('warehouse_bp.create') }}{% endif %}">
-      <i class="fas fa-plus-circle ml-1"></i> إضافة منتج
-    </a>
-
-    <a class="btn btn-sm btn-success shadow-sm fw-bold" 
-       href="{{ url_for('warehouse_bp.create') }}">
-      <i class="fas fa-plus ml-1"></i> مستودع جديد
-    </a>
-
-    <a class="btn btn-sm btn-warning text-dark shadow-sm fw-bold" 
-       href="{{ url_for('warehouse_bp.preorders_list') }}">
-      <i class="fas fa-clipboard-list ml-1"></i> الحجوزات
-    </a>
-
-    <a class="btn btn-sm btn-warning text-dark shadow-sm fw-bold" 
-       href="{{ url_for('warehouse_bp.preorder_create') }}">
-      <i class="fas fa-file-signature ml-1"></i> إنشاء حجز
-    </a>
-  </div>
+  <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">الرئيسية</a></li>
+  <li class="breadcrumb-item"><a href="{{ url_for('warehouse_bp.list') }}">المستودعات</a></li>
+  {% block breadcrumb_extra %}{% endblock %}
 {% endblock %}
 
-{% block content %}
-  <div id="notification-container"></div>
-  {% block w_content %}{% endblock %}
+{% block content_toolbar %}
+  {% block warehouse_toolbar %}
+    {% include 'partials/warehouse_toolbar.html' %}
+  {% endblock %}
 {% endblock %}
 
 {% block scripts %}

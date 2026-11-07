@@ -106,7 +106,7 @@
               <span class="gm-more-tile-label">المتجر</span>
             </a>
             {% endif %}
-            <a href="#" class="gm-more-tile" data-widget="pushmenu" onclick="return false;">
+            <a href="#" class="gm-more-tile" data-erp-pushmenu-proxy onclick="return false;">
               <span class="gm-more-tile-icon bg-secondary"><i class="fas fa-bars"></i></span>
               <span class="gm-more-tile-label">القائمة الكاملة</span>
             </a>
@@ -122,11 +122,11 @@
 document.addEventListener('DOMContentLoaded', function() {
   var sheet = document.getElementById('gmMobileMoreSheet');
   if (!sheet) return;
-  sheet.querySelectorAll('[data-widget="pushmenu"]').forEach(function(el) {
+  sheet.querySelectorAll('[data-erp-pushmenu-proxy]').forEach(function(el) {
     el.addEventListener('click', function(e) {
       e.preventDefault();
       if (window.jQuery) window.jQuery(sheet).modal('hide');
-      var push = document.querySelector('[data-widget="pushmenu"]');
+      var push = document.getElementById('erp-sidebar-toggle') || document.querySelector('[data-erp-pushmenu]');
       if (push) push.click();
     });
   });

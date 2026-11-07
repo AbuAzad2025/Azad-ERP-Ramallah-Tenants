@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}كشف راتب{% endblock %}
+{% block content %}
+<div class="container py-3" dir="rtl" id="payslip">
+  <h4>كشف راتب — {{ run.period_key }}</h4>
+  <p>{{ employee.name }} | صافي: <strong>{{ line.net_pay }} {{ run.currency }}</strong></p>
+  <table class="table table-bordered table-sm">
+    <tr><td>أساسي</td><td>{{ line.base_salary }}</td></tr>
+    <tr><td>بدلات</td><td>{{ line.allowances }}</td></tr>
+    <tr><td>خصومات</td><td>{{ line.deductions }}</td></tr>
+    <tr><td>صافي</td><td>{{ line.net_pay }}</td></tr>
+  </table>
+  <button class="btn btn-sm btn-secondary no-print" onclick="window.print()">طباعة</button>
+</div>
+<style>@media print { .no-print, nav, .sidebar { display:none !important; } }</style>
+{% endblock %}

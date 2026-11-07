@@ -86,6 +86,7 @@ class Config:
     
     AI_SYSTEMS_ENABLED = _bool(os.environ.get("AI_SYSTEMS_ENABLED"), True)
     ENABLE_AUTOMATED_BACKUPS = _bool(os.environ.get("ENABLE_AUTOMATED_BACKUPS"), True)
+    PAYMENT_ALLOCATION_ENABLED = _bool(os.environ.get("PAYMENT_ALLOCATION_ENABLED"), False)
     SYSTEM_COMPONENT_MAP = {
         "accounting": [
             "sales",

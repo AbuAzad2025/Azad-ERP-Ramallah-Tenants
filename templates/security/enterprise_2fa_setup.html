@@ -1,0 +1,31 @@
+{% extends 'security/base_security.html' %}
+{% block security_title %}المصادقة الثنائية{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">المصادقة الثنائية</li>{% endblock %}
+
+{% block security_content %}
+<div class="sec-card">
+  <div class="sec-card-body">
+    {% if enabled %}<div class="alert alert-success">المصادقة الثنائية مفعّلة</div>{% endif %}
+    <p>السر: <code>{{ secret }}</code></p>
+    <p class="text-muted">الرمز الحالي: <code>{{ current_code }}</code></p>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label>رمز تطبيق المصادقة</label>
+        <input name="code" class="form-control" maxlength="6" autocomplete="one-time-code">
+      </div>
+      <button class="btn btn-primary">تفعيل</button>
+    </form>
+    {% if enabled %}
+    <form method="post" action="{{ url_for('enterprise_security_bp.disable_2fa') }}" class="mt-4 pt-3 border-top">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label>رمز للإيقاف</label>
+        <input name="code" class="form-control mb-2" autocomplete="one-time-code">
+      </div>
+      <button class="btn btn-outline-danger">إيقاف المصادقة الثنائية</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

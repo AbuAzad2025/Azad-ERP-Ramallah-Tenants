@@ -1,8 +1,8 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}notifications{% endblock %}
-{% block security_title %}Notifications Center{% endblock %}
+{% block security_title %}مركز الإشعارات{% endblock %}
 {% block security_icon %}<i class="fas fa-bell"></i>{% endblock %}
-{% block security_description %}مركز الإشعارات - Email • SMS • Push Notifications{% endblock %}
+{% block security_description %}إشعارات البريد والرسائل{% endblock %}
 {% block security_breadcrumb %}<li class="breadcrumb-item active">Notifications</li>{% endblock %}
 {% block security_content %}
     
@@ -61,7 +61,7 @@
     <div class="row">
       <div class="col-md-12">
         <div class="card">
-          <div class="card-header">
+          <div class="card-header erp-card-header-row erp-theme-header--primary">
             <h3 class="card-title"><i class="fas fa-vial"></i> اختبار الإرسال</h3>
           </div>
           <div class="card-body">
@@ -69,7 +69,7 @@
               <!-- SMS Test -->
               <div class="col-md-6">
                 <div class="card card-outline card-primary">
-                  <div class="card-header">
+                  <div class="card-header erp-card-header-row erp-theme-header--primary">
                     <h3 class="card-title">📱 اختبار SMS</h3>
                   </div>
                   <div class="card-body">
@@ -92,7 +92,7 @@
               <!-- Email Test -->
               <div class="col-md-6">
                 <div class="card card-outline card-success">
-                  <div class="card-header">
+                  <div class="card-header erp-card-header-row erp-theme-header--primary">
                     <h3 class="card-title">📧 اختبار Email</h3>
                   </div>
                   <div class="card-body">
@@ -120,7 +120,7 @@
     <div class="row">
       <div class="col-md-4">
         <div class="card">
-          <div class="card-header">
+          <div class="card-header erp-card-header-row erp-theme-header--primary">
             <h3 class="card-title"><i class="fas fa-chart-pie"></i> التوزيع حسب النوع</h3>
           </div>
           <div class="card-body">
@@ -131,7 +131,7 @@
       
       <div class="col-md-8">
         <div class="card">
-          <div class="card-header">
+          <div class="card-header erp-card-header-row erp-theme-header--primary">
             <h3 class="card-title"><i class="fas fa-link"></i> روابط سريعة</h3>
           </div>
           <div class="card-body">
@@ -150,12 +150,12 @@
     <div class="row">
       <div class="col-md-12">
         <div class="card">
-          <div class="card-header">
+          <div class="card-header erp-card-header-row erp-theme-header--primary">
             <h3 class="card-title"><i class="fas fa-list"></i> سجل الإشعارات (آخر 50)</h3>
           </div>
           <div class="card-body">
             <table class="table table-sm table-hover">
-              <thead>
+              <thead class="table-header-primary text-white">
                 <tr>
                   <th>#</th>
                   <th>النوع</th>

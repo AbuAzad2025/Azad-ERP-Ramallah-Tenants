@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}مقدمات ومستحقات{% endblock %}
+{% block content %}
+<div class="container py-3" dir="rtl">
+  <h4>قيود مقدمات / مصروفات مستحقة</h4>
+  <form id="jeForm" class="card card-body">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label>نوع القيد</label>
+      <select name="entry_type" class="form-control"><option value="prepaid">مصروف مقدم</option><option value="accrual">مصروف مستحق</option></select>
+    </div>
+    <div class="form-group"><label>المبلغ</label><input name="amount" type="number" step="0.01" class="form-control" required></div>
+    <div class="form-group"><label>حساب المصروف</label><input name="expense_account" class="form-control" value="5000_EXPENSES"></div>
+    <div class="form-group"><label>بيان</label><input name="memo" class="form-control"></div>
+    <div class="form-group"><label>فرع</label>
+      <select name="branch_id" class="form-control"><option value="">—</option>{% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select>
+    </div>
+    <div class="form-group"><label>مركز تكلفة</label>
+      <select name="cost_center_id" class="form-control"><option value="">—</option>{% for cc in cost_centers %}<option value="{{ cc.id }}">{{ cc.code }} — {{ cc.name }}</option>{% endfor %}</select>
+    </div>
+    <button type="submit" class="btn btn-primary">ترحيل</button>
+  </form>
+  <div id="msg" class="mt-2"></div>
+</div>
+<script>
+document.getElementById('jeForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const fd = new FormData(this);
+  const r = await fetch('{{ url_for("financial_reports.prepaid_accrual") }}', { method: 'POST', body: fd });
+  const j = await r.json();
+  document.getElementById('msg').textContent = j.success ? j.message : (j.error || 'خطأ');
+});
+</script>
+{% endblock %}

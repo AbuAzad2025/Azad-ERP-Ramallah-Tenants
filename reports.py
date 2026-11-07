@@ -317,19 +317,38 @@ def advanced_report(
     objs = q.all()
     data = [{col: getattr(obj, col, None) for col in cols} for obj in objs]
     summary: Dict[str, float] = {}
-    if aggregates:
+    if aggregates and objs:
         for func_name, fields in aggregates.items():
-            agg_func = getattr(func, func_name, None)
-            if not agg_func:
-                continue
-            for f in fields:
-                if f not in allowed:
+            if func_name == "sum":
+                for f in fields:
+                    if f not in allowed:
+                        continue
+                    total = sum(float(getattr(obj, f, 0) or 0) for obj in objs)
+                    summary[f"sum_{f}"] = total
+            elif func_name == "count":
+                for f in fields:
+                    if f not in allowed:
+                        continue
+                    total = sum(1 for obj in objs if getattr(obj, f, None) is not None)
+                    summary[f"count_{f}"] = total
+            elif func_name == "avg":
+                for f in fields:
+                    if f not in allowed:
+                        continue
+                    vals = [float(getattr(obj, f, 0) or 0) for obj in objs]
+                    summary[f"avg_{f}"] = sum(vals) / len(vals) if vals else 0.0
+            else:
+                agg_func = getattr(func, func_name, None)
+                if not agg_func:
                     continue
-                fld = getattr(model, f, None)
-                if fld is None:
-                    continue
-                val = q.with_entities(agg_func(fld)).scalar()
-                summary[f"{func_name}_{f}"] = float(val or 0)
+                for f in fields:
+                    if f not in allowed:
+                        continue
+                    fld = getattr(model, f, None)
+                    if fld is None:
+                        continue
+                    val = q.with_entities(agg_func(fld)).scalar()
+                    summary[f"{func_name}_{f}"] = float(val or 0)
     return {"data": data, "summary": summary}
 
 def sales_report_ils(start_date: date | None, end_date: date | None, tz_name: str = "Asia/Hebron") -> dict:
@@ -698,8 +717,8 @@ def service_reports_report(
         try:
             if (currency or "ILS").upper() == "ILS":
                 return float(amount or 0)
-            if fx_used:
-                return float(Decimal(str(amount or 0)) * Decimal(str(fx_used)))
+            fx = Decimal(str(fx_used or 1))
+            return float(Decimal(str(amount or 0)) * fx)
         except Exception:
             pass
         return float(amount or 0)

@@ -1,90 +1,109 @@
-{{ form.hidden_tag() }}
-<div class="row g-3">
-  <div class="col-md-6">
-    <label class="form-label fw-bold">{{ form.name.label.text }} <span class="text-danger">*</span></label>
-    {{ form.name(class="form-control form-control-modern" + (' is-invalid' if form.name.errors else ''), placeholder="أدخل اسم الزبون", required=form.name.flags.required) }}
-    {% for e in form.name.errors %}<small class="text-danger">{{ e }}</small>{% endfor %}
-  </div>
-  <div class="col-md-3">
-    <label class="form-label fw-bold">{{ form.phone.label.text }} <span class="text-danger">*</span></label>
-    {{ form.phone(class="form-control form-control-modern" + (' is-invalid' if form.phone.errors else ''), placeholder="0501234567", type="tel", dir="ltr", required=form.phone.flags.required) }}
-    {% for e in form.phone.errors %}<small class="text-danger">{{ e }}</small>{% endfor %}
-  </div>
-  <div class="col-md-3">
-    <label class="form-label fw-bold">{{ form.whatsapp.label.text }}</label>
-    {{ form.whatsapp(class="form-control form-control-modern" + (' is-invalid' if form.whatsapp.errors else ''), placeholder="واتساب", type="tel", dir="ltr") }}
-    {% for e in form.whatsapp.errors %}<small class="text-danger">{{ e }}</small>{% endfor %}
-  </div>
-  <div class="col-md-6">
-    <label class="form-label fw-bold">{{ form.email.label.text }} <span class="text-danger">*</span></label>
-    {{ form.email(class="form-control form-control-modern" + (' is-invalid' if form.email.errors else ''), placeholder="email@example.com", type="email", dir="ltr", required=form.email.flags.required) }}
-    {% for e in form.email.errors %}<small class="text-danger">{{ e }}</small>{% endfor %}
-  </div>
-  <div class="col-md-12">
-    <label class="form-label fw-bold">{{ form.address.label.text }}</label>
-    {{ form.address(class="form-control form-control-modern" + (' is-invalid' if form.address.errors else ''), placeholder="العنوان كامل") }}
-    {% for e in form.address.errors %}<small class="text-danger">{{ e }}</small>{% endfor %}
-  </div>
-  <div class="col-md-4">
-    <label class="form-label fw-bold">{{ form.category.label.text }}</label>
-    {{ form.category(class="custom-select form-control-modern" + (' is-invalid' if form.category.errors else ''), required=form.category.flags.required) }}
-    {% for e in form.category.errors %}<small class="text-danger">{{ e }}</small>{% endfor %}
-  </div>
-  <div class="col-md-4">
-    <label class="form-label fw-bold">{{ form.currency.label.text }} <span class="text-danger">*</span></label>
-    {{ form.currency(class="custom-select form-control-modern" + (' is-invalid' if form.currency.errors else ''), required=form.currency.flags.required) }}
-    {% for e in form.currency.errors %}<small class="text-danger">{{ e }}</small>{% endfor %}
-  </div>
-  <div class="col-md-4">
-    <label class="form-label fw-bold">{{ form.credit_limit.label.text }}</label>
-    <div class="input-group">
-      {{ form.credit_limit(class="form-control form-control-modern" + (' is-invalid' if form.credit_limit.errors else ''), placeholder="0.00", inputmode="decimal") }}
-      <span class="input-group-text">₪</span>
+{% set is_create = not (form.id.data and form.id.data|string|trim) %}
+<div class="customer-form-sections">
+  <div class="d-flex flex-wrap justify-content-end mb-3 customer-form-switches">
+    <div class="custom-control custom-switch">
+      {{ form.is_online(class="custom-control-input") }}
+      <label class="custom-control-label" for="{{ form.is_online.id }}">
+        <i class="fas fa-globe text-info"></i> زبون أونلاين
+      </label>
     </div>
-    {% for e in form.credit_limit.errors %}<small class="text-danger">{{ e }}</small>{% endfor %}
-  </div>
-  <div class="col-md-4">
-    <label class="form-label fw-bold">{{ form.discount_rate.label.text }}</label>
-    <div class="input-group">
-      {{ form.discount_rate(class="form-control form-control-modern" + (' is-invalid' if form.discount_rate.errors else ''), placeholder="0", inputmode="decimal") }}
-      <span class="input-group-text">%</span>
-    </div>
-    {% for e in form.discount_rate.errors %}<small class="text-danger">{{ e }}</small>{% endfor %}
-  </div>
-  <div class="col-md-4">
-    <label class="form-label fw-bold">{{ form.opening_balance.label.text }} <i class="fas fa-info-circle text-info" title="موجب = له علينا، سالب = عليه لنا"></i></label>
-    <div class="input-group">
-      {{ form.opening_balance(class="form-control form-control-modern" + (' is-invalid' if form.opening_balance.errors else ''), placeholder="0.00", inputmode="decimal") }}
-      <span class="input-group-text">₪</span>
-    </div>
-    {% for e in form.opening_balance.errors %}<small class="text-danger">{{ e }}</small>{% endfor %}
-  </div>
-  <div class="col-md-4 d-flex align-items-center">
-    <div class="form-check form-switch">
-      {{ form.is_active(class="form-check-input") }}
-      <label class="form-check-label ms-2 fw-bold">{{ form.is_active.label.text }}</label>
-      {% for e in form.is_active.errors %}<small class="text-danger d-block">{{ e }}</small>{% endfor %}
+    <div class="custom-control custom-switch">
+      {{ form.is_active(class="custom-control-input") }}
+      <label class="custom-control-label" for="{{ form.is_active.id }}">
+        <i class="fas fa-toggle-on text-success"></i> نشط
+      </label>
     </div>
   </div>
-  <div class="col-md-4 d-flex align-items-center">
-    <div class="form-check form-switch">
-      {{ form.is_online(class="form-check-input") }}
-      <label class="form-check-label ms-2 fw-bold">{{ form.is_online.label.text }}</label>
-      {% for e in form.is_online.errors %}<small class="text-danger d-block">{{ e }}</small>{% endfor %}
+
+  <div class="section-title"><i class="fas fa-id-card"></i> البيانات الأساسية</div>
+  <div class="row">
+    <div class="col-lg-6 col-md-12 form-group">
+      <label for="{{ form.name.id }}"><i class="fas fa-user"></i> اسم الزبون <span class="text-danger">*</span></label>
+      {{ form.name(class="form-control form-control-modern" + (' is-invalid' if form.name.errors else ''), placeholder="أدخل اسم الزبون", required=True) }}
+      {% for e in form.name.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    </div>
+    <div class="col-lg-3 col-md-6 form-group">
+      <label for="{{ form.phone.id }}"><i class="fas fa-phone"></i> رقم الهاتف <span class="text-danger">*</span></label>
+      {{ form.phone(class="form-control form-control-modern" + (' is-invalid' if form.phone.errors else ''), placeholder="05XXXXXXXX", inputmode="tel", dir="ltr", required=True) }}
+      {% for e in form.phone.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    </div>
+    <div class="col-lg-3 col-md-6 form-group">
+      <label for="{{ form.whatsapp.id }}"><i class="fab fa-whatsapp"></i> رقم الواتساب</label>
+      {{ form.whatsapp(class="form-control form-control-modern" + (' is-invalid' if form.whatsapp.errors else ''), placeholder="رقم الواتساب", inputmode="tel", dir="ltr") }}
+      {% for e in form.whatsapp.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
     </div>
   </div>
+
+  <div class="section-title mt-3"><i class="fas fa-address-book"></i> التواصل والعنوان</div>
+  <div class="row">
+    <div class="col-lg-6 col-md-12 form-group">
+      <label for="{{ form.email.id }}"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
+      {{ form.email(class="form-control form-control-modern" + (' is-invalid' if form.email.errors else ''), type="email", inputmode="email", dir="ltr", placeholder="name@example.com (اختياري)") }}
+      {% for e in form.email.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    </div>
+    <div class="col-lg-6 col-md-12 form-group">
+      <label for="{{ form.address.id }}"><i class="fas fa-map-marker-alt"></i> العنوان</label>
+      {{ form.address(class="form-control form-control-modern" + (' is-invalid' if form.address.errors else ''), placeholder="العنوان كامل") }}
+      {% for e in form.address.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    </div>
+  </div>
+
+  <div class="section-title mt-3"><i class="fas fa-coins"></i> التصنيف والمالية</div>
+  <div class="row">
+    <div class="col-lg-4 col-md-6 form-group">
+      <label for="{{ form.category.id }}"><i class="fas fa-layer-group"></i> تصنيف الزبون</label>
+      {{ form.category(class="form-control form-control-modern" + (' is-invalid' if form.category.errors else '')) }}
+      {% for e in form.category.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    </div>
+    <div class="col-lg-4 col-md-6 form-group">
+      <label for="{{ form.currency.id }}"><i class="fas fa-coins"></i> العملة <span class="text-danger">*</span></label>
+      {{ form.currency(class="form-control form-control-modern" + (' is-invalid' if form.currency.errors else ''), required=True) }}
+      {% for e in form.currency.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    </div>
+    <div class="col-lg-4 col-md-6 form-group">
+      <label for="{{ form.credit_limit.id }}"><i class="fas fa-credit-card"></i> حد الائتمان</label>
+      {{ form.credit_limit(class="form-control form-control-modern" + (' is-invalid' if form.credit_limit.errors else ''), placeholder="0.00", step="0.01", min="0", inputmode="decimal") }}
+      {% for e in form.credit_limit.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    </div>
+    <div class="col-lg-4 col-md-6 form-group">
+      <label for="{{ form.discount_rate.id }}"><i class="fas fa-percent"></i> معدل الخصم (%)</label>
+      {{ form.discount_rate(class="form-control form-control-modern" + (' is-invalid' if form.discount_rate.errors else ''), placeholder="0 - 100", step="0.01", min="0", max="100", inputmode="decimal") }}
+      {% for e in form.discount_rate.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    </div>
+    <div class="col-lg-4 col-md-6 form-group">
+      <label for="{{ form.opening_balance.id }}">
+        <i class="fas fa-balance-scale"></i> الرصيد الافتتاحي
+        <i class="fas fa-info-circle text-info" title="موجب = له علينا، سالب = عليه لنا"></i>
+      </label>
+      {{ form.opening_balance(class="form-control form-control-modern" + (' is-invalid' if form.opening_balance.errors else ''), placeholder="0.00", step="0.01", inputmode="decimal") }}
+      {% for e in form.opening_balance.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    </div>
+  </div>
+
   {% if form.password is defined %}
-  <div class="col-md-6">
-    <label class="form-label fw-bold">{{ form.password.label.text }}</label>
-    {{ form.password(class="form-control form-control-modern" + (' is-invalid' if form.password.errors else ''), placeholder="كلمة المرور", autocomplete="new-password") }}
-    {% for e in form.password.errors %}<small class="text-danger">{{ e }}</small>{% endfor %}
+  <div class="section-title mt-3"><i class="fas fa-lock"></i> حساب الدخول</div>
+  <div class="row">
+    <div class="col-lg-6 col-md-12 form-group">
+      <label for="{{ form.password.id }}">
+        <i class="fas fa-key"></i> كلمة المرور
+        {% if is_create %}<span class="text-danger">*</span>{% else %}<span class="text-muted">(اختياري)</span>{% endif %}
+      </label>
+      {{ form.password(class="form-control form-control-modern" + (' is-invalid' if form.password.errors else ''), placeholder="******", autocomplete="new-password", required=is_create, minlength="6") }}
+      {% for e in form.password.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    </div>
+    {% if form.confirm is defined %}
+    <div class="col-lg-6 col-md-12 form-group">
+      <label for="{{ form.confirm.id }}"><i class="fas fa-lock"></i> تأكيد كلمة المرور</label>
+      {{ form.confirm(class="form-control form-control-modern" + (' is-invalid' if form.confirm.errors else ''), placeholder="******", autocomplete="new-password") }}
+      {% for e in form.confirm.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    </div>
+    {% endif %}
   </div>
   {% endif %}
-  {% if form.confirm is defined %}
-  <div class="col-md-6">
-    <label class="form-label fw-bold">{{ form.confirm.label.text }}</label>
-    {{ form.confirm(class="form-control form-control-modern" + (' is-invalid' if form.confirm.errors else ''), placeholder="تأكيد كلمة المرور", autocomplete="new-password") }}
-    {% for e in form.confirm.errors %}<small class="text-danger">{{ e }}</small>{% endfor %}
+
+  <div class="section-title mt-3"><i class="fas fa-sticky-note"></i> ملاحظات</div>
+  <div class="form-group mb-0">
+    {{ form.notes(class="form-control form-control-modern" + (' is-invalid' if form.notes.errors else ''), rows="2", placeholder="ملاحظات إضافية") }}
+    {% for e in form.notes.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
   </div>
-  {% endif %}
 </div>

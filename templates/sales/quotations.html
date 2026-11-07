@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}عروض أسعار{% endblock %}
+{% block content %}
+<div class="container py-3" dir="rtl">
+  <h4>عروض أسعار / Proforma</h4>
+  <a href="{{ url_for('sales_bp.create_quotation') }}" class="btn btn-primary btn-sm mb-2">عرض سعر جديد</a>
+  <table class="table table-bordered table-sm">
+    <thead class="table-header-primary text-white"><tr><th>رقم</th><th>زبون</th><th>تاريخ</th><th>مبلغ</th><th></th></tr></thead>
+    <tbody>
+      {% for q in quotes %}
+      <tr>
+        <td>{{ q.sale_number or q.id }}</td>
+        <td>{{ q.customer.name if q.customer else '—' }}</td>
+        <td>{{ q.sale_date }}</td>
+        <td>{{ q.total_amount }}</td>
+        <td>
+          <a href="{{ url_for('sales_bp.sale_detail', id=q.id) }}" class="btn btn-sm btn-outline-info">عرض</a>
+          <form method="post" action="{{ url_for('sales_bp.convert_quotation', id=q.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-success">تحويل لفاتورة</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

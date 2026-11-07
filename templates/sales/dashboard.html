@@ -5,15 +5,7 @@
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/sales.css') }}">
-  <style>
-    .small-box{border-radius:1rem;box-shadow:0 .5rem 1rem rgba(0,0,0,.08); position:relative; overflow:hidden;}
-    .small-box .icon{opacity:.2; position:absolute; inset-inline-start:16px; top:50%; transform:translateY(-50%); font-size:3.25rem;}
-    .small-box .inner h3{font-weight:800; margin-bottom:.25rem;}
-    .small-box-footer{display:block; padding-top:.35rem; font-size:.925rem; text-decoration:none;}
-    .card{border:0;border-radius:1rem;box-shadow:0 .5rem 1rem rgba(0,0,0,.08)}
-    .card-header{border-bottom:0; background:#f8f9fc;}
-    .table thead th{white-space:nowrap}
-  </style>
+  
 {% endblock %}
 
 {% block content %}
@@ -73,7 +65,7 @@
   <div class="row">
     <div class="col-xl-6 mb-3">
       <div class="card h-100">
-        <div class="card-header font-weight-bold"><i class="fas fa-chart-bar mr-2"></i> عدد الفواتير شهريًا</div>
+        <div class="card-header erp-card-header-row erp-theme-header--primary font-weight-bold"><i class="fas fa-chart-bar mr-2"></i> عدد الفواتير شهريًا</div>
         <div class="card-body">
           <div style="height:320px"><canvas id="salesCountChart" aria-label="عدد الفواتير"></canvas></div>
         </div>
@@ -81,7 +73,7 @@
     </div>
     <div class="col-xl-6 mb-3">
       <div class="card h-100">
-        <div class="card-header font-weight-bold"><i class="fas fa-chart-line mr-2"></i> الإيراد الشهري</div>
+        <div class="card-header erp-card-header-row erp-theme-header--primary font-weight-bold"><i class="fas fa-chart-line mr-2"></i> الإيراد الشهري</div>
         <div class="card-body">
           <div style="height:320px"><canvas id="revenueChart" aria-label="الإيراد"></canvas></div>
         </div>
@@ -93,10 +85,10 @@
   <div class="row">
     <div class="col-xl-6 mb-3">
       <div class="card h-100">
-        <div class="card-header font-weight-bold"><i class="fas fa-user-tie mr-2"></i> أفضل الزبائن</div>
+        <div class="card-header erp-card-header-row erp-theme-header--primary font-weight-bold"><i class="fas fa-user-tie mr-2"></i> أفضل الزبائن</div>
         <div class="card-body p-0">
           <table class="table table-striped table-hover mb-0">
-            <thead class="table-dark">
+            <thead class="table-header-primary text-white ">
               <tr><th>الزبون</th><th class="text-right">الإنفاق</th></tr>
             </thead>
             <tbody>
@@ -116,10 +108,10 @@
 
     <div class="col-xl-6 mb-3">
       <div class="card h-100">
-        <div class="card-header font-weight-bold"><i class="fas fa-cubes mr-2"></i> أفضل المنتجات</div>
+        <div class="card-header erp-card-header-row erp-theme-header--primary font-weight-bold"><i class="fas fa-cubes mr-2"></i> أفضل المنتجات</div>
         <div class="card-body p-0">
           <table class="table table-striped table-hover mb-0">
-            <thead class="table-dark">
+            <thead class="table-header-primary text-white ">
               <tr><th>المنتج</th><th class="text-center">المباع</th><th class="text-right">الإيراد</th></tr>
             </thead>
             <tbody>

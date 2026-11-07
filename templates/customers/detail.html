@@ -34,7 +34,7 @@
   
   <div class="row g-3 mb-4">
     <div class="col-md-3">
-      <div class="card card-hover text-white h-100" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+      <div class="card card-hover erp-kpi-tile erp-kpi-tile--primary text-white h-100">
         <div class="card-body d-flex justify-content-between align-items-center">
           <div>
             <h6 class="text-white-50 mb-1">الرصيد الحالي</h6>
@@ -45,7 +45,7 @@
       </div>
     </div>
     <div class="col-md-3">
-      <div class="card card-hover text-white h-100" style="background:linear-gradient(135deg,#00c6ff,#0072ff)">
+      <div class="card card-hover erp-kpi-tile erp-kpi-tile--info text-white h-100">
         <div class="card-body d-flex justify-content-between align-items-center">
           <div>
             <h6 class="text-white-50 mb-1">عدد الفواتير</h6>
@@ -56,7 +56,7 @@
       </div>
     </div>
     <div class="col-md-3">
-      <div class="card card-hover text-white h-100" style="background:linear-gradient(135deg,#11998e,#38ef7d)">
+      <div class="card card-hover erp-kpi-tile erp-kpi-tile--success text-white h-100">
         <div class="card-body d-flex justify-content-between align-items-center">
           <div>
             <h6 class="text-white-50 mb-1">عدد الدفعات</h6>
@@ -67,7 +67,7 @@
       </div>
     </div>
     <div class="col-md-3">
-      <div class="card card-hover text-white h-100" style="background:linear-gradient(135deg,#f7971e,#ffd200)">
+      <div class="card card-hover erp-kpi-tile erp-kpi-tile--warning text-white h-100">
         <div class="card-body d-flex justify-content-between align-items-center">
           <div>
             <h6 class="mb-1" style="color:rgba(0,0,0,0.7)">حد الائتمان</h6>
@@ -82,7 +82,7 @@
   {% if balance_view %}
   <div class="row g-3 mb-4">
     <div class="col-md-4">
-      <div class="card card-hover h-100 text-white" style="background:linear-gradient(135deg,#0ba360,#3cba92)">
+      <div class="card card-hover h-100 erp-kpi-tile erp-kpi-tile--success text-white">
         <div class="card-body text-center">
           <h6 class="text-white-50 mb-1">🟢 الحقوق</h6>
           <h3 class="mb-0 fw-bold">{{ balance_view.rights.total|format_currency }}</h3>
@@ -90,7 +90,7 @@
       </div>
     </div>
     <div class="col-md-4">
-      <div class="card card-hover h-100 text-white" style="background:linear-gradient(135deg,#f12711,#f5af19)">
+      <div class="card card-hover h-100 erp-kpi-tile erp-kpi-tile--danger text-white">
         <div class="card-body text-center">
           <h6 class="text-white-50 mb-1">🔴 الالتزامات</h6>
           <h3 class="mb-0 fw-bold">{{ balance_view.obligations.total|format_currency }}</h3>
@@ -98,7 +98,7 @@
       </div>
     </div>
     <div class="col-md-4">
-      <div class="card card-hover h-100 text-white" style="background:linear-gradient(135deg,#141e30,#243b55)">
+      <div class="card card-hover h-100 erp-kpi-tile erp-kpi-tile--neutral text-white">
         <div class="card-body text-center">
           <h6 class="text-white-50 mb-1">🎯 الوضع الحالي</h6>
           <h3 class="mb-0 fw-bold {% if balance_view.balance.amount > 0 %}text-success{% elif balance_view.balance.amount < 0 %}text-danger{% endif %}">
@@ -111,7 +111,7 @@
   </div>
 
   <div class="card shadow-sm rounded mb-4">
-    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+    <div class="card-header erp-card-header-row erp-theme-header--primary">
       <h5 class="mb-0"><i class="fas fa-scale-balanced ml-2"></i>تفاصيل الحقوق والالتزامات</h5>
       <small class="text-white-50">{{ balance_view.balance.formula }}</small>
     </div>
@@ -194,7 +194,7 @@
   {% endif %}
   
   <div class="card shadow-sm rounded">
-    <div class="card-header text-white d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+    <div class="card-header erp-card-header-row erp-theme-header--primary">
       <h3 class="card-title h5 mb-0"><i class="fas fa-user ml-2"></i> تفاصيل الزبون: {{ customer.name }}</h3>
       <div class="btn-group shadow-sm rounded-pill overflow-hidden bg-white">
           <button onclick="window.history.back()" class="btn btn-sm text-primary fw-bold border-end" title="رجوع">
@@ -304,8 +304,7 @@
         <a href="{{ url_for('customers_bp.edit_customer', customer_id=customer.id) }}" class="btn btn-warning">
           <i class="fas fa-edit ml-1"></i> تعديل
         </a>
-        {% endif %}
-        {% if customer.balance and customer.balance > 0 and has_perm('manage_payments') %}
+        {% if customer.balance and customer.balance > 0 %}
         {% set payment_reference = 'دفع من زبون: ' ~ customer.name %}
         {% set payment_notes = 'دفعة من الزبون: ' ~ customer.name %}
         {% if customer.phone %}

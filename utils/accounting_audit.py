@@ -65,7 +65,6 @@ def audit_entity_balances(*, limit: int = 0, include_archived: bool = False, fix
         if len(report[bucket]["issues"]) < 30:
             report[bucket]["issues"].append(item)
 
-    # ——— زبائن ———
     cq = Customer.query.order_by(Customer.id.asc())
     if not include_archived:
         cq = cq.filter(Customer.is_archived == False)  # noqa: E712
@@ -109,7 +108,6 @@ def audit_entity_balances(*, limit: int = 0, include_archived: bool = False, fix
         if view.get("success") and not view.get("balance", {}).get("matches_stored"):
             _cap_issues("customers", {"id": c.id, "issue": "view_breakdown_mismatch", "diff": view["balance"].get("difference")})
 
-    # ——— موردون ———
     sq = Supplier.query.order_by(Supplier.id.asc())
     if not include_archived and hasattr(Supplier, "is_archived"):
         sq = sq.filter(Supplier.is_archived == False)  # noqa: E712
@@ -153,7 +151,6 @@ def audit_entity_balances(*, limit: int = 0, include_archived: bool = False, fix
         if view.get("success") and not view.get("balance", {}).get("matches_stored"):
             _cap_issues("suppliers", {"id": s.id, "issue": "view_breakdown_mismatch", "diff": view["balance"].get("difference")})
 
-    # ——— شركاء ———
     pq = Partner.query.order_by(Partner.id.asc())
     if not include_archived and hasattr(Partner, "is_archived"):
         pq = pq.filter(Partner.is_archived == False)  # noqa: E712

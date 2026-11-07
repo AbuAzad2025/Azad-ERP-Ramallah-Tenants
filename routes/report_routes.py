@@ -24,6 +24,17 @@ from models import (
 from utils.supplier_balance_updater import build_supplier_balance_view
 from utils.partner_balance_updater import build_partner_balance_view
 from utils.balance_calculator import build_customer_balance_view
+from utils.company_scope import (
+    filter_sales_query,
+    filter_payments_query,
+    filter_by_branches,
+    filter_shipments_query,
+    filter_warehouses_query,
+    filter_customers_query,
+    filter_suppliers_query,
+    filter_service_requests_query,
+    filter_sale_returns_query,
+)
 reports_bp = Blueprint('reports_bp', __name__, url_prefix='/reports')
 
 from reports import (
@@ -950,17 +961,8 @@ def profit_loss_report():
     if sd and ed and ed < sd:
         sd, ed = ed, sd
     
-    from utils.company_scope import (
-        filter_by_branches,
-        filter_sale_returns_query,
-        filter_sales_query,
-        filter_service_requests_query,
-    )
-
     query_sales = filter_sales_query(Sale.query.filter(Sale.status == 'CONFIRMED'))
-    query_services = filter_service_requests_query(
-        ServiceRequest.query.filter(ServiceRequest.status == 'COMPLETED')
-    )
+    query_services = filter_service_requests_query(ServiceRequest.query.filter(ServiceRequest.status == 'COMPLETED'))
     query_returns = filter_sale_returns_query(SaleReturn.query.filter(SaleReturn.status == 'CONFIRMED'))
     query_expenses = filter_by_branches(Expense.query, Expense.branch_id)
     
@@ -1118,20 +1120,14 @@ def cash_flow_report():
     if sd and ed and ed < sd:
         sd, ed = ed, sd
     
-    from utils.company_scope import filter_by_branches, filter_payments_query
-
-    query_pay_in = filter_payments_query(
-        Payment.query.filter(
-            Payment.direction == PaymentDirection.IN.value,
-            Payment.status == PaymentStatus.COMPLETED.value,
-        )
-    )
-    query_pay_out = filter_payments_query(
-        Payment.query.filter(
-            Payment.direction == PaymentDirection.OUT.value,
-            Payment.status == PaymentStatus.COMPLETED.value,
-        )
-    )
+    query_pay_in = filter_payments_query(Payment.query.filter(
+        Payment.direction == PaymentDirection.IN.value,
+        Payment.status == PaymentStatus.COMPLETED.value
+    ))
+    query_pay_out = filter_payments_query(Payment.query.filter(
+        Payment.direction == PaymentDirection.OUT.value,
+        Payment.status == PaymentStatus.COMPLETED.value
+    ))
     query_expenses = filter_by_branches(Expense.query, Expense.branch_id)
     
     if sd:
@@ -1256,15 +1252,11 @@ def payments_advanced_report():
     if sd and ed and ed < sd:
         sd, ed = ed, sd
 
-    from utils.company_scope import filter_payments_query
-
-    base_q = filter_payments_query(
-        Payment.query.options(
-            db.joinedload(Payment.customer),
-            db.joinedload(Payment.supplier),
-            db.joinedload(Payment.partner),
-        )
-    )
+    base_q = filter_payments_query(Payment.query.options(
+        db.joinedload(Payment.customer),
+        db.joinedload(Payment.supplier),
+        db.joinedload(Payment.partner),
+    ))
     
     if sd:
         start_dt = datetime.combine(sd, datetime.min.time())
@@ -1448,8 +1440,6 @@ def inventory_report():
     except Exception:
         limit_rows = 1000
     limit_rows = max(100, min(limit_rows, 5000))
-
-    from utils.company_scope import filter_warehouses_query
 
     whs = filter_warehouses_query(Warehouse.query).order_by(Warehouse.name).all()
     if not whs:
@@ -1733,8 +1723,6 @@ def top_products():
         selected_warehouse_id = None
         group_by_warehouse = False
         rpt = _build_report(group_by_warehouse, selected_warehouse_id)
-
-    from utils.company_scope import filter_warehouses_query
 
     warehouses = filter_warehouses_query(Warehouse.query).order_by(Warehouse.name.asc()).all()
     return render_template(
@@ -2085,15 +2073,11 @@ def sales_advanced_report():
     if not sd and not ed:
         sd = (datetime.now().date() - timedelta(days=90))
     
-    from utils.company_scope import assert_customer_access, filter_sales_query
-
-    base_q = filter_sales_query(
-        Sale.query.options(
-            db.joinedload(Sale.customer),
-            db.joinedload(Sale.seller_employee),
-            db.joinedload(Sale.seller),
-        )
-    )
+    base_q = filter_sales_query(Sale.query.options(
+        db.joinedload(Sale.customer),
+        db.joinedload(Sale.seller_employee),
+        db.joinedload(Sale.seller),
+    ))
     
     if sd:
         start_dt = datetime.combine(sd, datetime.min.time())
@@ -2332,8 +2316,6 @@ def expenses_report():
     partner_id = request.args.get("partner_id")
     is_paid = request.args.get("is_paid")
 
-    from utils.company_scope import filter_by_branches
-
     q = filter_by_branches(Expense.query, Expense.branch_id)
     if start:
         q = q.filter(Expense.date >= start)
@@ -2448,10 +2430,8 @@ def expenses_report():
         emp_labels = [str(lbl) for lbl, _ in by_emp_rows]
         emp_values = [float(t or 0) for _, t in by_emp_rows]
 
-    from utils.company_scope import filter_partners_query, filter_warehouses_query
-
     warehouses = filter_warehouses_query(Warehouse.query).order_by(Warehouse.name).all()
-    partners = filter_partners_query(Partner.query).order_by(Partner.name).all()
+    partners = Partner.query.order_by(Partner.name).all()
     expense_types = ExpenseType.query.filter_by(is_active=True).order_by(ExpenseType.name).all()
     
     receipts_rows = []
@@ -2908,13 +2888,11 @@ def customer_detail_report(customer_id):
         .all()
     )
 
-    base_pay_q = filter_payments_query(
-        Payment.query.filter(
-            Payment.customer_id == customer_id,
-            Payment.direction == PaymentDirection.IN.value,
-            Payment.status == PaymentStatus.COMPLETED.value,
-        )
-    )
+    base_pay_q = filter_payments_query(Payment.query.filter(
+        Payment.customer_id == customer_id,
+        Payment.direction == PaymentDirection.IN.value,
+        Payment.status == PaymentStatus.COMPLETED.value,
+    ))
     if start_dt:
         base_pay_q = base_pay_q.filter(Payment.payment_date >= start_dt)
     if end_dt:
@@ -3016,13 +2994,11 @@ def supplier_detail_report(supplier_id):
     start_dt = datetime.combine(start_date, datetime.min.time()) if start_date else None
     end_dt = datetime.combine(end_date, datetime.max.time()) if end_date else None
 
-    payments_out_query = filter_payments_query(
-        Payment.query.filter(
-            Payment.supplier_id == supplier_id,
-            Payment.direction == PaymentDirection.OUT.value,
-            Payment.status == PaymentStatus.COMPLETED.value,
-        )
-    )
+    payments_out_query = filter_payments_query(Payment.query.filter(
+        Payment.supplier_id == supplier_id,
+        Payment.direction == PaymentDirection.OUT.value,
+        Payment.status == PaymentStatus.COMPLETED.value
+    ))
     if start_dt:
         payments_out_query = payments_out_query.filter(Payment.payment_date >= start_dt)
     if end_dt:
@@ -3037,13 +3013,11 @@ def supplier_detail_report(supplier_id):
         .all()
     )
     
-    payments_in_query = filter_payments_query(
-        Payment.query.filter(
-            Payment.supplier_id == supplier_id,
-            Payment.direction == PaymentDirection.IN.value,
-            Payment.status == PaymentStatus.COMPLETED.value,
-        )
-    )
+    payments_in_query = filter_payments_query(Payment.query.filter(
+        Payment.supplier_id == supplier_id,
+        Payment.direction == PaymentDirection.IN.value,
+        Payment.status == PaymentStatus.COMPLETED.value
+    ))
     if start_dt:
         payments_in_query = payments_in_query.filter(Payment.payment_date >= start_dt)
     if end_dt:
@@ -3089,14 +3063,12 @@ def supplier_detail_report(supplier_id):
     sales = []
     if supplier.customer_id:
         from models import Sale, SaleStatus, SaleLine
-        sales_query = filter_sales_query(
-            Sale.query.options(
-                joinedload(Sale.lines).joinedload(SaleLine.product)
-            ).filter(
-                Sale.customer_id == supplier.customer_id,
-                Sale.status == SaleStatus.CONFIRMED.value,
-            )
-        )
+        sales_query = filter_sales_query(Sale.query.options(
+            joinedload(Sale.lines).joinedload(SaleLine.product)
+        ).filter(
+            Sale.customer_id == supplier.customer_id,
+            Sale.status == SaleStatus.CONFIRMED.value
+        ))
         if start_dt:
             sales_query = sales_query.filter(Sale.sale_date >= start_dt)
         if end_dt:
@@ -3145,14 +3117,11 @@ def supplier_detail_report(supplier_id):
         preorders_query = None
         preorders_count = 0
 
-    expenses_query = filter_by_branches(
-        Expense.query.filter(
-            or_(
-                Expense.supplier_id == supplier_id,
-                and_(Expense.payee_type == 'SUPPLIER', Expense.payee_entity_id == supplier_id),
-            )
-        ),
-        Expense.branch_id,
+    expenses_query = filter_by_branches(Expense.query, Expense.branch_id).filter(
+        or_(
+            Expense.supplier_id == supplier_id,
+            and_(Expense.payee_type == 'SUPPLIER', Expense.payee_entity_id == supplier_id)
+        )
     )
     if start_dt:
         expenses_query = expenses_query.filter(Expense.date >= start_dt)
@@ -3410,13 +3379,11 @@ def partner_detail_report(partner_id):
     start_dt = datetime.combine(start_date, datetime.min.time()) if start_date else None
     end_dt = datetime.combine(end_date, datetime.max.time()) if end_date else None
 
-    payments_out_query = filter_payments_query(
-        Payment.query.filter(
-            Payment.partner_id == partner_id,
-            Payment.direction == PaymentDirection.OUT.value,
-            Payment.status == PaymentStatus.COMPLETED.value,
-        )
-    )
+    payments_out_query = filter_payments_query(Payment.query.filter(
+        Payment.partner_id == partner_id,
+        Payment.direction == PaymentDirection.OUT.value,
+        Payment.status == PaymentStatus.COMPLETED.value
+    ))
     if start_dt:
         payments_out_query = payments_out_query.filter(Payment.payment_date >= start_dt)
     if end_dt:
@@ -3429,13 +3396,11 @@ def partner_detail_report(partner_id):
         .all()
     )
     
-    payments_in_query = filter_payments_query(
-        Payment.query.filter(
-            Payment.partner_id == partner_id,
-            Payment.direction == PaymentDirection.IN.value,
-            Payment.status == PaymentStatus.COMPLETED.value,
-        )
-    )
+    payments_in_query = filter_payments_query(Payment.query.filter(
+        Payment.partner_id == partner_id,
+        Payment.direction == PaymentDirection.IN.value,
+        Payment.status == PaymentStatus.COMPLETED.value
+    ))
     if start_dt:
         payments_in_query = payments_in_query.filter(Payment.payment_date >= start_dt)
     if end_dt:
@@ -3451,14 +3416,12 @@ def partner_detail_report(partner_id):
     sales = []
     sales_count = 0
     if partner.customer_id:
-        sales_query = filter_sales_query(
-            Sale.query.options(
-                joinedload(Sale.lines).joinedload(SaleLine.product),
-            ).filter(
-                Sale.customer_id == partner.customer_id,
-                Sale.status == SaleStatus.CONFIRMED.value,
-            )
-        )
+        sales_query = filter_sales_query(Sale.query.options(
+            joinedload(Sale.lines).joinedload(SaleLine.product),
+        ).filter(
+            Sale.customer_id == partner.customer_id,
+            Sale.status == SaleStatus.CONFIRMED.value
+        ))
         if start_dt:
             sales_query = sales_query.filter(Sale.sale_date >= start_dt)
         if end_dt:
@@ -3506,14 +3469,11 @@ def partner_detail_report(partner_id):
     service_parts_count = int(service_parts_query.order_by(None).with_entities(func.count(ServicePart.id)).scalar() or 0)
     service_parts = service_parts_query.order_by(ServicePart.created_at.desc(), ServicePart.id.desc()).limit(limit_rows).all()
 
-    expenses_query = filter_by_branches(
-        Expense.query.filter(
-            or_(
-                Expense.partner_id == partner_id,
-                and_(Expense.payee_type == 'PARTNER', Expense.payee_entity_id == partner_id),
-            )
-        ),
-        Expense.branch_id,
+    expenses_query = filter_by_branches(Expense.query, Expense.branch_id).filter(
+        or_(
+            Expense.partner_id == partner_id,
+            and_(Expense.payee_type == 'PARTNER', Expense.payee_entity_id == partner_id)
+        )
     )
     if start_dt:
         expenses_query = expenses_query.filter(Expense.date >= start_dt)

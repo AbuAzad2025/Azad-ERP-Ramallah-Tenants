@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% from 'macros/gm_mobile_ui.html' import scroll_table_start, scroll_table_end %}
+
+{% block title %}مقارنة سنوات{% endblock %}
+{% block page_title %}مقارنة سنوات{% endblock %}
+{% block body_class %}gm-financial-report{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" dir="rtl">
+  <h4>مقارنة قوائم — {{ year_a }} مقابل {{ year_b }}</h4>
+  <form class="form-inline mb-3 gm-filter-row">
+    <input type="number" name="year_a" value="{{ year_a }}" class="form-control form-control-sm mx-1" placeholder="سنة أ">
+    <input type="number" name="year_b" value="{{ year_b }}" class="form-control form-control-sm mx-1" placeholder="سنة ب">
+    <select name="company_id" class="form-control form-control-sm mx-1">
+      <option value="">كل الشركات</option>
+      {% for c in companies %}<option value="{{ c.id }}" {% if company_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-primary btn-sm">عرض</button>
+  </form>
+  <div class="row mb-3 gm-report-kpi-row">
+    <div class="col-md-3 gm-report-kpi"><h6>إيراد {{ year_a }}</h6><h4>{{ data.summary.revenue_a }}</h4></div>
+    <div class="col-md-3 gm-report-kpi"><h6>إيراد {{ year_b }}</h6><h4>{{ data.summary.revenue_b }}</h4></div>
+    <div class="col-md-3 gm-report-kpi"><h6>صافي {{ year_a }}</h6><h4>{{ data.summary.net_income_a }}</h4></div>
+    <div class="col-md-3 gm-report-kpi"><h6>صافي {{ year_b }}</h6><h4>{{ data.summary.net_income_b }}</h4></div>
+  </div>
+  {{ scroll_table_start('جدول المقارنة — اسحب أفقياً') }}
+  <table class="table table-sm table-bordered">
+    <thead class="table-header-primary text-white"><tr><th>حساب</th><th>الاسم</th><th>{{ year_a }}</th><th>{{ year_b }}</th><th>فرق</th><th>%</th></tr></thead>
+    <tbody>
+      {% for row in data.lines %}
+      <tr>
+        <td><code>{{ row.account }}</code></td>
+        <td>{{ row.name }}</td>
+        <td class="text-end">{{ row.year_a }}</td>
+        <td class="text-end">{{ row.year_b }}</td>
+        <td class="text-end">{{ row.variance }}</td>
+        <td>{{ row.variance_pct }}%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {{ scroll_table_end() }}
+</div>
+{% endblock %}

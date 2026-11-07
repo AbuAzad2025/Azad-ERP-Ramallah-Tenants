@@ -1,16 +1,16 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}tax_reports{% endblock %}
-{% block security_title %}Tax Reports{% endblock %}
+{% block security_title %}تقارير الضرائب{% endblock %}
 {% block security_icon %}<i class="fas fa-file-invoice-dollar"></i>{% endblock %}
-{% block security_description %}تقارير الضرائب - VAT Tracking • إقرارات ضريبية{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">Tax Reports</li>{% endblock %}
+{% block security_description %}تقارير ضريبة القيمة المضافة{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">تقارير الضرائب</li>{% endblock %}
 {% block security_content %}
     
     <!-- اختيار الفترة -->
     <div class="row">
       <div class="col-md-12">
         <div class="card card-primary">
-          <div class="card-header">
+          <div class="card-header erp-card-header-row erp-theme-header--primary">
             <h3 class="card-title"><i class="fas fa-calendar"></i> اختيار الفترة</h3>
           </div>
           <div class="card-body">
@@ -44,7 +44,7 @@
     <div class="row">
       <div class="col-md-12">
         <div class="card">
-          <div class="card-header bg-gradient-primary">
+          <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-primary">
             <h3 class="card-title"><i class="fas fa-calculator"></i> ملخص VAT - {{ period }}</h3>
           </div>
           <div class="card-body">
@@ -124,12 +124,12 @@
     <div class="row">
       <div class="col-md-12">
         <div class="card">
-          <div class="card-header">
+          <div class="card-header erp-card-header-row erp-theme-header--primary">
             <h3 class="card-title"><i class="fas fa-list"></i> السجلات التفصيلية (آخر 100)</h3>
           </div>
           <div class="card-body table-responsive p-0" style="max-height: 500px;">
             <table class="table table-sm table-striped table-head-fixed">
-              <thead>
+              <thead class="table-header-primary text-white">
                 <tr>
                   <th>#</th>
                   <th>النوع</th>
@@ -201,7 +201,7 @@
     <div class="row">
       <div class="col-md-12">
         <div class="card">
-          <div class="card-header">
+          <div class="card-header erp-card-header-row erp-theme-header--primary">
             <h3 class="card-title"><i class="fas fa-chart-line"></i> اتجاه السنة {{ current_year }}</h3>
           </div>
           <div class="card-body">

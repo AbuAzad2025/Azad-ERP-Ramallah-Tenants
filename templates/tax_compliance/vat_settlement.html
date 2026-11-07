@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}تسوية VAT{% endblock %}
+{% block content %}
+<div class="container py-3" dir="rtl">
+  <h4>تسوية ضريبة القيمة المضافة</h4>
+  <form class="mb-3 row">
+    <div class="col-md-3"><input type="date" name="start_date" value="{{ start_date }}" class="form-control"></div>
+    <div class="col-md-3"><input type="date" name="end_date" value="{{ end_date }}" class="form-control"></div>
+    <div class="col-md-2"><button class="btn btn-primary">عرض</button></div>
+  </form>
+  <table class="table table-bordered">
+    <tr><td>VAT مخرجات (TaxEntry)</td><td>{{ data.output_vat_taxentry }}</td></tr>
+    <tr><td>VAT مدخلات (TaxEntry)</td><td>{{ data.input_vat_taxentry }}</td></tr>
+    <tr><td>صافي مستحق</td><td><strong>{{ data.net_payable }}</strong></td></tr>
+    <tr><td>GL VAT payable</td><td>{{ data.gl_vat_payable_net }}</td></tr>
+    <tr><td>GL VAT input</td><td>{{ data.gl_vat_input_net }}</td></tr>
+    <tr><td>متطابق</td><td>{{ 'نعم' if data.reconciled else 'مراجعة' }}</td></tr>
+  </table>
+  <a href="{{ url_for('tax_compliance_bp.vat_export', start_date=start_date, end_date=end_date) }}" class="btn btn-success">تصدير CSV إقرار</a>
+  <form method="post" action="{{ url_for('tax_compliance_bp.vat_post_gl') }}" class="d-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="start_date" value="{{ start_date }}">
+    <input type="hidden" name="end_date" value="{{ end_date }}">
+    <button type="submit" class="btn btn-warning" onclick="return confirm('ترحيل تسوية VAT إلى GL؟')">ترحيل GL</button>
+  </form>
+  <a href="{{ url_for('security.tax_reports') }}" class="btn btn-secondary">تقارير الضريبة</a>
+</div>
+{% endblock %}

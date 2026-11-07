@@ -49,7 +49,7 @@
 
   <!-- معلومات الموظف -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+ <div class="card-header erp-card-header-row erp-theme-header--primary">
       <i class="fas fa-user mr-1"></i> معلومات الموظف
     </div>
     <div class="card-body">
@@ -108,14 +108,14 @@
 
   <!-- السلف -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-warning text-white">
+    <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-white">
       <i class="fas fa-hand-holding-usd mr-1"></i> السلف المسحوبة
     </div>
     <div class="card-body">
       {% if advances %}
       <div class="table-responsive">
         <table class="table table-sm table-hover">
-          <thead>
+          <thead class="table-header-primary text-white">
             <tr>
               <th>التاريخ</th>
               <th>المبلغ</th>
@@ -154,14 +154,14 @@
 
   <!-- الخصومات الشهرية -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-danger text-white">
+    <div class="card-header erp-card-header-row erp-theme-header--primary bg-danger text-white">
       <i class="fas fa-minus-circle mr-1"></i> الخصومات الشهرية
     </div>
     <div class="card-body">
       {% if deductions %}
       <div class="table-responsive">
         <table class="table table-sm table-hover">
-          <thead>
+          <thead class="table-header-primary text-white">
             <tr>
               <th>النوع</th>
               <th>المبلغ</th>
@@ -197,7 +197,7 @@
 
   <!-- الرواتب المدفوعة -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+    <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white d-flex justify-content-between align-items-center">
       <span><i class="fas fa-money-bill-wave mr-1"></i> الرواتب المدفوعة</span>
       <button type="button" class="btn btn-light btn-sm no-print" data-toggle="modal" data-target="#generateSalaryModal">
         <i class="fas fa-plus-circle mr-1"></i> توليد راتب شهري
@@ -207,7 +207,7 @@
       {% if salaries %}
       <div class="table-responsive">
         <table class="table table-sm table-hover">
-          <thead>
+          <thead class="table-header-primary text-white">
             <tr>
               <th>التاريخ</th>
               <th>الشهر</th>
@@ -411,16 +411,7 @@
 
 {% block scripts %}
 {{ super() }}
-<style>
-  .modal-backdrop { pointer-events: none !important; }
-  #generateSalaryModal .modal-content { border-radius: 15px; overflow: hidden; }
-  #generateSalaryModal .modal-header { border: none; }
-  #generateSalaryModal .modal-footer { border: none; }
-  #generateSalaryModal .card { transition: transform 0.2s; }
-  #generateSalaryModal .form-control:focus { border-color: #28a745; box-shadow: 0 0 0 0.2rem rgba(40,167,69,.25); }
-  .payment-detail-field { animation: fadeIn 0.3s; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-</style>
+
 <script>
 $(document).ready(function() {
   const netSalary = {{ employee.net_salary_after_all|round(2) }};
@@ -446,7 +437,7 @@ $(document).ready(function() {
         const container = $('#advances_container');
         if (data.installments && data.installments.length > 0) {
           let html = '<div class="alert alert-info mt-3 mb-0"><h6 class="mb-2"><i class="fas fa-hand-holding-usd"></i> أقساط السلف المستحقة:</h6><table class="table table-sm mb-0">';
-          html += '<thead><tr><th>القسط</th><th>المبلغ</th><th>تاريخ الاستحقاق</th></tr></thead><tbody>';
+          html += '<thead class="table-header-primary text-white"><tr><th>القسط</th><th>المبلغ</th><th>تاريخ الاستحقاق</th></tr></thead><tbody>';
           
           data.installments.forEach(inst => {
             html += `<tr><td>${inst.installment_number}/${inst.total_installments}</td><td>${inst.amount} ₪</td><td>${inst.due_date}</td></tr>`;

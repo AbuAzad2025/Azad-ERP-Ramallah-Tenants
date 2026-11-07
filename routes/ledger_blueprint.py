@@ -21,6 +21,7 @@ from services.ledger_service import (
     SmartEntityExtractor, LedgerQueryOptimizer, CurrencyConverter,
     LedgerStatisticsCalculator, LedgerCache
 )
+from utils.gl_company_scope import filter_gl_query_on_batch, resolve_branch_filter, gl_batch_branch_clause
 
 csrf = CSRFProtect()
 
@@ -51,6 +52,12 @@ def _calculate_ledger_statistics(from_date: datetime | None, to_date: datetime |
         return cached
 
     base_gl = db.session.query(GLEntry).join(GLBatch).filter(GLBatch.status == "POSTED")
+    branch_ids = resolve_branch_filter()
+    if branch_ids is not None:
+        if not branch_ids:
+            base_gl = base_gl.filter(GLEntry.id == -1)
+        else:
+            base_gl = base_gl.filter(gl_batch_branch_clause(branch_ids))
     if from_date:
         base_gl = base_gl.filter(GLBatch.posted_at >= from_date)
     if to_date:
@@ -343,10 +350,31 @@ def ledger_index():
 
 @ledger_bp.route("/chart-of-accounts", methods=["GET"], endpoint="chart_of_accounts")
 @login_required
-@utils.permission_required(SystemPermissions.MANAGE_LEDGER)
+@utils.permission_required(SystemPermissions.VIEW_LEDGER)
 def chart_of_accounts():
-    """دليل الحسابات المحاسبية - واجهة مبسطة"""
-    return render_template("ledger/chart_of_accounts.html")
+    """شجرة دليل الحسابات."""
+    accounts = Account.query.filter_by(is_active=True).order_by(Account.code).all()
+    by_parent = {}
+    roots = []
+    for a in accounts:
+        by_parent.setdefault(a.parent_id, []).append(a)
+    for a in accounts:
+        if not a.parent_id:
+            roots.append(a)
+
+    def build_tree(node):
+        return {
+            "id": node.id,
+            "code": node.code,
+            "name": node.name,
+            "type": node.type,
+            "children": [build_tree(c) for c in by_parent.get(node.id, [])],
+        }
+
+    tree = [build_tree(r) for r in roots]
+    if request.args.get("format") == "json":
+        return jsonify({"success": True, "tree": tree})
+    return render_template("ledger/chart_of_accounts.html", tree=tree, accounts=accounts)
 
 @ledger_bp.route("/accounts", methods=["GET"], endpoint="get_accounts")
 @login_required
@@ -505,6 +533,8 @@ def get_ledger_data():
             query = query.filter(GLBatch.posted_at >= from_date)
         if to_date:
             query = query.filter(GLBatch.posted_at <= to_date)
+            
+        query = filter_gl_query_on_batch(query)
             
         if transaction_type:
             tt_upper = transaction_type.strip().upper()

@@ -2,88 +2,20 @@
 
 {% block tour_name %}sitemap{% endblock %}
 
-{% block security_title %}Sitemap{% endblock %}
+{% block security_title %}خريطة الموقع{% endblock %}
 {% block security_icon %}<i class="fas fa-sitemap"></i>{% endblock %}
 {% block security_description %}خريطة تفصيلية لجميع صفحات ووحدات النظام{% endblock %}
 
 {% block security_breadcrumb %}
-<li class="breadcrumb-item active">Sitemap</li>
+<li class="breadcrumb-item active">خريطة الموقع</li>
 {% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/security_responsive.css') }}">
-<style>
-  .sitemap-tree {
-    list-style: none;
-    padding-right: 0;
-  }
-  
-  .sitemap-tree ul {
-    list-style: none;
-    padding-right: 25px;
-    margin-top: 10px;
-  }
-  
-  .sitemap-tree li {
-    margin: 8px 0;
-    padding: 8px 12px;
-    border-right: 3px solid #667eea;
-    transition: all 0.2s;
-  }
-  
-  .sitemap-tree li:hover {
-    background: #f8f9fa;
-    border-right-width: 5px;
-  }
-  
-  .sitemap-tree a {
-    text-decoration: none;
-    color: #333;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  
-  .sitemap-tree a:hover {
-    color: #667eea !important;
-  }
-  
-  .sitemap-tree .badge {
-    font-size: 0.7rem;
-  }
-  
-  .sitemap-section {
-    margin-bottom: 30px;
-    padding: 20px;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  }
-  
-  .sitemap-section h4 {
-    color: #667eea;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #667eea;
-  }
-  
-  /* Dark Mode */
-  body.dark-mode .sitemap-tree li:hover {
-    background: #1a2942 !important;
-  }
-  
-  body.dark-mode .sitemap-tree a {
-    color: #e0e0e0 !important;
-  }
-  
-  body.dark-mode .sitemap-section {
-    background: #0f3460 !important;
-  }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/security_dark_mode.css') }}">
+
 {% endblock %}
 
-{% block content %}
+{% block security_content %}
 <div class="container-fluid">
  
   <!-- عنوان رئيسي -->
@@ -94,7 +26,7 @@
         <strong>خريطة الموقع:</strong>
         <span class="badge bg-white text-primary ms-2">جميع الروابط في مكان واحد</span>
       </div>
-      <small class="opacity-75">7 مراكز • 38 تبويب • 121 وظيفة</small>
+      <small class="opacity-75">{{ sitemap_data.total_routes }} مسار • {{ sitemap_data.centers|length }} مراكز</small>
     </div>
   </div>
   
@@ -256,7 +188,8 @@
             <ul>
               <li><a href="{{ url_for('ledger_control.index') }}#tab-accounts"><i class="fas fa-list"></i> الحسابات المحاسبية</a></li>
               <li><a href="{{ url_for('ledger_control.index') }}#tab-entries"><i class="fas fa-file"></i> القيود المحاسبية</a></li>
-              <li><a href="{{ url_for('ledger_control.index') }}#tab-batches"><i class="fas fa-edit"></i> تحرير القيود</a></li>
+              <li><a href="{{ url_for('ledger_control.index') }}#tab-batches"><i class="fas fa-layer-group"></i> دفعات القيود</a></li>
+              <li><a href="{{ url_for('ledger_control.index') }}#tab-editor"><i class="fas fa-edit"></i> تحرير القيود</a></li>
               <li><a href="{{ url_for('ledger_control.index') }}#tab-tools"><i class="fas fa-tools"></i> الأدوات</a></li>
             </ul>
           </li>
@@ -305,10 +238,15 @@
         
         <ul class="sitemap-tree">
           <li><a href="{{ url_for('security.settings_center') }}"><i class="fas fa-sliders-h"></i> إعدادات النظام</a></li>
+          <li><a href="{{ url_for('security.appearance_panel') }}"><i class="fas fa-swatchbook"></i> مظهر متقدم</a></li>
+          <li><a href="{{ url_for('security.printing_panel') }}"><i class="fas fa-print"></i> الطباعة والأجهزة</a></li>
           <li><a href="{{ url_for('security.theme_editor') }}"><i class="fas fa-palette"></i> محرر الثيمات</a></li>
           <li><a href="{{ url_for('security.permissions_manager') }}"><i class="fas fa-key"></i> مدير الصلاحيات</a></li>
-          <li><a href="{{ url_for('security.email_manager') }}"><i class="fas fa-envelope"></i> مدير البريد</a></li>
-          <li><a href="{{ url_for('security.owner_branding') }}"><i class="fas fa-file-invoice"></i> الهوية والفواتير</a></li>
+          <li><a href="{{ url_for('security.tools_center', tab='email') }}"><i class="fas fa-envelope"></i> مدير البريد</a></li>
+          <li><a href="{{ url_for('enterprise_security_bp.setup_2fa') }}"><i class="fas fa-mobile-alt"></i> المصادقة الثنائية</a></li>
+          <li><a href="{{ url_for('enterprise_security_bp.posting_controls') }}"><i class="fas fa-lock"></i> ضوابط الإدخال المحاسبي</a></li>
+          <li><a href="{{ url_for('ai_admin.ai_config_dashboard') }}"><i class="fas fa-robot"></i> إعدادات المساعد الذكي</a></li>
+          <li><a href="{{ url_for('security.invoice_designer') }}"><i class="fas fa-file-invoice"></i> مصمم الفواتير</a></li>
         </ul>
       </div>
       
@@ -338,35 +276,26 @@
     
   </div>
   
-  <!-- إحصائيات سريعة -->
+  <!-- إحصائيات -->
   <div class="row mt-4">
     <div class="col-12">
-      <div class="alert alert-light border text-center">
-        <h5 class="mb-3"><i class="fas fa-chart-pie"></i> إحصائيات الوحدة السرية</h5>
-        <div class="row">
-          <div class="col-md-3">
-            <div class="p-3 bg-primary text-white rounded">
-              <h3 class="mb-0">7</h3>
-              <small>مراكز موحدة</small>
-            </div>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="erp-sec-stat">
+            <span class="erp-sec-stat__value">{{ sitemap_data.centers|length }}</span>
+            <span class="erp-sec-stat__label">مراكز</span>
           </div>
-          <div class="col-md-3">
-            <div class="p-3 bg-success text-white rounded">
-              <h3 class="mb-0">38</h3>
-              <small>تبويب</small>
-            </div>
+        </div>
+        <div class="col-md-4">
+          <div class="erp-sec-stat">
+            <span class="erp-sec-stat__value">{{ sitemap_data.total_routes }}</span>
+            <span class="erp-sec-stat__label">مسارات لوحة الأمان</span>
           </div>
-          <div class="col-md-3">
-            <div class="p-3 bg-info text-white rounded">
-              <h3 class="mb-0">121</h3>
-              <small>راوتر</small>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="p-3 bg-warning text-dark rounded">
-              <h3 class="mb-0">45</h3>
-              <small>قالب</small>
-            </div>
+        </div>
+        <div class="col-md-4">
+          <div class="erp-sec-stat">
+            <span class="erp-sec-stat__value">{{ sitemap_data.total_tabs }}</span>
+            <span class="erp-sec-stat__label">تبويبات في المراكز</span>
           </div>
         </div>
       </div>

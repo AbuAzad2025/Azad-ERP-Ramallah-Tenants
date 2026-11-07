@@ -24,7 +24,7 @@ from utils.partner_balance_updater import update_partner_balance_components, bui
 from permissions_config.permissions import PermissionsRegistry
 from models import (
     Account, AuditLog, Branch, Site, Check, CheckStatus, Customer, Employee, ExchangeTransaction, Expense, ExpenseType, GLBatch,
-    GLEntry, GL_ACCOUNTS, Invoice, Note, OnlineCart, OnlineCartItem, OnlinePayment, OnlinePreOrder, OnlinePreOrderItem,
+    GLEntry, GL_ACCOUNTS, Invoice, InvoiceLine, Note, OnlineCart, OnlineCartItem, OnlinePayment, OnlinePreOrder, OnlinePreOrderItem,
     Partner, PartnerSettlement, Payment, PaymentDirection, PaymentEntityType, PaymentMethod, PaymentStatus, Permission,
     PreOrder, Product, ProductCategory, Role, Sale, SaleLine, ServicePart, ServiceRequest, ServiceStatus, ServiceTask,
     Shipment, ShipmentItem, ShipmentStatus, StockAdjustment, StockAdjustmentItem, StockLevel, Supplier,
@@ -2284,6 +2284,206 @@ def invoice_update_status(invoice_id: int):
         click.echo(f"OK: invoice {invoice_id} status -> {inv.status}")
     except SQLAlchemyError as e:
         db.session.rollback(); raise click.ClickException(str(e)) from e
+
+@click.command("backfill-sale-invoices")
+@click.option("--limit", type=int, default=0)
+@click.option("--dry-run", is_flag=True, default=False)
+@with_appcontext
+def backfill_sale_invoices(limit: int, dry_run: bool):
+    q = (
+        db.session.query(Sale.id)
+        .outerjoin(Invoice, Invoice.sale_id == Sale.id)
+        .filter(Invoice.id.is_(None))
+        .filter(Sale.cancelled_at.is_(None))
+        .filter(Sale.is_archived == False)
+        .order_by(Sale.id.asc())
+    )
+    if limit and int(limit) > 0:
+        q = q.limit(int(limit))
+    sale_ids = [int(r[0]) for r in q.all()]
+    if not sale_ids:
+        click.echo("OK: no missing sale invoices")
+        return
+    created = 0
+    for sid in sale_ids:
+        sale = db.session.get(Sale, sid)
+        if not sale or not getattr(sale, "customer_id", None):
+            continue
+        inv = Invoice(
+            invoice_number=f"FINV-{int(sale.id):06d}",
+            invoice_date=getattr(sale, "sale_date", None) or datetime.now(timezone.utc),
+            due_date=None,
+            customer_id=int(sale.customer_id),
+            sale_id=int(sale.id),
+            source="SALE",
+            kind="INVOICE",
+            currency=(getattr(sale, "currency", None) or "ILS").upper(),
+            total_amount=_Q2(getattr(sale, "total_amount", 0) or 0),
+            tax_amount=_Q2(getattr(sale, "tax_amount", 0) or 0),
+            discount_amount=_Q2(getattr(sale, "discount_total", 0) or 0),
+            notes=getattr(sale, "notes", None),
+        )
+        for ln in (getattr(sale, "lines", None) or []):
+            prod = None
+            try:
+                prod = db.session.get(Product, int(getattr(ln, "product_id", 0) or 0))
+            except Exception:
+                prod = None
+            inv.lines.append(
+                InvoiceLine(
+                    description=(getattr(prod, "name", None) or f"ITEM-{getattr(ln, 'product_id', '')}"),
+                    quantity=float(getattr(ln, "quantity", 0) or 0),
+                    unit_price=_Q2(getattr(ln, "unit_price", 0) or 0),
+                    tax_rate=_Q2(getattr(ln, "tax_rate", 0) or 0),
+                    discount=_Q2(getattr(ln, "discount_rate", 0) or 0),
+                    product_id=int(getattr(ln, "product_id", 0) or 0) or None,
+                )
+            )
+        if dry_run:
+            continue
+        db.session.add(inv)
+        try:
+            db.session.flush()
+            created += 1
+        except IntegrityError:
+            db.session.rollback()
+            continue
+    if dry_run:
+        db.session.rollback()
+        click.echo(f"DRY RUN: would create {len(sale_ids)} invoices")
+        return
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+    click.echo(f"OK: created {created} invoices")
+
+
+@click.command("fiscal-periods-sync")
+@click.option("--from-year", type=int, default=None)
+@click.option("--to-year", type=int, default=None)
+@click.option("--no-monthly", is_flag=True)
+@click.option("--no-quarterly", is_flag=True)
+@click.option("--no-half", is_flag=True)
+@click.option("--no-year", is_flag=True)
+@with_appcontext
+def fiscal_periods_sync(from_year, to_year, no_monthly, no_quarterly, no_half, no_year):
+    """توليد الفترات المحاسبية (شهر / ربع / نصف / سنة)."""
+    from utils.period_close_service import sync_fiscal_periods
+
+    stats = sync_fiscal_periods(
+        from_year=from_year,
+        to_year=to_year,
+        include_monthly=not no_monthly,
+        include_quarterly=not no_quarterly,
+        include_half=not no_half,
+        include_year=not no_year,
+    )
+    click.echo(f"OK: created={stats['created']} updated={stats['updated']}")
+
+
+@click.command("fiscal-period-close")
+@click.argument("period_key")
+@click.option("--scope", type=click.Choice(["GL_ONLY", "FULL"]), default="FULL")
+@click.option("--no-gl", is_flag=True, help="بدون قيود إقفال GL")
+@click.option("--no-carry", is_flag=True, help="بدون ترحيل سنوي")
+@click.option("--no-lock", is_flag=True, help="إقفال بدون LOCKED")
+@with_appcontext
+def fiscal_period_close(period_key, scope, no_gl, no_carry, no_lock):
+    """إقفال فترة محاسبية بالمفتاح (مثل 2025-FY أو 2025-Q1)."""
+    from utils.period_close_service import close_fiscal_period, get_period_by_key
+
+    period = get_period_by_key(period_key)
+    if not period:
+        raise click.ClickException(f"الفترة غير موجودة: {period_key}")
+    result = close_fiscal_period(
+        period.id,
+        close_scope=scope,
+        post_gl=not no_gl,
+        carry_forward=not no_carry,
+        lock_period=not no_lock,
+    )
+    click.echo(f"OK: {result['period_key']} -> {result['status']} snapshots={result.get('entity_snapshots')}")
+
+
+@click.command("erp-readiness")
+@with_appcontext
+def erp_readiness_cmd():
+    """تقييم جاهزية ERP (هدف ≥90% لكل محور)."""
+    from flask import current_app
+    from utils.erp_readiness import run_erp_readiness
+
+    report = run_erp_readiness(current_app)
+    click.echo(f"Overall: {report['overall']}% — pass_all_90={report['pass_all_90']}")
+    for m in report["modules"]:
+        flag = "OK" if m["score"] >= 90 else "!!"
+        click.echo(f"  [{flag}] {m['label']}: {m['score']}%")
+    if report.get("below_90"):
+        click.echo("Below 90%:")
+        for m in report["below_90"]:
+            click.echo(f"  - {m['label']}: {m['score']}%")
+    if not report["pass_all_90"]:
+        raise SystemExit(1)
+
+
+@click.command("comprehensive-audit")
+@click.option("--json-out", type=click.Path(), default=None, help="حفظ التقرير JSON")
+@with_appcontext
+def comprehensive_audit_cmd(json_out):
+    """تدقيق شامل: DB، FK، موديلات، endpoints، قوالب، JavaScript."""
+    from flask import current_app
+    from utils.comprehensive_audit import run_comprehensive_audit, format_audit_report_text
+
+    report = run_comprehensive_audit(current_app)
+    click.echo(format_audit_report_text(report))
+    if json_out:
+        import json as _json
+
+        with open(json_out, "w", encoding="utf-8") as f:
+            _json.dump(report, f, ensure_ascii=False, indent=2, default=str)
+        click.echo(f"JSON: {json_out}")
+    if not report.get("ok"):
+        raise SystemExit(1)
+
+
+@click.command("integration-audit")
+@with_appcontext
+def integration_audit_cmd():
+    """تدقيق تكامل: جداول الشركات/التوزيع/الفروع."""
+    from flask import current_app
+    from utils.integration_audit import run_integration_audit
+
+    report = run_integration_audit(current_app)
+    for item in report.get("issues", []):
+        click.echo(f"[{item['level']}] {item['msg']}")
+    if report.get("ok"):
+        click.echo("OK: integration audit passed")
+    else:
+        raise SystemExit(1)
+
+
+@click.command("accounting-audit")
+@click.option("--limit", type=int, default=0, show_default=True, help="0 = كل الجهات")
+@click.option("--fix", is_flag=True, help="إعادة حساب الأرصدة المخزّنة عند الفروقات")
+@click.option("--fix-policy", is_flag=True, help="فك ربط الدفعات القديمة من المبيعات وربطها بالزبون فقط")
+@click.option("--include-archived", is_flag=True)
+@with_appcontext
+def accounting_audit(limit, fix, fix_policy, include_archived):
+    """تدقيق محاسبي صارم: حقوق / التزامات / رصيد للزبون والمورد والشريك."""
+    from utils.accounting_audit import audit_entity_balances, format_audit_report_text
+
+    report = audit_entity_balances(
+        limit=int(limit or 0),
+        include_archived=include_archived,
+        fix=fix,
+        fix_policy=fix_policy,
+    )
+    click.echo(format_audit_report_text(report))
+    s = report.get("summary", {})
+    if any(s.get(k, 0) for k in s):
+        raise SystemExit(1)
+
 
 @click.command("preorder-create")
 @click.option("--product-id", type=int, required=True)
@@ -5304,6 +5504,13 @@ def register_cli(app) -> None:
         stock_transfer, stock_exchange, stock_reserve, stock_unreserve, shipment_create, shipment_status,
         supplier_settlement_draft, supplier_settlement_confirm, partner_settlement_draft, partner_settlement_confirm,
         payment_create, payment_list, invoice_list, invoice_update_status, preorder_create,
+        backfill_sale_invoices,
+        fiscal_periods_sync,
+        fiscal_period_close,
+        erp_readiness_cmd,
+        comprehensive_audit_cmd,
+        integration_audit_cmd,
+        accounting_audit,
         sr_create, sr_add_part, sr_add_task, sr_recalc, sr_set_status, sr_show, 
         cart_create, cart_add_item, order_from_cart, order_set_status, order_add_item,
         onlinepay_create, onlinepay_decrypt_card, expense_create, expense_pay, expense_link_known_entities, expenses_payoff_all,

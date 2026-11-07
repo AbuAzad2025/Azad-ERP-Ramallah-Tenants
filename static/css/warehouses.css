@@ -111,41 +111,199 @@
   padding-left: 0.5rem;
 }
 
+/* المستودعات: محاذاة مع layout-app — لا تغطية للنافبار الثابت */
+html[dir="rtl"] body.warehouses-page.erp-app.layout-navbar-fixed .content-wrapper {
+  margin-top: calc(
+    var(--gm-navbar-height, var(--erp-header-h, 56px)) + env(safe-area-inset-top, 0px)
+  ) !important;
+  padding-top: 0 !important;
+  z-index: auto !important;
+}
+
+body.warehouses-page .main-header.navbar {
+  z-index: 1030 !important;
+}
+
+body.warehouses-page .content-header {
+  position: static !important;
+  z-index: auto !important;
+  margin-top: 0 !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.35rem !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+body.warehouses-page .content-header .breadcrumb {
+  flex-wrap: wrap;
+  max-width: 100%;
+  background: transparent !important;
+}
+
+body.warehouses-page .content-header .row {
+  row-gap: 0.35rem;
+}
+
+body.warehouses-page .content-header h1 {
+  font-size: 1.25rem;
+  line-height: 1.35;
+  color: var(--erp-text, inherit) !important;
+  text-shadow: none !important;
+}
+
+body.warehouses-page .content-header .breadcrumb a {
+  color: var(--erp-primary, #2563eb) !important;
+}
+
+body.warehouses-page .content .container-fluid > .warehouse-toolbar {
+  margin-top: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.warehouse-toolbar {
+  background: var(--erp-surface, #fff);
+  border: 1px solid var(--erp-border, #e2e8f0);
+  border-radius: var(--erp-radius, 10px);
+  padding: 0.5rem 0.65rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--erp-shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.08));
+}
+
+.warehouse-toolbar__scroll {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+}
+
+.warehouse-toolbar__group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.warehouse-toolbar__group--actions {
+  margin-inline-start: auto;
+}
+
+.warehouse-toolbar .btn {
+  font-size: 0.8125rem;
+  padding: 0.35rem 0.65rem;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.warehouse-toolbar .btn.active,
+.warehouse-toolbar .btn-outline-secondary.active {
+  background: color-mix(in srgb, var(--erp-primary, #2563eb) 12%, transparent);
+  border-color: var(--erp-primary, #2563eb);
+  color: var(--erp-primary, #2563eb);
+}
+
+.warehouse-toolbar__current {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--erp-primary, #2563eb);
+  padding: 0.35rem 0.5rem;
+}
+
+.warehouse-toolbar--compact .warehouse-toolbar__scroll {
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.15rem;
+}
+
+.warehouse-toolbar--compact .warehouse-toolbar__group--actions {
+  margin-inline-start: 0;
+}
+
+.warehouse-toolbar--compact .ms-auto {
+  margin-inline-start: auto !important;
+}
+
+.warehouse-page-body {
+  min-width: 0;
+}
+
+/* صفحة الحجوزات المسبقة */
+body.warehouses-page--preorders .preorders-kpi-row .card-body {
+  min-height: 0;
+}
+
+body.warehouses-page--preorders .erp-kpi-card__value {
+  line-height: 1.2;
+}
+
+body.warehouses-page--preorders .preorders-table-card {
+  border-radius: var(--erp-radius, 10px);
+  overflow: hidden;
+}
+
+body.warehouses-page--preorders .preorders-table-wrap {
+  max-width: 100%;
+}
+
+body.warehouses-page--preorders #preorders-table {
+  font-size: 0.875rem;
+  margin-bottom: 0;
+}
+
+body.warehouses-page--preorders #preorders-table thead th {
+  background: var(--erp-table-head, #f1f5f9);
+  color: var(--erp-text, #0f172a);
+  border-bottom: 2px solid var(--erp-border, #e2e8f0);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+body.warehouses-page--preorders .preorders-col-actions {
+  width: 7.5rem;
+  min-width: 7.5rem;
+}
+
+body.warehouses-page--preorders .preorders-col-actions .btn {
+  padding: 0.2rem 0.45rem;
+}
+
+body.warehouses-page--preorders .dataTables_wrapper .dataTables_filter,
+body.warehouses-page--preorders .dataTables_wrapper .dataTables_length {
+  padding: 0.5rem 0.75rem;
+}
+
+@media (max-width: 991.98px) {
+  .warehouse-toolbar__scroll {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .warehouse-toolbar__group--actions {
+    margin-inline-start: 0;
+    justify-content: flex-start;
+  }
+}
+
+/* توافق قديم */
 .warehouse-nav-buttons {
-  background: #f8f9fa;
-  padding: 0.75rem;
+  background: var(--erp-surface, #f8f9fa);
+  padding: 0.5rem 0.65rem;
   border-radius: 0.5rem;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--erp-border, #e9ecef);
   margin-bottom: 1rem;
 }
 
 .warehouse-nav-buttons .btn {
-  transition: all 0.3s ease;
-  font-size: 0.9rem;
-  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  padding: 0.35rem 0.65rem;
   white-space: nowrap;
-  border-radius: 0.375rem;
-  border: 1px solid rgba(0,0,0,0.1) !important;
-}
-
-.warehouse-nav-buttons .btn:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.warehouse-nav-buttons .btn.fw-bold {
-  font-weight: 600;
-  letter-spacing: 0.3px;
-}
-
-@media (max-width: 768px) {
-  .warehouse-nav-buttons {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .warehouse-nav-buttons .text-muted {
-    display: none;
-  }
 }
 
 .warehouse-detail-actions {
@@ -224,47 +382,6 @@
 
 .content-header .dropdown-menu { max-width: 100%; }
 
-.warehouses-page .content-header {
-  background: rgba(15, 23, 42, 0.95) !important;
-  color: var(--text-main, #f9fafb) !important;
-  border: none !important;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
-  position: relative;
-  z-index: 1001 !important;
-  margin-top: 0 !important;
-  padding-top: 1.25rem !important;
-  border-radius: 0 0 0.5rem 0.5rem !important;
-}
-
-.warehouses-page .content-header h1 {
-  color: var(--text-main, #f9fafb) !important;
-  text-shadow: none !important;
-  font-weight: 700 !important;
-}
-
-.warehouses-page .content-header .breadcrumb {
-  background: transparent !important;
-  color: var(--text-muted, #d1d5db) !important;
-}
-
-.warehouses-page .content-header .breadcrumb a {
-  color: var(--primary-cyan, #06b6d4) !important;
-  text-decoration: none;
-  transition: all 0.2s ease;
-}
-
-.warehouses-page .content-header .breadcrumb a:hover {
-  color: var(--primary-cyan-hover, #22d3ee) !important;
-}
-
-.warehouses-page .main-header {
-  z-index: 1000 !important;
-}
-
-.warehouses-page .content-wrapper {
-  z-index: 999 !important;
-}
-
 .req { color: #dc3545; margin-inline-start: 0.25rem; }
 input:required, select:required, textarea:required { border-color: #dc3545; }
 .is-required .select2-container .select2-selection { border-color: #dc3545; }
@@ -307,5 +424,83 @@ table.dataTable thead .dt-orderable-desc span.dt-column-order {
 
 .dataTables_wrapper .column-visible {
   display: table-cell !important;
+}
+
+/* ── transfers_form.html ── */
+.warehouse-transfer-page .stock-info-card {
+  background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+  color: #fff;
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  display: none;
+}
+
+.warehouse-transfer-page .stock-info-card.show {
+  display: block;
+}
+
+.warehouse-transfer-page .stock-available {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.warehouse-transfer-page .stock-warning {
+  background: #fff3cd;
+  border-right: 4px solid #ffc107;
+  padding: 0.75rem;
+  border-radius: 0.35rem;
+  margin-top: 0.75rem;
+  display: none;
+}
+
+.warehouse-transfer-page .stock-warning.show {
+  display: block;
+}
+
+.warehouse-transfer-page .stock-warning.stock-danger {
+  background: #f8d7da;
+  border-right-color: #dc3545;
+}
+
+.warehouse-transfer-page .card-section {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.warehouse-transfer-page .card-section:last-child {
+  border-bottom: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.warehouse-transfer-page .card-section-title {
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.warehouse-transfer-page .reference-preview {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-top: 0.35rem;
+}
+
+.warehouse-transfer-page .btn-submit .btn-loading {
+  display: none;
+}
+
+.warehouse-transfer-page .btn-submit.loading .btn-text {
+  display: none;
+}
+
+.warehouse-transfer-page .btn-submit.loading .btn-loading {
+  display: inline;
+}
+
+.warehouse-transfer-page .form-actions-bar {
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 

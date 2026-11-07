@@ -1060,7 +1060,7 @@ def _calculate_supplier_outgoing(supplier_id: int, date_from: datetime, date_to:
     from sqlalchemy import func
     
     # المبيعات للمورد (إذا كان زبون أيضاً)
-    sales = scoped_sale_query().with_entities(func.sum(Sale.total_amount)).filter(
+    sales = db.session.query(func.sum(Sale.total_amount)).filter(
         Sale.customer_id == supplier_id,  # إذا كان المورد زبون أيضاً
         Sale.sale_date >= date_from,
         Sale.sale_date <= date_to
@@ -1666,7 +1666,7 @@ def _get_payments_to_supplier(supplier_id: int, supplier, date_from: datetime, d
                 })
         
         # 3. الدفعات المرتبطة بمبيعات للزبون (استثناء الشيكات المرتدة)
-        sale_payments = scoped_payment_query().join(
+        sale_payments = db.session.query(Payment).join(
             Sale, Sale.id == Payment.sale_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id
@@ -1939,7 +1939,7 @@ def _get_payments_from_supplier(supplier_id: int, supplier, date_from: datetime,
                 })
         
         # 3. الدفعات المرتبطة بمبيعات للزبون (استثناء الشيكات المرتدة)
-        sale_payments = scoped_payment_query().join(
+        sale_payments = db.session.query(Payment).join(
             Sale, Sale.id == Payment.sale_id
         ).outerjoin(
             Check, Check.payment_id == Payment.id

@@ -1,0 +1,109 @@
+/**
+ * هوية المستأجر في السايدبار — الاسم ثم الشعار، ظاهر دائماً
+ */
+body.erp-app:not(.security-body) .garage-brand-area {
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+body.erp-app:not(.security-body) .garage-brand-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  min-width: 0;
+  text-decoration: none;
+}
+
+body.erp-app:not(.security-body) .garage-brand-text {
+  display: block !important;
+  order: 1;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.35;
+  text-align: center;
+  max-width: 100%;
+}
+
+body.erp-app:not(.security-body) .garage-brand-branch {
+  display: block !important;
+  order: 2;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.3;
+  text-align: center;
+}
+
+body.erp-app:not(.security-body) .garage-brand-image--tenant {
+  display: block !important;
+  order: 3;
+  height: auto;
+  max-height: 56px;
+  width: auto;
+  max-width: min(100%, 168px);
+  object-fit: contain;
+  margin-top: 0.1rem;
+}
+
+/* إلغاء سلوك AdminLTE القديم (إخفاء الشعار عند التصغير) */
+body.erp-app:not(.security-body) .garage-brand-image--full,
+body.erp-app:not(.security-body) .garage-brand-image--emblem {
+  display: none !important;
+}
+
+body.erp-app:not(.security-body).sidebar-collapse .garage-brand-image--full,
+body.erp-app:not(.security-body).sidebar-mini.sidebar-collapse .garage-brand-image--full,
+body.erp-app:not(.security-body).sidebar-collapse .garage-brand-text,
+body.erp-app:not(.security-body).sidebar-mini.sidebar-collapse .garage-brand-text,
+body.erp-app:not(.security-body).sidebar-collapse .garage-brand-image--tenant,
+body.erp-app:not(.security-body).sidebar-mini.sidebar-collapse .garage-brand-image--tenant,
+body.erp-app:not(.security-body).sidebar-collapse .garage-brand-branch,
+body.erp-app:not(.security-body).sidebar-mini.sidebar-collapse .garage-brand-branch {
+  display: block !important;
+}
+
+body.erp-app:not(.security-body).sidebar-collapse .garage-brand-area,
+body.erp-app:not(.security-body).sidebar-mini.sidebar-collapse .garage-brand-area {
+  padding: 0.55rem 0.3rem;
+}
+
+body.erp-app:not(.security-body).sidebar-collapse .garage-brand-text,
+body.erp-app:not(.security-body).sidebar-mini.sidebar-collapse .garage-brand-text {
+  font-size: 0.62rem;
+  line-height: 1.25;
+  max-height: 2.6em;
+  overflow: hidden;
+}
+
+body.erp-app:not(.security-body).sidebar-collapse .garage-brand-branch,
+body.erp-app:not(.security-body).sidebar-mini.sidebar-collapse .garage-brand-branch {
+  font-size: 0.58rem;
+  display: none !important;
+}
+
+body.erp-app:not(.security-body).sidebar-collapse .garage-brand-image--tenant,
+body.erp-app:not(.security-body).sidebar-mini.sidebar-collapse .garage-brand-image--tenant {
+  max-height: 40px;
+  max-width: 52px;
+}
+
+/* السايدبار مفتوح على الموبايل */
+body.erp-app:not(.security-body).sidebar-open .garage-brand-image--tenant {
+  max-height: 56px;
+  max-width: min(100%, 168px);
+}
+
+body.erp-app:not(.security-body).sidebar-open .garage-brand-text {
+  font-size: 0.95rem;
+  max-height: none;
+  overflow: visible;
+}
+
+body.erp-app:not(.security-body).sidebar-open .garage-brand-branch {
+  display: block !important;
+}

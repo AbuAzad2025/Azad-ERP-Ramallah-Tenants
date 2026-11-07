@@ -1,9 +1,9 @@
-"""إدارة الشركات داخل التينانت — كيان قانوني."""
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+"""إدارة الشركات (كيان قانوني) — قاعدة واحدة."""
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 
 from extensions import db
-from models import Branch, Company
+from models import Company, Branch
 from permissions_config.enums import SystemPermissions
 from utils import permission_required
 
@@ -14,10 +14,17 @@ companies_bp = Blueprint("companies_bp", __name__, url_prefix="/companies")
 @login_required
 @permission_required(SystemPermissions.MANAGE_BRANCHES)
 def index():
-    from utils.company_scope import filter_companies_query
+    from utils.company_scope import get_accessible_company_ids
 
-    q = filter_companies_query(Company.query).order_by(Company.is_active.desc(), Company.name)
-    companies = q.all()
+    q = Company.query.order_by(Company.is_active.desc(), Company.name)
+    allowed = get_accessible_company_ids()
+    if allowed is not None:
+        if not allowed:
+            companies = []
+        else:
+            companies = q.filter(Company.id.in_(allowed)).all()
+    else:
+        companies = q.all()
     for c in companies:
         c.branches_count = Branch.query.filter_by(company_id=c.id).count()
     return render_template("companies/index.html", companies=companies)
@@ -50,8 +57,12 @@ def add():
             is_active=True,
         )
         db.session.add(c)
+        db.session.flush()
+        from utils.branding_assets import ensure_company_branding_dirs
+
+        ensure_company_branding_dirs(current_app.root_path, c.code)
         db.session.commit()
-        flash("تمت إضافة الشركة", "success")
+        flash("تمت إضافة الشركة — تم إنشاء مجلد أصول الشعارات تلقائياً", "success")
         return redirect(url_for("companies_bp.index"))
     return render_template("companies/form.html", company=None)
 

@@ -2,7 +2,7 @@
 
 {% block security_title %}إعدادات الطباعة والأجهزة{% endblock %}
 {% block security_icon %}<i class="fas fa-print"></i>{% endblock %}
-{% block security_description %}التحكم في طابعات الفواتير، الباركود، ونقاط البيع{% endblock %}
+{% block security_description %}طابعات ونقاط بيع{% endblock %}
 
 {% block security_breadcrumb %}
 <li class="breadcrumb-item"><a href="{{ url_for('security.settings_center') }}">الإعدادات</a></li>
@@ -52,7 +52,7 @@
 
     <!-- منطقة الإعدادات -->
     <div class="col-md-8">
-        <form method="POST" action="{{ url_for('security.settings_center', tab='config') }}">
+        <form method="POST" action="{{ url_for('security.printing_panel') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
             <!-- قسم: إعدادات الفواتير العامة -->
@@ -209,15 +209,5 @@
     }
 </script>
 
-<style>
-    .border-top-primary { border-top: 4px solid var(--bs-primary) !important; }
-    .border-top-warning { border-top: 4px solid var(--bs-warning) !important; }
-    .border-top-success { border-top: 4px solid var(--bs-success) !important; }
-    
-    .list-group-item { cursor: pointer; transition: all 0.2s; }
-    .list-group-item:hover { background-color: #f8f9fa; }
-    .list-group-item.active { background-color: var(--bs-primary) !important; border-color: var(--bs-primary) !important; color: white !important; }
-    .list-group-item.active .text-muted { color: rgba(255,255,255,0.8) !important; }
-    .list-group-item.active .opacity-75 { opacity: 0.9 !important; }
-</style>
+
 {% endblock %}

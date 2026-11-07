@@ -24,19 +24,14 @@
 
 {% block styles %}
 {{ super() }}
-<style>
-  /* تمنع تمدد الرسوم: نحدد ارتفاع الحاوية، ونجعل الـ canvas يملأها بدون تجاوز */
-  .chart-wrap{position:relative;height:300px}
-  @media (min-width:768px){.chart-wrap{height:340px}}
-  .chart-wrap canvas{width:100%!important;height:100%!important;display:block}
-</style>
+
 {% endblock %}
 
 {% block content %}
   <div class="row g-4">
 
     <div class="col-md-4">
-      <div class="card shadow-sm h-100 card-hover bg-primary text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+      <div class="card shadow-sm h-100 card-hover erp-kpi-tile erp-kpi-tile--primary text-white">
         <div class="card-body text-center">
           <div class="h6 text-white-50 mb-2">إجمالي المشتريات</div>
           <div class="display-6 fw-bold">{{ total_purchases|format_currency }}</div>
@@ -44,7 +39,7 @@
       </div>
     </div>
     <div class="col-md-4">
-      <div class="card shadow-sm h-100 card-hover bg-success text-white" style="background: linear-gradient(135deg, #198754 0%, #157347 100%);">
+      <div class="card shadow-sm h-100 card-hover erp-kpi-tile erp-kpi-tile--success text-white">
         <div class="card-body text-center">
           <div class="h6 text-white-50 mb-2">إجمالي الدفعات</div>
           <div class="display-6 fw-bold">{{ total_payments|format_currency }}</div>
@@ -52,7 +47,7 @@
       </div>
     </div>
     <div class="col-md-4">
-      <div class="card shadow-sm h-100 card-hover bg-info text-white" style="background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);">
+      <div class="card shadow-sm h-100 card-hover erp-kpi-tile erp-kpi-tile--info text-white">
         <div class="card-body text-center">
           <div class="h6 text-white-50 mb-2">متوسط قيمة الفاتورة</div>
           <div class="display-6 fw-bold">{{ avg_purchase|format_currency }}</div>
@@ -88,7 +83,7 @@
           <h5 class="mb-3"><i class="fas fa-list-ul ml-1"></i>فئات المشتريات</h5>
           <div class="table-responsive">
             <table class="table table-striped align-middle">
-              <thead class="table-light">
+              <thead class="table-header-primary text-white table-light">
                 <tr>
                   <th>الفئة</th>
                   <th>عدد العمليات</th>

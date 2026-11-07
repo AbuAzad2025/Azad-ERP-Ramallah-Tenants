@@ -17,3 +17,14 @@
 .tenant-branch-switch-form {
   vertical-align: middle;
 }
+
+.auth-tenant-hint .card-body {
+  text-align: right;
+}
+
+[data-tenant-scoped="1"] .form-group label[for="branch_id"]::after {
+  content: " (ضمن شركتك)";
+  font-size: 0.75rem;
+  color: #6c757d;
+  font-weight: normal;
+}

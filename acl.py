@@ -34,7 +34,7 @@ def attach_acl(
         ex_list.append("/static/")
     ex = tuple(ex_list)
 
-    rl = tuple(list(read_like_prefixes or []))
+    rl = tuple(read_like_prefixes or [])
 
     @bp.before_request
     def _guard():

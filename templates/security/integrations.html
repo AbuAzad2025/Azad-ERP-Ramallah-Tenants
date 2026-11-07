@@ -1,105 +1,16 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}integrations{% endblock %}
-{% block security_title %}Integrations{% endblock %}
+{% block security_title %}التكاملات{% endblock %}
 {% block security_icon %}<i class="fas fa-plug"></i>{% endblock %}
-{% block security_description %}التكامل مع الأجهزة والأنظمة الخارجية - POS • طابعات • API{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">Integrations</li>{% endblock %}
+{% block security_description %}تكامل POS وطابعات وAPI{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">التكاملات</li>{% endblock %}
 
 {% block head_extra %}
-<style>
-.integration-card {
-    border-radius: 15px;
-    border: none;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
-}
 
-.integration-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-}
-
-.integration-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 20px;
-    border-radius: 15px 15px 0 0;
-}
-
-.integration-header.stripe {
-    background: linear-gradient(135deg, #635BFF 0%, #0A2540 100%);
-}
-
-.integration-header.paypal {
-    background: linear-gradient(135deg, #0070BA 0%, #003087 100%);
-}
-
-.integration-header.sms {
-    background: linear-gradient(135deg, #F22F46 0%, #8B1A1F 100%);
-}
-
-.integration-header.printer {
-    background: linear-gradient(135deg, #FF6B6B 0%, #C44569 100%);
-}
-
-.integration-header.storage {
-    background: linear-gradient(135deg, #FF9A00 0%, #FF6200 100%);
-}
-
-.integration-header.webhooks {
-    background: linear-gradient(135deg, #00D2FF 0%, #3A7BD5 100%);
-}
-
-.integration-icon {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
-}
-
-.form-section {
-    padding: 25px;
-    background: #f8f9fa;
-    border-radius: 10px;
-    margin-bottom: 15px;
-}
-
-.test-btn {
-    margin-top: 15px;
-}
-
-.status-badge {
-    padding: 5px 15px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-
-.status-enabled {
-    background: #28a745;
-    color: white;
-}
-
-.status-disabled {
-    background: #dc3545;
-    color: white;
-}
-</style>
 {% endblock %}
 
-{% block content %}
+{% block security_content %}
 <div class="container-fluid">
-    
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body bg-gradient-info text-white" style="border-radius: 15px;">
-                    <h3><i class="fas fa-plug"></i> مركز التكامل الشامل</h3>
-                    <p class="mb-0">إعداد وإدارة جميع التكاملات مع الأجهزة الطرفية والأنظمة الخارجية</p>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Stripe Integration -->
     <div class="row">
@@ -333,7 +244,7 @@
     <div class="row">
         <div class="col-md-12">
             <div class="integration-card card">
-                <div class="card-header bg-dark text-white d-flex align-items-center">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-dark text-white d-flex align-items-center">
                     <div class="mr-3"><i class="fas fa-envelope fa-2x"></i></div>
                     <div>
                         <h4 class="mb-0">البريد الإلكتروني (SMTP)</h4>

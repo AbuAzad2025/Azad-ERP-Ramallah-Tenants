@@ -1,51 +1,35 @@
-{# الفوتر: منصة أزاد + المطوّر فقط — لا يظهر هنا شعار/اسم التينانت (الحازم / المهندس الفلسطيني) #}
-{% set platform_footer = platform_footer | default({
-  'company_name': 'شركة أزاد للأنظمة الذكية',
-  'system_name': 'منصة أزاد ERP',
-  'developer_name_en': 'Eng. Ahmad Ghannam',
-  'developer_name_ar': 'المهندس أحمد غنام',
-  'email': 'rafideen.ahmadghannam@gmail.com',
-  'phone': '',
-  'logo_url': url_for('static', filename='branding/platform/logos/emblem.png'),
-  'year': now().year
-}, true) %}
-<footer class="main-footer gm-main-footer gm-platform-footer" dir="rtl">
-  <div class="gm-footer-inner">
-    <div class="gm-footer-developer">
+<footer class="main-footer erp-footer" dir="rtl" id="erpAppFooter">
+  <div class="erp-footer__inner">
+    <div class="erp-footer__brand-row">
       <img
-        src="{{ platform_footer.logo_url }}"
-        class="gm-brand-mark gm-footer-platform-logo"
-        alt="{{ platform_footer.company_name }}"
+        class="erp-footer__azad-logo"
+        src="{{ system_settings.platform_logo_white_url or system_settings.platform_logo_url or url_for('static', filename='img/branding/platform/logos/primary.png') }}"
+        alt="{{ system_settings.platform_company_name or 'شركة أزاد للأنظمة الذكية' }}"
         loading="lazy"
         decoding="async"
-      >
-      <div class="gm-footer-developer-text">
-        <div class="gm-footer-developer-name">{{ platform_footer.company_name }}</div>
-        <div class="gm-footer-developer-tagline">{{ platform_footer.system_name }}</div>
-        <div class="gm-footer-developer-person">
-          <i class="fas fa-code ms-1"></i>
-          {{ platform_footer.developer_name_ar }}
-          <span class="opacity-75">({{ platform_footer.developer_name_en }})</span>
-        </div>
-      </div>
+        onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='{{ url_for('static', filename='img/branding/platform/logos/primary.png') }}';}else{this.hidden=true;}">
+      <span class="erp-footer__azad-name">{{ system_settings.platform_company_name or 'شركة أزاد للأنظمة الذكية' }}</span>
     </div>
 
-    <div class="gm-footer-meta text-center">
-      <div class="gm-footer-contact d-flex flex-wrap justify-content-center align-items-center gap-3">
-        {% if platform_footer.email %}
-        <a href="mailto:{{ platform_footer.email }}" class="gm-footer-contact-link">
-          <i class="fas fa-envelope ms-1"></i>{{ platform_footer.email }}
+    <div class="erp-footer__dev" aria-label="معلومات المطوّر">
+      <span class="erp-footer__dev-text">
+        تصميم وتطوير المهندس: <strong>أحمد غنام (أبو آزاد)</strong>
+      </span>
+      <span class="erp-footer__dev-actions">
+        <a href="tel:+972562150193" class="erp-footer__contact" title="اتصال">
+          <i class="fas fa-phone" aria-hidden="true"></i>
+          <span dir="ltr">+972 56 215 0193</span>
         </a>
-        {% endif %}
-        {% if platform_footer.phone %}
-        <a href="tel:{{ platform_footer.phone }}" class="gm-footer-contact-link">
-          <i class="fas fa-phone-alt ms-1"></i>{{ platform_footer.phone }}
+        <a href="https://wa.me/972562150193" class="erp-footer__contact erp-footer__contact--wa" target="_blank" rel="noopener noreferrer" title="واتساب">
+          <i class="fab fa-whatsapp" aria-hidden="true"></i>
+          <span>واتساب</span>
         </a>
-        {% endif %}
-      </div>
-      <div class="gm-footer-copyright mt-2">
-        &copy; {{ platform_footer.year }} {{ platform_footer.company_name }} — جميع الحقوق محفوظة
-      </div>
+      </span>
+    </div>
+
+    <div class="erp-footer__meta">
+      <span><i class="fas fa-copyright" aria-hidden="true"></i> {{ system_settings.platform_company_name or 'شركة أزاد للأنظمة الذكية' }} — جميع الحقوق محفوظة</span>
+      <span class="erp-footer__version">v3.2.0</span>
     </div>
   </div>
 </footer>

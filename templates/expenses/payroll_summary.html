@@ -4,22 +4,7 @@
 
 {% block head_extra %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-.card-hover {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.card-hover:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
-}
-.table-rounded {
-  border-radius: 10px;
-  overflow: hidden;
-}
-.month-row:hover {
-  background: #f8f9fa;
-}
-</style>
+
 {% endblock %}
 
 {% block content %}
@@ -89,7 +74,7 @@
   <div class="row g-4">
     <div class="col-md-8">
       <div class="card border-0 shadow-sm h-100 card-hover">
-        <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+        <div class="card-header erp-card-header-row erp-theme-header--primary py-3">
           <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i> الرسم البياني الشهري</h5>
         </div>
         <div class="card-body">
@@ -105,7 +90,7 @@
         <div class="card-body p-0">
           <div class="table-responsive table-rounded">
             <table class="table table-hover mb-0">
-              <thead class="bg-light">
+              <thead class="table-header-primary text-white bg-light">
                 <tr>
                   <th class="ps-3">الشهر</th>
                   <th>الموظفين</th>
@@ -137,7 +122,7 @@
         <div class="card-body p-0">
           <div class="table-responsive table-rounded">
             <table class="table table-hover mb-0 align-middle">
-              <thead class="bg-light">
+              <thead class="table-header-primary text-white bg-light">
                 <tr>
                   <th class="ps-4">الشهر</th>
                   <th>عدد الموظفين</th>

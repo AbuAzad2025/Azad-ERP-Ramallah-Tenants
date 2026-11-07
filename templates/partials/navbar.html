@@ -1,42 +1,109 @@
-<nav class="main-header navbar navbar-expand navbar-primary navbar-dark" dir="rtl">
-  
-  <ul class="navbar-nav">
+<nav class="main-header navbar navbar-expand navbar-primary navbar-dark erp-topbar" dir="rtl">
+  <div class="erp-topbar__nav">
+  <ul class="navbar-nav erp-nav-controls align-items-center">
     <li class="nav-item">
-      <a class="nav-link nav-strong" data-widget="pushmenu" href="#" role="button" title="تصغير القائمة">
-        <i class="fas fa-bars"></i>
+      <a class="nav-link nav-strong erp-pushmenu-btn" id="erp-sidebar-toggle" data-erp-pushmenu href="#" role="button" title="القائمة الجانبية" aria-label="فتح أو إغلاق القائمة" aria-expanded="false">
+        <i class="fas fa-bars" aria-hidden="true"></i>
       </a>
     </li>
-    
-    <li class="nav-item d-none d-lg-block">
-      <button class="nav-link btn btn-link text-white nav-strong" onclick="toggleSidebarFull()" title="إخفاء/إظهار القائمة بالكامل" style="border: none; background: none;">
-        <i class="fas fa-expand-arrows-alt" id="sidebar-full-toggle-icon"></i>
-      </button>
-    </li>
-    
-    <li class="nav-item d-none d-lg-block">
-      <button class="nav-link btn btn-link text-white nav-strong" onclick="toggleSidebarPosition()" title="تبديل موقع القائمة" style="border: none; background: none;">
-        <i class="fas fa-exchange-alt"></i>
-      </button>
-    </li>
 
-    <li class="nav-item">
-      <button type="button" class="nav-link btn btn-link text-white nav-strong" onclick="typeof gmToggleVariant==='function'&&gmToggleVariant()" title="الستايل الفلسطيني" style="border:none;background:none" id="gmVariantToggleNavbar" aria-label="تبديل الستايل البصري">
-        <i class="fas fa-flag"></i>
-      </button>
+    <li class="nav-item dropdown d-none d-md-block">
+      <a class="nav-link nav-strong erp-nav-icon-btn" data-toggle="dropdown" href="#" title="أدوات العرض والتخطيط" aria-expanded="false">
+        <i class="fas fa-sliders-h" aria-hidden="true"></i>
+      </a>
+      <div class="dropdown-menu dropdown-menu-right p-2 erp-dropdown-panel erp-topbar-tools-menu">
+        <div class="small text-muted px-2 mb-2">الستايل والعرض</div>
+        <div class="erp-theme-switcher mb-3">
+          <div class="small text-muted mb-1">الستايل</div>
+          <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+            <button type="button" class="btn btn-outline-secondary" data-erp-theme-variant="palestinian">فلسطيني</button>
+            <button type="button" class="btn btn-outline-secondary" data-erp-theme-variant="gulf">خليجي</button>
+          </div>
+          <div class="small text-muted mb-1">الوضع</div>
+          <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+            <button type="button" class="btn btn-outline-secondary" data-erp-theme-mode="light">فاتح</button>
+            <button type="button" class="btn btn-outline-secondary" data-erp-theme-mode="dark">داكن</button>
+          </div>
+        </div>
+        <div class="d-flex flex-column">
+          <button type="button" class="btn btn-sm btn-outline-secondary text-right mb-1" onclick="toggleErpThemeMode()" id="darkModeToggleNavbar">
+            <i class="fas fa-moon ml-2"></i> تبديل الوضع الليلي
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-secondary text-right mb-1" onclick="toggleUIMode()" id="ui-mode-toggle-btn">
+            <i class="fas fa-magic ml-2" id="ui-mode-toggle-icon"></i> وضع العرض
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-secondary text-right mb-1 d-none d-lg-block" onclick="toggleSidebarFull()">
+            <i class="fas fa-expand-arrows-alt ml-2" id="sidebar-full-toggle-icon"></i> إخفاء/إظهار القائمة
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-secondary text-right d-none d-lg-block" id="sidebar-position-toggle-btn" onclick="toggleSidebarPosition()">
+            <i class="fas fa-arrow-alt-circle-left ml-2"></i> موقع القائمة
+          </button>
+        </div>
+      </div>
     </li>
-    <li class="nav-item">
-      <button class="nav-link btn btn-link text-white nav-strong" onclick="toggleDarkMode()" title="تبديل الوضع الليلي" style="border: none; background: none;" id="darkModeToggleNavbar">
-        <i class="fas fa-moon"></i>
-      </button>
+    {% if current_user.is_authenticated %}
+    <li class="nav-item dropdown d-lg-none gm-navbar-info-dropdown">
+      <a class="nav-link nav-strong" data-toggle="dropdown" href="#" title="معلومات سريعة" aria-expanded="false">
+        <i class="fas fa-info-circle"></i>
+      </a>
+      <div class="dropdown-menu dropdown-menu-right gm-navbar-info-panel p-3 erp-dropdown-panel erp-dropdown-panel--wide">
+        <div class="erp-theme-switcher mb-3">
+          <div class="small text-muted mb-1">الستايل والوضع</div>
+          <div class="btn-group btn-group-sm w-100 mb-2">
+            <button type="button" class="btn btn-outline-secondary" data-erp-theme-variant="palestinian">فلسطيني</button>
+            <button type="button" class="btn btn-outline-secondary" data-erp-theme-variant="gulf">خليجي</button>
+          </div>
+          <div class="btn-group btn-group-sm w-100">
+            <button type="button" class="btn btn-outline-secondary" data-erp-theme-mode="light">فاتح</button>
+            <button type="button" class="btn btn-outline-secondary" data-erp-theme-mode="dark">داكن</button>
+          </div>
+        </div>
+        <div class="d-flex flex-wrap mb-2 erp-badge-row">
+          <span class="badge badge-warning"><i class="fas fa-clock"></i> <span class="gm-nav-time">--:--:--</span></span>
+          <span class="badge badge-info"><i class="fas fa-calendar"></i> <span class="gm-nav-date-gregorian">--/--/----</span></span>
+          <span class="badge badge-secondary"><i class="fas fa-moon"></i> <span class="gm-nav-date-hijri">--</span></span>
+          <span class="badge badge-success erp-fx-chip erp-fx-rates erp-fx-rates--loading" data-fx="USD">USD <strong class="gm-nav-usd-rate erp-fx-rate">--</strong> ₪ <small class="erp-fx-range-line gm-nav-usd-range d-block"></small></span>
+          <span class="badge badge-light erp-fx-chip erp-fx-rates erp-fx-rates--loading" data-fx="JOD">د.أ <strong class="gm-nav-jod-rate erp-fx-rate">--</strong> ₪ <small class="erp-fx-range-line gm-nav-jod-range d-block"></small></span>
+          <button type="button" class="btn btn-sm btn-outline-light erp-calc-mobile-btn" data-erp-calc-mobile-open title="حاسبة">
+            <i class="fas fa-calculator"></i> حاسبة
+          </button>
+        </div>
+        {% if tenant_show_nav_scope and tenant_branch_name %}
+        <div class="mb-2">
+          <span class="badge badge-light tenant-scope-badge"><i class="fas fa-code-branch"></i> {{ tenant_branch_name }}</span>
+        </div>
+        {% elif tenant_show_nav_scope and tenant_company_name %}
+        <div class="mb-2">
+          <span class="badge badge-primary tenant-scope-badge"><i class="fas fa-building"></i> {{ tenant_company_name }}</span>
+        </div>
+        {% endif %}
+        {% if tenant_can_switch_branch and tenant_branches %}
+        <form method="post" action="{{ url_for('main.switch_active_branch') }}" class="tenant-branch-switch-form mb-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <select name="branch_id" class="custom-select custom-select-sm tenant-branch-select w-100" onchange="this.form.submit()" title="تبديل الفرع النشط">
+            {% for b in tenant_branches %}
+            <option value="{{ b.id }}" {% if tenant_branch_id == b.id %}selected{% endif %}>{{ b.name }}{% if b.company %} ({{ b.company.name }}){% endif %}</option>
+            {% endfor %}
+          </select>
+        </form>
+        {% endif %}
+        <div class="position-relative w-100">
+          <div class="input-group input-group-sm">
+            <div class="input-group-prepend"><span class="input-group-text bg-white"><i class="fas fa-search"></i></span></div>
+            <input type="search" class="form-control" name="gm_search_global_compact" placeholder="بحث سريع..." data-search="global" data-search-autofill="off" autocomplete="new-password" autocapitalize="off" spellcheck="false" inputmode="search">
+          </div>
+          <div class="list-group erp-search-results erp-search-results--compact shadow" data-search-target="global"></div>
+        </div>
+      </div>
     </li>
-
-    <li class="nav-item">
-      <button class="nav-link btn btn-link text-white nav-strong" onclick="toggleUIMode()" id="ui-mode-toggle-btn" title="وضع العرض: تلقائي" style="border: none; background: none;">
-        <i class="fas fa-magic" id="ui-mode-toggle-icon"></i>
-      </button>
-    </li>
+    {% endif %}
 
     {% if current_user.is_authenticated and (has_perm('view_shop') or has_perm('manage_shop')) %}
+    <li class="nav-item d-lg-none">
+      <a class="nav-link nav-strong" href="{{ url_for('shop.catalog') }}" target="_blank" title="المتجر">
+        <i class="fas fa-store"></i>
+      </a>
+    </li>
     <li class="nav-item d-none d-lg-block">
       <a class="nav-link nav-strong" href="{{ url_for('shop.catalog') }}" target="_blank" title="المتجر">
         <i class="fas fa-store"></i>
@@ -49,6 +116,11 @@
       {% set ai_enabled = (ai_enabled_value|string).lower() == 'true' %}
       {% if ai_enabled %}
         {% if can('access_ai_assistant') and current_user.is_system %}
+        <li class="nav-item d-lg-none">
+          <a class="nav-link nav-strong" href="{{ url_for('ai.assistant') }}" title="المساعد الذكي">
+            <i class="fas fa-robot"></i>
+          </a>
+        </li>
         <li class="nav-item d-none d-lg-block">
           <a class="nav-link nav-strong" href="{{ url_for('ai.assistant') }}" title="المساعد الذكي">
             <i class="fas fa-robot"></i>
@@ -58,106 +130,68 @@
       {% endif %}
     {% endif %}
   </ul>
-  
-  <div class="navbar-info-center d-flex align-items-center justify-content-center flex-grow-1 flex-wrap" style="gap: 6px; max-width: 60%;">
-    <span class="badge badge-warning">
-      <i class="fas fa-clock"></i>
-      <span id="current-time">--:--:--</span>
+  </div>
+
+  <div class="erp-topbar__meta navbar-info-center">
+    <div class="erp-topbar-meta-strip d-none d-lg-flex align-items-center">
+      <span class="erp-meta-chip erp-meta-chip--time"><i class="fas fa-clock" aria-hidden="true"></i><span id="current-time">--:--:--</span></span>
+      <span class="erp-meta-chip erp-meta-chip--date"><i class="fas fa-calendar" aria-hidden="true"></i><span id="current-date-gregorian">--/--/----</span></span>
+      <span class="erp-meta-chip erp-meta-chip--date erp-meta-chip--hijri d-none d-xxl-inline-flex"><i class="fas fa-moon" aria-hidden="true"></i><span id="current-date-hijri">--</span></span>
+      <span class="erp-meta-chip erp-meta-chip--rates erp-fx-chip erp-fx-rates erp-fx-rates--loading d-none d-xl-inline-flex" data-fx="USD" title="سعر الدولار">
+        <i class="fas fa-dollar-sign" aria-hidden="true"></i>
+        <span class="erp-fx-main">USD <strong class="erp-fx-rate" id="usd-rate">--</strong></span>
+      </span>
+      <span class="erp-meta-chip erp-meta-chip--rates erp-fx-chip erp-fx-rates erp-fx-rates--loading d-none d-xl-inline-flex" data-fx="JOD" title="سعر الدينار">
+        <i class="fas fa-coins" aria-hidden="true"></i>
+        <span class="erp-fx-main">د.أ <strong class="erp-fx-rate" id="jod-rate">--</strong></span>
+      </span>
+      {% include 'partials/erp_nav_calculator.html' %}
+    </div>
+    {% if current_user.is_authenticated and tenant_show_nav_scope and tenant_branch_name %}
+    <span class="badge badge-light tenant-scope-badge d-none d-lg-inline-flex" title="الفرع النشط">
+      <i class="fas fa-code-branch"></i> {{ tenant_branch_name }}
     </span>
-    <span class="badge badge-info">
-      <i class="fas fa-calendar"></i>
-      <span id="current-date-gregorian">--/--/----</span>
-    </span>
-    <span class="badge badge-secondary">
-      <i class="fas fa-moon"></i>
-      <span id="current-date-hijri">--</span>
-    </span>
-    <span class="badge badge-success">
-      <span>$</span>
-      <span id="usd-rate">--</span>
-      <span>₪</span>
-    </span>
-    <span class="badge badge-light">
-      <span>JOD</span>
-      <span id="jod-rate">--</span>
-      <span>₪</span>
-    </span>
-    {% if current_user.is_authenticated and org_company_name %}
-    <span class="badge badge-primary tenant-scope-badge" title="سياق العمل الحالي">
-      <i class="fas fa-building"></i>
-      {{ org_company_name }}{% if org_branch_name %} — {{ org_branch_name }}{% endif %}
-    </span>
-    {% if org_can_switch_company and org_companies|length > 1 %}
-    <form method="post" action="{{ url_for('main.switch_active_company') }}" class="d-inline tenant-branch-switch-form">
+    {% endif %}
+    {% if tenant_can_switch_branch and tenant_branches %}
+    <form method="post" action="{{ url_for('main.switch_active_branch') }}" class="d-none d-lg-inline tenant-branch-switch-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <select name="company_id" class="custom-select custom-select-sm tenant-branch-select" onchange="this.form.submit()" title="تبديل الشركة">
-        {% for co in org_companies %}
-        <option value="{{ co.id }}" {% if org_company_id == co.id %}selected{% endif %}>{{ co.name }}</option>
+      <select name="branch_id" class="custom-select custom-select-sm tenant-branch-select" onchange="this.form.submit()" title="تبديل الفرع النشط">
+        {% for b in tenant_branches %}
+        <option value="{{ b.id }}" {% if tenant_branch_id == b.id %}selected{% endif %}>{{ b.name }}</option>
         {% endfor %}
       </select>
     </form>
     {% endif %}
-    {% if org_can_switch_branch and org_branches %}
-    <form method="post" action="{{ url_for('main.switch_active_branch') }}" class="d-inline tenant-branch-switch-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <select name="branch_id" class="custom-select custom-select-sm tenant-branch-select" onchange="this.form.submit()" title="تبديل الفرع">
-        {% for b in org_branches %}
-        <option value="{{ b.id }}" {% if org_branch_id == b.id %}selected{% endif %}>{{ b.name }}{% if b.company %} ({{ b.company.name }}){% endif %}</option>
-        {% endfor %}
-      </select>
-    </form>
-    {% endif %}
-    {% endif %}
-    {% if current_user.is_authenticated %}
-    <div class="position-relative" style="min-width: 240px; max-width: 340px;">
+  </div>
+
+  <div class="erp-topbar__actions">
+  {% if current_user.is_authenticated %}
+    <div class="position-relative erp-topbar-search-wrap erp-topbar-search d-none d-lg-block">
       <div class="input-group input-group-sm">
         <div class="input-group-prepend">
-          <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
         </div>
-        <input type="search" class="form-control" name="gm_search_global" placeholder="بحث سريع..." data-search="global" data-search-autofill="off" autocomplete="new-password" autocapitalize="off" spellcheck="false" inputmode="search" readonly>
+        <input type="search" class="form-control" name="gm_search_global" placeholder="بحث..." data-search="global" data-search-autofill="off" autocomplete="new-password" autocapitalize="off" spellcheck="false" inputmode="search" readonly>
       </div>
-      <div class="list-group position-absolute w-100 shadow" data-search-target="global" style="z-index: 2000; top: 100%; display: none; max-height: 360px; overflow: auto;"></div>
+      <div class="list-group erp-search-results shadow" data-search-target="global"></div>
     </div>
-    {% endif %}
-  </div>
-  
-  <div class="navbar-brand ml-auto d-flex align-items-center" style="margin-left: 10px !important;">
-    <a href="{{ user_home_url or url_for('main.dashboard') }}" class="company-logo-link">
-      {% if system_settings.custom_logo_url %}
-      <img src="{{ system_settings.custom_logo_url }}" class="gm-brand-mark brand-logo" alt="{{ system_settings.company_name or system_settings.system_name or 'النظام' }}" loading="lazy" decoding="async" style="height:32px;width:auto;max-width:140px;object-fit:contain; margin-left: 8px;">
-      {% endif %}
-      <span class="company-logo-text">{{ system_settings.company_name or system_settings.system_name or 'النظام' }}</span>
-    </a>
-  </div>
-  
-
-  {% if current_user.is_authenticated %}
-  <ul class="navbar-nav mr-auto">
-    <li class="nav-item">
-      <span class="navbar-text text-white d-flex align-items-center">
-        <i class="fas fa-crown mr-2 text-warning"></i>
-        <span class="font-weight-bold text-white">{{ current_user.role.name if current_user.role else 'مستخدم' }}</span>
-      </span>
-    </li>
-  </ul>
-  
-  <ul class="navbar-nav ml-auto">
+  <ul class="navbar-nav erp-nav-user align-items-center">
     <li class="nav-item dropdown">
-      <a class="nav-link d-flex align-items-center" data-toggle="dropdown" href="#" aria-expanded="false">
-        <div class="user-avatar mr-2">
+      <a class="nav-link d-flex align-items-center erp-nav-user-trigger" data-toggle="dropdown" href="#" aria-expanded="false" title="{{ current_user.display_name or current_user.username }}">
+        <div class="user-avatar">
           {% if current_user.avatar_url %}
-            <img src="{{ current_user.avatar_url }}" class="rounded-circle" width="32" height="32" alt="صورة المستخدم" loading="lazy" decoding="async">
+            <img src="{{ current_user.avatar_url }}" class="rounded-circle" width="34" height="34" alt="" loading="lazy" decoding="async">
           {% else %}
-            <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background: linear-gradient(45deg, #007bff, #28a745); color: white; font-weight: bold;">
+            <div class="avatar-placeholder erp-user-avatar rounded-circle d-flex align-items-center justify-content-center">
               {{ current_user.avatar_or_initials }}
             </div>
           {% endif %}
         </div>
-        <span class="d-none d-md-inline">
-          <span class="font-weight-bold d-block" style="line-height:1.2">{{ current_user.username }}</span>
-          <small class="gm-navbar-user-role d-block">{{ current_user.role.name if current_user.role else 'مستخدم' }}</small>
+        <span class="d-none d-xl-inline text-right mr-2 erp-nav-user-label">
+          <span class="d-block erp-header-user-name">{{ current_user.display_name or current_user.username }}</span>
+          <span class="d-block erp-header-user-role">{{ current_user.role.name if current_user.role else 'مستخدم' }}</span>
         </span>
-        <i class="fas fa-chevron-down mr-2"></i>
+        <i class="fas fa-chevron-down erp-nav-user-chevron d-none d-md-inline"></i>
       </a>
       <div class="dropdown-menu dropdown-menu-right gm-navbar-dropdown">
         <div class="dropdown-header bg-light text-center py-3">
@@ -165,12 +199,12 @@
             {% if current_user.avatar_url %}
               <img src="{{ current_user.avatar_url }}" class="rounded-circle mb-2" width="50" height="50" alt="صورة المستخدم" loading="lazy" decoding="async">
             {% else %}
-              <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 50px; height: 50px; background: linear-gradient(45deg, #007bff, #28a745); color: white; font-weight: bold; font-size: 18px;">
+              <div class="avatar-placeholder erp-user-avatar erp-user-avatar--lg rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2">
                 {{ current_user.avatar_or_initials }}
               </div>
             {% endif %}
-            <h6 class="mb-0 font-weight-bold" style="color: #212529;">{{ current_user.username }}</h6>
-            <small style="color: #6c757d;">{{ current_user.role.name if current_user.role else 'مستخدم' }}</small>
+            <h6 class="mb-0 font-weight-bold">{{ current_user.username }}</h6>
+            <small>{{ current_user.role.name if current_user.role else 'مستخدم' }}</small>
           </div>
         </div>
         
@@ -211,6 +245,7 @@
     </li>
   </ul>
   {% endif %}
+  </div>
 </nav>
 
 <div class="modal fade" id="logoutModalNavbar" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel" aria-hidden="true">
@@ -273,11 +308,13 @@ function toggleSidebarFull() {
     }
 
     // إجبار إعادة حساب المخطط (Layout) بشكل متكرر لضمان استجابة المكتبات
+    if (window.ErpNavbar && typeof window.ErpNavbar.syncPushmenuState === 'function') {
+        window.ErpNavbar.syncPushmenuState();
+    }
     const triggerResize = () => window.dispatchEvent(new Event('resize'));
     triggerResize();
     setTimeout(triggerResize, 100);
     setTimeout(triggerResize, 300);
-    setTimeout(triggerResize, 500);
 }
 
 // استعادة حالة القائمة عند التحميل
@@ -329,6 +366,7 @@ function updateDateTime() {
         const hijriEnglish = hijriDate.replace(/[٠-٩]/g, (d) => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)]);
         
         document.getElementById('current-date-hijri').textContent = hijriEnglish;
+        document.querySelectorAll('.gm-nav-date-hijri').forEach(function(el) { el.textContent = hijriEnglish; });
     } catch (e) {
         // في حالة عدم دعم التقويم الهجري
         document.getElementById('current-date-hijri').textContent = 'Hijri N/A';
@@ -344,53 +382,16 @@ function updateDateTime() {
     if (gregorianElement) {
         gregorianElement.textContent = gregorianDate;
     }
-}
-
-// جلب أسعار الصرف
-async function updateExchangeRates() {
-    try {
-        // جلب أسعار الصرف من API أو من قاعدة البيانات
-        const response = await fetch('{{ url_for("api.get_exchange_rates") }}');
-        if (response.ok) {
-            const data = await response.json();
-            
-            // تحديث سعر الدولار (كم شيقل يساوي دولار واحد)
-            const usdElement = document.getElementById('usd-rate');
-            if (usdElement && data.USD) {
-                usdElement.textContent = parseFloat(data.USD).toFixed(2);
-            }
-            
-            // تحديث سعر الدينار (كم شيقل يساوي دينار واحد)
-            const jodElement = document.getElementById('jod-rate');
-            if (jodElement && data.JOD) {
-                jodElement.textContent = parseFloat(data.JOD).toFixed(2);
-            }
-        } else {
-            // في حالة الفشل، استخدام قيم افتراضية
-            document.getElementById('usd-rate').textContent = '3.65';
-            document.getElementById('jod-rate').textContent = '5.15';
-        }
-    } catch (error) {
-        // قيم افتراضية تقريبية
-        document.getElementById('usd-rate').textContent = '3.65';
-        document.getElementById('jod-rate').textContent = '5.15';
-    }
+    document.querySelectorAll('.gm-nav-time').forEach(function(el) { el.textContent = timeString; });
+    document.querySelectorAll('.gm-nav-date-gregorian').forEach(function(el) { el.textContent = gregorianDate; });
 }
 
 // انتظار تحميل DOM
 document.addEventListener('DOMContentLoaded', function() {
-    // تحديث الوقت والتاريخ
     updateDateTime();
     setInterval(updateDateTime, 1000);
-    
-    // تحديث أسعار الصرف
-    updateExchangeRates();
-    // تحديث أسعار الصرف كل 5 دقائق
-    setInterval(updateExchangeRates, 5 * 60 * 1000);
 });
 
-// تحديث فوري أيضاً
 updateDateTime();
-updateExchangeRates();
 
 </script>

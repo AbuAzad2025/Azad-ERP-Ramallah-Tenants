@@ -3,197 +3,7 @@
 {% block title %}كشف حساب الزبون{% endblock %}
 
 {% block head_extra %}
-<style>
-  /* إخفاء عناصر الطباعة في الشاشة */
-  .print-header-info,
-  .print-customer-info,
-  .print-footer-info {
-    display: none !important;
-  }
-  
-  /* === تنسيق الطباعة === */
-  @media print {
-    /* إخفاء عناصر غير ضرورية */
-    .no-print,
-    .btn,
-    .breadcrumb,
-    nav,
-    .main-sidebar,
-    .main-header,
-    .main-footer,
-    .d-flex.gap-2,
-    .card.shadow-sm,
-    .row.g-3 {
-      display: none !important;
-    }
-    
-    /* إظهار عناصر الطباعة */
-    .print-header-info,
-    .print-customer-info,
-    .print-footer-info {
-      display: block !important;
-    }
-    
-    /* الصفحة */
-    @page {
-      margin: 1cm;
-      size: A4 portrait;
-    }
-    
-    body, html {
-      font-size: 7pt !important;
-      line-height: 1 !important;
-      margin: 0;
-      padding: 0;
-    }
-    
-    .content-wrapper {
-      margin: 0 !important;
-      padding: 0 !important;
-      max-width: 100% !important;
-    }
-    
-    /* ترويسة الطباعة */
-    .print-header-info {
-      display: block !important;
-      margin-bottom: 8px;
-      padding: 8px;
-      border: 2px solid #000;
-      background-color: #f8f9fa !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-    
-    .print-header-info .company-name {
-      font-size: 10pt !important;
-      font-weight: bold;
-      text-align: center;
-      margin-bottom: 4px;
-    }
-    
-    .print-header-info .statement-type h2 {
-      font-size: 9pt !important;
-      font-weight: bold;
-      text-align: center;
-      margin: 2px 0 4px 0;
-      border-bottom: 1px solid #666;
-      padding-bottom: 2px;
-    }
-    
-    .print-header-info .statement-date,
-    .print-header-info .user-info {
-      font-size: 6pt !important;
-      text-align: center;
-    }
-    
-    /* معلومات الزبون للطباعة */
-    .print-customer-info {
-      display: block !important;
-      font-size: 6pt !important;
-      border: 1px solid #000;
-      padding: 5px;
-      margin-bottom: 5px;
-      background-color: #ffffff !important;
-    }
-    
-    .print-customer-info table {
-      width: 100%;
-      font-size: 6pt !important;
-    }
-    
-    .print-customer-info td {
-      padding: 2px 4px;
-      border: none;
-      vertical-align: top;
-    }
-    
-    .print-customer-info strong {
-      font-weight: bold;
-    }
-    
-    /* خلفية الرصيد */
-    .print-customer-info .balance-box {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-    
-    /* الجدول الرئيسي - مضغوط */
-    .table {
-      font-size: 5pt !important;
-      width: 100% !important;
-      border-collapse: collapse !important;
-      margin: 0 !important;
-    }
-    #statementTable {
-      font-size: 5pt !important;
-      width: 100% !important;
-      border-collapse: collapse !important;
-      margin: 0 !important;
-      table-layout: auto !important;
-    }
-    
-    .table th,
-    .table td,
-    #statementTable th,
-    #statementTable td {
-      padding: 1px 2px !important;
-      line-height: 1 !important;
-      border: 0.5px solid #000 !important;
-      font-size: 5pt !important;
-    }
-    
-    .table thead th,
-    #statementTable thead th {
-      font-size: 6pt !important;
-      padding: 2px !important;
-      font-weight: bold !important;
-      background-color: #e0e0e0 !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-      text-align: center !important;
-    }
-    
-    .table tfoot th,
-    .table tfoot td,
-    #statementTable tfoot th,
-    #statementTable tfoot td {
-      font-size: 6pt !important;
-      padding: 2px !important;
-      font-weight: bold !important;
-      background-color: #f0f0f0 !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-    
-    /* جدول البنود المباعة - أصغر */
-    .sale-items-details {
-      padding: 0 !important;
-      margin: 0 !important;
-      background-color: #fafafa !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-    
-    .sale-items-details table {
-      font-size: 4pt !important;
-      width: 100% !important;
-    }
-    
-    .sale-items-details th,
-    .sale-items-details td {
-      padding: 1px !important;
-      font-size: 4pt !important;
-      line-height: 1 !important;
-      border: 0.5px solid #999 !important;
-    }
-    
-    /* إخفاء العناصر غير الضرورية */
-    .card-body > .row.g-3,
-    .card.shadow-sm {
-      display: none !important;
-    }
-  }
-</style>
+
 {% endblock %}
 
 {% block breadcrumb %}
@@ -219,9 +29,9 @@
 {% block content %}
 <!-- رأس الصفحة للطباعة فقط -->
 <div class="print-header-info">
-  {% with doc_title='كشف حساب زبون' %}
-  {% include 'partials/print_letterhead.html' %}
-  {% endwith %}
+  <div class="statement-type">
+    <h2>كشف حساب زبون</h2>
+  </div>
 </div>
 
 <!-- معلومات الزبون والرصيد - للطباعة فقط -->
@@ -447,7 +257,7 @@
   } %}
 
   <div class="card shadow-sm rounded card-hover" style="overflow-x:auto;">
-    <div class="card-header bg-primary text-white">
+    <div class="card-header erp-card-header-row erp-theme-header--primary">
       <h5 class="card-title m-0">
         <i class="fas fa-file-invoice ms-2"></i> كشف حساب: {{ customer.name }}
       </h5>
@@ -461,7 +271,7 @@
       </div>
       <div class="table-responsive table-rounded">
         <table class="table table-bordered table-sm align-middle" id="statementTable" data-no-export="true" data-realtime-statement-customer="{{ customer.id }}" style="border: 2px solid #dee2e6; border-collapse: collapse;">
-          <thead class="table-light" style="background-color: #f8f9fa;">
+          <thead class="table-header-primary text-white table-light" style="background-color: #f8f9fa;">
             <tr>
               <th style="width: 100px; border: 1px solid #dee2e6; padding: 12px; font-weight: bold; text-align: center;">التاريخ</th>
               <th style="border: 1px solid #dee2e6; padding: 12px; font-weight: bold; text-align: center;">البيان</th>
@@ -667,44 +477,8 @@
               </td>
             </tr>
             
-            {% if (e.type in ['PAYMENT','CHECK_BOUNCED','CHECK_PENDING']) and e.get('payment_details') and e.payment_details.get('splits') %}
-            <tr class="payment-splits-row">
-              <td colspan="6" class="p-0">
-                <div class="payment-split-details" style="background-color:#f9fbff; padding:10px; margin:5px;">
-                  <table class="table table-sm table-bordered mb-0" data-no-export="true" style="font-size:0.85em; border:1px solid #dee2e6;">
-                    <thead style="background-color:#e9ecef;">
-                      <tr>
-                        <th style="width:25%; text-align:start;">الطريقة</th>
-                        <th style="width:18%; text-align:end;">المبلغ</th>
-                        <th style="width:12%; text-align:center;">العملة</th>
-                        <th style="width:18%; text-align:end;">المبلغ المحوّل</th>
-                        <th style="width:12%; text-align:center;">عملة الأساس</th>
-                        <th style="width:15%; text-align:center;">سعر الصرف</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {% for split in e.payment_details.splits %}
-                      <tr>
-                        <td style="text-align:start;">{{ split.method }}</td>
-                        <td style="text-align:end;">{{ split.amount|format_currency }}</td>
-                        <td style="text-align:center;">{{ split.currency }}</td>
-                        <td style="text-align:end;">{{ split.converted_amount|format_currency }}</td>
-                        <td style="text-align:center;">{{ split.converted_currency }}</td>
-                        <td style="text-align:center;">
-                          {% if split.fx_rate %}
-                            {{ "%.6f"|format(split.fx_rate) }}
-                          {% else %}
-                            —
-                          {% endif %}
-                        </td>
-                      </tr>
-                      {% endfor %}
-                    </tbody>
-                  </table>
-                </div>
-              </td>
-            </tr>
-            {% endif %}
+            {# تم إخفاء جدول تفاصيل التوزيع (splits) من كشف حساب الزبون #}
+            {# الزبون يرى فقط المبلغ الإجمالي للدفعة - التفاصيل متاحة في صفحة الدفعة الداخلية #}
             
             {# عرض البنود المباعة تحت كل عملية بيع #}
             {% if e.type == 'SALE' and e.get('items') %}
@@ -712,7 +486,7 @@
               <td colspan="6" class="p-0">
                 <div class="sale-items-details" style="background-color: #f8f9fa; padding: 10px; margin: 5px;">
                   <table class="table table-sm table-bordered mb-0" data-no-export="true" style="font-size: 0.85em; border: 1px solid #dee2e6;">
-                    <thead style="background-color: #e9ecef;">
+                    <thead class="table-header-primary text-white" style="background-color: #e9ecef;">
                       <tr>
                         <th style="width: 35%; border: 1px solid #dee2e6; padding: 8px; text-align: center;">البند</th>
                         <th style="width: 10%; border: 1px solid #dee2e6; padding: 8px; text-align: center;">الكمية</th>
@@ -843,27 +617,7 @@
     const printWindow = window.open('', '', 'height=800,width=1000');
     printWindow.document.write('<html><head><title>كشف حساب - ' + printData.customerName + '</title>');
     printWindow.document.write('<meta charset="UTF-8">');
-    printWindow.document.write('<style>');
-    printWindow.document.write('.no-print{display:none !important;}');
-    printWindow.document.write('* { margin: 0; padding: 0; box-sizing: border-box; }');
-    printWindow.document.write('body { font-family: Arial, sans-serif; direction: rtl; padding: 10px; font-size: 8pt; line-height: 1.2; }');
-    printWindow.document.write('h2 { text-align: center; color: #333; margin-bottom: 6px; border-bottom: 2px solid #000; padding-bottom: 4px; font-size: 11pt; }');
-    printWindow.document.write('.customer-info { border: 1px solid #000; padding: 6px; margin: 8px 0; background-color: #f8f9fa; font-size: 7pt; }');
-    printWindow.document.write('.customer-info table { width: 100%; border-collapse: collapse; }');
-    printWindow.document.write('.customer-info td { padding: 2px 4px; border: none; }');
-    printWindow.document.write('.customer-info strong { font-weight: bold; }');
-    printWindow.document.write('.balance-box { background-color: #ffe0e0; border: 1px solid #000; padding: 3px; margin-top: 3px; font-size: 7pt; }');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 7pt; }');
-    printWindow.document.write('th, td { border: 1px solid #000; padding: 3px 4px; text-align: right; line-height: 1.1; }');
-    printWindow.document.write('th { background-color: #e0e0e0; font-weight: bold; text-align: center; font-size: 7.5pt; }');
-    printWindow.document.write('tfoot th, tfoot td { background-color: #f0f0f0; font-weight: bold; padding: 4px; }');
-    printWindow.document.write('.text-end { text-align: left; }');
-    printWindow.document.write('.sale-items-details { background-color: #fafafa; padding: 4px; margin: 2px 0; }');
-    printWindow.document.write('.sale-items-details table { font-size: 6pt; margin: 0; }');
-    printWindow.document.write('.sale-items-details th, .sale-items-details td { padding: 2px 3px; font-size: 6pt; }');
-    printWindow.document.write('.footer { text-align: center; font-size: 6pt; color: #666; margin-top: 15px; border-top: 1px solid #ccc; padding-top: 5px; }');
-    printWindow.document.write('@page { margin: 0.8cm; size: A4 portrait; }');
-    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('</head><body>');
     
     printWindow.document.write('<h2>كشف حساب زبون</h2>');
     printWindow.document.write('<div class="customer-info">');

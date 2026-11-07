@@ -278,9 +278,17 @@
           'Content-Type': 'application/json',
           ...(csrf ? { 'X-CSRFToken': csrf } : {})
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        uxFeedback: false,
       });
-      if (!r.ok) throw new Error('فشل الاتصال بالسيرفر');
+      if (!r.ok) {
+        let errText = '';
+        try {
+          const errBody = await r.json();
+          errText = errBody.message || errBody.error || '';
+        } catch (_) {}
+        throw new Error(errText || 'تعذّر جلب التقرير. تحقق من الفلاتر وحاول مجدداً.');
+      }
       const data = await r.json();
       let rows = Array.isArray(data.data) ? data.data : [];
       const headersFromRows = rows.length ? Object.keys(rows[0]) : (cols || []);
@@ -295,8 +303,11 @@
       renderSummary(data.summary || {});
       saveState();
     } catch (e) {
-      alert("حدث خطأ أثناء جلب التقرير: " + e.message);
-
+      if (window.AzadUX) {
+        AzadUX.notify('danger', e.message, { defaultKey: 'internal_error', force: true });
+      } else {
+        alert(e.message || 'تعذّر جلب التقرير.');
+      }
     } finally {
       showLoading(false);
     }
@@ -494,7 +505,11 @@ tbody tr:nth-child(even) { background: #fafafa; }
     `.trim();
     const win = window.open('about:blank', '_blank', 'width=1000,height=800');
     if (!win) {
-      alert('لم يتم فتح نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة أو إعادة المحاولة.');
+      if (window.AzadUX) {
+        AzadUX.notify('warning', 'لم يُفتح نافذة الطباعة. اسمح بالنوافذ المنبثقة ثم أعد المحاولة.', { force: true });
+      } else {
+        alert('لم يُفتح نافذة الطباعة. اسمح بالنوافذ المنبثقة ثم أعد المحاولة.');
+      }
       return;
     }
     clone.querySelectorAll('script').forEach((node) => node.remove());
@@ -558,7 +573,11 @@ tbody tr:nth-child(even) { background: #fafafa; }
       ? new Set(selectedColumns.map((val) => Number(val)))
       : new Set(activeColumns.map((col) => col.index));
     if (!keep.size) {
-      alert('يجب اختيار عمود واحد على الأقل للطباعة.');
+      if (window.AzadUX) {
+        AzadUX.notify('warning', null, { key: 'validation_error', force: true });
+      } else {
+        alert('اختر عموداً واحداً على الأقل للطباعة.');
+      }
       return;
     }
     const clone = activePrintTable.cloneNode(true);

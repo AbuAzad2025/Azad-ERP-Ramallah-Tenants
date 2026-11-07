@@ -1,132 +1,45 @@
 {% extends 'base.html' %}
 {% block title %}تعديل بيانات الزبون{% endblock %}
+{% block page_title %}<i class="fas fa-edit ml-1"></i> تعديل بيانات الزبون{% endblock %}
 {% block breadcrumb %}
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb bg-white px-3 py-2 rounded mb-4">
-    <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">الرئيسية</a></li>
-    <li class="breadcrumb-item"><a href="{{ url_for('customers_bp.list_customers') }}">الزبائن</a></li>
-    <li class="breadcrumb-item active">تعديل بيانات الزبون</li>
-  </ol>
-</nav>
+<li class="breadcrumb-item"><a href="{{ url_for('customers_bp.list_customers') }}">الزبائن</a></li>
+<li class="breadcrumb-item active">تعديل</li>
 {% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/customers-form.css', v=1) }}">
+{% endblock %}
+
 {% block content %}
-  <div class="card shadow-sm rounded border-0 card-hover">
-    <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
-      <div class="d-flex justify-content-between align-items-center">
-        <h3 class="card-title m-0"><i class="fas fa-edit ml-1"></i> تعديل بيانات الزبون</h3>
-        <div class="btn-group shadow-sm rounded-pill overflow-hidden bg-white">
-            <button onclick="window.history.back()" class="btn btn-sm text-primary fw-bold border-end" title="رجوع">
-                <i class="fas fa-arrow-right"></i>
-            </button>
-            <button onclick="window.history.forward()" class="btn btn-sm text-primary fw-bold" title="تقدم">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-        </div>
+<div class="customer-form-page">
+  <div class="card shadow-sm border-0">
+    <div class="card-header erp-card-header-row erp-theme-header--primary py-2">
+      <div class="d-flex justify-content-between align-items-center w-100">
+        <span class="badge badge-light text-dark">{{ customer.name }}</span>
+        <a href="{{ url_for('customers_bp.list_customers') }}" class="btn btn-light btn-sm">
+          <i class="fas fa-arrow-right ml-1"></i> رجوع للقائمة
+        </a>
       </div>
     </div>
-    <div class="card-body">
+    <div class="card-body p-4">
       {% if form.errors %}
         <div class="alert alert-danger">يرجى تصحيح الحقول المظللة أدناه.</div>
       {% endif %}
       <form id="customer-edit-form" method="post" action="{{ url_for('customers_bp.edit_customer', customer_id=customer.id) }}" novalidate>
         {{ form.hidden_tag() }}
-        
-        <!-- ✅ نقل الحقول داخل الفورم -->
-        <div class="d-flex justify-content-end mb-3 gap-3">
-          <div class="custom-control custom-switch">
-            {{ form.is_online(class="custom-control-input") }}
-            <label class="custom-control-label" for="{{ form.is_online.id }}"><i class="fas fa-globe text-info"></i> زبون أونلاين</label>
-          </div>
-          <div class="custom-control custom-switch">
-            {{ form.is_active(class="custom-control-input") }}
-            <label class="custom-control-label" for="{{ form.is_active.id }}"><i class="fas fa-toggle-on text-success"></i> نشط</label>
-          </div>
-        </div>
-        <div class="row g-3">
-          <div class="form-group col-md-6">
-            <label for="{{ form.name.id }}"><i class="fas fa-user"></i> اسم الزبون <span class="text-danger">*</span></label>
-            {{ form.name(class="form-control form-control-modern" + (' is-invalid' if form.name.errors else ''), placeholder="أدخل اسم الزبون", required=True) }}
-            {% for e in form.name.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-          </div>
-          <div class="form-group col-md-6">
-            <label for="{{ form.phone.id }}"><i class="fas fa-phone"></i> رقم الهاتف <span class="text-danger">*</span></label>
-            {{ form.phone(class="form-control form-control-modern" + (' is-invalid' if form.phone.errors else ''), placeholder="05XXXXXXXX", inputmode="tel") }}
-            {% for e in form.phone.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-          </div>
-        </div>
-        <div class="row g-3 mt-1">
-          <div class="form-group col-md-6">
-            <label for="{{ form.email.id }}"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
-            {{ form.email(class="form-control form-control-modern" + (' is-invalid' if form.email.errors else ''), type="email", inputmode="email", dir="ltr", placeholder="name@example.com (اختياري)") }}
-            {% for e in form.email.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-          </div>
-          <div class="form-group col-md-6">
-            <label for="{{ form.whatsapp.id }}"><i class="fab fa-whatsapp"></i> رقم الواتساب</label>
-            {{ form.whatsapp(class="form-control form-control-modern" + (' is-invalid' if form.whatsapp.errors else ''), placeholder="رقم الواتساب", inputmode="tel") }}
-            {% for e in form.whatsapp.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-          </div>
-        </div>
-        <div class="form-group mt-3">
-          <label for="{{ form.address.id }}"><i class="fas fa-map-marker-alt"></i> العنوان</label>
-          {{ form.address(class="form-control form-control-modern" + (' is-invalid' if form.address.errors else ''), placeholder="العنوان كامل") }}
-          {% for e in form.address.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-        </div>
-        <div class="row g-3 mt-1">
-          <div class="form-group col-md-6">
-            <label for="{{ form.category.id }}"><i class="fas fa-layer-group"></i> تصنيف الزبون</label>
-            {{ form.category(class="form-control form-control-modern" + (' is-invalid' if form.category.errors else '')) }}
-            {% for e in form.category.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-          </div>
-          <div class="form-group col-md-6">
-            <label for="{{ form.currency.id }}"><i class="fas fa-coins"></i> العملة <span class="text-danger">*</span></label>
-            {{ form.currency(class="form-control form-control-modern" + (' is-invalid' if form.currency.errors else '')) }}
-            {% for e in form.currency.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-          </div>
-        </div>
-        <div class="row g-3 mt-1">
-          <div class="form-group col-md-6">
-            <label for="{{ form.credit_limit.id }}"><i class="fas fa-credit-card"></i> حد الائتمان</label>
-            {{ form.credit_limit(class="form-control form-control-modern" + (' is-invalid' if form.credit_limit.errors else ''), placeholder="0.00", step="0.01", min="0") }}
-            {% for e in form.credit_limit.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-          </div>
-          <div class="form-group col-md-6">
-            <label for="{{ form.discount_rate.id }}"><i class="fas fa-percent"></i> معدل الخصم (%)</label>
-            {{ form.discount_rate(class="form-control form-control-modern" + (' is-invalid' if form.discount_rate.errors else ''), placeholder="0 - 100", step="0.01", min="0", max="100") }}
-            {% for e in form.discount_rate.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-          </div>
-        </div>
-        <div class="row g-3 mt-1">
-          <div class="form-group col-md-12">
-            <label for="{{ form.opening_balance.id }}"><i class="fas fa-balance-scale"></i> الرصيد الافتتاحي (سالب=عليه، موجب=له) <i class="fas fa-info-circle text-info" title="سالب = عليه لنا، موجب = له علينا"></i></label>
-            {{ form.opening_balance(class="form-control form-control-modern" + (' is-invalid' if form.opening_balance.errors else ''), placeholder="0.00", step="0.01") }}
-            {% for e in form.opening_balance.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-          </div>
-        </div>
-        <div class="form-group mt-3">
-          <label for="{{ form.notes.id }}"><i class="fas fa-sticky-note"></i> ملاحظات</label>
-          {{ form.notes(class="form-control form-control-modern" + (' is-invalid' if form.notes.errors else ''), rows="3", placeholder="ملاحظات إضافية") }}
-          {% for e in form.notes.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-        </div>
-        <div class="row g-3 mt-1">
-          <div class="form-group col-md-6">
-            <label for="{{ form.password.id }}"><i class="fas fa-lock"></i> كلمة المرور</label>
-            {{ form.password(class="form-control form-control-modern" + (' is-invalid' if form.password.errors else ''), placeholder="******", autocomplete="new-password") }}
-            {% for e in form.password.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-          </div>
-          <div class="form-group col-md-6">
-            <label for="{{ form.confirm.id }}"><i class="fas fa-lock"></i> تأكيد كلمة المرور</label>
-            {{ form.confirm(class="form-control form-control-modern" + (' is-invalid' if form.confirm.errors else ''), placeholder="******", autocomplete="new-password") }}
-            {% for e in form.confirm.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-          </div>
-        </div>
-        <div class="mt-4 d-flex">
-          <button type="submit" class="btn btn-primary btn-modern no-loading"><i class="fas fa-save ml-1"></i> حفظ التعديلات</button>
+        {% include 'customers/_form.html' %}
+        <div class="form-actions d-flex flex-wrap">
+          <button type="submit" class="btn btn-primary btn-modern no-loading">
+            <i class="fas fa-save ml-1"></i> حفظ التعديلات
+          </button>
           <a href="{{ url_for('customers_bp.list_customers') }}" class="btn btn-secondary btn-modern ml-2">إلغاء</a>
         </div>
       </form>
     </div>
   </div>
+</div>
 {% endblock %}
+
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/customers.js') }}"></script>
 {% endblock %}

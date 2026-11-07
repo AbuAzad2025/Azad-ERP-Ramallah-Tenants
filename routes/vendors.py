@@ -50,9 +50,10 @@ def suppliers_list():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
     per_page = min(200, max(10, per_page))
+    q = Supplier.query.filter(Supplier.is_archived == False)
     from utils.company_scope import filter_suppliers_query
 
-    q = filter_suppliers_query(Supplier.query.filter(Supplier.is_archived == False))
+    q = filter_suppliers_query(q)
     if search_term:
         term = f"%{search_term}%"
         q = q.filter(or_(Supplier.name.ilike(term), Supplier.phone.ilike(term), Supplier.identity_number.ilike(term)))

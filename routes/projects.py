@@ -9,18 +9,10 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 from utils import permission_required
+from utils.company_scope import filter_projects_query, filter_customers_query, assert_project_access
+from utils.tenant_ui import resolve_branch_id, accessible_branches_query, branch_choices_for_form
 
 projects_bp = Blueprint('projects', __name__, url_prefix='/projects')
-
-@projects_bp.before_request
-@login_required
-def restrict_projects_access():
-    # الحماية: فقط للمالك والمطور (Level 0)
-    from permissions_config.role_policy import is_platform_owner_role
-
-    if not is_platform_owner_role(current_user):
-        utils.flash_error('غير مصرح لك بالوصول لإدارة المشاريع', 'danger')
-        return redirect(url_for('main.dashboard'))
 
 
 @projects_bp.route('/')
@@ -30,7 +22,7 @@ def index():
     status = request.args.get('status')
     customer_id = request.args.get('customer', type=int)
     
-    query = Project.query
+    query = filter_projects_query(Project.query)
     
     if status:
         query = query.filter_by(status=status)
@@ -67,11 +59,7 @@ def index():
             'progress': (completed_phases / phases_count * 100) if phases_count else 0
         })
     
-    from utils.company_scope import filter_customers_query
-
-    customers = filter_customers_query(
-        Customer.query.filter_by(is_active=True)
-    ).order_by(Customer.name).all()
+    customers = filter_customers_query(Customer.query.filter_by(is_active=True)).order_by(Customer.name).all()
     
     return render_template('projects/index.html',
                          projects=projects_data,
@@ -91,7 +79,7 @@ def add_project():
             client_id = request.form.get('customer_id', type=int)
             cost_center_id = request.form.get('cost_center_id', type=int)
             manager_id = request.form.get('manager_id', type=int) or current_user.id
-            branch_id = request.form.get('branch_id', type=int)
+            branch_id = resolve_branch_id(request.form.get('branch_id'), required=True)
             start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date()
             end_date_str = request.form.get('end_date')
             try:

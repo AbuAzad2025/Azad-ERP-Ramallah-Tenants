@@ -1,15 +1,15 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}grafana{% endblock %}
-{% block security_title %}Grafana Setup{% endblock %}
+{% block security_title %}إعداد Grafana{% endblock %}
 {% block security_icon %}<i class="fas fa-chart-area"></i>{% endblock %}
-{% block security_description %}إعداد Grafana + Prometheus للمراقبة الاحترافية{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">Grafana Setup</li>{% endblock %}
+{% block security_description %}إعداد Grafana{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">إعداد Grafana</li>{% endblock %}
 {% block security_content %}
 
   <div class="row mb-4">
     <div class="col-12">
       <div class="card shadow">
-        <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient text-white">
           <h4 class="mb-0">
             <i class="fas fa-chart-line"></i> إعداد Grafana + Prometheus
             <span class="badge bg-light text-dark float-end">Professional Monitoring</span>
@@ -249,7 +249,7 @@ scrape_configs:
                   <h6>طريقتان لإنشاء Dashboard:</h6>
 
                   <div class="card border-info mb-3">
-                    <div class="card-header bg-info text-white">
+                    <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
                       <strong>الطريقة السريعة: استيراد Dashboard جاهز</strong>
                     </div>
                     <div class="card-body">
@@ -287,7 +287,7 @@ scrape_configs:
                   </div>
 
                   <div class="card border-warning">
-                    <div class="card-header bg-warning text-dark">
+                    <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-dark">
                       <strong>الطريقة اليدوية: إنشاء Dashboard مخصص</strong>
                     </div>
                     <div class="card-body">
@@ -335,7 +335,7 @@ scrape_configs:
                   <h6 class="mt-4">أمثلة تنبيهات مهمة:</h6>
                   <div class="table-responsive">
                     <table class="table table-sm table-bordered">
-                      <thead class="table-light">
+                      <thead class="table-header-primary text-white table-light">
                         <tr>
                           <th>التنبيه</th>
                           <th>الشرط</th>
@@ -374,7 +374,7 @@ scrape_configs:
 
           <!-- أوامر سريعة -->
           <div class="card border-dark mt-4">
-            <div class="card-header bg-dark text-white">
+            <div class="card-header erp-card-header-row erp-theme-header--primary bg-dark text-white">
               <h5 class="mb-0"><i class="fas fa-terminal"></i> أوامر سريعة مفيدة</h5>
             </div>
             <div class="card-body">
@@ -402,7 +402,7 @@ docker logs grafana</code></pre>
 
           <!-- روابط مفيدة -->
           <div class="card border-info mt-4">
-            <div class="card-header bg-info text-white">
+            <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
               <h5 class="mb-0"><i class="fas fa-link"></i> روابط مفيدة</h5>
             </div>
             <div class="card-body">

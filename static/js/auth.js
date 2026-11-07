@@ -3,7 +3,7 @@
   window.__AUTH_INIT__ = true;
 
 document.addEventListener('DOMContentLoaded', function () {
-  const btn = document.querySelector('.toggle-pass');
+  const btn = document.getElementById('login-toggle-pass') || document.querySelector('.toggle-pass');
   const input = document.getElementById('login-password');
   if (btn && input) {
     btn.addEventListener('click', function () {

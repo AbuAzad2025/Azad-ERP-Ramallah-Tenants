@@ -4,32 +4,7 @@
 
 {% block head_extra %}
 {{ super() }}
-<style>
-.tenant-card {
-  transition: all 0.3s ease;
-  border-left: 5px solid transparent;
-}
-.tenant-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-}
-.tenant-card.active {
-  border-left-color: #28a745;
-  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
-}
-.tenant-card.inactive {
-  border-left-color: #dc3545;
-  opacity: 0.8;
-}
-.module-badge {
-  display: inline-block;
-  padding: 0.25rem 0.6rem;
-  margin: 0.1rem;
-  border-radius: 50rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-</style>
+
 {% endblock %}
 
 {% block content %}
@@ -59,7 +34,7 @@
 
   <div class="row mb-4">
     <div class="col-md-3 mb-3">
-      <div class="card border-0 shadow-sm bg-primary text-white card-hover" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+      <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--primary text-white card-hover" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
         <div class="card-body text-center">
           <h2 class="mb-0 font-weight-bold">{{ stats.total_tenants }}</h2>
           <p class="mb-0">إجمالي Tenants</p>
@@ -67,7 +42,7 @@
       </div>
     </div>
     <div class="col-md-3 mb-3">
-      <div class="card border-0 shadow-sm bg-success text-white card-hover" style="background: linear-gradient(135deg, #198754 0%, #157347 100%);">
+      <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--success text-white card-hover">
         <div class="card-body text-center">
           <h2 class="mb-0 font-weight-bold">{{ stats.active_tenants }}</h2>
           <p class="mb-0">مفعّل</p>
@@ -83,7 +58,7 @@
       </div>
     </div>
     <div class="col-md-3 mb-3">
-      <div class="card border-0 shadow-sm bg-info text-white card-hover" style="background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);">
+      <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--info text-white card-hover">
         <div class="card-body text-center">
           <h2 class="mb-0 font-weight-bold">{{ stats.total_users_limit }}</h2>
           <p class="mb-0">حد المستخدمين</p>
@@ -185,7 +160,7 @@
   <div class="row">
     <div class="col-md-4">
       <div class="card border-0 shadow-lg card-hover">
-        <div class="card-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+        <div class="card-header erp-card-header-row erp-theme-header--primary card-header-danger text-white erp-card-header-row">
           <h5 class="mb-0"><i class="fas fa-plus"></i> إضافة Tenant جديد</h5>
         </div>
         <div class="card-body">
@@ -238,7 +213,7 @@
                 <i class="fas fa-image"></i> الشعار (Logo URL)
               </label>
               <input type="text" name="tenant_logo" class="form-control" 
-                     placeholder="branding/tenants/alhazem/logos/primary.png">
+                     placeholder="/static/img/branding/tenants/phe/logos/primary.png">
             </div>
 
             <div class="mb-3">
@@ -298,7 +273,7 @@
 
     <div class="col-md-8">
       <div class="card border-0 shadow-sm card-hover">
-        <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-primary text-white d-flex justify-content-between align-items-center">
           <h5 class="mb-0"><i class="fas fa-list"></i> Tenants المسجلة ({{ visible_count }})</h5>
           {% if total_pages > 1 %}
           <nav aria-label="Tenant pagination">

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}{{ grn.number }}{% endblock %}
+{% block content %}
+<div class="container py-3" dir="rtl">
+  <h4>إشعار استلام {{ grn.number }}</h4>
+  <p>أمر الشراء: {{ grn.purchase_order.number if grn.purchase_order else grn.purchase_order_id }} | التاريخ: {{ grn.receipt_date }}</p>
+  <table class="table table-bordered table-sm">
+    <thead class="table-header-primary text-white"><tr><th>منتج</th><th>كمية</th><th>سعر</th></tr></thead>
+    <tbody>{% for ln in grn.lines %}<tr><td>{{ ln.product.name if ln.product else ln.product_id }}</td><td>{{ ln.quantity }}</td><td>{{ ln.unit_price }}</td></tr>{% endfor %}</tbody>
+  </table>
+  <a href="{{ url_for('purchases_bp.detail', id=grn.purchase_order_id) }}" class="btn btn-secondary btn-sm">أمر الشراء</a>
+</div>
+{% endblock %}

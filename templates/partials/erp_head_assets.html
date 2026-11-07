@@ -1,0 +1,66 @@
+{# mode: app | public | minimal #}
+{% set erp_head_mode = erp_head_mode|default('app') %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;600;700;800&family=Cairo:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="{{ static_url('adminlte/plugins/fontawesome-free/css/all.min.css') }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+{% if erp_head_mode == 'app' %}
+<link rel="stylesheet" href="{{ static_url('adminlte/plugins/overlayScrollbars/css/OverlayScrollbars.min.css') }}">
+<link rel="stylesheet" href="{{ static_url('adminlte/css/adminlte.min.css') }}">
+<link rel="stylesheet" href="{{ static_url('adminlte/plugins/select2/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/ui.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/mobile.css') }}" id="mobile-css" data-default-media="(max-width: 575.98px)" media="(max-width: 575.98px)">
+<link rel="stylesheet" href="{{ static_url('css/mobile-app.css') }}" id="mobile-app-css" data-default-media="(max-width: 575.98px)" media="(max-width: 575.98px)">
+<link rel="stylesheet" href="{{ static_url('css/gm-scroll-filters.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/gm-financial-pages.css') }}" id="gm-financial-css" data-default-media="(max-width: 575.98px)" media="(max-width: 575.98px)">
+<link rel="stylesheet" href="{{ static_url('css/gm-invoice-detail.css') }}" id="gm-invoice-detail-css" data-default-media="(max-width: 575.98px)" media="(max-width: 575.98px)">
+<script>
+(function() {
+  const html = document.documentElement;
+  const link = document.getElementById('mobile-css');
+  const appLink = document.getElementById('mobile-app-css');
+  const finLink = document.getElementById('gm-financial-css');
+  const invLink = document.getElementById('gm-invoice-detail-css');
+  const stored = (function() { try { return localStorage.getItem('ui_mode') || 'auto'; } catch (e) { return 'auto'; } })();
+  const mode = stored === 'mobile' || stored === 'tablet' || stored === 'desktop' ? stored : 'auto';
+  const autoMode = (function() {
+    try {
+      if (window.matchMedia('(max-width: 575.98px)').matches) return 'mobile';
+      if (window.matchMedia('(min-width: 576px) and (max-width: 991.98px)').matches) return 'tablet';
+      return 'desktop';
+    } catch (_) { return 'desktop'; }
+  })();
+  const effective = mode === 'auto' ? autoMode : mode;
+  html.setAttribute('data-ui-mode', effective);
+  const compactMedia = (effective === 'mobile' || effective === 'tablet') ? 'all' : (link && link.getAttribute('data-default-media')) || '(max-width: 575.98px)';
+  if (link) link.media = compactMedia;
+  if (appLink) appLink.media = compactMedia;
+  if (finLink) finLink.media = compactMedia;
+  if (invLink) invLink.media = compactMedia;
+})();
+</script>
+{% endif %}
+<link rel="stylesheet" href="{{ static_url('css/numbers-fix.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/bs5-utils.css') }}">
+{% if erp_head_mode == 'app' %}
+<link rel="stylesheet" href="{{ static_url('css/tenant-scope.css') }}">
+{% endif %}
+<link rel="stylesheet" href="{{ static_url('css/ux-messages.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/erp-theme/index.css') }}">
+{% if erp_head_mode == 'app' %}
+<link rel="stylesheet" href="{{ static_url('css/erp-calculator.css') }}">
+{% endif %}
+<script src="{{ static_url('js/erp-theme.js') }}"></script>
+{% if erp_head_mode == 'app' %}
+<link rel="stylesheet" href="{{ static_url('css/print.css') }}" media="print">
+{% endif %}
+{% if system_settings.primary_color %}
+<style>
+  html[data-erp-tenant-color="1"] {
+    --erp-primary: {{ system_settings.primary_color }};
+    --erp-primary-dark: {{ system_settings.primary_color }};
+    --primary-color: {{ system_settings.primary_color }};
+  }
+</style>
+{% endif %}

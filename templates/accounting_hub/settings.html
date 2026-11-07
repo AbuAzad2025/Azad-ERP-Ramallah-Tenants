@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}إعدادات المحاسبة{% endblock %}
+{% block content %}
+<div class="container py-3" dir="rtl" style="max-width:640px">
+  <h4>إعدادات المحاسبة</h4>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-check mb-2">
+      <input type="checkbox" name="auto_allocate" class="form-check-input" {% if auto_allocate %}checked{% endif %}>
+      <label class="form-check-label">توزيع تلقائي للدفعات على المستندات (مثل بيسان)</label>
+    </div>
+    <p class="small text-muted">الافتراضي في الكود: <code>PAYMENT_ALLOCATION_ENABLED=false</code> — دفعة على حساب الزبون فقط.</p>
+    <div class="form-check mb-3">
+      <input type="checkbox" name="annual_carry_updates_opening_balance" class="form-check-input" {% if annual_carry %}checked{% endif %}>
+      <label class="form-check-label">عند الإقفال السنوي: تحديث الرصيد الافتتاحي على البطاقات</label>
+    </div>
+    <button class="btn btn-primary">حفظ</button>
+  </form>
+</div>
+{% endblock %}

@@ -16,11 +16,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const text = document.createTextNode(' ' + String(message || ''));
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
-        closeBtn.className = 'btn-close';
-        closeBtn.setAttribute('data-bs-dismiss', 'alert');
+        closeBtn.className = 'close';
+        closeBtn.setAttribute('data-dismiss', 'alert');
+        closeBtn.setAttribute('aria-label', 'إغلاق');
+        const closeIcon = document.createElement('span');
+        closeIcon.setAttribute('aria-hidden', 'true');
+        closeIcon.innerHTML = '&times;';
+        closeBtn.appendChild(closeIcon);
+        alertDiv.appendChild(closeBtn);
         alertDiv.appendChild(icon);
         alertDiv.appendChild(text);
-        alertDiv.appendChild(closeBtn);
         document.body.appendChild(alertDiv);
         
         setTimeout(() => {

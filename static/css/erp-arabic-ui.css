@@ -1,0 +1,573 @@
+/**
+ * واجهة ERP عربية — ثيم blue_cyan_enterprise
+ * مرجع: docs/arabic_erp_ui_assistant_spec.json
+ * مسافات/قوائم: docs/arabic_erp_ui_spacing_dropdowns_spec.json → erp-forms-spacing.css
+ * مبادئ: RTL، مسافات مريحة، بدون تكديس، ألوان متناسقة
+ */
+:root {
+  --erp-navy: #062a5a;
+  --erp-blue: #0b68ff;
+  --erp-cyan: #10c6e8;
+  --erp-bg: #f5f7fb;
+  --erp-card: #ffffff;
+  --erp-text: #1f2937;
+  --erp-muted: #6b7280;
+  --erp-border: #e5e7eb;
+  --erp-radius: 16px;
+  --erp-radius-sm: 10px;
+  --erp-shadow: 0 4px 24px rgba(6, 42, 90, 0.06);
+  --erp-shadow-sm: 0 1px 3px rgba(6, 42, 90, 0.08);
+  --erp-success: #16a34a;
+  --erp-warning: #ea580c;
+  --erp-danger: #dc2626;
+  --erp-info: #0b68ff;
+  --erp-sidebar-w: 260px;
+}
+
+/* خلفية المحتوى */
+body:not(.auth-page) .content-wrapper {
+  background: var(--erp-bg);
+}
+
+.content-header {
+  padding-top: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+.content-header h1 {
+  font-weight: 700;
+  font-size: 1.35rem;
+  color: var(--erp-navy);
+}
+
+/* الشريط الجانبي */
+.main-sidebar.sidebar-dark-primary,
+.main-sidebar.sidebar-dark-primary .brand-link {
+  background: var(--erp-navy) !important;
+}
+
+.main-sidebar .nav-sidebar > .nav-item > .nav-link {
+  border-radius: var(--erp-radius-sm);
+  margin: 2px 10px;
+  font-weight: 500;
+}
+
+.main-sidebar .nav-sidebar > .nav-item > .nav-link.active {
+  background: rgba(11, 104, 255, 0.22) !important;
+  color: #fff !important;
+  box-shadow: inset 3px 0 0 var(--erp-cyan);
+}
+
+.main-sidebar .nav-sidebar .nav-icon {
+  opacity: 0.95;
+}
+
+.garage-brand-area {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1rem 0.75rem;
+}
+
+/* الشريط العلوي */
+.main-header.navbar-primary {
+  background: linear-gradient(90deg, var(--erp-navy) 0%, #0a3d7a 100%) !important;
+  border-bottom: none;
+  min-height: 56px;
+}
+
+.erp-topbar-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: min(720px, 55vw);
+}
+
+.erp-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.erp-meta-chip i {
+  opacity: 0.85;
+  font-size: 0.75rem;
+}
+
+.erp-meta-chip--rates {
+  font-variant-numeric: tabular-nums;
+}
+
+.tenant-scope-badge {
+  border-radius: 999px;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  background: rgba(16, 198, 232, 0.25) !important;
+  border: 1px solid rgba(16, 198, 232, 0.35);
+}
+
+.tenant-branch-select {
+  border-radius: 999px;
+  max-width: 200px;
+  font-size: 0.8rem;
+}
+
+.erp-user-avatar {
+  width: 32px;
+  height: 32px;
+  background: var(--erp-blue, #0b68ff);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 50%;
+}
+
+.erp-user-avatar--lg {
+  width: 50px;
+  height: 50px;
+  font-size: 1.1rem;
+}
+
+.navbar-info-center .badge:not(.tenant-scope-badge) {
+  display: none;
+}
+
+.navbar-info-center .erp-topbar-meta {
+  display: flex;
+}
+
+.erp-topbar-search {
+  min-width: 200px;
+  max-width: 280px;
+}
+
+.erp-topbar-search .form-control {
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.95);
+  font-size: 0.875rem;
+}
+
+.erp-topbar-search .input-group-text {
+  border-radius: 0 999px 999px 0;
+  border: none;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+/* بطاقات عامة */
+.card {
+  border: 1px solid var(--erp-border);
+  border-radius: var(--erp-radius);
+  box-shadow: var(--erp-shadow-sm);
+}
+
+.card-header {
+  background: var(--erp-card);
+  border-bottom: 1px solid var(--erp-border);
+  font-weight: 700;
+  color: var(--erp-navy);
+}
+
+/*
+ * ═══ KPI / Dashboard — نُقل إلى static/css/erp-theme/kpi-cards-global.css ═══
+ * هذا الملف غير محمّل في base.html — لا تضف قواعد KPI هنا لتجنب التكرار.
+ */
+
+/* KPI — legacy (غير مستخدم) */
+body.dashboard-page .dashboard-chart-card {
+  border: 1px solid var(--erp-border);
+  border-radius: var(--erp-radius);
+  box-shadow: var(--erp-shadow);
+  background: var(--erp-card) !important;
+  overflow: hidden;
+}
+
+body.dashboard-page .dashboard-stats-card,
+body.dashboard-page .erp-kpi-card {
+  --erp-kpi-accent: var(--erp-blue);
+  border: 1px solid var(--erp-border);
+  border-radius: var(--erp-radius);
+  box-shadow: var(--erp-shadow);
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--erp-kpi-accent) 14%, var(--erp-card)) 0%,
+    var(--erp-card) 58%
+  ) !important;
+  color: var(--erp-text) !important;
+  overflow: hidden;
+}
+
+body.dashboard-page .erp-kpi-card--info {
+  --erp-kpi-accent: var(--erp-info);
+}
+
+body.dashboard-page .erp-kpi-card--success {
+  --erp-kpi-accent: var(--erp-success);
+}
+
+body.dashboard-page .erp-kpi-card--warning {
+  --erp-kpi-accent: var(--erp-warning);
+}
+
+body.dashboard-page .erp-kpi-card--danger {
+  --erp-kpi-accent: var(--erp-danger);
+}
+
+body.dashboard-page .dashboard-stats-card .card-body,
+body.dashboard-page .erp-kpi-card .card-body {
+  padding: 1.25rem 1.35rem;
+  color: var(--erp-text) !important;
+}
+
+body.dashboard-page .dashboard-stats-card .metric-value,
+body.dashboard-page .erp-kpi-card .erp-kpi-value,
+body.dashboard-page .erp-kpi-card .metric-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--erp-navy) !important;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+body.dashboard-page .dashboard-stats-card .small,
+body.dashboard-page .erp-kpi-card .erp-kpi-label,
+body.dashboard-page .erp-kpi-card .small {
+  color: var(--erp-muted) !important;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+body.dashboard-page .dashboard-stats-card .card-footer,
+body.dashboard-page .erp-kpi-card .card-footer,
+body.dashboard-page a.erp-kpi-card__footer {
+  display: block;
+  background: var(--erp-kpi-accent) !important;
+  border-top: none;
+  color: #fff !important;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.65rem 1rem;
+  transition: filter 0.2s ease, background 0.2s ease;
+}
+
+body.dashboard-page .dashboard-stats-card .card-footer:hover,
+body.dashboard-page .erp-kpi-card .card-footer:hover,
+body.dashboard-page a.erp-kpi-card__footer:hover {
+  filter: brightness(1.08);
+  color: #fff !important;
+  text-decoration: none;
+}
+
+body.dashboard-page .erp-kpi-card .card-footer.text-white,
+body.dashboard-page a.erp-kpi-card__footer.text-white {
+  color: #fff !important;
+}
+
+body.dashboard-page .dashboard-stats-card i.fa-3x,
+body.dashboard-page .erp-kpi-card .erp-kpi-icon,
+body.dashboard-page .erp-kpi-card .card-body > i.fa-3x {
+  color: var(--erp-kpi-accent);
+  opacity: 0.45;
+}
+
+/* إلغاء التدرجات القديمة على بطاقات KPI فقط */
+body.dashboard-page .bg-gradient-stats-blue,
+body.dashboard-page .bg-gradient-stats-green,
+body.dashboard-page .bg-gradient-stats-red,
+body.dashboard-page .bg-gradient-stats-gold,
+body.dashboard-page .bg-gradient-stats-cyan {
+  background: var(--erp-card) !important;
+  color: var(--erp-text) !important;
+}
+
+body.dashboard-page .dashboard-stats-card::before,
+body.dashboard-page .erp-kpi-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--erp-kpi-accent);
+  border-radius: 0 var(--erp-radius) var(--erp-radius) 0;
+}
+
+/* رؤوس مخططات لوحة التحكم */
+body.dashboard-page .erp-dash-header {
+  border-bottom: 1px solid var(--erp-border);
+  font-weight: 700;
+}
+
+body.dashboard-page .erp-dash-header--blue {
+  background: #e3f2fd !important;
+  color: #1565c0 !important;
+}
+
+body.dashboard-page .erp-dash-header--green {
+  background: #e8f5e9 !important;
+  color: #2e7d32 !important;
+}
+
+body.dashboard-page .erp-dash-header--amber {
+  background: #fff3e0 !important;
+  color: #e65100 !important;
+}
+
+body.dashboard-page .erp-dash-header--cyan {
+  background: #e1f5fe !important;
+  color: #01579b !important;
+}
+
+body.dashboard-page .erp-dash-header--teal {
+  background: #e0f7fa !important;
+  color: #006064 !important;
+}
+
+body.dashboard-page .erp-dash-header--rose {
+  background: #fce4ec !important;
+  color: #880e4f !important;
+}
+
+body.dashboard-page .erp-dash-header--lime {
+  background: #f1f8e9 !important;
+  color: #33691e !important;
+}
+
+/* حاويات الرسوم — منع تكدس النصوص فوق المخطط */
+body.dashboard-page .erp-chart-host {
+  position: relative;
+  width: 100%;
+  min-height: 220px;
+  height: 280px;
+  max-height: 280px;
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+body.dashboard-page .erp-chart-host--lg {
+  min-height: 240px;
+  height: 300px;
+  max-height: 300px;
+}
+
+body.dashboard-page .erp-chart-host--sm {
+  min-height: 200px;
+  height: 240px;
+  max-height: 240px;
+}
+
+body.dashboard-page .dashboard-chart-card .card-body,
+body.dashboard-page .card .card-body:has(> .erp-chart-host) {
+  padding: 0.75rem 1rem 1rem;
+  overflow: hidden;
+}
+
+body.dashboard-page .erp-chart-host canvas.chartjs-chart {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+body.dashboard-page .chart-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.92);
+  text-align: center;
+}
+
+body.dashboard-page .chart-fallback-inner {
+  max-width: 100%;
+}
+
+body.dashboard-page .chart-fallback-title {
+  font-weight: 700;
+  color: var(--erp-navy);
+  margin-bottom: 0.35rem;
+}
+
+body.dashboard-page .chart-fallback-message {
+  font-size: 0.9rem;
+  color: var(--erp-muted);
+}
+
+@media (max-width: 768px) {
+  body.dashboard-page .erp-chart-host--lg {
+    height: 260px;
+    max-height: 260px;
+  }
+
+  body.dashboard-page .erp-chart-host--sm {
+    height: 220px;
+    max-height: 220px;
+  }
+}
+
+body.dashboard-page .alert-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--erp-bg);
+}
+
+body.dashboard-page .alert-amount {
+  font-size: 1rem;
+  color: var(--erp-danger);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+body.dashboard-page .metric-value-sm {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--erp-navy);
+}
+
+.dashboard-chart-card .card-header-blue {
+  background: #e3f2fd !important;
+  color: #1565c0 !important;
+  border-bottom: 1px solid var(--erp-border);
+}
+
+.dashboard-chart-card .card-header-green {
+  background: #e8f5e9 !important;
+  color: #2e7d32 !important;
+  border-bottom: 1px solid var(--erp-border);
+}
+
+.dashboard-chart-card .card-header-blue .card-title,
+.dashboard-chart-card .card-header-green .card-title,
+.dashboard-chart-card .card-header-blue i,
+.dashboard-chart-card .card-header-green i {
+  color: inherit !important;
+}
+
+/* جداول */
+.table {
+  font-size: 0.9rem;
+}
+
+/* تفاصيل thead: erp-forms-spacing.css */
+
+.table-hover tbody tr:hover {
+  background: rgba(11, 104, 255, 0.04);
+}
+
+/* شارات الحالة */
+.badge-success, .badge.badge-success { background: var(--erp-success); }
+.badge-warning, .badge.badge-warning { background: var(--erp-warning); color: #fff; }
+.badge-danger, .badge.badge-danger { background: var(--erp-danger); }
+.badge-info, .badge.badge-info { background: var(--erp-info); }
+
+/* أزرار */
+.btn-primary {
+  background: var(--erp-blue);
+  border-color: var(--erp-blue);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background: #0952cc;
+  border-color: #0952cc;
+}
+
+.btn-outline-primary {
+  color: var(--erp-blue);
+  border-color: var(--erp-blue);
+}
+
+.btn-outline-primary:hover {
+  background: var(--erp-blue);
+  border-color: var(--erp-blue);
+}
+
+/* إجراءات سريعة — موبايل */
+.gm-quick-actions {
+  background: var(--erp-card);
+  border: 1px solid var(--erp-border);
+  border-radius: var(--erp-radius);
+  padding: 1rem;
+  box-shadow: var(--erp-shadow-sm);
+}
+
+.gm-quick-actions-title {
+  font-weight: 700;
+  color: var(--erp-navy);
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.gm-action-tile {
+  border-radius: var(--erp-radius-sm);
+  border: 1px solid var(--erp-border);
+  background: var(--erp-bg);
+}
+
+/* تنبيهات لوحة التحكم */
+body.dashboard-page .alert-card {
+  border-radius: var(--erp-radius-sm);
+  border-inline-start: 4px solid var(--erp-warning);
+}
+
+/* وحدة الأمان — عناوين الأقسام */
+body.security-body.erp-unified .erp-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--erp-navy);
+  margin: 1.25rem 0 0.75rem;
+}
+
+body.security-body.erp-unified .erp-page-title {
+  color: var(--erp-navy);
+}
+
+/* شريط إجراءات الصفحة */
+.erp-page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.erp-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--erp-navy);
+  margin: 1.5rem 0 0.75rem;
+}
+
+@media (max-width: 991.98px) {
+  .navbar-info-center {
+    display: none !important;
+  }
+  .erp-topbar-search {
+    min-width: 0;
+    max-width: none;
+  }
+}
+
+@media (min-width: 992px) {
+  .navbar-info-center > .badge,
+  .navbar-info-center > .position-relative:not(.erp-topbar-search-wrap) {
+    /* legacy badges hidden when erp-topbar-meta present */
+  }
+}

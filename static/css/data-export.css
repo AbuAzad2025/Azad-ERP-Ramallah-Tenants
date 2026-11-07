@@ -1,0 +1,18 @@
+.data-export-page .data-export-search-wrap {
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.data-export-page .data-export-card {
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.data-export-page .data-export-card:hover {
+  box-shadow: 0 0.25rem 0.75rem rgba(40, 167, 69, 0.2);
+  transform: translateY(-2px);
+}
+
+.data-export-page .data-export-table-name {
+  font-size: 0.9rem;
+  word-break: break-word;
+}

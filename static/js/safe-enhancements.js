@@ -25,6 +25,7 @@
     tables.forEach(table => {
       if (table.closest('.table-responsive')) return;
       if (table.closest('.dataTables_wrapper')) return;
+      if (table.closest('.scroll_table, .gm-scroll-rail, .gm-ledger-scroll-card, [data-gm-scroll-table]')) return;
       const parent = table.parentElement;
       if (!parent) return;
       const wrapper = document.createElement('div');
@@ -97,7 +98,7 @@
     });
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
-      modal.addEventListener('show.bs.modal', () => {
+      modal.addEventListener('shown.bs.modal', () => {
         document.body.style.overflow = 'hidden';
       });
       modal.addEventListener('hidden.bs.modal', () => {
@@ -137,7 +138,8 @@
         }, 2000);
       } catch (err) {
         if (typeof toastr !== 'undefined') toastr.error('فشل النسخ إلى الحافظة');
-        else alert('فشل النسخ إلى الحافظة');
+        else if (window.AzadUX) AzadUX.notify('warning', 'تعذّر النسخ إلى الحافظة. انسخ يدوياً.');
+        else alert('تعذّر النسخ إلى الحافظة.');
       }
     });
   }
@@ -182,13 +184,7 @@
   }
 
   function setupGlobalErrorHandler() {
-    window.addEventListener('unhandledrejection', (event) => {
-      if (event.reason && event.reason.message) {
-        const message = event.reason.message;
-      if (message.includes('fetch') || message.includes('network')) {
-        }
-      }
-    });
+    /* معالجة الأخطاء العامة في ux-messages.js (AzadUX) */
   }
 
   function enhanceNumberInputs() {
@@ -206,6 +202,9 @@
   }
 
   function enhanceDateInputs() {
+    if (document.body.classList.contains('erp-unified')) {
+      return;
+    }
     const dateInputs = document.querySelectorAll('input[type="date"], input[type="datetime-local"]');
     dateInputs.forEach(input => {
       if (!input.classList.contains('has-icon')) {
@@ -340,8 +339,32 @@
     });
   }
 
+  function initBootstrapCompatBridge() {
+    document.addEventListener('click', function (e) {
+      const dismissBtn = e.target.closest('[data-bs-dismiss="alert"], [data-dismiss="alert"]');
+      if (!dismissBtn) return;
+      const alertEl = dismissBtn.closest('.alert');
+      if (alertEl) {
+        e.preventDefault();
+        alertEl.remove();
+      }
+    });
+
+    document.addEventListener('click', function (e) {
+      const tabTrigger = e.target.closest('[data-bs-toggle="tab"], [data-bs-toggle="pill"]');
+      if (!tabTrigger || !window.jQuery) return;
+      const href = tabTrigger.getAttribute('href') || tabTrigger.getAttribute('data-bs-target');
+      if (!href || href.charAt(0) !== '#') return;
+      try {
+        e.preventDefault();
+        window.jQuery(href).tab('show');
+      } catch (_) {}
+    });
+  }
+
   function initAllEnhancements() {
     try {
+      initBootstrapCompatBridge();
       enhanceTableSearch();
       wrapPlainTables();
       enhanceTableScrolling();

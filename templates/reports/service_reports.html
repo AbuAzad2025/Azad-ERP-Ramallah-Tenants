@@ -12,7 +12,7 @@
   
 
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
+    <div class="card-header erp-card-header-row erp-theme-header--primary">
       {{ FIELD_LABELS.get("date_range", "نطاق التاريخ") }}
     </div>
     <div class="card-body">
@@ -134,7 +134,7 @@
       {% else %}
       <div class="table-responsive">
         <table id="report-table" class="table table-striped table-bordered align-middle">
-          <thead class="text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+          <thead class="table-header-primary text-white">
             <tr>
               <th>{{ FIELD_LABELS.get("number", "رقم") }}</th>
               <th>{{ FIELD_LABELS.get("status", "الحالة") }}</th>

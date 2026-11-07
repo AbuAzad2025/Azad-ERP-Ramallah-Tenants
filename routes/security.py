@@ -203,6 +203,61 @@ def _get_table_columns_safe(table_name: str) -> list[str]:
         return []
 
 
+def _wants_json_response() -> bool:
+    accept = request.accept_mimetypes.best_match(['application/json', 'text/html'])
+    return (
+        accept == 'application/json'
+        or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    )
+
+
+def _get_fast_table_counts(tables: list[str]) -> dict[str, int]:
+    """تقدير سريع لعدد الصفوف دون COUNT(*) على كل جدول."""
+    counts = {t: 0 for t in tables}
+    try:
+        dialect = (getattr(db.engine.dialect, 'name', '') or '').lower()
+        if dialect == 'postgresql':
+            rows = db.session.execute(text(
+                "SELECT relname, COALESCE(n_live_tup, 0)::bigint FROM pg_stat_user_tables"
+            )).fetchall()
+            stat_map = {r[0]: int(r[1] or 0) for r in rows}
+            for t in tables:
+                counts[t] = stat_map.get(t, 0)
+            return counts
+    except Exception:
+        current_app.logger.warning('fast table counts failed, using per-table COUNT', exc_info=True)
+    for table in tables:
+        try:
+            if not _is_safe_identifier(table):
+                continue
+            result = db.session.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
+            counts[table] = int(result or 0)
+        except Exception:
+            counts[table] = 0
+    return counts
+
+
+def _get_all_foreign_key_relations() -> list[dict]:
+    relations = []
+    try:
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        for table in inspector.get_table_names():
+            if not _is_safe_identifier(table):
+                continue
+            for fk in inspector.get_foreign_keys(table) or []:
+                relations.append({
+                    'name': fk.get('name') or '',
+                    'from_table': table,
+                    'from_columns': fk.get('constrained_columns') or [],
+                    'to_table': fk.get('referred_table') or '',
+                    'to_columns': fk.get('referred_columns') or [],
+                })
+    except Exception as e:
+        current_app.logger.error('Error loading FK relations: %s', e)
+    return relations
+
+
 def _assert_valid_table(table_name: str):
     tables = _get_all_tables()
     if not _is_safe_identifier(table_name) or table_name not in tables:
@@ -254,7 +309,37 @@ def saas_manager():
     from models import SaaSPlan, SaaSSubscription, SaaSInvoice
     from sqlalchemy import func
     from decimal import Decimal
-    
+    import csv
+    import io
+    from flask import Response
+
+    export = request.args.get('export', '').strip()
+    if export == 'invoices':
+        rows = SaaSInvoice.query.order_by(SaaSInvoice.created_at.desc()).all()
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow([
+            'invoice_number', 'subscription_id', 'amount', 'currency',
+            'status', 'due_date', 'paid_at', 'created_at',
+        ])
+        for inv in rows:
+            writer.writerow([
+                inv.invoice_number,
+                inv.subscription_id,
+                float(inv.amount or 0),
+                inv.currency or '',
+                inv.status or '',
+                inv.due_date.strftime('%Y-%m-%d') if inv.due_date else '',
+                inv.paid_at.strftime('%Y-%m-%d') if inv.paid_at else '',
+                inv.created_at.strftime('%Y-%m-%d %H:%M:%S') if inv.created_at else '',
+            ])
+        filename = f'saas_invoices_{datetime.now().strftime("%Y%m%d")}.csv'
+        return Response(
+            '\ufeff' + output.getvalue(),
+            mimetype='text/csv; charset=utf-8',
+            headers={'Content-Disposition': f'attachment; filename={filename}'},
+        )
+
     try:
         plans = SaaSPlan.query.order_by(SaaSPlan.sort_order, SaaSPlan.price_monthly).all()
     except Exception:
@@ -779,95 +864,7 @@ def index():
     
     مع Caching للإحصائيات (5 دقائق)
     """
-    from utils.owner_hubs import PLATFORM_HUB_SECTIONS, PLATFORM_OWNER_TAGLINE
-    from utils.tenant_permissions import filter_platform_hub_sections
-
-    hub_sections = filter_platform_hub_sections(PLATFORM_HUB_SECTIONS, current_user)
-    from utils.tenant_owner_dashboard import get_platform_saas_snapshot
-
-    return render_template(
-        'security/index.html',
-        stats=get_cached_security_stats(),
-        recent=get_recent_suspicious_activities(),
-        hub_sections=hub_sections,
-        hub_tagline=PLATFORM_OWNER_TAGLINE,
-        saas_snapshot=get_platform_saas_snapshot(),
-        control_url=url_for('security.control_center'),
-    )
-
-
-@security_bp.route('/control-center', methods=['GET', 'POST'], endpoint='control_center')
-@permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
-def control_center():
-    """مركز تحكم مالك المنصة — SaaS، صيانة، تينانتات، كاش."""
-    from utils.owner_hubs import PLATFORM_OWNER_TAGLINE
-    from utils.owner_control_service import (
-        clear_application_cache,
-        clear_rbac_caches,
-        get_maintenance_mode,
-        get_platform_tenants_control_rows,
-        run_integration_audit_report,
-        set_maintenance_mode,
-        toggle_platform_tenant_active,
-    )
-
-    control_result = None
-    last_action = None
-
-    if request.method == 'POST':
-        last_action = (request.form.get('control_action') or '').strip()
-        try:
-            if last_action == 'maintenance_on':
-                control_result = set_maintenance_mode(True)
-                flash('تم تفعيل وضع الصيانة.', 'warning')
-            elif last_action == 'maintenance_off':
-                control_result = set_maintenance_mode(False)
-                flash('تم إيقاف وضع الصيانة.', 'success')
-            elif last_action == 'clear_cache':
-                control_result = clear_application_cache()
-                flash('تم مسح الكاش.', 'success')
-            elif last_action == 'clear_rbac':
-                control_result = clear_rbac_caches()
-                flash('تم مسح كاش الصلاحيات.', 'success')
-            elif last_action == 'integration_audit':
-                control_result = run_integration_audit_report()
-            elif last_action == 'tenant_toggle':
-                slug = (request.form.get('tenant_slug') or '').strip()
-                control_result = toggle_platform_tenant_active(slug)
-                if control_result.get('ok'):
-                    st = 'مفعّل' if control_result.get('is_active') else 'موقوف'
-                    flash(f'التينانت {slug}: {st}', 'success')
-                else:
-                    flash(control_result.get('error', 'فشل'), 'danger')
-            elif last_action == 'kill_sessions':
-                _kill_all_user_sessions()
-                control_result = {'ok': True}
-                flash('تم إنهاء الجلسات.', 'warning')
-            else:
-                control_result = {'ok': False, 'error': 'إجراء غير معروف'}
-                flash(control_result['error'], 'danger')
-
-            if control_result and last_action not in ('maintenance_on', 'maintenance_off', 'clear_cache', 'clear_rbac', 'tenant_toggle', 'kill_sessions'):
-                if control_result.get('ok'):
-                    flash('اكتمل الفحص — راجع التفاصيل.', 'info')
-                else:
-                    flash('يوجد ملاحظات حرجة.', 'warning')
-
-            _log_owner_action(f'platform_control.{last_action}', None, control_result)
-        except Exception:
-            db.session.rollback()
-            current_app.logger.exception('platform control failed: %s', last_action)
-            flash('فشل تنفيذ الإجراء.', 'danger')
-
-    return render_template(
-        'security/control_center.html',
-        hub_tagline=PLATFORM_OWNER_TAGLINE,
-        maintenance_mode=get_maintenance_mode(),
-        tenants=get_platform_tenants_control_rows(),
-        control_result=control_result,
-        last_action=last_action,
-        stats=get_cached_security_stats(),
-    )
+    return render_template('security/index.html', stats=get_cached_security_stats(), recent=get_recent_auth_audit_snapshot())
 
 
 @security_bp.route('/index-old')
@@ -1192,31 +1189,11 @@ def security_center():
     - التنبيهات (Notifications)
     - النشاط (Activity Timeline)
     """
+    allowed_tabs = {'monitoring', 'firewall', 'notifications', 'activity'}
     tab = request.args.get('tab', 'monitoring')
-    
-    try:
-        from models import User
-        active_users = User.query.filter(User.last_seen >= datetime.now(timezone.utc) - timedelta(minutes=30)).count()
-    except Exception:
-        active_users = 0
-    
-    try:
-        failed_login_count = AuditLog.query.filter(
-            AuditLog.action.like('%failed%'),
-            AuditLog.created_at >= datetime.now(timezone.utc) - timedelta(hours=24)
-        ).count()
-    except Exception:
-        failed_login_count = 0
-    
-    security_stats = {
-        'online_users': active_users,
-        'blocked_ips': BlockedIP.query.count() if 'BlockedIP' in dir() else 0,
-        'failed_logins': failed_login_count,
-        'active_sessions': User.query.filter(User.last_seen.isnot(None)).count() if 'User' in dir() else 1,
-        'threats_detected': 0,
-        'patterns_found': 0,
-        'notifications': 0
-    }
+    if tab not in allowed_tabs:
+        flash('⚠️ تبويب غير صالح، تم تحويلك للمراقبة الفورية.', 'warning')
+        return redirect(url_for('security.security_center', tab='monitoring'))
     
     recent_activities = []
     blocked_ips = []
@@ -1227,8 +1204,6 @@ def security_center():
     
     if tab == 'firewall':
         blocked_ips = BlockedIP.query.order_by(BlockedIP.created_at.desc()).limit(50).all() if 'BlockedIP' in dir() else []
-    elif tab == 'patterns':
-        patterns = _detect_suspicious_patterns()
     elif tab == 'activity':
         recent_audit_logs = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(20).all()
     elif tab == 'notifications':
@@ -1249,16 +1224,24 @@ def security_center():
         }
 
     stats = get_cached_security_stats()
+
+    notifications_count = 0
+    try:
+        from models import NotificationLog
+        notifications_count = NotificationLog.query.filter(
+            NotificationLog.created_at >= datetime.now(timezone.utc) - timedelta(hours=24)
+        ).count()
+    except Exception:
+        pass
     
-    # Map stats to security_stats expected format
     security_stats = {
         'online_users': stats.get('online_users', 0),
         'blocked_ips': stats.get('blocked_ips', 0),
         'failed_logins': stats.get('failed_logins_24h', 0),
         'active_sessions': stats.get('active_sessions', 0),
-        'threats_detected': 0,
-        'patterns_found': 0,
-        'notifications': 0
+        'threats_detected': stats.get('failed_logins_24h', 0),
+        'patterns_found': len(patterns),
+        'notifications': notifications_count,
     }
     
     return render_template('security/security_center.html',
@@ -1324,7 +1307,14 @@ def database_manager():
         - Full audit trail
         - CSRF protection
     """
+    allowed_tabs = {
+        'browse', 'edit', 'schema', 'indexes', 'logs', 'sql', 'python',
+        'maintenance', 'restore', 'tools', 'archive',
+    }
     tab = request.args.get('tab', 'browse')
+    if tab not in allowed_tabs:
+        flash('⚠️ تبويب غير صالح، تم تحويلك لتصفح الجداول.', 'warning')
+        return redirect(url_for('security.database_manager', tab='browse'))
     selected_table = request.args.get('table')
     log_type = request.args.get('log_type', 'audit')
 
@@ -1337,17 +1327,8 @@ def database_manager():
     
     # ==== البيانات الأساسية (للجميع) ====
     tables = _get_all_tables()
-    table_counts = {}
-    for table in tables:
-        try:
-            if not _is_safe_identifier(table):
-                table_counts[table] = 0
-                continue
-            count_query = text(f"SELECT COUNT(*) as count FROM {table}")
-            result = db.session.execute(count_query).fetchone()
-            table_counts[table] = result[0] if result else 0
-        except Exception:
-            table_counts[table] = 0
+    table_counts = _get_fast_table_counts(tables) if tab == 'browse' else {}
+    db_relations = _get_all_foreign_key_relations() if tab == 'schema' else []
     
     # ==== بيانات خاصة بكل تبويب ====
     data = []
@@ -1373,13 +1354,10 @@ def database_manager():
     if tab in ['browse', 'edit', 'schema'] and selected_table:
         data, columns = _browse_table(selected_table, limit=1000 if tab == 'edit' else 100)
         table_info = _get_table_info(selected_table)
-        
-        for col_info in table_info:
-            if col_info.get('pk', 0) == 1:
-                primary_key_column = col_info.get('name', 'id')
-                break
-        if not primary_key_column or primary_key_column == 'id':
-            primary_key_column = columns[0] if columns else 'id'
+        primary_key_column = (
+            _get_primary_key_column(selected_table)
+            or (columns[0] if columns else 'id')
+        )
     
     # === 2) Indexes ===
     if tab == 'indexes':
@@ -1655,6 +1633,7 @@ def database_manager():
                           # عام
                           tables=tables,
                           table_counts=table_counts,
+                          db_relations=db_relations,
                           active_tab=tab,
                           selected_table=selected_table,
                           # Browse/Edit/Schema
@@ -1746,6 +1725,9 @@ def users_center():
             return redirect(url_for('security.users_center', tab='users'))
 
     tab = request.args.get('tab', 'users')
+    if tab not in ('users', 'permissions'):
+        flash('⚠️ تبويب غير صالح، تم تحويلك لقسم المستخدمين.', 'warning')
+        return redirect(url_for('security.users_center', tab='users'))
     
     users_data = {
         'total': User.query.count(),
@@ -1793,7 +1775,8 @@ def settings_center():
     - الوضع الليلي
     - الفروع والمواقع
     """
-    from models import SystemSettings, Branch
+    from models import SystemSettings, Branch, Company
+    from services.user_branch_service import count_unlinked_operational_users
     from constants import DEFAULT_CURRENCY
     
     allowed_tabs = {'system', 'constants', 'config', 'theme', 'darkmode', 'branches'}
@@ -1819,44 +1802,83 @@ def settings_center():
                 utils.flash_warning("هذا الإعداد غير مسموح بتعديله مباشرة من هذه الشاشة.")
                 
         elif action == 'update_branding':
-            flash('تم نقل الهوية إلى صفحة موحّدة.', 'info')
-            return redirect(url_for('security.owner_branding'))
+            # 1. System Identity (Appearance Panel / System Branding)
+            system_name = (request.form.get('system_name') or "").strip()
+            company_name = (request.form.get('company_name') or "").strip()
+            login_title = (request.form.get('login_title') or "").strip()
+            login_subtitle = (request.form.get('login_subtitle') or "").strip()
+            footer_text = (request.form.get('footer_text') or "").strip()
 
-        # 2. Handle tab-based bulk updates (from system_settings.html)
-        elif active_tab == 'general':
-            SystemSettings.set_setting('maintenance_mode', request.form.get('maintenance_mode') == 'on', data_type='boolean')
-            SystemSettings.set_setting('registration_enabled', request.form.get('registration_enabled') == 'on', data_type='boolean')
-            SystemSettings.set_setting('api_enabled', request.form.get('api_enabled') == 'on', data_type='boolean')
-            utils.flash_success("تم حفظ الإعدادات العامة بنجاح")
-            
-        elif active_tab == 'advanced':
-            SystemSettings.set_setting('SESSION_TIMEOUT', request.form.get('session_timeout'), data_type='integer')
-            SystemSettings.set_setting('MAX_LOGIN_ATTEMPTS', request.form.get('max_login_attempts'), data_type='integer')
-            SystemSettings.set_setting('PASSWORD_MIN_LENGTH', request.form.get('password_min_length'), data_type='integer')
-            
-            SystemSettings.set_setting('AUTO_BACKUP_ENABLED', request.form.get('auto_backup_enabled') == 'on', data_type='boolean')
-            SystemSettings.set_setting('BACKUP_INTERVAL_HOURS', request.form.get('backup_interval_hours'), data_type='integer')
-            
-            SystemSettings.set_setting('ENABLE_EMAIL_NOTIFICATIONS', request.form.get('enable_email_notifications') == 'on', data_type='boolean')
-            SystemSettings.set_setting('ENABLE_SMS_NOTIFICATIONS', request.form.get('enable_sms_notifications') == 'on', data_type='boolean')
-            utils.flash_success("تم حفظ التكوينات المتقدمة بنجاح")
-            
-        elif active_tab == 'company':
-            SystemSettings.set_setting('COMPANY_ADDRESS', request.form.get('company_address'))
-            SystemSettings.set_setting('COMPANY_PHONE', request.form.get('company_phone'))
-            SystemSettings.set_setting('COMPANY_EMAIL', request.form.get('company_email'))
-            SystemSettings.set_setting('TAX_NUMBER', request.form.get('tax_number'))
-            SystemSettings.set_setting('CURRENCY_SYMBOL', request.form.get('currency_symbol'))
-            SystemSettings.set_setting('TIMEZONE', request.form.get('timezone'))
-            utils.flash_success("تم حفظ بيانات الشركة بنجاح")
+            if system_name:
+                SystemSettings.set_setting('system_name', system_name)
+            if company_name:
+                SystemSettings.set_setting('company_name', company_name)
+            if login_title:
+                SystemSettings.set_setting('login_title', login_title)
+            if login_subtitle:
+                SystemSettings.set_setting('login_subtitle', login_subtitle)
+            if footer_text:
+                SystemSettings.set_setting('footer_text', footer_text)
+
+            # 2. Theme & Colors (safe keys only)
+            primary_color = (request.form.get('primary_color') or "").strip()
+            secondary_color = (request.form.get('secondary_color') or "").strip()
+            sidebar_bg = (request.form.get('sidebar_bg') or "").strip()
+            sidebar_text = (request.form.get('sidebar_text') or "").strip()
+
+            if primary_color:
+                SystemSettings.set_setting('primary_color', primary_color)
+            if secondary_color:
+                SystemSettings.set_setting('secondary_color', secondary_color)
+            if sidebar_bg:
+                SystemSettings.set_setting('sidebar_bg', sidebar_bg)
+            if sidebar_text:
+                SystemSettings.set_setting('sidebar_text', sidebar_text)
+
+            _apply_appearance_settings(request.form)
+            flash('✅ تم تحديث مظهر وهوية النظام بنجاح', 'success')
+
+        elif action == 'update_printing':
+            _apply_printing_settings(request.form)
+            flash('✅ تم حفظ إعدادات الطباعة والأجهزة بنجاح', 'success')
+
+        elif action == 'repair_user_branch_links':
+            from services.user_branch_service import repair_missing_user_branch_links
+
+            try:
+                report = repair_missing_user_branch_links()
+                db.session.commit()
+                fixed = report.get('fixed') or []
+                errors = report.get('errors') or []
+                if fixed:
+                    flash('✅ تم إصلاح الربط: ' + '؛ '.join(fixed[:8]) + ('…' if len(fixed) > 8 else ''), 'success')
+                if errors:
+                    flash('⚠️ لم يُصلَح: ' + '؛ '.join(errors[:5]), 'warning')
+                if not fixed and not errors:
+                    flash('✔️ كل المستخدمين التشغيليين مربوطين بفروع — لا حاجة لإصلاح.', 'info')
+                remaining = int(report.get('unlinked_count') or 0)
+                if remaining:
+                    flash(f'⚠️ ما زال {remaining} مستخدم(ين) بدون فرع — عيّنهم يدوياً من المستخدمون.', 'warning')
+            except Exception:
+                db.session.rollback()
+                current_app.logger.exception('repair_user_branch_links failed')
+                flash('حدث خطأ أثناء إصلاح الربط', 'danger')
+            return redirect(url_for('security.settings_center', tab='branches'))
         
         try:
             db.session.commit()
         except Exception:
             db.session.rollback()
             current_app.logger.exception('commit error')
-            utils.flash_error(utils.MSG_SAVE_FAILED)
-        return redirect(url_for('security.settings_center', tab=tab))
+            flash('حدث خطأ أثناء الحفظ', 'danger')
+        redirect_tab = tab
+        if active_tab in allowed_tabs:
+            redirect_tab = active_tab
+        elif action == 'update_branding':
+            redirect_tab = 'branding'
+        elif action == 'update_printing':
+            redirect_tab = 'config'
+        return redirect(url_for('security.settings_center', tab=redirect_tab))
     
     settings_list = SystemSettings.query.order_by(SystemSettings.key).limit(50).all()
     
@@ -1902,9 +1924,15 @@ def settings_center():
     branches_data = {
         'total': Branch.query.count(),
         'active': Branch.query.filter_by(is_active=True).count(),
+        'companies': Company.query.filter_by(is_active=True).count(),
+        'unlinked_users': count_unlinked_operational_users(),
     }
     
-    branches_list = Branch.query.all()
+    branches_list = (
+        Branch.query.options(db.joinedload(Branch.company))
+        .order_by(Branch.company_id, Branch.name)
+        .all()
+    )
     
     constants_data = {
         'default_currency': DEFAULT_CURRENCY,
@@ -2228,8 +2256,172 @@ def theme_editor():
 @security_bp.route('/logo-manager', methods=['GET', 'POST'])
 @permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
 def logo_manager():
-    """أُعيد توجيهه — الهوية الموحّدة لمالك المنصة."""
-    return redirect(url_for('security.owner_branding'))
+    """مدير الشعارات - رفع وتعديل الشعارات"""
+    import os
+    import tempfile
+    import time
+    from werkzeug.utils import secure_filename
+    from models import Company, SystemSettings
+    from utils.branding_assets import (
+        LOGO_UPLOAD_MAP,
+        clear_tenant_logo_setting,
+        default_company_code,
+        persist_tenant_logo_settings,
+        resolve_company_logo_assets,
+        save_tenant_logo_upload,
+        tenant_rel_path,
+        tenant_slug_for_code,
+    )
+    from utils.tenant_ui import build_tenant_context
+
+    def _redirect(company: str):
+        return redirect(url_for('security.logo_manager', company=company))
+
+    def _delete_setting(key: str):
+        SystemSettings.query.filter_by(key=key).delete(synchronize_session=False)
+
+    companies = (
+        Company.query.filter(Company.code.isnot(None), Company.code != '')
+        .order_by(Company.name)
+        .all()
+    )
+    default_code = default_company_code()
+    company_code = ''
+
+    requested = (request.args.get('company') or request.form.get('company_code') or '').strip().upper()
+    if requested:
+        match = next((c for c in companies if (c.code or '').strip().upper() == requested), None)
+        if match:
+            company_code = match.code.strip().upper()
+
+    if not company_code:
+        try:
+            tctx = build_tenant_context()
+            if tctx.get('tenant_company_id'):
+                co = Company.query.get(int(tctx['tenant_company_id']))
+                if co and co.code:
+                    company_code = co.code.strip().upper()
+        except Exception:
+            pass
+
+    if not company_code:
+        company_code = default_code or (
+            (companies[0].code or '').strip().upper() if companies else 'PHE'
+        )
+
+    slug = tenant_slug_for_code(company_code) or 'phe'
+    selected_company = next(
+        (c for c in companies if (c.code or '').strip().upper() == company_code),
+        None,
+    )
+
+    if request.method == 'POST':
+        post_code = (request.form.get('company_code') or company_code).strip().upper()
+        if post_code and post_code != company_code:
+            match = next((c for c in companies if (c.code or '').strip().upper() == post_code), None)
+            if match:
+                company_code = match.code.strip().upper()
+                slug = tenant_slug_for_code(company_code) or slug
+
+        logo_type = request.form.get('logo_type', 'main')
+        action = (request.form.get('action') or 'upload').strip().lower()
+
+        if action == 'reset' and logo_type in LOGO_UPLOAD_MAP:
+            try:
+                asset_key = LOGO_UPLOAD_MAP[logo_type][0]
+                clear_tenant_logo_setting(
+                    company_code,
+                    asset_key,
+                    delete_setting=_delete_setting,
+                    default_code=default_code,
+                )
+                SystemSettings.set_setting('assets_version', int(time.time()), data_type='number', commit=False)
+                db.session.commit()
+                flash('✅ تم إعادة تعيين إعداد الشعار — المعاينة تعتمد على الملف في المجلد', 'success')
+            except Exception:
+                db.session.rollback()
+                current_app.logger.exception('logo_manager reset failed')
+                flash('حدث خطأ أثناء إعادة التعيين', 'danger')
+            return _redirect(company_code)
+
+        if 'logo_file' in request.files:
+            file = request.files['logo_file']
+            if file and file.filename:
+                filename = secure_filename(file.filename)
+                allowed_exts = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
+                ext = os.path.splitext(filename)[1].lower()
+                if ext not in allowed_exts:
+                    flash('⚠️ نوع ملف غير مدعوم (استخدم: png, jpg, jpeg, gif, webp)', 'warning')
+                    return _redirect(company_code)
+                if logo_type not in LOGO_UPLOAD_MAP:
+                    flash('⚠️ نوع شعار غير معروف', 'warning')
+                    return _redirect(company_code)
+
+                try:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+                        file.save(tmp.name)
+                        tmp_path = tmp.name
+                    result = save_tenant_logo_upload(
+                        current_app.root_path,
+                        company_code,
+                        logo_type,
+                        tmp_path,
+                    )
+                    os.unlink(tmp_path)
+                    if not result:
+                        flash('⚠️ تعذّر حفظ الشعار — تحقق من رمز الشركة', 'warning')
+                        return _redirect(company_code)
+
+                    rel_path, _setting_key = result
+                    asset_key = LOGO_UPLOAD_MAP[logo_type][0]
+                    persist_tenant_logo_settings(
+                        company_code,
+                        rel_path,
+                        asset_key,
+                        set_setting=SystemSettings.set_setting,
+                        default_code=default_code,
+                    )
+                    if logo_type == 'main' and slug:
+                        for asset_key in ('white', 'emblem', 'favicon'):
+                            derived_path = f'static/{tenant_rel_path(slug, asset_key)}'
+                            abs_derived = os.path.join(
+                                current_app.root_path,
+                                derived_path.replace('/', os.sep),
+                            )
+                            if os.path.isfile(abs_derived):
+                                persist_tenant_logo_settings(
+                                    company_code,
+                                    derived_path,
+                                    asset_key,
+                                    set_setting=SystemSettings.set_setting,
+                                    default_code=default_code,
+                                )
+                    SystemSettings.set_setting('assets_version', int(time.time()), data_type='number', commit=False)
+                    db.session.commit()
+                    flash(f'✅ تم رفع الشعار بنجاح ({company_code})', 'success')
+                except Exception:
+                    db.session.rollback()
+                    current_app.logger.exception('logo_manager upload failed')
+                    flash('حدث خطأ داخلي', 'danger')
+            return _redirect(company_code)
+
+    assets_version = SystemSettings.get_setting('assets_version', int(time.time()))
+    logos = resolve_company_logo_assets(
+        current_app.root_path,
+        company_code,
+        get_setting=SystemSettings.get_setting,
+    )
+
+    return render_template(
+        'security/logo_manager.html',
+        logos=logos,
+        company_code=company_code,
+        company_name=(selected_company.name if selected_company else company_code),
+        branding_slug=slug,
+        companies=companies,
+        default_company_code=default_code,
+        assets_version=assets_version,
+    )
 
 
 @security_bp.route('/advanced-analytics')
@@ -2359,9 +2551,8 @@ def permissions_manager():
 @security_bp.route('/email-manager', methods=['GET', 'POST'])
 @permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
 def email_manager():
-    """إدارة البريد - SMTP + قوالب (Deprecated -> Integrations)"""
-    utils.flash_info('تم نقل إعدادات البريد إلى صفحة التكاملات الموحدة.', 'info')
-    return redirect(url_for('security.integrations'))
+    """إدارة البريد — أُعيد توجيهه إلى مركز الأدوات (تبويب البريد)."""
+    return redirect(url_for('security.tools_center', tab='email'))
 
 
 @security_bp.route('/owner-branding', methods=['GET', 'POST'], endpoint='owner_branding')
@@ -2541,7 +2732,7 @@ def integrations():
                 _save_setting('customer_display_port', request.form.get('customer_display_port', 'COM2'))
                 _save_setting('customer_display_lines', request.form.get('customer_display_lines', '2'))
                 _save_setting('customer_display_chars', request.form.get('customer_display_chars', '20'))
-                utils.flash_success("تم حفظ إعدادات شاشة الزبون")
+                flash('✅ تم حفظ إعدادات شاشة الزبون', 'success')
             
             elif action == 'save_fingerprint_scanner':
                 _save_setting('fingerprint_scanner_enabled', request.form.get('fingerprint_scanner_enabled') == 'on')
@@ -2868,7 +3059,7 @@ def get_cached_security_stats():
         # 🔄 إحصائيات ديناميكية
         'total_services': total_tables,
         'system_version': system_version,
-        'total_modules': f'{total_tables}+',
+        'total_modules': total_tables,
         'total_apis': total_apis,
         'total_indexes': total_indexes,
         'total_relations': total_relations
@@ -2882,23 +3073,58 @@ def inject_security_stats():
     }
 
 
-@cache.memoize(timeout=300)  # 5 دقائق
-def get_recent_suspicious_activities():
-    """
-    📋 جلب آخر الأنشطة المشبوهة مع Caching
-    """
-    from datetime import datetime, timedelta, timezone
-    from models import AuthAudit, AuthEvent
-    
-    day_ago = datetime.now(timezone.utc) - timedelta(hours=24)
-    
+@cache.memoize(timeout=120)
+def get_recent_auth_audit_snapshot():
+    """آخر أحداث auth_audit كـ dict (آمن للكاش — بدون lazy load)."""
     try:
-        return AuthAudit.query.filter(
-            AuthAudit.event == AuthEvent.LOGIN_FAIL.value,
-            AuthAudit.created_at >= day_ago
-        ).order_by(AuthAudit.created_at.desc()).limit(10).all()
+        from models import AuthAudit
+        from sqlalchemy.orm import joinedload
+
+        rows = (
+            AuthAudit.query.options(joinedload(AuthAudit.user))
+            .order_by(AuthAudit.created_at.desc())
+            .limit(10)
+            .all()
+        )
+        return [
+            {
+                'id': row.id,
+                'event': row.event,
+                'success': bool(row.success),
+                'ip': row.ip or '',
+                'username': (row.user.username if row.user else None),
+                'created_at_display': (
+                    row.created_at.strftime('%Y-%m-%d %H:%M') if row.created_at else ''
+                ),
+            }
+            for row in rows
+        ]
     except Exception:
+        current_app.logger.debug('get_recent_auth_audit_snapshot failed', exc_info=True)
         return []
+
+
+def get_recent_audit_events():
+    """Alias for backward compatibility."""
+    return get_recent_auth_audit_snapshot()
+
+
+AUTH_EVENT_LABELS = {
+    'LOGIN_SUCCESS': 'دخول ناجح',
+    'LOGIN_FAIL': 'فشل دخول',
+    'PASSWORD_SET': 'تعيين كلمة مرور',
+    'PASSWORD_CHANGE': 'تغيير كلمة مرور',
+    'USER_ACTIVATE': 'تفعيل مستخدم',
+    'USER_DEACTIVATE': 'تعطيل مستخدم',
+    'ROLE_CHANGE': 'تغيير دور',
+    'PERM_GRANT': 'منح صلاحية',
+    'PERM_REVOKE': 'سحب صلاحية',
+}
+
+
+@security_bp.app_context_processor
+def inject_auth_event_labels():
+    return {'auth_event_labels': AUTH_EVENT_LABELS}
 
 
 def _get_setting(key, default=None):
@@ -2916,6 +3142,88 @@ def _save_setting(key, value):
     """حفظ إعداد في SystemSettings"""
     # Use the model method for consistency and cache clearing
     SystemSettings.set_setting(key, value, commit=False)
+
+
+def _load_appearance_settings():
+    return {
+        'primary_color': _get_setting('primary_color', '#4e73df'),
+        'sidebar_bg': _get_setting('sidebar_bg', '#224abe'),
+        'success_color': _get_setting('success_color', '#1cc88a'),
+        'danger_color': _get_setting('danger_color', '#e74a3b'),
+        'font_family': _get_setting('font_family', "'Tajawal', sans-serif"),
+        'default_language': _get_setting('default_language', 'ar'),
+    }
+
+
+def _apply_appearance_settings(form):
+    color_fields = (
+        'primary_color', 'secondary_color', 'sidebar_bg', 'sidebar_text',
+        'success_color', 'danger_color',
+    )
+    for field in color_fields:
+        value = (form.get(field) or '').strip()
+        if value:
+            SystemSettings.set_setting(field, value)
+    font_family = (form.get('font_family') or '').strip()
+    if font_family:
+        SystemSettings.set_setting('font_family', font_family)
+    default_language = (form.get('default_language') or '').strip()
+    if default_language in ('ar', 'en'):
+        SystemSettings.set_setting('default_language', default_language)
+    for text_key in ('system_name', 'company_name', 'login_title', 'login_subtitle', 'footer_text'):
+        value = (form.get(text_key) or '').strip()
+        if value:
+            SystemSettings.set_setting(text_key, value)
+
+
+def _printing_bool(key, default=False):
+    value = _get_setting(key, default)
+    if isinstance(value, bool):
+        return value
+    return str(value or '').lower() in ('true', '1', 'on', 'yes')
+
+
+def _load_printing_settings():
+    try:
+        logo_height = int(_get_setting('invoice_logo_height', 120) or 120)
+    except (TypeError, ValueError):
+        logo_height = 120
+    return {
+        'invoice_logo_visibility': _get_setting('invoice_logo_visibility', 'show'),
+        'invoice_logo_height': logo_height,
+        'invoice_show_qr': _printing_bool('invoice_show_qr', True),
+        'invoice_show_barcode': _printing_bool('invoice_show_barcode', False),
+        'invoice_footer_text': _get_setting('invoice_footer_text', '') or '',
+        'thermal_paper_size': _get_setting('thermal_paper_size', '80mm'),
+        'thermal_font_size': _get_setting('thermal_font_size', 'normal'),
+        'thermal_auto_print': _printing_bool('thermal_auto_print', False),
+        'thermal_show_sku': _printing_bool('thermal_show_sku', False),
+        'barcode_label_size': _get_setting('barcode_label_size', '50x25'),
+        'barcode_show_price': _printing_bool('barcode_show_price', True),
+        'barcode_show_name': _printing_bool('barcode_show_name', True),
+    }
+
+
+def _apply_printing_settings(form):
+    visibility = (form.get('invoice_logo_visibility') or 'show').strip()
+    if visibility in ('show', 'hide'):
+        SystemSettings.set_setting('invoice_logo_visibility', visibility)
+    try:
+        height = int(form.get('invoice_logo_height') or 120)
+        SystemSettings.set_setting('invoice_logo_height', str(max(50, min(300, height))))
+    except (TypeError, ValueError):
+        pass
+    for key in (
+        'invoice_show_qr', 'invoice_show_barcode', 'thermal_auto_print',
+        'thermal_show_sku', 'barcode_show_price', 'barcode_show_name',
+    ):
+        SystemSettings.set_setting(key, form.get(key) == 'true', data_type='boolean')
+    if form.get('invoice_footer_text') is not None:
+        SystemSettings.set_setting('invoice_footer_text', form.get('invoice_footer_text', ''))
+    for key in ('thermal_paper_size', 'thermal_font_size', 'barcode_label_size'):
+        value = (form.get(key) or '').strip()
+        if value:
+            SystemSettings.set_setting(key, value)
 
 
 def _test_stripe():
@@ -3790,32 +4098,21 @@ def user_control():
     user_ids = [u.id for u in users]
     
     if user_ids:
-        sales_counts = db.session.query(
-            Sale.seller_id,
-            func.count(Sale.id).label('count'),
-            func.sum(Sale.total_amount).label('total')
-        ).filter(
-            Sale.seller_id.in_(user_ids),
-            Sale.status == 'CONFIRMED'
-        ).group_by(Sale.seller_id).all()
-        
         sales_dict = {uid: {'count': 0, 'total': Decimal('0.00')} for uid in user_ids}
-        for seller_id, count, total in sales_counts:
-            sales_dict[seller_id] = {'count': count, 'total': Decimal(str(total or 0))}
-        
-        all_user_sales = db.session.query(Sale).filter(
+        confirmed_sales = db.session.query(Sale).filter(
             Sale.seller_id.in_(user_ids),
             Sale.status == 'CONFIRMED'
         ).all()
-        
-        for sale in all_user_sales:
+        for sale in confirmed_sales:
+            uid = sale.seller_id
+            sales_dict[uid]['count'] += 1
             amt = Decimal(str(sale.total_amount or 0))
             if sale.currency != "ILS":
                 try:
                     amt = convert_amount(amt, sale.currency, "ILS", sale.sale_date)
                 except Exception:
                     amt = Decimal('0.00')
-            sales_dict[sale.seller_id]['total'] += amt
+            sales_dict[uid]['total'] += amt
         
         services_counts = db.session.query(
             ServiceRequest.mechanic_id,
@@ -3870,7 +4167,15 @@ def user_control():
         audits_dict = {}
     
     threshold = datetime.now(timezone.utc) - timedelta(minutes=15)
-    
+
+    def _is_user_online(u):
+        if not u.last_seen:
+            return False
+        last_seen = u.last_seen
+        if last_seen.tzinfo is None:
+            last_seen = last_seen.replace(tzinfo=timezone.utc)
+        return last_seen >= threshold
+
     for user in users:
         user_data = sales_dict.get(user.id, {'count': 0, 'total': Decimal('0.00')})
         user.sales_count = user_data['count']
@@ -3890,15 +4195,19 @@ def user_control():
         else:
             user.is_online = False
     
-    # إحصائيات عامة
+    all_users = User.query.options(db.joinedload(User.role)).all()
     stats = {
-        'total_users': len(users),
-        'active_users': len([u for u in users if u.is_active]),
-        'inactive_users': len([u for u in users if not u.is_active]),
-        'online_users': len([u for u in users if u.is_online]),
-        'system_accounts': len([u for u in users if u.is_system_account]),
-        'total_sales': sum(u.sales_total for u in users),
-        'total_operations': sum(u.sales_count + u.services_count + u.payments_count for u in users)
+        'total_users': len(all_users),
+        'active_users': sum(1 for u in all_users if u.is_active),
+        'inactive_users': sum(1 for u in all_users if not u.is_active),
+        'online_users': sum(1 for u in all_users if _is_user_online(u)),
+        'system_accounts': sum(1 for u in all_users if u.is_system_account),
+        'total_sales': sum(getattr(u, 'sales_total', 0) for u in users),
+        'total_operations': sum(
+            getattr(u, 'sales_count', 0) + getattr(u, 'services_count', 0) + getattr(u, 'payments_count', 0)
+            for u in users
+        ),
+        'filtered_count': len(users),
     }
     
     # جميع الأدوار
@@ -4148,10 +4457,9 @@ def api_user_details(user_id):
             abort(404)
         
         # إحصائيات
-        sales_count = Sale.query.filter_by(seller_id=user.id).count()
+        sales_count = Sale.query.filter_by(seller_id=user.id, status='CONFIRMED').count()
         
-        # حساب إجمالي المبيعات مع تحويل العملات
-        user_sales = Sale.query.filter_by(seller_id=user.id).all()
+        user_sales = Sale.query.filter_by(seller_id=user.id, status='CONFIRMED').all()
         sales_total = Decimal('0.00')
         for s in user_sales:
             amt = Decimal(str(s.total_amount or 0))
@@ -4559,248 +4867,33 @@ def update_user_extra_permissions(user_id):
 @security_bp.route('/system-settings', methods=['GET', 'POST'])  # Backward compatibility
 @permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
 def system_settings():
-    """إعدادات النظام الموحدة - 4 في 1 (عامة + متقدمة + شركة + ثوابت أعمال)"""
-    from models import SystemSettings
-    
-    tab = request.args.get('tab', 'general')  # general, advanced, company, business
-    
+    """إعدادات النظام الموحدة — تبويبات حقيقية مربوطة بقاعدة البيانات."""
+    from utils.system_settings_page import (
+        load_system_settings_page_data,
+        normalize_tab,
+        save_system_settings_tab,
+    )
+
+    tab = normalize_tab(request.args.get('tab', 'general'))
+
     if request.method == 'POST':
-        tab = request.form.get('active_tab', 'general')
-        
-        if tab == 'general':
-            # حفظ الإعدادات العامة
-            settings = {
-                'maintenance_mode': request.form.get('maintenance_mode') == 'on',
-                'registration_enabled': request.form.get('registration_enabled') == 'on',
-                'api_enabled': request.form.get('api_enabled') == 'on',
+        tab = normalize_tab(request.form.get('active_tab', tab))
+        ok, err = save_system_settings_tab(tab, request.form, request.files)
+        if ok:
+            flash_messages = {
+                'general': '✅ تم حفظ الإعدادات العامة',
+                'advanced': '✅ تم تحديث التكوين المتقدم',
+                'company': '✅ تم تحديث بيانات الشركة',
+                'business': '✅ تم حفظ ثوابت الأعمال',
+                'branding': '✅ تم تحديث هوية النظام',
             }
-            for key, value in settings.items():
-                _set_system_setting(key, value)
-            utils.flash_success("تم حفظ الإعدادات العامة")
-            
-        elif tab == 'advanced':
-            # حفظ التكوينات المتقدمة
-            config = {
-                'SESSION_TIMEOUT': request.form.get('session_timeout', 3600),
-                'MAX_LOGIN_ATTEMPTS': request.form.get('max_login_attempts', 5),
-                'PASSWORD_MIN_LENGTH': request.form.get('password_min_length', 8),
-                'AUTO_BACKUP_ENABLED': request.form.get('auto_backup_enabled') == 'on',
-                'BACKUP_INTERVAL_HOURS': request.form.get('backup_interval_hours', 24),
-                'ENABLE_EMAIL_NOTIFICATIONS': request.form.get('enable_email_notifications') == 'on',
-                'ENABLE_SMS_NOTIFICATIONS': request.form.get('enable_sms_notifications') == 'on',
-            }
-            for key, value in config.items():
-                _set_system_setting(key, value)
-            utils.flash_success("تم تحديث التكوين المتقدم")
-            
-        elif tab == 'company':
-            # حفظ بيانات الشركة
-            constants = {
-                'COMPANY_NAME': request.form.get('company_name', ''),
-                'COMPANY_ADDRESS': request.form.get('company_address', ''),
-                'COMPANY_PHONE': request.form.get('company_phone', ''),
-                'COMPANY_EMAIL': request.form.get('company_email', ''),
-                'TAX_NUMBER': request.form.get('tax_number', ''),
-                'CURRENCY_SYMBOL': request.form.get('currency_symbol', '$'),
-                'TIMEZONE': request.form.get('timezone', 'UTC'),
-                'DATE_FORMAT': request.form.get('date_format', '%Y-%m-%d'),
-                'TIME_FORMAT': request.form.get('time_format', '%H:%M:%S'),
-            }
-            for key, value in constants.items():
-                if value:
-                    _set_system_setting(key, value)
-            utils.flash_success("تم تحديث بيانات الشركة")
-            
-        elif tab == 'branding':
-            return redirect(url_for('security.owner_branding'))
-            
-        elif tab == 'business':
-            # حفظ ثوابت الأعمال (Business Constants)
-            try:
-                group_flags = {
-                    'tax': request.form.get('enable_tax_constants') == 'on',
-                    'payroll': request.form.get('enable_payroll_constants') == 'on',
-                    'assets': request.form.get('enable_asset_constants') == 'on',
-                    'accounting': request.form.get('enable_accounting_constants') == 'on',
-                    'notifications': request.form.get('enable_notification_constants') == 'on',
-                    'business_rules': request.form.get('enable_business_rules_constants') == 'on',
-                    'multi_tenancy': request.form.get('enable_multi_tenancy_constants') == 'on',
-                }
-                
-                descriptions = {
-                    'tax': 'تفعيل ثوابت الضرائب',
-                    'payroll': 'تفعيل ثوابت الرواتب',
-                    'assets': 'تفعيل ثوابت الأصول الثابتة',
-                    'accounting': 'تفعيل ثوابت المحاسبة',
-                    'notifications': 'تفعيل ثوابت الإشعارات',
-                    'business_rules': 'تفعيل ثوابت قواعد العمل',
-                    'multi_tenancy': 'تفعيل ثوابت التعددية',
-                }
-                
-                for group, enabled in group_flags.items():
-                    SystemSettings.set_setting(
-                        f'enable_{group}_constants',
-                        enabled,
-                        descriptions.get(group),
-                        'boolean'
-                    )
-                
-                # Tax Settings
-                if group_flags['tax']:
-                    SystemSettings.set_setting('default_vat_rate', request.form.get('default_vat_rate', 16.0), 
-                                               'نسبة VAT الافتراضية', 'number')
-                    SystemSettings.set_setting('vat_enabled', request.form.get('vat_enabled') == 'on', 
-                                               'تفعيل VAT', 'boolean')
-                    SystemSettings.set_setting('income_tax_rate', request.form.get('income_tax_rate', 15.0), 
-                                               'ضريبة دخل الشركات', 'number')
-                    SystemSettings.set_setting('withholding_tax_rate', request.form.get('withholding_tax_rate', 5.0), 
-                                               'الخصم من المنبع', 'number')
-                
-                # Payroll Settings
-                if group_flags['payroll']:
-                    SystemSettings.set_setting('social_insurance_enabled', request.form.get('social_insurance_enabled') == 'on', 
-                                               'تفعيل التأمينات', 'boolean')
-                    SystemSettings.set_setting('social_insurance_company', request.form.get('social_insurance_company', 7.5), 
-                                               'نسبة التأمين - الشركة', 'number')
-                    SystemSettings.set_setting('social_insurance_employee', request.form.get('social_insurance_employee', 7.0), 
-                                               'نسبة التأمين - الموظف', 'number')
-                    SystemSettings.set_setting('overtime_rate_normal', request.form.get('overtime_rate_normal', 1.5), 
-                                               'معدل العمل الإضافي', 'number')
-                    SystemSettings.set_setting('working_hours_per_day', request.form.get('working_hours_per_day', 8), 
-                                               'ساعات العمل اليومية', 'number')
-                
-                # Fixed Assets Settings
-                if group_flags['assets']:
-                    SystemSettings.set_setting('asset_auto_depreciation', request.form.get('asset_auto_depreciation') == 'on', 
-                                               'استهلاك تلقائي', 'boolean')
-                    SystemSettings.set_setting('asset_threshold_amount', request.form.get('asset_threshold_amount', 500), 
-                                               'حد مبلغ الأصول', 'number')
-                
-                # Accounting Settings
-                if group_flags['accounting']:
-                    SystemSettings.set_setting('cost_centers_enabled', request.form.get('cost_centers_enabled') == 'on', 
-                                               'تفعيل مراكز التكلفة', 'boolean')
-                    SystemSettings.set_setting('budgeting_enabled', request.form.get('budgeting_enabled') == 'on', 
-                                               'تفعيل الموازنات', 'boolean')
-                    SystemSettings.set_setting('fiscal_year_start_month', request.form.get('fiscal_year_start_month', 1), 
-                                               'بداية السنة المالية', 'number')
-                
-                # Notification Settings
-                if group_flags['notifications']:
-                    SystemSettings.set_setting('notify_on_service_complete', request.form.get('notify_on_service_complete') == 'on', 
-                                               'إشعار اكتمال الصيانة', 'boolean')
-                    SystemSettings.set_setting('notify_on_payment_due', request.form.get('notify_on_payment_due') == 'on', 
-                                               'إشعار استحقاق الدفعات', 'boolean')
-                    SystemSettings.set_setting('notify_on_low_stock', request.form.get('notify_on_low_stock') == 'on', 
-                                               'تنبيه انخفاض المخزون', 'boolean')
-                    SystemSettings.set_setting('payment_reminder_days', request.form.get('payment_reminder_days', 3), 
-                                               'التذكير قبل الاستحقاق', 'number')
-                
-                # Business Rules
-                if group_flags['business_rules']:
-                    SystemSettings.set_setting('allow_negative_stock', request.form.get('allow_negative_stock') == 'on', 
-                                               'السماح بالمخزون السالب', 'boolean')
-                    SystemSettings.set_setting('require_approval_for_sales_above', request.form.get('require_approval_for_sales_above', 10000), 
-                                               'طلب موافقة للمبيعات الكبيرة', 'number')
-                    SystemSettings.set_setting('discount_max_percent', request.form.get('discount_max_percent', 50), 
-                                               'الحد الأقصى للخصم', 'number')
-                    SystemSettings.set_setting('credit_limit_check', request.form.get('credit_limit_check') == 'on', 
-                                               'فحص حد الائتمان', 'boolean')
-                
-                # Multi-Tenancy Settings  
-                if group_flags['multi_tenancy']:
-                    SystemSettings.set_setting('multi_tenancy_enabled', request.form.get('multi_tenancy_enabled') == 'on', 
-                                               'تفعيل تعدد المستأجرين', 'boolean')
-                    SystemSettings.set_setting('trial_period_days', request.form.get('trial_period_days', 30), 
-                                               'مدة التجريبي', 'number')
-                
-                db.session.commit()
-                utils.flash_success("تم حفظ ثوابت الأعمال")
-                
-            except Exception as e:
-                db.session.rollback()
-                current_app.logger.exception('internal error')
-                utils.flash_error()
-        
+            flash(flash_messages.get(tab, '✅ تم الحفظ'), 'success')
+        else:
+            flash(f'⚠️ {err or "حدث خطأ أثناء الحفظ"}', 'danger')
         return redirect(url_for('security.system_settings', tab=tab))
-    
-    # قراءة جميع الإعدادات
-    data = {
-        'general': {
-            'maintenance_mode': _get_system_setting('maintenance_mode', False),
-            'registration_enabled': _get_system_setting('registration_enabled', True),
-            'api_enabled': _get_system_setting('api_enabled', True),
-        },
-        'advanced': {
-            'SESSION_TIMEOUT': _get_system_setting('SESSION_TIMEOUT', 3600),
-            'MAX_LOGIN_ATTEMPTS': _get_system_setting('MAX_LOGIN_ATTEMPTS', 5),
-            'PASSWORD_MIN_LENGTH': _get_system_setting('PASSWORD_MIN_LENGTH', 8),
-            'AUTO_BACKUP_ENABLED': _get_system_setting('AUTO_BACKUP_ENABLED', True),
-            'BACKUP_INTERVAL_HOURS': _get_system_setting('BACKUP_INTERVAL_HOURS', 24),
-            'ENABLE_EMAIL_NOTIFICATIONS': _get_system_setting('ENABLE_EMAIL_NOTIFICATIONS', True),
-            'ENABLE_SMS_NOTIFICATIONS': _get_system_setting('ENABLE_SMS_NOTIFICATIONS', False),
-        },
-        'company': {
-            'COMPANY_NAME': _get_system_setting('COMPANY_NAME', 'اسم الشركة'),
-            'COMPANY_ADDRESS': _get_system_setting('COMPANY_ADDRESS', ''),
-            'COMPANY_PHONE': _get_system_setting('COMPANY_PHONE', ''),
-            'COMPANY_EMAIL': _get_system_setting('COMPANY_EMAIL', ''),
-            'TAX_NUMBER': _get_system_setting('TAX_NUMBER', ''),
-            'CURRENCY_SYMBOL': _get_system_setting('CURRENCY_SYMBOL', '$'),
-            'TIMEZONE': _get_system_setting('TIMEZONE', 'UTC'),
-            'DATE_FORMAT': _get_system_setting('DATE_FORMAT', '%Y-%m-%d'),
-            'TIME_FORMAT': _get_system_setting('TIME_FORMAT', '%H:%M:%S'),
-        },
-        'business': {
-            'enable_tax_constants': SystemSettings.get_setting('enable_tax_constants', True),
-            'enable_payroll_constants': SystemSettings.get_setting('enable_payroll_constants', True),
-            'enable_asset_constants': SystemSettings.get_setting('enable_asset_constants', True),
-            'enable_accounting_constants': SystemSettings.get_setting('enable_accounting_constants', True),
-            'enable_notification_constants': SystemSettings.get_setting('enable_notification_constants', True),
-            'enable_business_rules_constants': SystemSettings.get_setting('enable_business_rules_constants', True),
-            'enable_multi_tenancy_constants': SystemSettings.get_setting('enable_multi_tenancy_constants', True),
-            # Tax
-            'default_vat_rate': SystemSettings.get_setting('default_vat_rate', 16.0),
-            'vat_enabled': SystemSettings.get_setting('vat_enabled', True),
-            'income_tax_rate': SystemSettings.get_setting('income_tax_rate', 15.0),
-            'withholding_tax_rate': SystemSettings.get_setting('withholding_tax_rate', 5.0),
-            # Payroll
-            'social_insurance_enabled': SystemSettings.get_setting('social_insurance_enabled', False),
-            'social_insurance_company': SystemSettings.get_setting('social_insurance_company', 7.5),
-            'social_insurance_employee': SystemSettings.get_setting('social_insurance_employee', 7.0),
-            'overtime_rate_normal': SystemSettings.get_setting('overtime_rate_normal', 1.5),
-            'working_hours_per_day': SystemSettings.get_setting('working_hours_per_day', 8),
-            # Assets
-            'asset_auto_depreciation': SystemSettings.get_setting('asset_auto_depreciation', True),
-            'asset_threshold_amount': SystemSettings.get_setting('asset_threshold_amount', 500),
-            # Accounting
-            'cost_centers_enabled': SystemSettings.get_setting('cost_centers_enabled', False),
-            'budgeting_enabled': SystemSettings.get_setting('budgeting_enabled', False),
-            'fiscal_year_start_month': SystemSettings.get_setting('fiscal_year_start_month', 1),
-            # Notifications
-            'notify_on_service_complete': SystemSettings.get_setting('notify_on_service_complete', True),
-            'notify_on_payment_due': SystemSettings.get_setting('notify_on_payment_due', True),
-            'notify_on_low_stock': SystemSettings.get_setting('notify_on_low_stock', True),
-            'payment_reminder_days': SystemSettings.get_setting('payment_reminder_days', 3),
-            # Business Rules
-            'allow_negative_stock': SystemSettings.get_setting('allow_negative_stock', False),
-            'require_approval_for_sales_above': SystemSettings.get_setting('require_approval_for_sales_above', 10000),
-            'discount_max_percent': SystemSettings.get_setting('discount_max_percent', 50),
-            'credit_limit_check': SystemSettings.get_setting('credit_limit_check', True),
-            # Multi-Tenancy
-            'multi_tenancy_enabled': SystemSettings.get_setting('multi_tenancy_enabled', False),
-            'trial_period_days': SystemSettings.get_setting('trial_period_days', 30),
-        },
-        'branding': {
-            'system_name': _get_system_setting('system_name', 'منصة أزاد ERP'),
-            'company_name': _get_system_setting('company_name', 'شركة أزاد للأنظمة الذكية'),
-            'company_logo': _get_system_setting('custom_logo', ''),
-        }
-    }
-    
-    # 🔄 إضافة إحصائيات ديناميكية
+
+    data = load_system_settings_page_data()
     stats = get_cached_security_stats()
-    
     return render_template('security/system_settings.html', data=data, active_tab=tab, stats=stats)
 
 
@@ -4860,7 +4953,13 @@ def kill_all_sessions():
 def data_export():
     """تصدير البيانات"""
     tables = _get_all_tables()
-    return render_template('security/data_export.html', tables=tables)
+    table_counts = _get_fast_table_counts(tables)
+    return render_template(
+        'security/data_export.html',
+        tables=tables,
+        table_counts=table_counts,
+        export_row_limit=10000,
+    )
 
 
 @security_bp.route('/export-table/<table_name>')
@@ -4869,13 +4968,19 @@ def export_table_csv(table_name):
     """تصدير جدول كـ CSV"""
     import csv
     from io import StringIO
-    
+
+    _assert_valid_table(table_name)
     data, columns = _browse_table(table_name, limit=10000)
+    if not columns:
+        columns = _get_table_columns_safe(table_name)
     
     si = StringIO()
-    writer = csv.DictWriter(si, fieldnames=columns)
-    writer.writeheader()
-    writer.writerows(data)
+    if columns:
+        writer = csv.DictWriter(si, fieldnames=columns, extrasaction='ignore')
+        writer.writeheader()
+        writer.writerows(data)
+    else:
+        si.write('')
     
     output = si.getvalue()
     
@@ -4908,6 +5013,48 @@ def system_branding():
     """أُعيد توجيهه — دُمج في الهوية الموحّدة."""
     return redirect(url_for('security.owner_branding'))
 
+
+
+@security_bp.route('/appearance-panel', methods=['GET', 'POST'])
+@permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
+def appearance_panel():
+    """مظهر النظام المتقدم — ألوان، خطوط، لغة، معاينة حية."""
+    if request.method == 'POST':
+        _apply_appearance_settings(request.form)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception('appearance_panel save failed')
+            flash('حدث خطأ أثناء الحفظ', 'danger')
+            return redirect(url_for('security.appearance_panel'))
+        flash('✅ تم حفظ إعدادات المظهر بنجاح', 'success')
+        return redirect(url_for('security.appearance_panel'))
+    return render_template(
+        'security/appearance_panel.html',
+        appearance=_load_appearance_settings(),
+    )
+
+
+@security_bp.route('/printing-panel', methods=['GET', 'POST'])
+@permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
+def printing_panel():
+    """إعدادات الطباعة — فواتير A4، طابعات حرارية، ملصقات باركود."""
+    if request.method == 'POST':
+        _apply_printing_settings(request.form)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception('printing_panel save failed')
+            flash('حدث خطأ أثناء الحفظ', 'danger')
+            return redirect(url_for('security.printing_panel'))
+        flash('✅ تم حفظ إعدادات الطباعة بنجاح', 'success')
+        return redirect(url_for('security.printing_panel'))
+    return render_template(
+        'security/printing_panel.html',
+        settings=_load_printing_settings(),
+    )
 
 
 @security_bp.route('/db-editor/add-column/<table_name>', methods=['POST'])
@@ -5005,10 +5152,14 @@ def db_edit_row(table_name, row_id):
             updates.append((key, value))
         
         if updates:
+            primary_key = _get_primary_key_column(table_name) or 'id'
+            if not _is_safe_identifier(primary_key):
+                flash('مفتاح أساسي غير صالح', 'danger')
+                return redirect(url_for('security.database_manager', tab='edit', table=table_name))
             set_parts = [f"{col} = :val_{i}" for i, (col, _) in enumerate(updates)]
             params = {f"val_{i}": v for i, (_, v) in enumerate(updates)}
             params['row_id'] = row_id
-            sql = text(f"UPDATE {table_name} SET {', '.join(set_parts)} WHERE id = :row_id")
+            sql = text(f"UPDATE {table_name} SET {', '.join(set_parts)} WHERE {primary_key} = :row_id")
             db.session.execute(sql, params)
             db.session.commit()
             flash('تم التحديث بنجاح', 'success')
@@ -5028,24 +5179,40 @@ def db_edit_row(table_name, row_id):
 @limiter.limit("10/minute")
 def db_delete_row(table_name, row_id):
     """حذف صف من الجدول"""
+    wants_json = _wants_json_response()
     try:
         _assert_valid_table(table_name)
         primary_key = _get_primary_key_column(table_name) or 'id'
-        
-        # حذف الصف
+
         if not _is_safe_identifier(primary_key):
-            utils.flash_error("مفتاح أساسي غير صالح")
+            msg = 'مفتاح أساسي غير صالح'
+            if wants_json:
+                return jsonify({'success': False, 'error': msg}), 400
+            flash(f'❌ {msg}', 'danger')
             return redirect(url_for('security.database_manager', tab='edit', table=table_name))
+
         sql = text(f"DELETE FROM {table_name} WHERE {primary_key} = :row_id")
-        
         result = db.session.execute(sql, {'row_id': row_id})
         db.session.commit()
-        utils.flash_success(f'تم حذف الصف #{row_id} بنجاح', 'success')
+
+        if result.rowcount == 0:
+            msg = 'لم يتم العثور على السجل'
+            if wants_json:
+                return jsonify({'success': False, 'error': msg}), 404
+            flash(msg, 'warning')
+            return redirect(url_for('security.database_manager', tab='edit', table=table_name))
+
+        msg = f'تم حذف السجل بنجاح'
+        if wants_json:
+            return jsonify({'success': True, 'message': msg, 'rows_affected': result.rowcount})
+        flash(f'✅ {msg}', 'success')
     except Exception as e:
         db.session.rollback()
         current_app.logger.error("DB delete row error: %s", e)
+        if wants_json:
+            return jsonify({'success': False, 'error': 'خطأ في حذف الصف'}), 500
         flash('خطأ في حذف الصف', 'danger')
-    
+
     return redirect(url_for('security.database_manager', tab='edit', table=table_name))
 
 @security_bp.route('/db-editor/delete-column/<table_name>', methods=['POST'])
@@ -5582,16 +5749,29 @@ def _get_table_info(table_name):
         columns = inspector.get_columns(table_name)
         pk_constraint = inspector.get_pk_constraint(table_name)
         pk_cols = pk_constraint.get('constrained_columns', [])
-        
+        fk_map = {}
+        for fk in inspector.get_foreign_keys(table_name) or []:
+            ref_table = fk.get('referred_table') or ''
+            for col_name in fk.get('constrained_columns') or []:
+                fk_map[col_name] = ref_table
+
         info = []
         for i, col in enumerate(columns):
+            col_name = col['name']
+            is_pk = col_name in pk_cols
+            is_fk = col_name in fk_map
             info.append({
                 'cid': i,
-                'name': col['name'],
+                'name': col_name,
                 'type': str(col['type']),
                 'notnull': 1 if not col['nullable'] else 0,
-                'default': str(col['default']) if col['default'] else None,
-                'pk': 1 if col['name'] in pk_cols else 0
+                'nullable': bool(col.get('nullable', True)),
+                'default': str(col['default']) if col['default'] is not None else None,
+                'pk': 1 if is_pk else 0,
+                'primary_key': is_pk,
+                'foreign_keys': is_fk,
+                'fk_references': fk_map.get(col_name),
+                'autoincrement': bool(col.get('autoincrement', False)),
             })
         return info
     except Exception as e:
@@ -6703,7 +6883,7 @@ def api_maintenance_analyze():
 
 
 @security_bp.route('/api/maintenance/checkpoint', methods=['POST'])
-@permission_required(SystemPermissions.MANAGE_SYSTEM_HEALTH)
+@permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
 def api_maintenance_checkpoint():
     """تنفيذ Checkpoint لدمج WAL"""
     try:
@@ -6732,7 +6912,7 @@ def api_maintenance_checkpoint():
 
 
 @security_bp.route('/api/maintenance/db-info', methods=['GET'])
-@permission_required(SystemPermissions.MANAGE_SYSTEM_HEALTH)
+@permission_required(SystemPermissions.ACCESS_OWNER_DASHBOARD)
 def api_maintenance_db_info():
     """الحصول على معلومات قاعدة البيانات"""
     try:
@@ -6766,187 +6946,39 @@ def api_maintenance_db_info():
 @security_bp.route('/data-quality-center', methods=['GET', 'POST'])
 @permission_required(SystemPermissions.MANAGE_SYSTEM_HEALTH)
 def data_quality_center():
-    """
-    مركز متقدم لفحص وتحسين جودة البيانات
-    يفحص جميع الحقول الإجبارية والاختيارية ويقترح إصلاحات
-    """
-    from models import (
-        Check, Payment, PaymentSplit, Customer, Supplier, Partner,
-        Sale, Invoice, ServiceRequest, Shipment, Expense, Account, GLEntry,
-        PaymentMethod
-    )
-    from datetime import timedelta
-    from decimal import Decimal
-    
+    """مركز فحص وتحسين جودة البيانات — شيكات، دفعات، أرصدة."""
+    from services.data_quality_service import collect_data_quality_stats, run_data_quality_fix
+
     if request.method == 'GET':
-        # جمع إحصائيات شاملة
-        issues = {
-            'critical': [],
-            'warning': [],
-            'info': []
-        }
-        
-        # فحص الشيكات
-        checks_no_entity = Check.query.filter(
-            Check.customer_id == None,
-            Check.supplier_id == None,
-            Check.partner_id == None
-        ).count()
-        
-        checks_no_bank = Check.query.filter(
-            db.or_(Check.check_bank == None, Check.check_bank == '')
-        ).count()
-        
-        # فحص الدفعات
-        payments_no_bank = Payment.query.filter(
-            Payment.method == PaymentMethod.CHEQUE.value,
-            db.or_(Payment.check_bank == None, Payment.check_bank == '')
-        ).count()
-        
-        payments_no_due_date = Payment.query.filter(
-            Payment.method == PaymentMethod.CHEQUE.value,
-            Payment.check_due_date == None
-        ).count()
-        
-        # فحص الأرصدة
-        customers_null_balance = 0
-        suppliers_null_balance = 0
-        partners_null_balance = 0
-        
-        # الإحصائيات العامة
-        total_checks = Check.query.count()
-        total_payments = Payment.query.count()
-        total_customers = Customer.query.count()
-        total_suppliers = Supplier.query.count()
-        total_partners = Partner.query.count()
-        
-        stats = {
-            'checks': {
-                'total': total_checks,
-                'no_entity': checks_no_entity,
-                'no_bank': checks_no_bank
-            },
-            'payments': {
-                'total': total_payments,
-                'no_bank': payments_no_bank,
-                'no_due_date': payments_no_due_date
-            },
-            'balances': {
-                'customers_null': customers_null_balance,
-                'suppliers_null': suppliers_null_balance,
-                'partners_null': partners_null_balance
-            },
-            'entities': {
-                'customers': total_customers,
-                'suppliers': total_suppliers,
-                'partners': total_partners
-            }
-        }
-        
-        total_issues = (checks_no_entity + checks_no_bank + payments_no_bank + 
-                       payments_no_due_date + customers_null_balance + 
-                       suppliers_null_balance + partners_null_balance)
-        
-        return render_template('security/data_quality_center.html',
-                             stats=stats,
-                             total_issues=total_issues)
-    
-    # POST - تنفيذ الإصلاح
+        scan_balances = request.args.get('scan') == 'balances'
+        stats, total_issues = collect_data_quality_stats(scan_balances=scan_balances)
+        return render_template(
+            'security/data_quality_center.html',
+            stats=stats,
+            total_issues=total_issues,
+            scan_balances=scan_balances,
+        )
+
+    action = (request.form.get('action') or 'all').strip()
+    if action not in ('all', 'checks', 'payments', 'balances'):
+        flash('⚠️ إجراء غير صالح.', 'warning')
+        return redirect(url_for('security.data_quality_center'))
+
     try:
-        action = request.form.get('action', 'all')
-        fixed_count = 0
-        
-        if action in ['all', 'checks']:
-            # إصلاح الشيكات
-            from datetime import timedelta
-            
-            # ربط الشيكات بالجهات
-            checks_without_entity = Check.query.filter(
-                Check.customer_id == None,
-                Check.supplier_id == None,
-                Check.partner_id == None
-            ).all()
-            
-            for check in checks_without_entity:
-                payment = None
-                
-                if check.reference_number:
-                    if check.reference_number.startswith('PMT-SPLIT-'):
-                        split_id = int(check.reference_number.replace('PMT-SPLIT-', ''))
-                        split = db.session.get(PaymentSplit, split_id)
-                        if split:
-                            payment = split.payment
-                    elif check.reference_number.startswith('PMT-'):
-                        try:
-                            payment_id = int(check.reference_number.replace('PMT-', ''))
-                            payment = db.session.get(Payment, payment_id)
-                        except Exception:
-                            current_app.logger.warning('payment processing failed silently in security.py', exc_info=True)
-                
-                if not payment and check.check_number:
-                    payment = Payment.query.filter(
-                        Payment.check_number == check.check_number
-                    ).first()
-                
-                if payment:
-                    if payment.customer_id:
-                        check.customer_id = payment.customer_id
-                        fixed_count += 1
-                    elif payment.supplier_id:
-                        check.supplier_id = payment.supplier_id
-                        fixed_count += 1
-                    elif payment.partner_id:
-                        check.partner_id = payment.partner_id
-                        fixed_count += 1
-                    elif payment.sale_id:
-                        sale = db.session.get(Sale, payment.sale_id)
-                        if sale and sale.customer_id:
-                            check.customer_id = sale.customer_id
-                            fixed_count += 1
-        
-        if action in ['all', 'payments']:
-            # إصلاح الدفعات
-            check_payments = Payment.query.filter(
-                Payment.method == PaymentMethod.CHEQUE.value
-            ).all()
-            
-            for payment in check_payments:
-                if not payment.check_bank:
-                    check_record = Check.query.filter(
-                        Check.reference_number == f'PMT-{payment.id}'
-                    ).first()
-                    if check_record and check_record.check_bank:
-                        payment.check_bank = check_record.check_bank
-                    else:
-                        payment.check_bank = 'غير محدد'
-                    fixed_count += 1
-                
-                if not payment.check_due_date:
-                    check_record = Check.query.filter(
-                        Check.reference_number == f'PMT-{payment.id}'
-                    ).first()
-                    if check_record and check_record.check_due_date:
-                        payment.check_due_date = check_record.check_due_date
-                    else:
-                        payment.check_due_date = (payment.payment_date or datetime.now(timezone.utc)) + timedelta(days=30)
-                    fixed_count += 1
-        
-        if action in ['all', 'balances']:
-            pass
-        
+        fixed_count = run_data_quality_fix(action)
         db.session.commit()
-        
-        utils.log_audit("System", None, "DATA_QUALITY_FIX", 
-                       details=f"تم إصلاح {fixed_count} مشكلة")
-        
-        utils.flash_success(f'تم إصلاح {fixed_count} مشكلة بنجاح!', 'success')
-        return redirect(url_for('security.data_quality_center'))
-        
-    except Exception as e:
+        utils.log_audit(
+            'System',
+            0,
+            'DATA_QUALITY_FIX',
+            new_data={'action': action, 'fixed_count': fixed_count},
+        )
+        flash(f'✅ تم إصلاح {fixed_count} مشكلة بنجاح!', 'success')
+    except Exception:
         db.session.rollback()
-        current_app.logger.exception('internal error')
-        utils.flash_error()
-        return redirect(url_for('security.data_quality_center'))
+        current_app.logger.exception('data_quality_center fix failed')
+        flash('حدث خطأ أثناء الإصلاح', 'danger')
+    return redirect(url_for('security.data_quality_center'))
 
 
 @security_bp.route('/advanced-check-linking', methods=['GET', 'POST'])
@@ -7120,10 +7152,12 @@ def help_page():
     - حل المشاكل
     """
     help_data = {
-        'total_centers': 7,
-        'total_features': 41,
-        'total_routes': 97,
-        'version': '5.0.0'
+        'total_centers': 6,
+        'total_routes': len([
+            r for r in current_app.url_map.iter_rules()
+            if r.endpoint and r.endpoint.startswith('security.')
+        ]),
+        'version': str(SystemSettings.get_setting('system_version', '1.0.0') or '1.0.0').strip(),
     }
     return render_template('security/help.html', help_data=help_data)
 
@@ -7142,16 +7176,19 @@ def sitemap():
     """
     sitemap_data = {
         'centers': [
-            {'name': 'Database Control Center', 'url': 'security.database_manager', 'tabs': 11},
-            {'name': 'Users & Permissions Center', 'url': 'security.users_center', 'tabs': 2},
-            {'name': 'Settings & Customization Center', 'url': 'security.settings_center', 'tabs': 8},
-            {'name': 'Reports & Performance Center', 'url': 'security.reports_center', 'tabs': 4},
-            {'name': 'Tools & Integration Center', 'url': 'security.tools_center', 'tabs': 5},
-            {'name': 'Security & Monitoring Center', 'url': 'security.security_center', 'tabs': 4},
-            {'name': 'Ledger Control', 'url': 'ledger_control.index', 'tabs': 0},
+            {'name': 'مدير قاعدة البيانات', 'url': 'security.database_manager', 'tabs': 11},
+            {'name': 'مركز المستخدمين', 'url': 'security.users_center', 'tabs': 2},
+            {'name': 'مركز العمليات', 'url': 'security.settings_center', 'tabs': 8},
+            {'name': 'مركز التقارير', 'url': 'security.reports_center', 'tabs': 3},
+            {'name': 'مركز الأدوات', 'url': 'security.tools_center', 'tabs': 4},
+            {'name': 'مركز الأمان', 'url': 'security.security_center', 'tabs': 4},
+            {'name': 'مراقبة الدفاتر', 'url': 'ledger_control.index', 'tabs': 6},
         ],
-        'total_routes': 97,
-        'total_tabs': 34
+        'total_routes': len([
+            r for r in current_app.url_map.iter_rules()
+            if r.endpoint and r.endpoint.startswith('security.')
+        ]),
+        'total_tabs': 11 + 2 + 8 + 3 + 4 + 4 + 6,
     }
     return render_template('security/sitemap.html', sitemap_data=sitemap_data)
 
@@ -8153,11 +8190,13 @@ def api_chart_data():
         total_users = User.query.filter_by(is_active=True).count()
         blocked_users = User.query.filter_by(is_active=False).count()
 
+        ar_weekdays = ['إث', 'ث', 'أر', 'خ', 'ج', 'س', 'ح']
+
         for i in range(6, -1, -1):
             day = now - timedelta(days=i)
             day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
             day_end = day.replace(hour=23, minute=59, second=59, microsecond=999999)
-            days_labels.append(day.strftime('%a'))
+            days_labels.append(ar_weekdays[day.weekday()])
 
             failed = AuthAudit.query.filter(
                 AuthAudit.event == AuthEvent.LOGIN_FAIL.value,
@@ -8179,7 +8218,7 @@ def api_chart_data():
             'active_users': active_users_data,
             'failed_logins': failed_logins_data,
             'activity': activity_data,
-            'total_users': total_users,
+            'active_users_total': total_users,
             'blocked_users': blocked_users
         })
     except Exception as e:

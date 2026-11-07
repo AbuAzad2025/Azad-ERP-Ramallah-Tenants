@@ -1,9 +1,9 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}ultimate_control{% endblock %}
-{% block security_title %}Ultimate Control{% endblock %}
+{% block security_title %}التحكم الشامل{% endblock %}
 {% block security_icon %}<i class="fas fa-crown"></i>{% endblock %}
-{% block security_description %}مركز القيادة الموحد - صلاحيات خارقة للمالك{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">Ultimate Control</li>{% endblock %}
+{% block security_description %}قيادة موحدة للمالك{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">التحكم الشامل</li>{% endblock %}
 {% block security_content %}
   
   {% if session.get('impersonating') %}
@@ -24,7 +24,7 @@
   {% endif %}
 
   <div class="alert alert-danger border-0 shadow-sm">
-    <i class="fas fa-crown"></i> <strong>صلاحيات خارقة:</strong> أنت المالك (__OWNER__) - لديك سيطرة كاملة!
+    <i class="fas fa-crown"></i> <strong>صلاحيات خارقة:</strong> أنت المالك ({{ current_user.display_name or current_user.username }}) — سيطرة كاملة على النظام.
     <div class="mt-2">
       <span class="badge bg-light text-dark">7 مراكز موحدة</span>
       <span class="badge bg-light text-dark">41 وظيفة مدمجة</span>
@@ -232,6 +232,7 @@
             <a href="{{ url_for('security.tools_center', tab='email') }}" class="btn btn-sm btn-outline-light">بريد</a>
             <a href="{{ url_for('security.tools_center', tab='cards') }}" class="btn btn-sm btn-outline-light">كروت</a>
             <a href="{{ url_for('security.tools_center', tab='export') }}" class="btn btn-sm btn-outline-light">تصدير</a>
+            <a href="{{ url_for('security.printing_panel') }}" class="btn btn-sm btn-outline-light">طباعة</a>
           </div>
         </div>
       </div>
@@ -242,6 +243,48 @@
   <h4 class="mb-3"><i class="fas fa-star"></i> وحدات مستقلة - Standalone Units</h4>
 
   <div class="row g-3">
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-lg h-100" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+        <div class="card-body text-center text-white">
+          <i class="fas fa-swatchbook fa-3x mb-3" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);"></i>
+          <h5 class="fw-bold">مظهر وطباعة</h5>
+          <p class="small opacity-75">ألوان، خطوط، طابعات POS</p>
+          <div class="d-flex flex-wrap gap-1 justify-content-center">
+            <a href="{{ url_for('security.appearance_panel') }}" class="btn btn-light btn-sm fw-bold">مظهر</a>
+            <a href="{{ url_for('security.printing_panel') }}" class="btn btn-light btn-sm fw-bold">طباعة</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-lg h-100" style="background: linear-gradient(135deg, #434343 0%, #000000 100%);">
+        <div class="card-body text-center text-white">
+          <i class="fas fa-shield-alt fa-3x mb-3" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);"></i>
+          <h5 class="fw-bold">أمان مؤسسي</h5>
+          <p class="small opacity-75">2FA وقفل الإدخال</p>
+          <div class="d-flex flex-wrap gap-1 justify-content-center">
+            <a href="{{ url_for('enterprise_security_bp.setup_2fa') }}" class="btn btn-light btn-sm fw-bold">2FA</a>
+            <a href="{{ url_for('enterprise_security_bp.posting_controls') }}" class="btn btn-light btn-sm fw-bold">إدخال</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-lg h-100" style="background: linear-gradient(135deg, #8360c3 0%, #2ebf91 100%);">
+        <div class="card-body text-center text-white">
+          <i class="fas fa-robot fa-3x mb-3" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);"></i>
+          <h5 class="fw-bold">المساعد الذكي</h5>
+          <p class="small opacity-75">إعدادات AI Hub</p>
+          <div class="d-flex flex-wrap gap-1 justify-content-center">
+            <a href="{{ url_for('ai_admin.ai_config_dashboard') }}" class="btn btn-light btn-sm fw-bold">إعدادات</a>
+            <a href="{{ url_for('ai.hub') }}" class="btn btn-light btn-sm fw-bold">Hub</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="col-lg-3 col-md-6">
       <div class="card border-0 shadow-lg h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
         <div class="card-body text-center text-white">

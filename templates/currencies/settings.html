@@ -1,204 +1,171 @@
 {% extends "base.html" %}
 
-{% block title %}إعدادات أسعار الصرف{% endblock %}
+{% block page_title %}إعدادات أسعار الصرف{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">الرئيسية</a></li>
+<li class="breadcrumb-item"><a href="{{ url_for('currencies.list') }}">إدارة العملات</a></li>
+<li class="breadcrumb-item active">الإعدادات</li>
+{% endblock %}
 
 {% block content %}
-<div class="content-header">
-    <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1>إعدادات أسعار الصرف</h1>
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card card-outline card-primary">
+            <div class="card-header erp-card-header-row erp-theme-header--primary">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-cog ml-2"></i>
+                    إعدادات أسعار الصرف
+                </h3>
             </div>
-            <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">الرئيسية</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('currencies.list') }}">إدارة العملات</a></li>
-                    <li class="breadcrumb-item active">الإعدادات</li>
-                </ol>
+            <div class="card-body">
+                <div class="row align-items-center mb-4">
+                    <div class="col-md-8">
+                        <h5 class="mb-1">جلب أسعار الصرف من السيرفرات الأونلاين</h5>
+                        <p class="text-muted mb-0 small">
+                            عند التشغيل: محاولة جلب حي أولاً، ثم السعر اليدوي/المسجّل كبديل.
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-md-right text-left mt-2 mt-md-0">
+                        <form method="POST" action="{{ url_for('currencies.toggle_online') }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-{{ 'success' if online_fx_enabled else 'secondary' }} btn-lg">
+                                <i class="fas fa-{{ 'toggle-on' if online_fx_enabled else 'toggle-off' }} ml-1"></i>
+                                {{ 'مفعل' if online_fx_enabled else 'معطل' }}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row align-items-end mb-4">
+                    <div class="col-md-8">
+                        <h5 class="mb-1">فترة تحديث أسعار الصرف</h5>
+                        <p class="text-muted mb-0 small">
+                            تُطبَّق على الشريط العلوي وواجهة <code>/api/exchange-rates</code> (بالثواني).
+                        </p>
+                    </div>
+                    <div class="col-md-4 mt-2 mt-md-0">
+                        <form method="POST" action="{{ url_for('currencies.update_interval') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div class="input-group">
+                                <input type="number" name="interval" class="form-control"
+                                       value="{{ fx_update_interval }}" min="300" max="86400" aria-label="فترة التحديث">
+                                <div class="input-group-append">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save ml-1"></i> حفظ
+                                    </button>
+                                </div>
+                            </div>
+                            <small class="form-text text-muted">
+                                من 300 ثانية (5 دقائق) إلى 86400 ثانية (24 ساعة).
+                            </small>
+                        </form>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h5 class="mb-1">اختبار جلب الأسعار الأونلاين</h5>
+                        <p class="text-muted mb-0 small">اختبار USD → ILS من السيرفرات العالمية.</p>
+                    </div>
+                    <div class="col-md-4 text-md-right text-left mt-2 mt-md-0">
+                        <form method="POST" action="{{ url_for('currencies.test_online') }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-info btn-lg">
+                                <i class="fas fa-play ml-1"></i>
+                                اختبار الآن
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header erp-card-header-row erp-theme-header--primary">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-info-circle ml-2"></i>
+                    معلومات النظام
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>مصادر الأسعار</h6>
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-1"><i class="fas fa-globe text-primary ml-1"></i> أونلاين (عند التفعيل)</li>
+                            <li class="mb-1"><i class="fas fa-edit text-warning ml-1"></i> يدوي / مسجّل في النظام</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>ملاحظة</h6>
+                        <p class="text-muted small mb-0">
+                            سعر الحركة المحاسبية يُثبت عند الإنشاء حسب تاريخها ولا يُحدَّث يومياً للقيود القديمة.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header erp-card-header-row erp-theme-header--primary">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-chart-line ml-2"></i>
+                    إحصائيات سريعة
+                </h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="info-box mb-0">
+                    <span class="info-box-icon bg-info"><i class="fas fa-coins"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">العملات المتاحة</span>
+                        <span class="info-box-number">{{ currencies_count or 0 }}</span>
+                    </div>
+                </div>
+                <div class="info-box mb-0">
+                    <span class="info-box-icon bg-success"><i class="fas fa-exchange-alt"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">أسعار الصرف</span>
+                        <span class="info-box-number">{{ rates_count or 0 }}</span>
+                    </div>
+                </div>
+                <div class="info-box mb-0">
+                    <span class="info-box-icon bg-{{ 'success' if online_fx_enabled else 'secondary' }}">
+                        <i class="fas fa-{{ 'wifi' if online_fx_enabled else 'wifi-slash' }}"></i>
+                    </span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">الأونلاين</span>
+                        <span class="info-box-number">{{ 'مفعل' if online_fx_enabled else 'معطل' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header erp-card-header-row erp-theme-header--primary">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-link ml-2"></i>
+                    روابط سريعة
+                </h3>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('currencies.list') }}" class="btn btn-primary btn-block mb-2">
+                    <i class="fas fa-list ml-1"></i> قائمة العملات
+                </a>
+                <a href="{{ url_for('currencies.exchange_rates') }}" class="btn btn-info btn-block mb-2">
+                    <i class="fas fa-exchange-alt ml-1"></i> أسعار الصرف
+                </a>
+                <a href="{{ url_for('currencies.reports') }}" class="btn btn-success btn-block">
+                    <i class="fas fa-chart-bar ml-1"></i> التقارير
+                </a>
             </div>
         </div>
     </div>
 </div>
-
-<section class="content">
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-cog"></i>
-                            إعدادات أسعار الصرف الذكية
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <!-- إعداد جلب الأسعار الأونلاين -->
-                        <div class="row mb-4">
-                            <div class="col-md-8">
-                                <h5>جلب أسعار الصرف من السيرفرات الأونلاين</h5>
-                                <p class="text-muted">
-                                    عند التشغيل: النظام يحاول جلب الأسعار من السيرفرات العالمية أولاً، ثم يستخدم السعر اليدوي كبديل
-                                </p>
-                            </div>
-                            <div class="col-md-4 text-right">
-                                <form method="POST" action="{{ url_for('currencies.toggle_online') }}" style="display: inline;">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-{{ 'success' if online_fx_enabled else 'secondary' }} btn-lg">
-                                        <i class="fas fa-{{ 'toggle-on' if online_fx_enabled else 'toggle-off' }}"></i>
-                                        {{ 'مفعل' if online_fx_enabled else 'معطل' }}
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-
-                        <hr>
-
-                        <!-- إعداد فترة التحديث -->
-                        <div class="row mb-4">
-                            <div class="col-md-8">
-                                <h5>فترة تحديث أسعار الصرف</h5>
-                                <p class="text-muted">
-                                    المدة الزمنية بين تحديثات أسعار الصرف (بالثواني)
-                                </p>
-                            </div>
-                            <div class="col-md-4">
-                                <form method="POST" action="{{ url_for('currencies.update_interval') }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <div class="input-group">
-                                        <input type="number" name="interval" class="form-control" 
-                                               value="{{ fx_update_interval }}" min="300" max="86400">
-                                        <div class="input-group-append">
-                                            <button type="submit" class="btn btn-primary">
-                                                <i class="fas fa-save"></i> حفظ
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <small class="form-text text-muted">
-                                        الحد الأدنى: 5 دقائق (300 ثانية) | الحد الأقصى: 24 ساعة (86400 ثانية)
-                                    </small>
-                                </form>
-                            </div>
-                        </div>
-
-                        <hr>
-
-                        <!-- اختبار الأسعار الأونلاين -->
-                        <div class="row mb-4">
-                            <div class="col-md-8">
-                                <h5>اختبار جلب الأسعار الأونلاين</h5>
-                                <p class="text-muted">
-                                    اختبار الاتصال بالسيرفرات العالمية وجلب سعر USD إلى ILS
-                                </p>
-                            </div>
-                            <div class="col-md-4 text-right">
-                                <form method="POST" action="{{ url_for('currencies.test_online') }}" style="display: inline;">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                    <button type="submit" class="btn btn-info btn-lg">
-                                        <i class="fas fa-play"></i>
-                                        اختبار الآن
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- معلومات النظام -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-info-circle"></i>
-                            معلومات النظام
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6>مصادر الأسعار:</h6>
-                                <ul class="list-unstyled">
-                                    <li><i class="fas fa-globe text-primary"></i> السيرفرات الأونلاين (أولوية)</li>
-                                    <li><i class="fas fa-edit text-warning"></i> الأسعار اليدوية (بديل)</li>
-                                    <li><i class="fas fa-shield-alt text-success"></i> السعر الافتراضي (حماية)</li>
-                                </ul>
-                            </div>
-                            <div class="col-md-6">
-                                <h6>مزايا النظام:</h6>
-                                <ul class="list-unstyled">
-                                    <li><i class="fas fa-check text-success"></i> تحديث تلقائي للأسعار</li>
-                                    <li><i class="fas fa-check text-success"></i> نظام بديل ذكي</li>
-                                    <li><i class="fas fa-check text-success"></i> تحكم كامل في الإعدادات</li>
-                                    <li><i class="fas fa-check text-success"></i> حماية من انقطاع الخدمة</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <!-- إحصائيات سريعة -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-chart-line"></i>
-                            إحصائيات سريعة
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="info-box">
-                            <span class="info-box-icon bg-info">
-                                <i class="fas fa-coins"></i>
-                            </span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">العملات المتاحة</span>
-                                <span class="info-box-number">{{ currencies_count or 8 }}</span>
-                            </div>
-                        </div>
-
-                        <div class="info-box">
-                            <span class="info-box-icon bg-success">
-                                <i class="fas fa-exchange-alt"></i>
-                            </span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">أسعار الصرف</span>
-                                <span class="info-box-number">{{ rates_count or 0 }}</span>
-                            </div>
-                        </div>
-
-                        <div class="info-box">
-                            <span class="info-box-icon bg-{{ 'success' if online_fx_enabled else 'secondary' }}">
-                                <i class="fas fa-{{ 'wifi' if online_fx_enabled else 'wifi-slash' }}"></i>
-                            </span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">الحالة</span>
-                                <span class="info-box-number">{{ 'مفعل' if online_fx_enabled else 'معطل' }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- روابط سريعة -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-link"></i>
-                            روابط سريعة
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <a href="{{ url_for('currencies.list') }}" class="btn btn-primary btn-block mb-2">
-                            <i class="fas fa-list"></i> قائمة العملات
-                        </a>
-                        <a href="{{ url_for('currencies.exchange_rates') }}" class="btn btn-info btn-block mb-2">
-                            <i class="fas fa-chart-line"></i> أسعار الصرف
-                        </a>
-                        <a href="{{ url_for('currencies.reports') }}" class="btn btn-success btn-block">
-                            <i class="fas fa-chart-bar"></i> التقارير
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
 {% endblock %}

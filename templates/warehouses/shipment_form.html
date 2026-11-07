@@ -1,95 +1,17 @@
 {% extends 'warehouses/base.html' %}
 {% set is_edit = shipment is not none %}
-{% block page_title %}{{ is_edit and 'تعديل شحنة' or 'شحنة جديدة' }}{% endblock %}
+{% block page_title %}<i class="fas fa-shipping-fast ml-1"></i> {{ is_edit and 'تعديل شحنة' or 'شحنة جديدة' }}{% endblock %}
+{% block breadcrumb_extra %}
+<li class="breadcrumb-item"><a href="{{ url_for('shipments_bp.list_shipments') }}">الشحنات</a></li>
+<li class="breadcrumb-item active">{{ is_edit and 'تعديل' or 'جديد' }}</li>
+{% endblock %}
 
-{% block head_extra %}
+{% block styles %}
   {{ super() }}
   <link rel="stylesheet" href="{{ url_for('static', filename='adminlte/plugins/select2/css/select2.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='adminlte/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/shipments.css') }}">
-  <style>
-    .is-valid { border-color: #28a745 !important; }
-    .is-invalid { border-color: #dc3545 !important; }
-    .invalid-feedback { display:block; font-size:0.85rem; }
-    
-    /* تحسينات Tabs */
-    .nav-tabs .nav-link {
-      border-radius: 10px 10px 0 0;
-      font-weight: 600;
-      padding: 12px 24px;
-      transition: all 0.3s ease;
-    }
-    
-    .nav-tabs .nav-link.active {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border-color: #667eea;
-    }
-    
-    .nav-tabs .nav-link:hover:not(.active) {
-      background: #f8f9fa;
-    }
-    
-    .tab-content {
-      border: 2px solid #e9ecef;
-      border-radius: 0 15px 15px 15px;
-      padding: 20px;
-      background: white;
-      min-height: 300px;
-    }
-    
-    /* تحسينات البطاقات */
-    .stat-card-mini {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border-radius: 10px;
-      padding: 15px;
-      text-align: center;
-      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-    }
-    
-    .stat-card-mini h3 {
-      font-size: 1.5rem;
-      margin-bottom: 5px;
-    }
-    
-    .stat-card-mini p {
-      font-size: 0.85rem;
-      margin: 0;
-      opacity: 0.9;
-    }
-    
-    /* تحسينات البنود */
-    .shipment-item {
-      background: #f8f9fa;
-      border-left: 4px solid #667eea !important;
-      transition: all 0.3s ease;
-    }
-    
-    .shipment-item:hover {
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-      transform: translateX(5px);
-    }
-    
-    .shipment-partner {
-      background: #fff9e6;
-      border-left: 4px solid #ffc107 !important;
-    }
-    
-    /* تحسينات الحقول */
-    .form-label {
-      font-weight: 600;
-      color: #495057;
-      margin-bottom: 8px;
-    }
-    
-    .required-field::after {
-      content: " *";
-      color: #dc3545;
-      font-weight: bold;
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/shipments.css', v=2) }}">
 {% endblock %}
 
 {% macro render_field(field, kwargs={}) -%}
@@ -259,8 +181,19 @@
 {%- endmacro %}
 
 {% block content %}
+<div class="shipment-form-page">
+  <div class="d-flex justify-content-end mb-3">
+    <a href="{{ url_for('shipments_bp.list_shipments') }}" class="btn btn-light btn-sm">
+      <i class="fas fa-arrow-right ml-1"></i> رجوع للقائمة
+    </a>
+  </div>
+
 <form method="POST" id="shipment-form" novalidate autocomplete="off">
   {{ form.hidden_tag() }}
+  {% if pre_po_id %}<input type="hidden" name="purchase_order_id" value="{{ pre_po_id }}">{% endif %}
+  {% if pre_po %}
+  <div class="alert alert-info">مرتبط بأمر شراء <strong>{{ pre_po.number }}</strong> — المورد: {{ pre_po.supplier.name if pre_po.supplier else pre_po.supplier_id }}</div>
+  {% endif %}
 
   <!-- إحصائيات سريعة -->
   <div class="row mb-3">
@@ -324,31 +257,31 @@
         <strong>معلومات أساسية:</strong> رقم الشحنة يتولد تلقائياً عند تركه فارغاً. حدد المستودع الوجهة وتواريخ الشحنة.
       </div>
       
-      <div class="row g-3">
-        <div class="col-md-3">
+      <div class="row">
+        <div class="col-lg-3 col-md-6 form-group">
           <label class="form-label required-field">رقم الشحنة</label>
           {{ render_field(form.shipment_number, {'id': form.shipment_number.id, 'class': 'form-control', 'placeholder': 'توليد تلقائي'}) }}
           <small class="text-muted">اتركه فارغاً للتوليد التلقائي</small>
         </div>
-        <div class="col-md-3">
+        <div class="col-lg-3 col-md-6 form-group">
           <label class="form-label required-field">تاريخ الشحن</label>
           {{ render_field(form.shipment_date, {'id': form.shipment_date.id, 'class': 'form-control dtp', 'dir': 'ltr'}) }}
         </div>
-        <div class="col-md-3">
+        <div class="col-lg-3 col-md-6 form-group">
           <label class="form-label">الوصول المتوقع</label>
           {{ render_field(form.expected_arrival, {'id': form.expected_arrival.id, 'class': 'form-control dtp', 'dir': 'ltr'}) }}
         </div>
-        <div class="col-md-3">
+        <div class="col-lg-3 col-md-6 form-group">
           <label class="form-label">الوصول الفعلي</label>
           {{ render_field(form.actual_arrival, {'id': form.actual_arrival.id, 'class': 'form-control dtp', 'dir': 'ltr'}) }}
         </div>
         
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-6 form-group">
           <label class="form-label">المنشأ</label>
           {{ render_field(form.origin, {'id': form.origin.id, 'class': 'form-control', 'placeholder': 'بلد أو مدينة المنشأ'}) }}
           <small class="text-muted">من أين تأتي الشحنة؟</small>
         </div>
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-6 form-group">
           <label class="form-label required-field">المستودع الوجهة</label>
           {{ render_field(form.destination_id, {
             'id': form.destination_id.id,
@@ -359,33 +292,33 @@
           }) }}
           <small class="text-muted">المستودع الذي ستصل إليه البضاعة</small>
         </div>
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-6 form-group">
           <label class="form-label">حالة الشحنة</label>
           {{ render_field(form.status, {'id': form.status.id, 'class': 'custom-select'}) }}
         </div>
         
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-6 form-group">
           <label class="form-label">الأولوية</label>
           {{ render_field(form.priority, {'id': form.priority.id, 'class': 'custom-select'}) }}
         </div>
         
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-6 form-group">
           <label class="form-label">طريقة التسليم</label>
           {{ render_field(form.delivery_method, {'id': form.delivery_method.id, 'class': 'custom-select'}) }}
         </div>
       </div>
       
-      <div class="row mb-3">
-        <div class="col-md-4">
+      <div class="row">
+        <div class="col-lg-4 col-md-6 form-group">
           <label class="form-label">شركة النقل</label>
           {{ render_field(form.carrier, {'id': form.carrier.id, 'class': 'form-control', 'placeholder': 'اسم الناقل'}) }}
         </div>
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-6 form-group">
           <label class="form-label">رقم التتبع</label>
           {{ render_field(form.tracking_number, {'id': form.tracking_number.id, 'class': 'form-control', 'placeholder': 'Tracking Number', 'dir': 'ltr'}) }}
         </div>
         {% if form.currency is defined %}
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-6 form-group">
           <label class="form-label">العملة</label>
           {{ render_field(form.currency, {'id': form.currency.id, 'class': 'custom-select'}) }}
         </div>
@@ -394,7 +327,7 @@
       
       <!-- معلومات الطرود والأبعاد -->
       <div class="card bg-light mb-3">
-        <div class="card-header">
+        <div class="card-header erp-card-header-row erp-theme-header--primary">
           <h5 class="mb-0"><i class="fas fa-box-open"></i> معلومات الطرود والأبعاد</h5>
         </div>
         <div class="card-body">
@@ -468,34 +401,34 @@
         <strong>التكاليف:</strong> أدخل تكاليف الشحن الإضافية. الإجمالي النهائي يُحسب تلقائياً.
       </div>
       
-      <div class="row g-3">
-        <div class="col-md-4">
+      <div class="row">
+        <div class="col-lg-4 col-md-6 form-group">
           <label class="form-label">قيمة البنود (تلقائي)</label>
           {{ render_field(form.value_before, {'id': form.value_before.id, 'class': 'form-control', 'type': 'number', 'step': '0.01', 'readonly': True}) }}
           <small class="text-muted">مجموع قيمة البنود المضافة</small>
         </div>
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-6 form-group">
           <label class="form-label">تكلفة الشحن</label>
           {{ render_field(form.shipping_cost, {'id': form.shipping_cost.id, 'class': 'form-control cost-field', 'type': 'number', 'step': '0.01', 'placeholder': '0.00'}) }}
           <small class="text-muted">تكلفة نقل البضاعة</small>
         </div>
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-6 form-group">
           <label class="form-label">الجمارك</label>
           {{ render_field(form.customs, {'id': form.customs.id, 'class': 'form-control cost-field', 'type': 'number', 'step': '0.01', 'placeholder': '0.00'}) }}
           <small class="text-muted">رسوم جمركية</small>
         </div>
         
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-6 form-group">
           <label class="form-label">ضريبة القيمة المضافة (VAT)</label>
           {{ render_field(form.vat, {'id': form.vat.id, 'class': 'form-control cost-field', 'type': 'number', 'step': '0.01', 'placeholder': '0.00'}) }}
           <small class="text-muted">ضريبة على القيمة المضافة</small>
         </div>
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-6 form-group">
           <label class="form-label">التأمين</label>
           {{ render_field(form.insurance, {'id': form.insurance.id, 'class': 'form-control cost-field', 'type': 'number', 'step': '0.01', 'placeholder': '0.00'}) }}
           <small class="text-muted">تأمين على الشحنة</small>
         </div>
-        <div class="col-md-4">
+        <div class="col-lg-4 col-md-6 form-group">
           <label class="form-label"><strong>الإجمالي النهائي (تلقائي)</strong></label>
           {{ render_field(form.total_value, {'id': form.total_value.id, 'class': 'form-control', 'type': 'number', 'step': '0.01', 'readonly': True, 'style': 'font-weight: bold; font-size: 1.1rem; background: #e9ecef;'}) }}
           <small class="text-muted">إجمالي الشحنة شاملاً كل التكاليف</small>
@@ -519,7 +452,7 @@
         <button type="button" class="btn btn-warning" id="add-partner">
           <i class="fas fa-plus"></i> إضافة شريك
         </button>
-        <div class="float-end">
+        <div class="partners-total-wrap">
           <span class="badge badge-info" id="partners-total-pct">0%</span>
           <span class="text-muted">مجموع النسب</span>
         </div>
@@ -547,11 +480,14 @@
     
   </div>
 
-  <div class="mt-3">
-    <button type="submit" class="btn btn-primary">{{ is_edit and 'تحديث الشحنة' or 'حفظ الشحنة' }}</button>
-    <a class="btn btn-secondary" href="{{ url_for('shipments_bp.list_shipments') }}">عودة</a>
+  <div class="form-actions-bar d-flex flex-wrap">
+    <button type="submit" class="btn btn-primary btn-modern">
+      <i class="fas fa-save ml-1"></i> {{ is_edit and 'تحديث الشحنة' or 'حفظ الشحنة' }}
+    </button>
+    <a class="btn btn-secondary btn-modern ml-2" href="{{ url_for('shipments_bp.list_shipments') }}">إلغاء</a>
   </div>
 </form>
+</div>
 
 <template id="item-row-template">
   <div class="shipment-item border rounded p-2 mb-2" data-index="__INDEX__">

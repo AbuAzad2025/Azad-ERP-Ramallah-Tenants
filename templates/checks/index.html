@@ -11,285 +11,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-<style>
-    :root {
-        --checks-border: #e2e5ec;
-        --checks-muted: #5f6470;
-    }
 
-    .stat-card {
-        border: 1px solid var(--checks-border);
-        border-radius: 14px;
-        background: #fff;
-        padding: 18px;
-        color: #111;
-        box-shadow: none;
-    }
-
-    .stat-card h6 {
-        font-size: 0.95rem;
-        font-weight: 400;
-        color: #111;
-        margin-bottom: 0.35rem;
-    }
-
-    .stat-card h3 {
-        font-size: 2rem;
-        font-weight: 400;
-        color: #111;
-        margin-bottom: 0.2rem;
-    }
-
-    .stat-card small {
-        color: var(--checks-muted);
-        font-weight: 400;
-    }
-
-    .stat-card .stat-icon {
-        font-size: 2rem;
-        color: #7a808d;
-        opacity: 0.8;
-    }
-
-    .stat-pending {
-        background: #f5f7ff;
-    }
-
-    .stat-cashed {
-        background: #f4fdf6;
-    }
-
-    .stat-returned {
-        background: #fff4f6;
-    }
-
-    .stat-overdue {
-        background: #fff2f2;
-    }
-
-    .nav-tabs-custom {
-        background: #fff;
-        border: 1px solid var(--checks-border);
-        border-radius: 12px;
-        padding: 8px;
-    }
-
-    .nav-tabs-custom .nav-link {
-        border: 1px solid transparent;
-        border-radius: 8px;
-        color: #333;
-        font-weight: 500;
-        padding: 10px 20px;
-    }
-
-    .nav-tabs-custom .nav-link.active {
-        background: #f0f2f7;
-        border-color: var(--checks-border);
-        color: #111;
-    }
-
-    .nav-link.overdue-tab.blink-red {
-        background: #fdecec;
-        border-color: #f1c0c0;
-        color: #a21f1f;
-    }
-
-    .nav-tabs-custom .badge {
-        background: #e7eaf3;
-        color: #111;
-        border: 1px solid var(--checks-border);
-        border-radius: 10px;
-        padding: 2px 10px;
-        font-weight: 500;
-    }
-
-    #badge-overdue {
-        background: #fdecec;
-        border-color: #f1c0c0;
-        color: #a21f1f;
-    }
-
-    .checks-table {
-        font-size: 14px;
-        color: #111;
-    }
-
-    .checks-table th {
-        background: #f6f7fb;
-        color: #111;
-        font-weight: 600;
-        border-bottom: 1px solid var(--checks-border);
-    }
-
-    .checks-table td {
-        color: #1c1e21;
-        border-color: var(--checks-border);
-    }
-
-    .checks-table tbody tr:hover {
-        background: #f9fafc;
-    }
-
-    .row-overdue {
-        background: #fff1f1 !important;
-    }
-
-    .row-due-soon {
-        background: #fff8ed !important;
-    }
-
-    .row-cashed {
-        background: #f4fff6 !important;
-    }
-
-    .row-pending {
-        background: #f5f8ff !important;
-    }
-
-    .row-bank-return {
-        box-shadow: inset 0 0 0 9999px rgba(255, 0, 0, 0.04);
-    }
-
-    .badge-custom {
-        padding: 5px 10px;
-        font-size: 0.85rem;
-        font-weight: 400 !important;
-        background: #f7f8fc;
-        border: 1px solid #dde1eb;
-        color: #111;
-        border-radius: 999px;
-    }
-
-    .badge-status-pending {
-        background: #f5f7ff;
-        color: #1f2a53;
-    }
-
-    .badge-status-overdue {
-        background: #fdecec;
-        color: #8b1a1a;
-    }
-
-    .badge-status-success {
-        background: #f4fdf6;
-        color: #14532d;
-    }
-
-    .badge-status-warning {
-        background: #fff6e5;
-        color: #8b4c10;
-    }
-
-    .badge-status-neutral {
-        background: #f4f4f4;
-        color: #4a4c52;
-    }
-
-    .empty-state {
-        padding: 50px 20px;
-        text-align: center;
-        color: var(--checks-muted);
-    }
-
-    #overdue-alert {
-        border: 1px solid #dc3545;
-        background: #fffafa;
-        color: #111;
-        box-shadow: none;
-    }
-
-    #overdue-alert .alert-heading {
-        color: #111;
-        font-weight: 500;
-    }
-
-    #overdue-alert .alert-icon {
-        font-size: 2.4rem;
-        color: #a21f1f;
-    }
-
-    #overdue-alert p {
-        color: #111;
-    }
-
-    #overdue-alert .btn-light {
-        border: 1px solid var(--checks-border);
-        color: #111;
-        font-weight: 500;
-    }
-
-    .tab-content {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-    }
-
-    .tab-content .tab-pane {
-        display: none !important;
-    }
-
-    .tab-content .tab-pane.active.show {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-    }
-
-    .table {
-        display: table !important;
-        visibility: visible !important;
-    }
-
-    .table tbody {
-        display: table-row-group !important;
-    }
-
-    .table tr {
-        display: table-row !important;
-    }
-
-    .table td,
-    .table th {
-        display: table-cell !important;
-    }
-
-    .simple-card {
-        border: 1px solid var(--checks-border);
-        border-radius: 12px;
-        box-shadow: none;
-    }
-
-    .filter-label {
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin-bottom: 0.25rem;
-    }
-
-    /* تحسين التباين في الوضع الداكن */
-    body.dark-mode .filter-label {
-        color: #e1e1e1;
-    }
-    
-    body.dark-mode .btn-outline-dark {
-        color: #e1e1e1;
-        border-color: #6c757d;
-    }
-    
-    body.dark-mode .btn-outline-dark:hover,
-    body.dark-mode .btn-outline-dark.active {
-        background-color: #4b545c;
-        color: #fff;
-    }
-
-    #checks-filters-card .badge-custom,
-    #checks-legend-card .badge-custom,
-    #checks-legend-card small {
-        font-family: inherit;
-        font-weight: 400 !important;
-        color: #111;
-        text-shadow: none;
-        letter-spacing: 0;
-    }
-</style>
 {% endblock %}
 
 {% from 'macros/permissions.html' import readonly_banner with context %}
@@ -479,7 +201,7 @@
             </div>
 
             <div class="card card-primary card-outline card-outline-tabs simple-card">
-                <div class="card-header p-0 border-bottom-0">
+                <div class="card-header erp-card-header-row erp-theme-header--primary p-0 border-bottom-0">
                     <ul class="nav nav-tabs nav-tabs-custom" role="tablist">
                         <li class="nav-item">
                             <a class="nav-link active" data-toggle="pill" href="#tab-pending" role="tab">
@@ -536,7 +258,7 @@
                     <div class="tab-content">
                         <div class="tab-pane fade show active" id="tab-pending" role="tabpanel">
                                 <table class="table table-hover checks-table" id="table-pending">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                         <th>#</th>
                                         <th>رقم الشيك</th>
@@ -560,7 +282,7 @@
 
                         <div class="tab-pane fade" id="tab-overdue" role="tabpanel">
                                 <table class="table table-hover checks-table" id="table-overdue">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                         <th>#</th>
                                         <th>رقم الشيك</th>
@@ -584,7 +306,7 @@
 
                         <div class="tab-pane fade" id="tab-cashed" role="tabpanel">
                                 <table class="table table-hover checks-table" id="table-cashed">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                         <th>#</th>
                                         <th>رقم الشيك</th>
@@ -608,7 +330,7 @@
 
                         <div class="tab-pane fade" id="tab-returned" role="tabpanel">
                                 <table class="table table-hover checks-table" id="table-returned">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                         <th>#</th>
                                         <th>رقم الشيك</th>
@@ -632,7 +354,7 @@
 
                         <div class="tab-pane fade" id="tab-cancelled" role="tabpanel">
                                 <table class="table table-hover checks-table" id="table-cancelled">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                         <th>#</th>
                                         <th>رقم الشيك</th>
@@ -656,7 +378,7 @@
 
                         <div class="tab-pane fade" id="tab-settled" role="tabpanel">
                                 <table class="table table-hover checks-table" id="table-settled">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                         <th>#</th>
                                         <th>رقم الشيك</th>
@@ -680,7 +402,7 @@
 
                         <div class="tab-pane fade" id="tab-legal" role="tabpanel">
                                 <table class="table table-hover checks-table" id="table-legal">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                         <th>#</th>
                                         <th>رقم الشيك</th>
@@ -704,7 +426,7 @@
 
                         <div class="tab-pane fade" id="tab-all" role="tabpanel">
                                 <table class="table table-hover checks-table" id="table-all">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                         <th>#</th>
                                         <th>رقم الشيك</th>

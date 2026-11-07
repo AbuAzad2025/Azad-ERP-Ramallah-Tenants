@@ -1,98 +1,24 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}data_quality{% endblock %}
-{% block security_title %}Data Quality Center{% endblock %}
+{% block security_title %}مركز جودة البيانات{% endblock %}
 {% block security_icon %}<i class="fas fa-check-double"></i>{% endblock %}
 {% block security_description %}مراقبة وتحسين جودة البيانات{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">Data Quality</li>{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">مركز جودة البيانات</li>{% endblock %}
 
 {% block extra_css %}
-<style>
-.quality-card {
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
-}
 
-.quality-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-}
-
-.stat-box {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 30px;
-    border-radius: 15px;
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.stat-number {
-    font-size: 48px;
-    font-weight: 700;
-    margin: 10px 0;
-}
-
-.issue-badge {
-    font-size: 24px;
-    padding: 10px 20px;
-    border-radius: 25px;
-}
-
-.fix-btn {
-    padding: 15px 40px;
-    font-size: 18px;
-    border-radius: 30px;
-    font-weight: 600;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    transition: all 0.3s ease;
-}
-
-.fix-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-}
-
-.progress-bar-animated {
-    animation: progress-bar-stripes 1s linear infinite;
-}
-
-.category-card {
-    border-left: 4px solid;
-    margin-bottom: 15px;
-}
-
-.category-card.critical { border-left-color: #dc3545; }
-.category-card.warning { border-left-color: #ffc107; }
-.category-card.success { border-left-color: #28a745; }
-</style>
 {% endblock %}
 
-{% block content %}
-<div class="content-wrapper">
-    <section class="content-header">
-        <div class="container-fluid">
-            <div class="row mb-2">
-                <div class="col-sm-6">
-                    <h1>
-                        <i class="fas fa-chart-line text-primary"></i>
-                        مركز جودة البيانات
-                    </h1>
-                </div>
-                <div class="col-sm-6">
-                    <ol class="breadcrumb float-sm-right">
-                        <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">الرئيسية</a></li>
-                        <li class="breadcrumb-item">اللوحة السرية</li>
-                        <li class="breadcrumb-item active">مركز جودة البيانات</li>
-                    </ol>
-                </div>
-            </div>
-        </div>
-    </section>
+{% block security_actions %}
+<a href="{{ url_for('security.advanced_check_linking') }}" class="btn btn-glass btn-sm"><i class="fas fa-link"></i> ربط الشيكات المتقدم</a>
+{% if not scan_balances %}
+<a href="{{ url_for('security.data_quality_center', scan='balances') }}" class="btn btn-glass btn-sm"><i class="fas fa-search-dollar"></i> فحص تباين الأرصدة</a>
+{% else %}
+<a href="{{ url_for('security.data_quality_center') }}" class="btn btn-glass btn-sm"><i class="fas fa-sync"></i> تحديث سريع</a>
+{% endif %}
+{% endblock %}
 
-    <section class="content">
-        <div class="container-fluid">
-            
+{% block security_content %}
             <!-- البطاقة الرئيسية -->
             <div class="row mb-4">
                 <div class="col-12">
@@ -108,8 +34,12 @@
                         <h4 style="margin: 0; font-weight: 300;">
                             {% if total_issues == 0 %}
                                 ممتاز! جميع البيانات ذات جودة عالية
+                            {% elif total_issues == 1 %}
+                                مشكلة واحدة تحتاج إلى إصلاح
+                            {% elif total_issues == 2 %}
+                                مشكلتان تحتاجان إلى إصلاح
                             {% else %}
-                                مشكلة تحتاج إلى إصلاح
+                                {{ total_issues }} مشكلة تحتاج إلى إصلاح
                             {% endif %}
                         </h4>
                     </div>
@@ -121,7 +51,7 @@
                 <!-- الشيكات -->
                 <div class="col-md-4">
                     <div class="card quality-card {% if stats.checks.no_entity > 0 or stats.checks.no_bank > 0 %}category-card warning{% else %}category-card success{% endif %}">
-                        <div class="card-header {% if stats.checks.no_entity > 0 or stats.checks.no_bank > 0 %}bg-warning{% else %}bg-success{% endif %} text-white">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary {% if stats.checks.no_entity > 0 or stats.checks.no_bank > 0 %}bg-warning{% else %}bg-success{% endif %} text-white">
                             <h5 class="mb-0">
                                 <i class="fas fa-file-invoice ml-2"></i>
                                 الشيكات
@@ -151,7 +81,7 @@
                 <!-- الدفعات -->
                 <div class="col-md-4">
                     <div class="card quality-card {% if stats.payments.no_bank > 0 or stats.payments.no_due_date > 0 %}category-card warning{% else %}category-card success{% endif %}">
-                        <div class="card-header {% if stats.payments.no_bank > 0 or stats.payments.no_due_date > 0 %}bg-warning{% else %}bg-success{% endif %} text-white">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary {% if stats.payments.no_bank > 0 or stats.payments.no_due_date > 0 %}bg-warning{% else %}bg-success{% endif %} text-white">
                             <h5 class="mb-0">
                                 <i class="fas fa-money-bill-wave ml-2"></i>
                                 الدفعات
@@ -179,9 +109,12 @@
                 </div>
 
                 <!-- الأرصدة -->
+                {% set balance_null = stats.balances.customers_null + stats.balances.suppliers_null + stats.balances.partners_null %}
+                {% set balance_drift = stats.balances.customers_drift + stats.balances.suppliers_drift + stats.balances.partners_drift %}
+                {% set balance_issues = balance_null + (balance_drift if scan_balances else 0) %}
                 <div class="col-md-4">
-                    <div class="card quality-card {% if stats.balances.customers_null > 0 or stats.balances.suppliers_null > 0 or stats.balances.partners_null > 0 %}category-card warning{% else %}category-card success{% endif %}">
-                        <div class="card-header {% if stats.balances.customers_null > 0 or stats.balances.suppliers_null > 0 or stats.balances.partners_null > 0 %}bg-warning{% else %}bg-success{% endif %} text-white">
+                    <div class="card quality-card {% if balance_issues > 0 %}category-card warning{% else %}category-card success{% endif %}">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary {% if balance_issues > 0 %}bg-warning{% else %}bg-success{% endif %} text-white">
                             <h5 class="mb-0">
                                 <i class="fas fa-balance-scale ml-2"></i>
                                 الأرصدة
@@ -200,12 +133,40 @@
                                     {{ stats.balances.suppliers_null }}
                                 </span>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
                                 <span>شركاء برصيد NULL:</span>
                                 <span class="badge {% if stats.balances.partners_null > 0 %}bg-warning{% else %}bg-success{% endif %} issue-badge">
                                     {{ stats.balances.partners_null }}
                                 </span>
                             </div>
+                            {% if scan_balances %}
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>تباين زبائن:</span>
+                                <span class="badge {% if stats.balances.customers_drift > 0 %}bg-danger{% else %}bg-success{% endif %} issue-badge">
+                                    {{ stats.balances.customers_drift }}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>تباين موردين:</span>
+                                <span class="badge {% if stats.balances.suppliers_drift > 0 %}bg-danger{% else %}bg-success{% endif %} issue-badge">
+                                    {{ stats.balances.suppliers_drift }}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>تباين شركاء:</span>
+                                <span class="badge {% if stats.balances.partners_drift > 0 %}bg-danger{% else %}bg-success{% endif %} issue-badge">
+                                    {{ stats.balances.partners_drift }}
+                                </span>
+                            </div>
+                            {% if stats.balances.scan_truncated %}
+                            <p class="small text-muted mt-2 mb-0">* الفحص على أول 300 سجل لكل نوع — قد يوجد المزيد.</p>
+                            {% endif %}
+                            {% else %}
+                            <p class="small text-muted mt-2 mb-0">
+                                <a href="{{ url_for('security.data_quality_center', scan='balances') }}">فحص تباين الأرصدة</a> (مقارنة المخزن مع الحساب الفعلي)
+                            </p>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -214,7 +175,7 @@
             <!-- أزرار الإصلاح -->
             {% if total_issues > 0 %}
             <div class="card quality-card">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header erp-card-header-row erp-theme-header--primary">
                     <h5 class="mb-0">
                         <i class="fas fa-magic ml-2"></i>
                         خيارات الإصلاح التلقائي
@@ -255,7 +216,7 @@
                             <form method="POST" style="display: inline;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="action" value="balances">
-                                <button type="submit" class="btn btn-primary fix-btn w-100" onclick="return confirm('إصلاح مشاكل الأرصدة؟')">
+                                <button type="submit" class="btn btn-primary fix-btn w-100" onclick="return confirm('إصلاح مشاكل الأرصدة؟\n\nسيتم:\n• تعيين NULL إلى 0\n• إعادة حساب الأرصدة المتباينة')" {% if balance_null == 0 and scan_balances and balance_drift == 0 %}disabled{% endif %}>
                                     <i class="fas fa-balance-scale ml-2"></i>
                                     إصلاح الأرصدة فقط
                                 </button>
@@ -289,7 +250,7 @@
 
             <!-- كيفية العمل -->
             <div class="card quality-card mt-4">
-                <div class="card-header bg-info text-white">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-graduation-cap ml-2"></i>
                         كيف يعمل الإصلاح التلقائي الذكي؟
@@ -311,7 +272,8 @@
                             <ul>
                                 <li>البنوك: من سجلات Check أو قيمة افتراضية</li>
                                 <li>تواريخ الاستحقاق: من Check أو +30 يوم افتراضي</li>
-                                <li>الأرصدة NULL: تعيين 0.00 كقيمة ابتدائية</li>
+                                <li>الأرصدة NULL: تعيين 0 ثم إعادة حساب المكونات</li>
+                                <li>تباين الأرصدة: مزامنة مع حاسبة الحقوق والالتزامات</li>
                                 <li>المزامنة بين Payment و Check</li>
                             </ul>
                         </div>
@@ -327,7 +289,7 @@
 
             <!-- الإحصائيات التفصيلية -->
             <div class="card quality-card mt-4 collapsed-card">
-                <div class="card-header bg-secondary text-white">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-secondary text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-chart-bar ml-2"></i>
                         إحصائيات تفصيلية للنظام
@@ -369,6 +331,15 @@
                         </div>
                         <div class="col-md-3 col-6">
                             <div class="info-box bg-info">
+                                <span class="info-box-icon"><i class="fas fa-money-bill-wave"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">الدفعات</span>
+                                    <span class="info-box-number">{{ stats.payments.total }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="info-box bg-info">
                                 <span class="info-box-icon"><i class="fas fa-file-invoice"></i></span>
                                 <div class="info-box-content">
                                     <span class="info-box-text">الشيكات</span>
@@ -380,8 +351,5 @@
                 </div>
             </div>
 
-        </div>
-    </section>
-</div>
 {% endblock %}
 

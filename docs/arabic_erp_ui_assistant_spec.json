@@ -438,5 +438,12 @@
       "name": "service_and_maintenance",
       "description": "واجهة صيانة وخدمات ومهام"
     }
+  ],
+  "related_specs": [
+    {
+      "file": "arabic_erp_ui_spacing_dropdowns_spec.json",
+      "css": "static/css/erp-forms-spacing.css",
+      "topics": ["dropdowns", "field alignment", "table headers", "button labels", "spacing"]
+    }
   ]
 }

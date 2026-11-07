@@ -1,0 +1,46 @@
+{# شريط تنقل المستودعات — يُعرض عبر content_toolbar في base.html فقط #}
+{% set ep = request.endpoint or '' %}
+{% set DEFAULT_WID = 1 %}
+{% set wid =
+  (warehouse.id if warehouse is defined else
+   active_warehouse_id if active_warehouse_id is defined else
+   (request.view_args.get('id') if request.view_args and request.view_args.get('id') is not none else
+    (request.view_args.get('warehouse_id') if request.view_args and request.view_args.get('warehouse_id') is not none else none)))
+%}
+
+<nav class="warehouse-toolbar" aria-label="تنقل المستودعات">
+  <div class="warehouse-toolbar__scroll">
+    <div class="warehouse-toolbar__group">
+      <a class="btn btn-sm btn-outline-secondary{% if ep == 'warehouse_bp.list' %} active{% endif %}"
+         href="{{ url_for('warehouse_bp.list') }}">
+        <i class="fas fa-warehouse ml-1"></i> المستودعات
+      </a>
+      <a class="btn btn-sm btn-outline-secondary{% if ep == 'warehouse_bp.products' %} active{% endif %}"
+         href="{{ url_for('warehouse_bp.products', id=(wid or DEFAULT_WID)) }}">
+        <i class="fas fa-box-open ml-1"></i> منتجاتي
+      </a>
+      <a class="btn btn-sm btn-outline-secondary{% if ep == 'warehouse_bp.inventory_summary' %} active{% endif %}"
+         href="{{ url_for('warehouse_bp.inventory_summary') }}">
+        <i class="fas fa-table ml-1"></i> كشف المخزون
+      </a>
+      <a class="btn btn-sm btn-outline-secondary{% if ep and ep.startswith('warehouse_bp.preorder') %} active{% endif %}"
+         href="{{ url_for('warehouse_bp.preorders_list') }}">
+        <i class="fas fa-clipboard-list ml-1"></i> الحجوزات
+      </a>
+    </div>
+    <div class="warehouse-toolbar__group warehouse-toolbar__group--actions">
+      <a class="btn btn-sm btn-outline-primary"
+         href="{{ url_for('warehouse_bp.add_product', id=(wid or DEFAULT_WID)) }}">
+        <i class="fas fa-plus-circle ml-1"></i> إضافة منتج
+      </a>
+      <a class="btn btn-sm btn-outline-primary"
+         href="{{ url_for('warehouse_bp.create') }}">
+        <i class="fas fa-plus ml-1"></i> مستودع جديد
+      </a>
+      <a class="btn btn-sm btn-primary{% if ep == 'warehouse_bp.preorder_create' %} active{% endif %}"
+         href="{{ url_for('warehouse_bp.preorder_create') }}">
+        <i class="fas fa-file-signature ml-1"></i> إنشاء حجز
+      </a>
+    </div>
+  </div>
+</nav>

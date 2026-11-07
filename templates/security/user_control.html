@@ -1,488 +1,419 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}user_control{% endblock %}
-{% block security_title %}لوحة تحكم المستخدمين المتقدمة{% endblock %}
-{% block security_icon %}<i class="fas fa-user-shield"></i>{% endblock %}
-{% block security_description %}أدوات متقدمة لإدارة المستخدمين: انتحال آمن، تعطيل، إعادة تعيين، وتحليل سلوك المستخدمين{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">التحكم المتقدم بالمستخدمين</li>{% endblock %}
+{% block security_title %}إدارة المستخدمين{% endblock %}
+{% block security_description %}تحكم كامل بالحسابات — {{ stats.filtered_count }} نتيجة من {{ stats.total_users }} مستخدم{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">التحكم بالمستخدمين</li>{% endblock %}
+
+{% block extra_css %}
+<style>
+  .uc-users-page { min-width: 0; max-width: 100%; }
+  .uc-kpi-compact .erp-sec-kpi-card { min-height: 88px; }
+  .uc-kpi-compact .erp-sec-kpi-card__value { font-size: 1.35rem; }
+  .uc-toolbar .btn { white-space: nowrap; }
+  .uc-users-table {
+    width: 100%;
+    table-layout: fixed;
+    margin-bottom: 0;
+    font-size: 0.875rem;
+  }
+  .uc-users-table th,
+  .uc-users-table td {
+    padding: 0.55rem 0.65rem;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .uc-users-table thead th {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #475569;
+    background: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .uc-users-table .col-check { width: 40px; text-align: center; }
+  .uc-users-table .col-actions { width: 52px; text-align: center; }
+  .uc-users-table .col-user { width: 26%; }
+  .uc-users-table .col-role { width: 12%; }
+  .uc-users-table .col-status { width: 14%; }
+  .uc-users-table .col-activity { width: 20%; }
+  .uc-user-name { font-weight: 700; color: #0f172a; line-height: 1.3; }
+  .uc-user-meta { font-size: 0.75rem; color: #64748b; line-height: 1.35; margin-top: 2px; }
+  .uc-status-line { font-size: 0.8rem; color: #334155; line-height: 1.4; }
+  .uc-status-line .uc-dot-online { color: #16a34a; }
+  .uc-status-line .uc-dot-offline { color: #94a3b8; }
+  .uc-action-btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 8px;
+    line-height: 34px;
+  }
+  .uc-users-table td.uc-actions-cell { position: static; overflow: visible; }
+  .uc-users-table .dropdown-menu {
+    min-width: 10.5rem;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    z-index: 1060;
+  }
+  .uc-users-table tbody tr { border-right: 3px solid transparent; }
+  .uc-users-table tbody tr.uc-row-system { border-right-color: #f59e0b; background: #fffbeb; }
+  .uc-users-table tbody tr.uc-row-online { border-right-color: #22c55e; }
+  .uc-users-table tbody tr:hover { background: #f1f5f9 !important; }
+  .uc-table-wrap { width: 100%; max-width: 100%; overflow: visible; }
+  .dataTables_wrapper .dataTables_filter input { max-width: 220px; }
+  .dataTables_wrapper .dataTables_length select { width: auto; }
+  /* مودالات الأمان فوق الفوتر الثابت */
+  body.security-body .sec-modal { z-index: 1070 !important; }
+  body.security-body .sec-modal .modal-dialog {
+    margin: 1rem auto calc(var(--erp-footer-height, 72px) + 1rem);
+    max-height: calc(100vh - var(--erp-footer-height, 72px) - 2rem);
+  }
+  body.security-body .sec-modal .modal-content { max-height: 100%; display: flex; flex-direction: column; }
+  body.security-body .sec-modal .modal-body { overflow-y: auto; }
+  body.security-body .modal-backdrop { z-index: 1065 !important; }
+  body.security-body .sec-modal .modal-header.bg-primary {
+    background: linear-gradient(135deg, #0a4a72, #06325f) !important;
+    color: #fff !important;
+  }
+  body.security-body .sec-modal .modal-header.bg-success {
+    background: #28a745 !important;
+    color: #fff !important;
+  }
+  body.security-body .sec-modal .modal-header.bg-danger {
+    background: #dc3545 !important;
+    color: #fff !important;
+  }
+  body.security-body .sec-modal .modal-footer .btn {
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
+  }
+  .uc-detail-card { border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 1rem; overflow: hidden; }
+  .uc-detail-card__head { padding: 0.5rem 0.85rem; font-weight: 700; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+  .uc-detail-card__body { padding: 0; }
+  .uc-detail-card .table { margin-bottom: 0; font-size: 0.875rem; }
+  .uc-activity-list { list-style: none; margin: 0; padding: 0.5rem 0.85rem; max-height: 220px; overflow-y: auto; }
+  .uc-activity-list li { padding: 0.45rem 0; border-bottom: 1px solid #f1f5f9; line-height: 1.45; }
+  .uc-activity-list li:last-child { border-bottom: 0; }
+</style>
+{% endblock %}
+
 {% block security_content %}
-  
-  {% if session.get('impersonating') %}
-  <div class="alert alert-warning border-0 shadow-sm animate__animated animate__pulse">
-    <div class="d-flex justify-content-between align-items-center">
-      <div>
-        <strong>🕵️ تحذير:</strong> أنت الآن تتصفح كمستخدم آخر!
-        <br><small>الحساب الأصلي: <strong>{{ session.get('original_username', 'Owner') }}</strong></small>
+<div class="uc-users-page">
+
+{% if session.get('impersonating') %}
+<div class="alert alert-warning border-0 shadow-sm mb-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <strong><i class="fas fa-user-secret ms-1"></i> وضع الانتحال نشط</strong>
+      <span class="d-block small mt-1">الحساب الأصلي: {{ session.get('original_username', 'Owner') }}</span>
+    </div>
+    <form method="POST" action="{{ url_for('security.stop_impersonate') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-undo"></i> العودة لحسابك</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-2 mb-3 uc-kpi-compact">
+  <div class="col-6 col-lg-3">
+    <div class="erp-sec-kpi-card erp-sec-kpi-card--primary">
+      <div class="erp-sec-kpi-card__body">
+        <div class="erp-sec-kpi-card__value">{{ stats.total_users }}</div>
+        <div class="erp-sec-kpi-card__label">إجمالي المستخدمين</div>
       </div>
-      <form method="POST" action="{{ url_for('security.stop_impersonate') }}" style="display:inline;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-sm btn-danger">
-          <i class="fas fa-undo"></i> العودة لحسابك
-        </button>
-      </form>
+      <div class="erp-sec-kpi-card__icon"><i class="fas fa-users"></i></div>
     </div>
   </div>
-  {% endif %}
-
-  <div class="alert alert-danger border-0 shadow-sm">
-    <i class="fas fa-crown"></i> <strong>صلاحيات خارقة:</strong> سيطرة كاملة على جميع المستخدمين!
-    <div class="mt-2 small">
-      <span class="badge bg-light text-dark">الانتحال</span>
-      <span class="badge bg-light text-dark">إعادة التعيين</span>
-      <span class="badge bg-light text-dark">الحذف</span>
-      <span class="badge bg-light text-dark">عمليات جماعية</span>
-      <span class="badge bg-light text-dark">إحصائيات متقدمة</span>
+  <div class="col-6 col-lg-3">
+    <div class="erp-sec-kpi-card erp-sec-kpi-card--success">
+      <div class="erp-sec-kpi-card__body">
+        <div class="erp-sec-kpi-card__value">{{ stats.active_users }}</div>
+        <div class="erp-sec-kpi-card__label">نشطون</div>
+      </div>
+      <div class="erp-sec-kpi-card__icon"><i class="fas fa-user-check"></i></div>
     </div>
   </div>
-
-  <!-- إحصائيات سريعة -->
-  <div class="row g-3 mb-4">
-    <div class="col-lg-2 col-md-4 col-sm-6">
-      <div class="small-box bg-primary">
-        <div class="inner">
-          <h3>{{ stats.total_users }}</h3>
-          <p>إجمالي المستخدمين</p>
-        </div>
-        <div class="icon"><i class="fas fa-users"></i></div>
+  <div class="col-6 col-lg-3">
+    <div class="erp-sec-kpi-card erp-sec-kpi-card--warning">
+      <div class="erp-sec-kpi-card__body">
+        <div class="erp-sec-kpi-card__value">{{ stats.online_users }}</div>
+        <div class="erp-sec-kpi-card__label">متصل الآن</div>
       </div>
-    </div>
-    
-    <div class="col-lg-2 col-md-4 col-sm-6">
-      <div class="small-box bg-success">
-        <div class="inner">
-          <h3>{{ stats.active_users }}</h3>
-          <p>نشطين</p>
-        </div>
-        <div class="icon"><i class="fas fa-user-check"></i></div>
-      </div>
-    </div>
-    
-    <div class="col-lg-2 col-md-4 col-sm-6">
-      <div class="small-box bg-danger">
-        <div class="inner">
-          <h3>{{ stats.inactive_users }}</h3>
-          <p>معطلين</p>
-        </div>
-        <div class="icon"><i class="fas fa-user-times"></i></div>
-      </div>
-    </div>
-    
-    <div class="col-lg-2 col-md-4 col-sm-6">
-      <div class="small-box bg-info">
-        <div class="inner">
-          <h3>{{ stats.online_users }}</h3>
-          <p>متصل الآن</p>
-        </div>
-        <div class="icon"><i class="fas fa-circle text-success"></i></div>
-      </div>
-    </div>
-    
-    <div class="col-lg-2 col-md-4 col-sm-6">
-      <div class="small-box bg-warning">
-        <div class="inner">
-          <h3>{{ stats.system_accounts }}</h3>
-          <p>حسابات النظام</p>
-        </div>
-        <div class="icon"><i class="fas fa-cog"></i></div>
-      </div>
-    </div>
-    
-    <div class="col-lg-2 col-md-4 col-sm-6">
-      <div class="small-box bg-secondary">
-        <div class="inner">
-          <h3>{{ stats.total_operations|default(0) }}</h3>
-          <p>إجمالي العمليات</p>
-        </div>
-        <div class="icon"><i class="fas fa-tasks"></i></div>
-      </div>
+      <div class="erp-sec-kpi-card__icon"><i class="fas fa-circle"></i></div>
     </div>
   </div>
-
-  <!-- Filters & Search -->
-  <div class="card shadow-sm mb-3">
-    <div class="card-body">
-      <form method="GET" class="row g-3">
-        <div class="col-md-3">
-          <label class="form-label">الحالة</label>
-          <select name="filter" class="custom-select" onchange="this.form.submit()">
-            <option value="all" {{ current_filter == 'all' and 'selected' or '' }}>الكل</option>
-            <option value="active" {{ current_filter == 'active' and 'selected' or '' }}>نشطين فقط</option>
-            <option value="inactive" {{ current_filter == 'inactive' and 'selected' or '' }}>معطلين فقط</option>
-            <option value="online" {{ current_filter == 'online' and 'selected' or '' }}>متصلين الآن</option>
-            <option value="system" {{ current_filter == 'system' and 'selected' or '' }}>حسابات النظام</option>
-          </select>
-        </div>
-        
-        <div class="col-md-3">
-          <label class="form-label">الدور</label>
-          <select name="role" class="custom-select" onchange="this.form.submit()">
-            <option value="">جميع الأدوار</option>
-            {% for role in all_roles %}
-            <option value="{{ role.name }}" {{ current_role == role.name and 'selected' or '' }}>
-              {{ role.name }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        
-        <div class="col-md-4">
-          <label class="form-label">بحث</label>
-          <input type="text" name="search" class="form-control" 
-                 placeholder="اسم المستخدم أو البريد..." 
-                 value="{{ search_query }}">
-        </div>
-        
-        <div class="col-md-2">
-          <label class="form-label">&nbsp;</label>
-          <div class="d-grid gap-2">
-            <button type="submit" class="btn btn-primary">
-              <i class="fas fa-search"></i> بحث
-            </button>
-          </div>
-        </div>
-      </form>
+  <div class="col-6 col-lg-3">
+    <div class="erp-sec-kpi-card erp-sec-kpi-card--danger">
+      <div class="erp-sec-kpi-card__body">
+        <div class="erp-sec-kpi-card__value">{{ stats.inactive_users }}</div>
+        <div class="erp-sec-kpi-card__label">معطّلون</div>
+      </div>
+      <div class="erp-sec-kpi-card__icon"><i class="fas fa-user-times"></i></div>
     </div>
   </div>
-
-  <!-- جدول المستخدمين المحسّن -->
-  <div class="card shadow-lg">
-    <div class="card-header bg-gradient-primary text-white">
-      <div class="d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="fas fa-users-cog"></i> قائمة المستخدمين - {{ stats.total_users }} مستخدم</h5>
-        <div class="btn-group">
-          <button class="btn btn-sm btn-primary" onclick="showCreateUser()">
-            <i class="fas fa-user-plus"></i> مستخدم جديد
-          </button>
-          <button class="btn btn-sm btn-light" onclick="exportUsers()">
-            <i class="fas fa-download"></i> Export
-          </button>
-          <button class="btn btn-sm btn-success" onclick="bulkActivate()">
-            <i class="fas fa-check-circle"></i> تفعيل
-          </button>
-          <button class="btn btn-sm btn-warning" onclick="bulkDeactivate()">
-            <i class="fas fa-ban"></i> تعطيل
-          </button>
-        </div>
-      </div>
-    </div>
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-hover table-striped mb-0" id="usersTable">
-          <thead class="table-dark">
-            <tr>
-              <th style="width: 30px;">
-                <input type="checkbox" id="selectAll" onchange="toggleAll(this)">
-              </th>
-              <th style="width: 50px;">ID</th>
-              <th>المستخدم</th>
-              <th>البريد</th>
-              <th>الدور</th>
-              <th>الحالة</th>
-              <th>متصل</th>
-              <th>المبيعات</th>
-              <th>الصيانة</th>
-              <th>المدفوعات</th>
-              <th>آخر نشاط</th>
-              <th style="width: 250px;">إجراءات خارقة</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for user in users %}
-            <tr class="{{ user.is_system_account and 'table-warning' or '' }} {{ user.is_online and 'table-success' or '' }}">
-              <td>
-                <input type="checkbox" class="user-checkbox" value="{{ user.id }}">
-              </td>
-              <td>
-                <strong>{{ user.id }}</strong>
-                {% if user.is_system_account %}
-                <span class="badge bg-warning text-dark" title="حساب نظام محمي">
-                  <i class="fas fa-lock"></i>
-                </span>
-                {% endif %}
-              </td>
-              <td>
-                <div>
-                  <strong>{{ user.username }}</strong>
-                  {% if user.username == '__OWNER__' %}
-                  <span class="badge bg-danger ms-1">المالك</span>
-                  {% endif %}
-                </div>
-                <small class="text-muted">
-                  عدد الدخول: {{ user.login_count|default(0) }}
-                </small>
-              </td>
-              <td>
-                <small>{{ user.email or 'N/A' }}</small>
-                {% if user.last_login_ip %}
-                <br><small class="text-muted">IP: {{ user.last_login_ip }}</small>
-                {% endif %}
-              </td>
-              <td>
-                {% if user.role %}
-                <span class="badge bg-info">{{ user.role.name }}</span>
-                {% else %}
-                <span class="badge bg-secondary">لا يوجد</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if user.is_active %}
-                <span class="badge bg-success">
-                  <i class="fas fa-check-circle"></i> نشط
-                </span>
-                {% else %}
-                <span class="badge bg-danger">
-                  <i class="fas fa-times-circle"></i> معطل
-                </span>
-                {% endif %}
-              </td>
-              <td>
-                {% if user.is_online %}
-                <span class="badge bg-success">
-                  <i class="fas fa-circle"></i> Online
-                </span>
-                {% else %}
-                <span class="badge bg-secondary">
-                  <i class="far fa-circle"></i> Offline
-                </span>
-                {% endif %}
-              </td>
-              <td>
-                <div>
-                  <strong>{{ user.sales_count|default(0) }}</strong>
-                </div>
-                <small class="text-success">
-                  {{ "{:,.2f}".format(user.sales_total|default(0)) }} ₪
-                </small>
-              </td>
-              <td>
-                <strong>{{ user.services_count|default(0) }}</strong>
-              </td>
-              <td>
-                <strong>{{ user.payments_count|default(0) }}</strong>
-              </td>
-              <td>
-                {% if user.last_activity_time %}
-                <small title="{{ user.last_activity_time }}">
-                  {{ user.last_activity_time.strftime('%Y-%m-%d %H:%M') }}
-                </small>
-                <br><small class="text-muted">{{ user.last_activity_desc[:30] }}</small>
-                {% else %}
-                <small class="text-muted">لا يوجد</small>
-                {% endif %}
-              </td>
-              <td>
-                <div class="btn-group btn-group-sm" role="group">
-                  <!-- عرض التفاصيل -->
-                  <button class="btn btn-primary" onclick="viewUserDetails({{ user.id }})" title="التفاصيل الكاملة">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  
-                  <!-- انتحال الشخصية -->
-                  {% if user.id != current_user.id %}
-                  <form method="POST" action="{{ url_for('security.impersonate_user', user_id=user.id) }}" 
-                        style="display:inline;" 
-                        onsubmit="return confirm('🕵️ هل تريد تسجيل الدخول كـ {{ user.username }}؟\n\nستتمكن من رؤية كل شيء كما يراه هذا المستخدم.');">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-warning" title="انتحال شخصية {{ user.username }}">
-                      <i class="fas fa-user-secret"></i>
-                    </button>
-                  </form>
-                  {% endif %}
-                  
-                  <!-- إدارة الصلاحيات -->
-                  <button class="btn btn-success" onclick="managePermissions({{ user.id }}, '{{ user.username }}', '{{ user.role.name if user.role else '' }}')" title="إدارة صلاحيات {{ user.username }}">
-                    <i class="fas fa-key"></i>
-                  </button>
-                  
-                  <!-- إعادة تعيين كلمة المرور -->
-                  <button class="btn btn-info" onclick="resetPassword({{ user.id }}, '{{ user.username }}')" title="إعادة تعيين كلمة المرور">
-                    <i class="fas fa-lock"></i>
-                  </button>
-                  
-                  <!-- تفعيل/تعطيل -->
-                  {% if user.id != current_user.id %}
-                  <form method="POST" action="{{ url_for('security.toggle_user_status', user_id=user.id) }}" 
-                        style="display:inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-{{ user.is_active and 'danger' or 'success' }}" 
-                            title="{{ user.is_active and 'تعطيل' or 'تفعيل' }}">
-                      <i class="fas fa-power-off"></i>
-                    </button>
-                  </form>
-                  {% endif %}
-                  
-                  <!-- حذف -->
-                  {% if user.id != current_user.id and not user.is_system_account %}
-                  <button class="btn btn-dark" onclick="deleteUser({{ user.id }}, '{{ user.username }}')" title="حذف نهائي">
-                    <i class="fas fa-trash-alt"></i>
-                  </button>
-                  {% endif %}
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
 </div>
 
-<!-- Modal: تفاصيل المستخدم -->
-<div class="modal fade" id="userDetailsModal" tabindex="-1">
-  <div class="modal-dialog modal-xl">
+<div class="card shadow-sm mb-3">
+  <div class="card-body py-3">
+    <form method="GET" class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small mb-1">الحالة</label>
+        <select name="filter" class="custom-select custom-select-sm">
+          <option value="all" {{ current_filter == 'all' and 'selected' or '' }}>الكل</option>
+          <option value="active" {{ current_filter == 'active' and 'selected' or '' }}>نشطون</option>
+          <option value="inactive" {{ current_filter == 'inactive' and 'selected' or '' }}>معطّلون</option>
+          <option value="online" {{ current_filter == 'online' and 'selected' or '' }}>متصلون الآن</option>
+          <option value="system" {{ current_filter == 'system' and 'selected' or '' }}>حسابات النظام</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1">الدور</label>
+        <select name="role" class="custom-select custom-select-sm">
+          <option value="">جميع الأدوار</option>
+          {% for role in all_roles %}
+          <option value="{{ role.name }}" {{ current_role == role.name and 'selected' or '' }}>{{ role.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small mb-1">بحث</label>
+        <input type="text" name="search" class="form-control form-control-sm" placeholder="اسم المستخدم أو البريد…" value="{{ search_query }}">
+      </div>
+      <div class="col-md-2 d-grid">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> تطبيق</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header bg-white border-bottom py-2 px-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 uc-toolbar">
+      <h5 class="mb-0 font-weight-bold text-dark"><i class="fas fa-users-cog text-primary ms-1"></i> القائمة <span class="badge badge-light border text-muted">{{ stats.filtered_count }}</span></h5>
+      <div class="d-flex flex-wrap gap-1">
+        <button type="button" class="btn btn-primary btn-sm" id="btnCreateUser"><i class="fas fa-user-plus"></i> جديد</button>
+        <div class="btn-group btn-group-sm">
+          <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown">عمليات</button>
+          <div class="dropdown-menu dropdown-menu-left">
+            <button type="button" class="dropdown-item" id="btnBulkActivate"><i class="fas fa-check-circle ml-2 text-success"></i> تفعيل المحدد</button>
+            <button type="button" class="dropdown-item" id="btnBulkDeactivate"><i class="fas fa-ban ml-2 text-warning"></i> تعطيل المحدد</button>
+            <div class="dropdown-divider"></div>
+            <button type="button" class="dropdown-item" id="btnExportUsers"><i class="fas fa-download ml-2"></i> تصدير</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="uc-table-wrap px-2 pb-2">
+      <table class="table table-hover uc-users-table" id="usersTable">
+        <thead>
+          <tr>
+            <th class="col-check"><input type="checkbox" id="selectAll" aria-label="تحديد الكل"></th>
+            <th class="col-user">المستخدم</th>
+            <th class="col-role">الدور</th>
+            <th class="col-status">الحالة</th>
+            <th class="col-activity">آخر نشاط</th>
+            <th class="col-actions">⋮</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+          <tr class="{% if user.is_system_account %}uc-row-system{% elif user.is_online %}uc-row-online{% endif %}">
+            <td class="col-check"><input type="checkbox" class="user-checkbox" value="{{ user.id }}" aria-label="تحديد {{ user.username }}"></td>
+            <td class="col-user">
+              <div class="uc-user-name">
+                {{ user.username }}
+                {% if user.username == '__OWNER__' %}<span class="badge badge-danger badge-pill ml-1">مالك</span>{% endif %}
+                {% if user.is_system_account %}<i class="fas fa-lock text-warning ml-1" title="حساب نظام"></i>{% endif %}
+              </div>
+              <div class="uc-user-meta">{{ user.email or '—' }} · #{{ user.id }}</div>
+            </td>
+            <td class="col-role"><span class="text-dark">{{ user.role.name if user.role else '—' }}</span></td>
+            <td class="col-status">
+              <div class="uc-status-line">
+                {% if user.is_online %}<i class="fas fa-circle uc-dot-online"></i>{% else %}<i class="far fa-circle uc-dot-offline"></i>{% endif %}
+                {{ 'متصل' if user.is_online else 'غير متصل' }} · {{ 'نشط' if user.is_active else 'معطّل' }}
+              </div>
+            </td>
+            <td class="col-activity">
+              {% if user.last_activity_time %}
+              <div class="text-dark">{{ user.last_activity_time.strftime('%Y-%m-%d %H:%M') }}</div>
+              <div class="uc-user-meta">{{ (user.last_activity_desc or '')[:36] }}</div>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="col-actions uc-actions-cell">
+              <div class="dropdown d-inline-block">
+                <button type="button" class="btn btn-light btn-sm uc-action-btn" data-toggle="dropdown" data-boundary="window" aria-label="إجراءات {{ user.username }}">
+                  <i class="fas fa-ellipsis-h"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-left">
+                  <button type="button" class="dropdown-item js-user-details" data-user-id="{{ user.id }}"><i class="fas fa-eye ml-2 text-primary"></i> التفاصيل الكاملة</button>
+                  <button type="button" class="dropdown-item js-user-perms" data-user-id="{{ user.id }}" data-username="{{ user.username }}" data-role="{{ user.role.name if user.role else '' }}"><i class="fas fa-key ml-2 text-success"></i> الصلاحيات</button>
+                  <button type="button" class="dropdown-item js-user-reset" data-user-id="{{ user.id }}" data-username="{{ user.username }}"><i class="fas fa-lock ml-2 text-info"></i> كلمة المرور</button>
+                  {% if user.id != current_user.id %}
+                  <div class="dropdown-divider"></div>
+                  <form method="POST" action="{{ url_for('security.impersonate_user', user_id=user.id) }}" onsubmit="return confirm('تسجيل الدخول كـ {{ user.username }}؟');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="dropdown-item"><i class="fas fa-user-secret ml-2 text-warning"></i> انتحال</button>
+                  </form>
+                  <form method="POST" action="{{ url_for('security.toggle_user_status', user_id=user.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="dropdown-item"><i class="fas fa-power-off ml-2"></i> {{ 'تعطيل' if user.is_active else 'تفعيل' }}</button>
+                  </form>
+                  {% if not user.is_system_account %}
+                  <button type="button" class="dropdown-item text-danger js-user-delete" data-user-id="{{ user.id }}" data-username="{{ user.username }}"><i class="fas fa-trash-alt ml-2"></i> حذف</button>
+                  {% endif %}
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-5">لا توجد نتائج مطابقة للفلتر الحالي.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div>{# .uc-users-page #}
+
+{% endblock %}
+
+{% block security_modals %}
+
+<div class="modal fade sec-modal" id="userDetailsModal" tabindex="-1" role="dialog" aria-labelledby="userDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
     <div class="modal-content">
       <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title"><i class="fas fa-user"></i> تفاصيل المستخدم الكاملة</h5>
-        <button type="button" class="close" data-dismiss="modal"></button>
+        <h5 class="modal-title" id="userDetailsModalLabel"><i class="fas fa-user ms-1"></i> تفاصيل المستخدم</h5>
+        <button type="button" class="close text-white js-modal-close" data-dismiss="modal" aria-label="إغلاق"><span aria-hidden="true">&times;</span></button>
       </div>
       <div class="modal-body" id="userDetailsContent">
-        <div class="text-center py-5">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">جاري التحميل...</span>
-          </div>
-        </div>
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary js-modal-close" data-dismiss="modal">إغلاق</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Modal: إدارة الصلاحيات -->
-<div class="modal fade" id="permissionsModal" tabindex="-1">
-  <div class="modal-dialog modal-xl">
+<div class="modal fade sec-modal" id="permissionsModal" tabindex="-1" role="dialog" aria-labelledby="permissionsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
     <div class="modal-content">
       <div class="modal-header bg-success text-white">
-        <h5 class="modal-title">
-          <i class="fas fa-key"></i> إدارة صلاحيات: <span id="permsUsername"></span>
-        </h5>
-        <button type="button" class="close text-white" data-dismiss="modal" aria-label="إغلاق">
-          <span aria-hidden="true">&times;</span>
-        </button>
+        <h5 class="modal-title" id="permissionsModalLabel"><i class="fas fa-key ms-1"></i> صلاحيات: <span id="permsUsername"></span></h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="إغلاق"><span aria-hidden="true">&times;</span></button>
       </div>
       <div class="modal-body">
-        <div class="alert alert-info border-0">
-          <i class="fas fa-info-circle"></i>
+        <div class="alert alert-info border-0 mb-3">
           <strong>الدور:</strong> <span id="permsRole"></span>
-          <br><small>💡 الزرقاء = موروثة من الدور (لا يمكن تعديلها) | الخضراء = إضافية</small>
+          <span class="d-block small mt-1">الأزرق = من الدور (غير قابل للتعديل) · الأخضر = صلاحيات إضافية</span>
         </div>
         <div id="permissionsContent"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">إلغاء</button>
-        <button type="button" class="btn btn-success" onclick="savePermissions()">
-          <i class="fas fa-save"></i> حفظ
-        </button>
+        <button type="button" class="btn btn-success" id="btnSavePermissions"><i class="fas fa-save"></i> حفظ</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Modal: إعادة تعيين كلمة المرور -->
-<div class="modal fade" id="resetPasswordModal" tabindex="-1">
-  <div class="modal-dialog">
+<div class="modal fade sec-modal" id="resetPasswordModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog" role="document">
     <div class="modal-content">
       <form method="POST" id="resetPasswordForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-header bg-warning">
-          <h5 class="modal-title"><i class="fas fa-key"></i> إعادة تعيين كلمة المرور</h5>
-          <button type="button" class="close" data-dismiss="modal"></button>
+          <h5 class="modal-title"><i class="fas fa-key ms-1"></i> إعادة تعيين كلمة المرور</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="إغلاق"><span>&times;</span></button>
         </div>
         <div class="modal-body">
-          <div class="alert alert-warning">
-            <i class="fas fa-exclamation-triangle"></i> سيتم إرسال كلمة المرور الجديدة للمستخدم عبر البريد الإلكتروني
-          </div>
-          <p>المستخدم: <strong id="resetUsername"></strong></p>
-          <div class="mb-3">
+          <p class="mb-2">المستخدم: <strong id="resetUsername"></strong></p>
+          <div class="form-group mb-0">
             <label class="form-label">كلمة المرور الجديدة</label>
             <div class="input-group">
-              <input type="text" name="new_password" id="newPassword" class="form-control" value="" required>
-              <button type="button" class="btn btn-outline-secondary" onclick="generatePassword()">
-                <i class="fas fa-random"></i> توليد
-              </button>
+              <input type="text" name="new_password" id="newPassword" class="form-control" required autocomplete="off">
+              <div class="input-group-append">
+                <button type="button" class="btn btn-outline-secondary" id="btnGenPassword"><i class="fas fa-random"></i></button>
+              </div>
             </div>
-            <small class="text-muted">اترك فارغاً لتوليد تلقائي، أو أدخل كلمة مرور مخصصة</small>
+            <small class="form-text text-muted">يُولَّد تلقائياً — يمكنك تعديله قبل الحفظ</small>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">إلغاء</button>
-          <button type="submit" class="btn btn-warning">
-            <i class="fas fa-check"></i> تأكيد الإعادة
-          </button>
+          <button type="submit" class="btn btn-warning">تأكيد</button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-<!-- Modal: حذف مستخدم -->
-<div class="modal fade" id="deleteUserModal" tabindex="-1">
-  <div class="modal-dialog">
+<div class="modal fade sec-modal" id="deleteUserModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog" role="document">
     <div class="modal-content">
       <form method="POST" id="deleteUserForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-header bg-danger text-white">
-          <h5 class="modal-title"><i class="fas fa-trash-alt"></i> حذف المستخدم</h5>
-          <button type="button" class="close" data-dismiss="modal"></button>
+          <h5 class="modal-title"><i class="fas fa-trash-alt ms-1"></i> حذف المستخدم</h5>
+          <button type="button" class="close text-white" data-dismiss="modal" aria-label="إغلاق"><span>&times;</span></button>
         </div>
         <div class="modal-body">
-          <div class="alert alert-danger">
-            <i class="fas fa-exclamation-triangle"></i> <strong>تحذير:</strong> هذا الإجراء خطير ولا يمكن التراجع عنه!
-          </div>
-          <p>هل أنت متأكد من حذف المستخدم: <strong id="deleteUsername"></strong>؟</p>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="confirmDelete" required>
-            <label class="form-check-label" for="confirmDelete">
-              نعم، أنا متأكد من الحذف النهائي
-            </label>
+          <div class="alert alert-danger border-0">هذا الإجراء نهائي ولا يمكن التراجع عنه.</div>
+          <p>حذف: <strong id="deleteUsername"></strong></p>
+          <div class="custom-control custom-checkbox">
+            <input type="checkbox" class="custom-control-input" id="confirmDelete" required>
+            <label class="custom-control-label" for="confirmDelete">أؤكد الحذف النهائي</label>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">إلغاء</button>
-          <button type="submit" class="btn btn-danger">
-            <i class="fas fa-trash-alt"></i> حذف نهائي
-          </button>
+          <button type="submit" class="btn btn-danger">حذف</button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-<!-- Modal: إنشاء مستخدم جديد -->
-<div class="modal fade" id="createUserModal" tabindex="-1">
-  <div class="modal-dialog">
+<div class="modal fade sec-modal" id="createUserModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog" role="document">
     <div class="modal-content">
       <form method="POST" action="{{ url_for('security.create_user') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title"><i class="fas fa-user-plus"></i> إنشاء مستخدم جديد</h5>
-          <button type="button" class="close" data-dismiss="modal"></button>
+          <h5 class="modal-title"><i class="fas fa-user-plus ms-1"></i> مستخدم جديد</h5>
+          <button type="button" class="close text-white" data-dismiss="modal" aria-label="إغلاق"><span>&times;</span></button>
         </div>
         <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label">اسم المستخدم <span class="text-danger">*</span></label>
-            <input type="text" name="username" class="form-control" required 
-                   pattern="[a-zA-Z0-9_]{3,50}" 
-                   title="3-50 حرف (حروف إنجليزية وأرقام و _ فقط)">
+          <div class="form-group">
+            <label>اسم المستخدم <span class="text-danger">*</span></label>
+            <input type="text" name="username" class="form-control" required pattern="[a-zA-Z0-9_]{3,50}">
           </div>
-          
-          <div class="mb-3">
-            <label class="form-label">البريد الإلكتروني <span class="text-danger">*</span></label>
+          <div class="form-group">
+            <label>البريد <span class="text-danger">*</span></label>
             <input type="email" name="email" class="form-control" required>
           </div>
-          
-          <div class="mb-3">
-            <label class="form-label">كلمة المرور</label>
+          <div class="form-group">
+            <label>كلمة المرور</label>
             <div class="input-group">
-              <input type="text" name="password" id="createPassword" class="form-control" 
-                     value="" placeholder="اترك فارغاً لـ 123456">
-              <button type="button" class="btn btn-outline-secondary" onclick="generateCreatePassword()">
-                <i class="fas fa-random"></i> توليد
-              </button>
+              <input type="text" name="password" id="createPassword" class="form-control" autocomplete="off">
+              <div class="input-group-append">
+                <button type="button" class="btn btn-outline-secondary" id="btnGenCreatePassword"><i class="fas fa-random"></i></button>
+              </div>
             </div>
+            <small class="form-text text-muted">اتركه فارغاً لاستخدام 123456</small>
           </div>
-          
-          <div class="mb-3">
-            <label class="form-label">الدور</label>
+          <div class="form-group">
+            <label>الدور</label>
             <select name="role_id" class="custom-select">
               <option value="">بدون دور</option>
               {% for role in all_roles %}
@@ -490,423 +421,299 @@
               {% endfor %}
             </select>
           </div>
-          
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="is_active" value="1" id="createActive" checked>
-            <label class="form-check-label" for="createActive">
-              تفعيل الحساب فوراً
-            </label>
+          <div class="custom-control custom-checkbox">
+            <input type="checkbox" class="custom-control-input" name="is_active" value="1" id="createActive" checked>
+            <label class="custom-control-label" for="createActive">تفعيل فوراً</label>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">إلغاء</button>
-          <button type="submit" class="btn btn-primary">
-            <i class="fas fa-check"></i> إنشاء المستخدم
-          </button>
+          <button type="submit" class="btn btn-primary">إنشاء</button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-<script>
-// Helper: toast or alert fallback
-function _notify(msg, type) {
-  if (typeof showToast !== 'undefined') { showToast(msg, type); }
-  else { alert(msg); }
-}
+{% endblock %}
 
-// تفعيل DataTable
-$(document).ready(function() {
-  function initUsersTableDT() {
-    if (!(window.jQuery && jQuery.fn && jQuery.fn.DataTable)) return;
-    $('#usersTable').DataTable({
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+  var CSRF = '{{ csrf_token() }}';
+  var currentManageUserId = null;
+  var usersTable = null;
+
+  function notify(msg, type) {
+    if (typeof showToast === 'function') showToast(msg, type);
+    else alert(msg);
+  }
+
+  function openSecModal(selector) {
+    if (!window.jQuery || !$.fn.modal) return;
+    var $m = $(selector);
+    if (!$m.length) return;
+    if (!$m.parent().is('body')) $m.appendTo('body');
+    $m.modal({ backdrop: true, keyboard: true, focus: true, show: true });
+  }
+
+  function closeSecModal(selector) {
+    if (!window.jQuery || !$.fn.modal) return;
+    var $m = typeof selector === 'string' ? $(selector) : selector;
+    if (!$m || !$m.length) return;
+    $m.modal('hide');
+  }
+
+  function cleanupModalShell() {
+    if ($('.modal.show').length) return;
+    $('body').removeClass('modal-open').css('padding-right', '');
+    $('.modal-backdrop').remove();
+  }
+
+  $(document).on('click', '.sec-modal [data-dismiss="modal"], .sec-modal .js-modal-close', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    closeSecModal($(this).closest('.modal'));
+  });
+
+  $(document).on('hidden.bs.modal', '.sec-modal', function () {
+    cleanupModalShell();
+  });
+
+  function randomPassword() {
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+    var out = '';
+    for (var i = 0; i < 12; i++) out += chars.charAt(Math.floor(Math.random() * chars.length));
+    return out;
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleString('ar-EG'); } catch (e) { return iso; }
+  }
+
+  function fmtMoney(n) {
+    return parseFloat(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₪';
+  }
+
+  function initTable() {
+    if (!window.jQuery || !$.fn.DataTable) return;
+    if ($.fn.DataTable.isDataTable('#usersTable')) return;
+    usersTable = $('#usersTable').DataTable({
       order: [[1, 'asc']],
-      pageLength: 25,
-      responsive: true,
+      pageLength: 20,
       autoWidth: false,
-      scrollX: $('#usersTable thead th').length > 8,
-      language: {
-        url: '/static/datatables/Arabic.json'
-      },
-      dom: 'Bfrtip',
-      buttons: [
-        'copy', 'csv', 'excel', 'print'
+      responsive: false,
+      language: { url: '/static/datatables/Arabic.json' },
+      dom: '<"row mx-0 px-2 pt-2 align-items-center"<"col-sm-6"l><"col-sm-6"f>>rtip',
+      columnDefs: [
+        { orderable: false, targets: [0, 5] },
+        { searchable: false, targets: [0, 5] }
       ]
     });
   }
 
-  if (window.jQuery && typeof window.ensureDataTables === 'function' && !(jQuery.fn && jQuery.fn.DataTable)) {
-    window.ensureDataTables().then(initUsersTableDT);
+  function positionUcDropdown($dropdown) {
+    var $btn = $dropdown.find('[data-toggle="dropdown"]');
+    var $menu = $dropdown.find('.dropdown-menu');
+    if (!$btn.length || !$menu.length) return;
+    $menu.css({ display: 'block', visibility: 'hidden' });
+    var rect = $btn[0].getBoundingClientRect();
+    var menuW = $menu.outerWidth() || 168;
+    var left = Math.round(rect.left);
+    if (left + menuW > window.innerWidth - 8) left = Math.round(rect.right - menuW);
+    if (left < 8) left = 8;
+    $menu.css({
+      position: 'fixed',
+      top: Math.round(rect.bottom + 4) + 'px',
+      left: left + 'px',
+      right: 'auto',
+      transform: 'none',
+      visibility: 'visible'
+    });
+  }
+
+  $(document).on('hidden.bs.dropdown', '.uc-users-table .dropdown', function () {
+    $(this).find('.dropdown-menu').removeAttr('style');
+  });
+
+  $(document).on('show.bs.dropdown', '.uc-users-table .dropdown', function () {
+    positionUcDropdown($(this));
+  });
+  $(window).on('scroll resize', function () {
+    $('.uc-users-table .dropdown.show').each(function () {
+      positionUcDropdown($(this));
+    });
+  });
+
+  if (window.ensureDataTables && !(jQuery.fn && jQuery.fn.DataTable)) {
+    window.ensureDataTables().then(initTable);
   } else {
-    initUsersTableDT();
+    $(initTable);
   }
-});
 
-// Toggle All Checkboxes
-function toggleAll(source) {
-  const checkboxes = document.querySelectorAll('.user-checkbox');
-  checkboxes.forEach(cb => cb.checked = source.checked);
-}
-
-// Export Users
-function exportUsers() {
-  const table = $('#usersTable').DataTable();
-  table.button('.buttons-csv').trigger();
-}
-
-// Bulk Activate
-function bulkActivate() {
-  const selected = getSelectedUsers();
-  if (selected.length === 0) {
-    _notify('⚠️ الرجاء اختيار مستخدم واحد على الأقل', 'warning');
-    return;
-  }
-  if (confirm(`✅ تفعيل ${selected.length} مستخدم؟`)) {
-    bulkOperation('activate', selected);
-  }
-}
-
-// Bulk Deactivate
-function bulkDeactivate() {
-  const selected = getSelectedUsers();
-  if (selected.length === 0) {
-    _notify('⚠️ الرجاء اختيار مستخدم واحد على الأقل', 'warning');
-    return;
-  }
-  if (confirm(`❌ تعطيل ${selected.length} مستخدم؟`)) {
-    bulkOperation('deactivate', selected);
-  }
-}
-
-// Get Selected Users
-function getSelectedUsers() {
-  const checkboxes = document.querySelectorAll('.user-checkbox:checked');
-  return Array.from(checkboxes).map(cb => cb.value);
-}
-
-// Bulk Operation
-function bulkOperation(operation, userIds) {
-  fetch('/security/api/users/bulk-operation', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': '{{ csrf_token() }}'
-    },
-    body: JSON.stringify({
-      operation: operation,
-      user_ids: userIds
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.success) {
-      _notify(`✅ ${data.message}`, 'success');
-      location.reload();
-    } else {
-      _notify(`❌ ${data.error}`, 'error');
-    }
-  })
-  .catch(err => {
-    _notify('❌ حدث خطأ: ' + err, 'error');
+  $('#selectAll').on('change', function () {
+    $('.user-checkbox').prop('checked', this.checked);
   });
-}
 
-// عرض تفاصيل المستخدم
-function viewUserDetails(userId) {
-  $('#userDetailsModal').modal('show');
-  
-  fetch(`/security/api/users/${userId}/details`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        document.getElementById('userDetailsContent').innerHTML = renderUserDetails(data.user);
-      } else {
-        document.getElementById('userDetailsContent').innerHTML = `
-          <div class="alert alert-danger">❌ ${data.error}</div>
-        `;
-      }
-    })
-    .catch(err => {
-      document.getElementById('userDetailsContent').innerHTML = `
-        <div class="alert alert-danger">❌ حدث خطأ: ${err}</div>
-      `;
-    });
-}
-
-// Render User Details
-function renderUserDetails(user) {
-  return `
-    <div class="row g-3">
-      <div class="col-md-6">
-        <div class="card">
-          <div class="card-header bg-primary text-white">
-            <i class="fas fa-info-circle"></i> معلومات أساسية
-          </div>
-          <div class="card-body">
-            <table class="table table-sm">
-              <tr><th>ID:</th><td>${user.id}</td></tr>
-              <tr><th>اسم المستخدم:</th><td><strong>${user.username}</strong></td></tr>
-              <tr><th>البريد:</th><td>${user.email || 'N/A'}</td></tr>
-              <tr><th>الدور:</th><td><span class="badge bg-info">${user.role || 'N/A'}</span></td></tr>
-              <tr><th>الحالة:</th><td>${user.is_active ? '<span class="badge bg-success">نشط</span>' : '<span class="badge bg-danger">معطل</span>'}</td></tr>
-              <tr><th>حساب نظام:</th><td>${user.is_system_account ? '<span class="badge bg-warning">نعم</span>' : 'لا'}</td></tr>
-            </table>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-md-6">
-        <div class="card">
-          <div class="card-header bg-success text-white">
-            <i class="fas fa-chart-line"></i> إحصائيات الأداء
-          </div>
-          <div class="card-body">
-            <table class="table table-sm">
-              <tr><th>عدد المبيعات:</th><td><strong>${user.sales_count}</strong></td></tr>
-              <tr><th>إجمالي المبيعات:</th><td><strong class="text-success">${parseFloat(user.sales_total).toLocaleString('en-US', {minimumFractionDigits: 2})} ₪</strong></td></tr>
-              <tr><th>طلبات الصيانة:</th><td>${user.services_count}</td></tr>
-              <tr><th>المدفوعات المُنشأة:</th><td>${user.payments_count}</td></tr>
-              <tr><th>إجمالي العمليات:</th><td><strong>${user.sales_count + user.services_count + user.payments_count}</strong></td></tr>
-            </table>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-md-6">
-        <div class="card">
-          <div class="card-header bg-info text-white">
-            <i class="fas fa-clock"></i> سجل الدخول
-          </div>
-          <div class="card-body">
-            <table class="table table-sm">
-              <tr><th>آخر دخول:</th><td>${user.last_login || 'N/A'}</td></tr>
-              <tr><th>آخر نشاط:</th><td>${user.last_seen || 'N/A'}</td></tr>
-              <tr><th>عدد مرات الدخول:</th><td>${user.login_count}</td></tr>
-              <tr><th>آخر IP:</th><td><code>${user.last_login_ip || 'N/A'}</code></td></tr>
-            </table>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-md-6">
-        <div class="card">
-          <div class="card-header bg-warning text-dark">
-            <i class="fas fa-history"></i> آخر الأنشطة (10)
-          </div>
-          <div class="card-body">
-            <div id="recentActivities" style="max-height: 200px; overflow-y: auto;">
-              <div class="text-center py-3">
-                <div class="spinner-border spinner-border-sm" role="status"></div>
-                <span class="ms-2">جاري التحميل...</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// إعادة تعيين كلمة المرور
-function resetPassword(userId, username) {
-  document.getElementById('resetUsername').textContent = username;
-  document.getElementById('resetPasswordForm').action = `/security/force-reset-password/${userId}`;
-  document.getElementById('newPassword').value = generateRandomPassword();
-  $('#resetPasswordModal').modal('show');
-}
-
-// توليد كلمة مرور عشوائية
-function generatePassword() {
-  document.getElementById('newPassword').value = generateRandomPassword();
-}
-
-function generateRandomPassword() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
-  let password = '';
-  for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  function selectedIds() {
+    return $('.user-checkbox:checked').map(function () { return this.value; }).get();
   }
-  return password;
-}
 
-// إظهار نافذة إنشاء مستخدم
-function showCreateUser() {
-  document.getElementById('createPassword').value = generateRandomPassword();
-  $('#createUserModal').modal('show');
-}
+  function bulkOp(op) {
+    var ids = selectedIds();
+    if (!ids.length) { notify('اختر مستخدماً واحداً على الأقل', 'warning'); return; }
+    if (!confirm((op === 'activate' ? 'تفعيل ' : 'تعطيل ') + ids.length + ' مستخدم؟')) return;
+    fetch('/security/api/users/bulk-operation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ operation: op, user_ids: ids })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) { notify(d.message, 'success'); location.reload(); }
+      else notify(d.error || 'فشلت العملية', 'error');
+    }).catch(function () { notify('خطأ في الاتصال', 'error'); });
+  }
 
-// توليد كلمة مرور لإنشاء مستخدم
-function generateCreatePassword() {
-  document.getElementById('createPassword').value = generateRandomPassword();
-}
+  $('#btnBulkActivate').on('click', function () { bulkOp('activate'); });
+  $('#btnBulkDeactivate').on('click', function () { bulkOp('deactivate'); });
+  $('#btnExportUsers').on('click', function () {
+    if (usersTable && usersTable.button) {
+      try { usersTable.button('.buttons-csv').trigger(); return; } catch (e) {}
+    }
+    window.location.href = '{{ url_for("security.user_control") }}?{{ request.query_string.decode() }}&export=csv';
+  });
+  $('#btnCreateUser').on('click', function () {
+    $('#createPassword').val(randomPassword());
+    openSecModal('#createUserModal');
+  });
+  $('#btnGenPassword').on('click', function () { $('#newPassword').val(randomPassword()); });
+  $('#btnGenCreatePassword').on('click', function () { $('#createPassword').val(randomPassword()); });
 
-// حذف مستخدم
-function deleteUser(userId, username) {
-  document.getElementById('deleteUsername').textContent = username;
-  document.getElementById('deleteUserForm').action = `/security/delete-user/${userId}`;
-  document.getElementById('confirmDelete').checked = false;
-  $('#deleteUserModal').modal('show');
-}
+  function renderActivities(activities) {
+    if (!activities || !activities.length) return '<p class="text-muted mb-0 px-3 py-2">لا توجد أنشطة مسجّلة.</p>';
+    return '<ul class="uc-activity-list">' + activities.map(function (a) {
+      return '<li><strong>' + (a.action || '—') + '</strong><br><small class="text-muted">' + fmtDate(a.created_at) + '</small></li>';
+    }).join('') + '</ul>';
+  }
 
-// إدارة الصلاحيات - Owner Only
-let currentManageUserId = null;
-let currentRolePerms = [];
+  function renderUserDetails(user) {
+    var ops = (user.sales_count || 0) + (user.services_count || 0) + (user.payments_count || 0);
+    return '<div class="row">' +
+      '<div class="col-lg-6 mb-3"><div class="uc-detail-card h-100"><div class="uc-detail-card__head">معلومات أساسية</div><div class="uc-detail-card__body"><table class="table table-sm">' +
+      '<tr><th class="pl-3">المعرّف</th><td>' + user.id + '</td></tr>' +
+      '<tr><th class="pl-3">اسم المستخدم</th><td><strong>' + user.username + '</strong></td></tr>' +
+      '<tr><th class="pl-3">البريد</th><td>' + (user.email || '—') + '</td></tr>' +
+      '<tr><th class="pl-3">الدور</th><td>' + (user.role || '—') + '</td></tr>' +
+      '<tr><th class="pl-3">الحالة</th><td>' + (user.is_active ? '<span class="badge badge-success">نشط</span>' : '<span class="badge badge-danger">معطّل</span>') + '</td></tr>' +
+      '<tr><th class="pl-3">حساب نظام</th><td>' + (user.is_system_account ? 'نعم' : 'لا') + '</td></tr>' +
+      '</table></div></div></div>' +
+      '<div class="col-lg-6 mb-3"><div class="uc-detail-card h-100"><div class="uc-detail-card__head">الأداء</div><div class="uc-detail-card__body"><table class="table table-sm">' +
+      '<tr><th class="pl-3">مبيعات</th><td>' + (user.sales_count || 0) + ' — ' + fmtMoney(user.sales_total) + '</td></tr>' +
+      '<tr><th class="pl-3">صيانة</th><td>' + (user.services_count || 0) + '</td></tr>' +
+      '<tr><th class="pl-3">مدفوعات</th><td>' + (user.payments_count || 0) + '</td></tr>' +
+      '<tr><th class="pl-3">إجمالي العمليات</th><td><strong>' + ops + '</strong></td></tr>' +
+      '</table></div></div></div>' +
+      '<div class="col-lg-6 mb-3"><div class="uc-detail-card h-100"><div class="uc-detail-card__head">الدخول</div><div class="uc-detail-card__body"><table class="table table-sm">' +
+      '<tr><th class="pl-3">آخر دخول</th><td>' + fmtDate(user.last_login) + '</td></tr>' +
+      '<tr><th class="pl-3">آخر ظهور</th><td>' + fmtDate(user.last_seen) + '</td></tr>' +
+      '<tr><th class="pl-3">مرات الدخول</th><td>' + (user.login_count || 0) + '</td></tr>' +
+      '<tr><th class="pl-3">آخر IP</th><td><code>' + (user.last_login_ip || '—') + '</code></td></tr>' +
+      '</table></div></div></div>' +
+      '<div class="col-lg-6 mb-3"><div class="uc-detail-card h-100"><div class="uc-detail-card__head">آخر الأنشطة</div><div class="uc-detail-card__body">' +
+      renderActivities(user.recent_activities) + '</div></div></div></div>';
+  }
 
-function managePermissions(userId, username, roleName) {
-  currentManageUserId = userId;
-  document.getElementById('permsUsername').textContent = username;
-  document.getElementById('permsRole').textContent = roleName || 'لا يوجد';
-  
-  try { $('#permissionsModal').modal('show'); } catch (e) {}
-  
-  document.getElementById('permissionsContent').innerHTML = `
-    <div class="text-center py-5">
-      <div class="spinner-border text-primary"></div>
-      <p class="mt-2">جاري التحميل...</p>
-    </div>
-  `;
-  
-  fetch(`/security/api/users/${userId}/details`)
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        renderPermissionsManager(data.user);
-      } else {
-        document.getElementById('permissionsContent').innerHTML = 
-          '<div class="alert alert-danger">خطأ في تحميل البيانات</div>';
-      }
-    })
-    .catch(err => {
-      document.getElementById('permissionsContent').innerHTML = 
-        '<div class="alert alert-danger">خطأ في الاتصال</div>';
-    });
-}
-
-function renderPermissionsManager(user) {
-  const modules = {
-    'owner_only': {title: '👑 للمالك فقط', perms: []},
-    'ai': {title: '🤖 المساعد الذكي', perms: []},
-    'system': {title: '💾 النظام', perms: []},
-    'users': {title: '👥 المستخدمين', perms: []},
-    'customers': {title: '🏢 الزبائن', perms: []},
-    'sales': {title: '🛒 المبيعات', perms: []},
-    'service': {title: '🔧 الصيانة', perms: []},
-    'warehouses': {title: '📦 المستودعات', perms: []},
-    'vendors': {title: '🚚 الموردين', perms: []},
-    'accounting': {title: '💰 المحاسبة', perms: []},
-    'shop': {title: '🛍️ المتجر', perms: []},
-    'other': {title: '🔧 أخرى', perms: []}
-  };
-  
-  const rolePerms = new Set(user.role_permissions || []);
-  const extraPerms = new Set(user.extra_permissions || []);
-  currentRolePerms = Array.from(rolePerms);
-  
-  user.all_permissions.forEach(perm => {
-    const module = perm.module || 'other';
-    if (modules[module]) {
-      modules[module].perms.push({
-        ...perm,
-        inherited: rolePerms.has(perm.code),
-        extra: extraPerms.has(perm.code)
+  $(document).on('click', '.js-user-details', function () {
+    var uid = $(this).data('user-id');
+    $('#userDetailsContent').html('<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>');
+    openSecModal('#userDetailsModal');
+    fetch('/security/api/users/' + uid + '/details')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.success) $('#userDetailsContent').html(renderUserDetails(d.user));
+        else $('#userDetailsContent').html('<div class="alert alert-danger">' + (d.error || 'تعذّر التحميل') + '</div>');
+      })
+      .catch(function () {
+        $('#userDetailsContent').html('<div class="alert alert-danger">خطأ في الاتصال</div>');
       });
-    }
   });
-  
-  let html = `
-    <div class="row mb-3">
-      <div class="col-6">
-        <div class="alert alert-info mb-0">
-          <strong>صلاحيات الدور:</strong> ${rolePerms.size} صلاحية
-        </div>
-      </div>
-      <div class="col-6">
-        <div class="alert alert-success mb-0">
-          <strong>صلاحيات إضافية:</strong> ${extraPerms.size} صلاحية
-        </div>
-      </div>
-    </div>
-  `;
-  
-  for (const [key, module] of Object.entries(modules)) {
-    if (module.perms.length === 0) continue;
-    
-    html += `
-      <div class="card mb-3">
-        <div class="card-header bg-light">
-          <strong>${module.title}</strong>
-          <span class="badge bg-secondary">${module.perms.length}</span>
-        </div>
-        <div class="card-body">
-          <div class="row g-2">
-    `;
-    
-    module.perms.forEach(perm => {
-      const checked = perm.inherited || perm.extra;
-      const disabled = perm.inherited ? 'disabled' : '';
-      const badgeClass = perm.inherited ? 'bg-info' : (perm.extra ? 'bg-success' : 'bg-secondary');
-      
-      html += `
-        <div class="col-md-6">
-          <div class="form-check">
-            <input class="form-check-input perm-checkbox" type="checkbox" 
-                   id="perm_${perm.code}" value="${perm.code}" 
-                   ${checked ? 'checked' : ''} ${disabled}
-                   data-inherited="${perm.inherited}">
-            <label class="form-check-label" for="perm_${perm.code}">
-              <span class="badge ${badgeClass}">${perm.name_ar || perm.name}</span>
-              ${perm.inherited ? '<small class="text-muted">(من الدور)</small>' : ''}
-            </label>
-          </div>
-        </div>
-      `;
+
+  function renderPermissions(user) {
+    var modules = {
+      owner_only: '👑 للمالك', ai: '🤖 الذكاء الاصطناعي', system: '💾 النظام', users: '👥 المستخدمون',
+      customers: '🏢 الزبائن', sales: '🛒 المبيعات', service: '🔧 الصيانة', warehouses: '📦 المستودعات',
+      vendors: '🚚 الموردون', accounting: '💰 المحاسبة', shop: '🛍️ المتجر', other: '🔧 أخرى'
+    };
+    var roleSet = new Set(user.role_permissions || []);
+    var extraSet = new Set(user.extra_permissions || []);
+    var grouped = {};
+    (user.all_permissions || []).forEach(function (p) {
+      var m = p.module || 'other';
+      if (!grouped[m]) grouped[m] = [];
+      grouped[m].push({
+        code: p.code, label: p.name_ar || p.name,
+        inherited: roleSet.has(p.code), extra: extraSet.has(p.code)
+      });
     });
-    
-    html += `
-          </div>
-        </div>
-      </div>
-    `;
+    var html = '<div class="row mb-3"><div class="col-md-6"><div class="alert alert-info mb-0">صلاحيات الدور: <strong>' + roleSet.size + '</strong></div></div>' +
+      '<div class="col-md-6"><div class="alert alert-success mb-0">إضافية: <strong>' + extraSet.size + '</strong></div></div></div>';
+    Object.keys(modules).forEach(function (key) {
+      if (!grouped[key] || !grouped[key].length) return;
+      html += '<div class="card mb-3"><div class="card-header py-2"><strong>' + modules[key] + '</strong> <span class="badge badge-secondary">' + grouped[key].length + '</span></div><div class="card-body"><div class="row">';
+      grouped[key].forEach(function (perm) {
+        var checked = perm.inherited || perm.extra;
+        var dis = perm.inherited ? ' disabled' : '';
+        var badge = perm.inherited ? 'badge-info' : (perm.extra ? 'badge-success' : 'badge-light border');
+        html += '<div class="col-md-6 mb-2"><div class="custom-control custom-checkbox">' +
+          '<input type="checkbox" class="custom-control-input perm-checkbox" id="perm_' + perm.code + '" value="' + perm.code + '"' + (checked ? ' checked' : '') + dis + '>' +
+          '<label class="custom-control-label" for="perm_' + perm.code + '"><span class="badge ' + badge + '">' + perm.label + '</span></label></div></div>';
+      });
+      html += '</div></div></div>';
+    });
+    $('#permissionsContent').html(html);
   }
-  
-  document.getElementById('permissionsContent').innerHTML = html;
-}
 
-function savePermissions() {
-  const checkboxes = document.querySelectorAll('.perm-checkbox:not([disabled]):checked');
-  const permissions = Array.from(checkboxes).map(cb => cb.value);
-  
-  fetch(`/security/update-user-permissions/${currentManageUserId}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': '{{ csrf_token() }}'
-    },
-    body: JSON.stringify({ permissions })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.success) {
-      _notify('✅ تم حفظ الصلاحيات بنجاح!', 'success');
-      location.reload();
-    } else {
-      _notify('❌ خطأ: ' + (data.message || 'فشل الحفظ'), 'error');
-    }
-  })
-  .catch(err => {
-    _notify('❌ خطأ في الاتصال', 'error');
+  $(document).on('click', '.js-user-perms', function () {
+    currentManageUserId = $(this).data('user-id');
+    $('#permsUsername').text($(this).data('username') || '');
+    $('#permsRole').text($(this).data('role') || 'لا يوجد');
+    $('#permissionsContent').html('<div class="text-center py-4"><div class="spinner-border text-success"></div></div>');
+    openSecModal('#permissionsModal');
+    fetch('/security/api/users/' + currentManageUserId + '/details')
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (d.success) renderPermissions(d.user); else $('#permissionsContent').html('<div class="alert alert-danger">تعذّر التحميل</div>'); })
+      .catch(function () { $('#permissionsContent').html('<div class="alert alert-danger">خطأ في الاتصال</div>'); });
   });
-}
+
+  $('#btnSavePermissions').on('click', function () {
+    if (!currentManageUserId) return;
+    var perms = $('.perm-checkbox:not(:disabled):checked').map(function () { return this.value; }).get();
+    fetch('/security/update-user-permissions/' + currentManageUserId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ permissions: perms })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) { closeSecModal('#permissionsModal'); notify('تم حفظ الصلاحيات', 'success'); location.reload(); }
+      else notify(d.message || 'فشل الحفظ', 'error');
+    }).catch(function () { notify('خطأ في الاتصال', 'error'); });
+  });
+
+  $(document).on('click', '.js-user-reset', function () {
+    var uid = $(this).data('user-id');
+    $('#resetUsername').text($(this).data('username') || '');
+    $('#resetPasswordForm').attr('action', '/security/force-reset-password/' + uid);
+    $('#newPassword').val(randomPassword());
+    openSecModal('#resetPasswordModal');
+  });
+
+  $(document).on('click', '.js-user-delete', function () {
+    var uid = $(this).data('user-id');
+    $('#deleteUsername').text($(this).data('username') || '');
+    $('#deleteUserForm').attr('action', '/security/delete-user/' + uid);
+    $('#confirmDelete').prop('checked', false);
+    openSecModal('#deleteUserModal');
+  });
+})();
 </script>
-
-<style>
-.table-success {
-  background-color: rgba(25, 135, 84, 0.1) !important;
-}
-.table-warning {
-  background-color: rgba(255, 193, 7, 0.1) !important;
-}
-</style>
-
 {% endblock %}

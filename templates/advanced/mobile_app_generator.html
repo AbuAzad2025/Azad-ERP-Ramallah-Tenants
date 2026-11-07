@@ -4,38 +4,7 @@
 
 {% block head_extra %}
 {{ super() }}
-<style>
-.platform-card {
-  transition: all 0.3s ease;
-  cursor: pointer;
-  border: 3px solid transparent;
-}
-.platform-card:hover {
-  transform: scale(1.05);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
-.platform-card.selected {
-  border-color: #0056b3;
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-}
-.tech-badge {
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-weight: 600;
-  display: inline-block;
-  margin: 0.25rem;
-}
-.category-section {
-  margin-bottom: 1.5rem;
-}
-.category-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-</style>
+
 {% endblock %}
 
 {% block content %}
@@ -69,7 +38,7 @@
     <div class="row mb-4">
       <div class="col-md-4">
         <div class="card border-0 shadow-sm h-100">
-          <div class="card-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+ <div class="card-header erp-card-header-row erp-theme-header--primary">
             <h5 class="mb-0"><i class="fas fa-cog"></i> إعدادات التطبيق</h5>
           </div>
           <div class="card-body">
@@ -104,7 +73,7 @@
 
       <div class="col-md-4">
         <div class="card border-0 shadow-sm h-100">
-          <div class="card-header text-white" style="background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);">
+          <div class="card-header erp-card-header-row erp-theme-header--primary text-white">
             <h5 class="mb-0"><i class="fas fa-mobile-alt"></i> اختر المنصة</h5>
           </div>
           <div class="card-body">
@@ -166,7 +135,7 @@
     </div>
 
     <div class="card border-0 shadow-lg mb-4">
-      <div class="card-header" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); color: white;">
+      <div class="card-header erp-card-header-row erp-theme-header--primary">
         <h5 class="mb-0"><i class="fas fa-th"></i> اختر الوحدات ({{ modules|length }} متاح)</h5>
       </div>
       <div class="card-body">
@@ -259,13 +228,13 @@
 
   {% if mobile_apps %}
   <div class="card border-0 shadow-lg mt-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+    <div class="card-header erp-card-header-row erp-theme-header--primary">
       <h5 class="mb-0"><i class="fas fa-mobile-alt"></i> التطبيقات المُنشأة ({{ mobile_apps|length }})</h5>
     </div>
     <div class="card-body">
       <div class="table-responsive">
         <table class="table table-hover">
-          <thead class="table-light">
+          <thead class="table-header-primary text-white table-light">
             <tr>
               <th>اسم التطبيق</th>
               <th>الحجم</th>

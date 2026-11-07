@@ -128,11 +128,8 @@ def log_customer_action(cust, action, old_data=None, new_data=None):
 @customers_bp.route("/", methods=["GET"], endpoint="list_customers")
 @login_required
 def list_customers():
-    from utils.company_scope import filter_customers_query
-
     # عرض جميع الزبائن مع فلتر افتراضي لاستبعاد المؤرشفين إلا إذا طلب خلاف ذلك
-    q = filter_customers_query(
-        Customer.query.options(
+    q = Customer.query.options(
         selectinload(Customer.supplier_link).load_only(Supplier.id, Supplier.name),
         selectinload(Customer.partner_link).load_only(Partner.id, Partner.name),
         )
@@ -143,6 +140,9 @@ def list_customers():
         pass # عرض الكل (أو يمكن فلتر is_archived=True فقط إذا أردنا عرض الأرشيف فقط)
     else:
         q = q.filter(Customer.is_archived == False)
+
+    from utils.company_scope import filter_customers_query
+    q = filter_customers_query(q)
 
     if name := request.args.get("name"):
         q = q.filter(Customer.name.ilike(f"%{name}%"))
@@ -575,10 +575,8 @@ def customer_analytics(customer_id):
     docs_count = len(invoices) + len(sales) + len(services)
     avg_purchase = (total_purchases / docs_count) if docs_count else D(0)
 
-    from utils.company_scope import filter_payments_query
-
     # تحسين: استعلام واحد لجلب جميع الدفعات المكتملة للزبون (مباشرة أو مرتبطة)
-    all_payments = filter_payments_query(db.session.query(Payment)).outerjoin(
+    all_payments = db.session.query(Payment).outerjoin(
         Sale, Payment.sale_id == Sale.id
     ).outerjoin(
         Invoice, Payment.invoice_id == Invoice.id
@@ -814,7 +812,7 @@ def create_customer():
         current_app.logger.exception("SQLAlchemyError while creating customer")
         if is_ajax:
             return jsonify({"ok": False, "message": "خطأ أثناء إضافة الزبون"}), 500
-        utils.flash_error("خطأ أثناء إضافة الزبون")
+        flash('❌ خطأ أثناء إضافة الزبون', 'danger')
         # إبقاء المستخدم على نفس الصفحة مع عرض الخطأ بشكل ودي
         return render_template("customers/new.html", form=form, return_to=request.form.get("return_to"))
     if is_ajax:
@@ -869,7 +867,7 @@ def edit_customer(customer_id):
             except SQLAlchemyError:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError while editing customer")
-                utils.flash_error("خطأ أثناء تعديل الزبون")
+                flash('❌ خطأ أثناء تعديل الزبون', 'danger')
                 return render_template("customers/edit.html", form=form, customer=cust), 500
             flash("تم تعديل بيانات الزبون", "success")
             return redirect(url_for("customers_bp.customer_detail", customer_id=customer_id))
@@ -894,14 +892,14 @@ def delete_customer(id):
     has_opening_balance = (customer.opening_balance and float(customer.opening_balance) != 0)
     
     if has_invoices or has_payments or has_sales or has_services or has_preorders or has_opening_balance:
-        utils.flash_error("لا يمكن حذف الزبون لأنه مرتبط بمعاملات أو له رصيد افتتاحي.")
+        flash("❌ لا يمكن حذف الزبون لأنه مرتبط بمعاملات أو له رصيد افتتاحي.", "danger")
         return redirect(url_for("customers_bp.list_customers"))
     
     try:
         name = customer.name
         db.session.delete(customer)
         db.session.commit()
-        utils.flash_success(f"تم حذف الزبون: {name}", "success")
+        flash(f"✅ تم حذف الزبون: {name}", "success")
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('internal error')
@@ -1131,6 +1129,10 @@ def account_statement(customer_id):
     invoices = (
         Invoice.query
         .filter(Invoice.customer_id == customer_id)
+        .filter(Invoice.cancelled_at.is_(None))
+        .filter(Invoice.sale_id.is_(None))
+        .filter(Invoice.service_id.is_(None))
+        .filter(Invoice.preorder_id.is_(None))
         .filter(Invoice.invoice_date >= start_date)
         .filter(Invoice.invoice_date <= end_date)
         .filter(*standalone_invoice_filters())
@@ -1215,25 +1217,22 @@ def account_statement(customer_id):
             "currency": getattr(inv, 'currency', None) or (getattr(c, 'currency', None) or 'ILS'),
         })
 
-    from utils.company_scope import filter_payments_query, filter_sales_query
-
     sales = (
-        filter_sales_query(Sale.query.filter_by(customer_id=customer_id))
-        .filter(Sale.status.in_(SALE_OBLIGATION_STATUSES))
+        Sale.query.filter_by(customer_id=customer_id)
+        .filter(Sale.status == "CONFIRMED")
+        .filter(Sale.cancelled_at.is_(None))
+        .filter(Sale.is_archived == False)  # noqa: E712
         .options(
-            joinedload(Sale.lines).load_only(
-                SaleLine.id, SaleLine.quantity, SaleLine.unit_price, SaleLine.line_total,
-                SaleLine.line_receiver, SaleLine.note,
-            ),
+            joinedload(Sale.lines).load_only(SaleLine.id, SaleLine.quantity, SaleLine.unit_price, SaleLine.line_total, SaleLine.line_receiver, SaleLine.note),
             joinedload(Sale.lines).joinedload(SaleLine.product).load_only(Product.id, Product.name),
-            joinedload(Sale.preorder).selectinload(PreOrder.payments),
+            joinedload(Sale.preorder),
         )
         .filter(Sale.sale_date >= start_date)
         .filter(Sale.sale_date <= end_date)
         .order_by(Sale.sale_date, Sale.id)
         .all()
     )
-    
+
     for s in sales:
         sale_lines = getattr(s, 'lines', []) or []
         sale_discount_total = D(getattr(s, "discount_total", 0) or 0)
@@ -1305,7 +1304,7 @@ def account_statement(customer_id):
             "statement": generate_statement("SALE", s),
             "debit": sale_debit,
             "credit": D(0),
-            "items": items,  # إضافة البنود المباعة
+            "items": items,
             "notes": getattr(s, 'notes', '') or '',
             "currency": getattr(s, 'currency', None) or (getattr(c, 'currency', None) or 'ILS'),
         })
@@ -1322,8 +1321,6 @@ def account_statement(customer_id):
                 "notes": "",
                 "currency": getattr(s, 'currency', None) or (getattr(c, 'currency', None) or 'ILS'),
             })
-
-    from utils.company_scope import filter_sale_returns_query, filter_service_requests_query
 
     sale_returns = (
         filter_sale_returns_query(SaleReturn.query)
@@ -1450,8 +1447,9 @@ def account_statement(customer_id):
                 "notes": "دفعة مقدمة - طلب أونلاين",
             })
 
-    # عرض: كل الحالات ذات الصلة؛ الرصيد الجاري يتأثر فقط بـ COMPLETED (انظر affects_balance)
-    payment_statuses = list(PAYMENT_STATUSES_STATEMENT)
+    # الدفعات المكتملة فقط تؤثر على الرصيد؛ الحالات الأخرى للعرض التوثيقي فقط
+    payment_statuses_balance = ['COMPLETED']
+    payment_statuses_display = ['COMPLETED', 'PENDING', 'BOUNCED', 'FAILED', 'REJECTED', 'REFUNDED']
     
     # ✅ إضافة joinedload(Payment.splits) لجميع استعلامات الدفعات لضمان تحميل splits
     # ✅ إضافة selectinload(Payment.related_check) لتحميل الشيكات المرتبطة وتجنب N+1 queries
@@ -1462,12 +1460,7 @@ def account_statement(customer_id):
     
     from models import Expense
     # نحتاج لمعرفة مصاريف الزبون لتضمين دفعاتها
-    from utils.company_scope import filter_expenses_query
-
-    expense_ids_with_customer = [
-        e.id
-        for e in filter_expenses_query(Expense.query.filter(Expense.customer_id == customer_id)).all()
-    ]
+    expense_ids_with_customer = [e.id for e in Expense.query.filter(Expense.customer_id == customer_id).all()]
     
     # بناء شروط البحث
     payment_criteria = [
@@ -1511,7 +1504,7 @@ def account_statement(customer_id):
         .outerjoin(ServiceRequest, Payment.service_id == ServiceRequest.id)
         .outerjoin(PreOrder, Payment.preorder_id == PreOrder.id)
         .filter(
-            Payment.status.in_(payment_statuses),
+            Payment.status.in_(payment_statuses_display),
             Payment.payment_date >= start_date,
             Payment.payment_date <= end_date,
             or_(*payment_criteria)
@@ -2016,25 +2009,133 @@ def account_statement(customer_id):
                         seen_check_identifiers[check_identifier] = (p.id, has_cashed_in_this_payment)
         
         if not should_skip:
-            # ✅ دفعة واحدة في كشف الحساب (مع أو بدون splits)
-            # تفاصيل تقسيمات الدفع تبقى في payment_details['splits']
-            entries.append({
-                "date": getattr(p, "payment_date", None) or getattr(p, "created_at", None),
-                "type": entry_type,
-                "id": p.id,
-                "model": "payment",
-                "ref": getattr(p, "payment_number", None) or getattr(p, "receipt_number", None) or f"PMT-{p.id}",
-                "statement": payment_statement,
-                "debit": debit_val,
-                "credit": credit_val,
-                "currency": "ILS",
-                "payment_details": payment_details,
-                "notes": notes,
-                "affects_balance": payment_affects_running_balance(payment_status),
-            })
+            # ✅ عرض الدفعة كسطر واحد بالمبلغ الإجمالي بدلاً من تفصيل كل split
+            # الزبون يتذكر فقط المبلغ الكلي الذي دفعه، لا يحتاج لرؤية التوزيع
+            # تفاصيل التوزيع (splits) تبقى متاحة في صفحة تفاصيل الدفعة الداخلية
+            if splits and len(splits) > 0:
+                # عرض الدفعة كسطر واحد مجمّع بالمبلغ الإجمالي
+                # payment_details لا تزال تحتوي على splits للاستخدام الداخلي لكن لا تُعرض في الكشف
+                payment_details_no_splits = dict(payment_details)
+                payment_details_no_splits['splits'] = []
 
-            # إضافة الشيكات المرتدة كقيود منفصلة
-            for returned_check_item in returned_checks_list:
+                entries.append({
+                    "date": getattr(p, "payment_date", None) or getattr(p, "created_at", None),
+                    "type": entry_type,
+                    "id": p.id,
+                    "model": "payment",
+                    "ref": getattr(p, "payment_number", None) or getattr(p, "receipt_number", None) or f"PMT-{p.id}",
+                    "statement": payment_statement,
+                    "debit": debit_val,
+                    "credit": credit_val,
+                    "currency": "ILS",
+                    "payment_details": payment_details_no_splits,
+                    "notes": notes,
+                    "affects_balance": payment_status == "COMPLETED",
+                })
+
+                # إضافة الشيكات المرتدة من الـ splits كقيود منفصلة
+                # (الشيك المرتد حدث محاسبي منفصل يجب أن يظهر في الكشف)
+                for split in sorted(splits, key=lambda s: getattr(s, "id", 0)):
+                    split_method_val = getattr(split, "method", None)
+                    if hasattr(split_method_val, "value"):
+                        split_method_val = split_method_val.value
+                    split_method_raw = str(split_method_val or "").lower()
+                    if not ('check' in split_method_raw or 'cheque' in split_method_raw):
+                        continue
+
+                    ref_key = f"PMT-SPLIT-{split.id}"
+                    split_checks_unsorted = split_checks_map.get(ref_key, [])
+                    split_checks_sorted = sorted(
+                        split_checks_unsorted,
+                        key=lambda c: (
+                            getattr(c, 'updated_at', None) or datetime.min,
+                            getattr(c, 'check_date', None) or datetime.min,
+                            getattr(c, 'id', 0)
+                        ),
+                        reverse=True
+                    )
+
+                    split_check_for_return = None
+                    for chk in split_checks_sorted:
+                        chk_status = str(getattr(chk, 'status', 'PENDING') or 'PENDING').upper()
+                        if chk_status in ['RETURNED', 'BOUNCED']:
+                            split_check_for_return = chk
+                            break
+
+                    if split_check_for_return:
+                        split_amount = D(getattr(split, "amount", 0) or 0)
+                        split_converted_amount = D(getattr(split, "converted_amount", 0) or 0)
+                        split_currency = (getattr(split, "currency", None) or getattr(p, "currency", "ILS") or "ILS").upper()
+                        converted_currency = (getattr(split, "converted_currency", None) or getattr(p, "currency", "ILS") or "ILS").upper()
+
+                        if split_converted_amount > 0 and converted_currency == "ILS":
+                            split_amount_ils = split_converted_amount
+                        else:
+                            split_amount_ils = split_amount
+                            if split_currency != "ILS":
+                                try:
+                                    from models import convert_amount
+                                    split_amount_ils = convert_amount(split_amount, split_currency, "ILS", p.payment_date)
+                                except Exception:
+                                    current_app.logger.debug('Currency conversion skipped')
+
+                        returned_statement = "إرجاع شيك"
+                        if split_check_for_return.check_number:
+                            returned_statement += f" #{split_check_for_return.check_number}"
+                        if split_check_for_return.check_bank:
+                            returned_statement += f" - {split_check_for_return.check_bank}"
+
+                        returned_details = {
+                            'method': 'شيك',
+                            'method_raw': 'cheque',
+                            'check_number': split_check_for_return.check_number,
+                            'check_bank': split_check_for_return.check_bank,
+                            'check_due_date': split_check_for_return.check_due_date,
+                            'status': str(getattr(split_check_for_return, 'status', 'RETURNED') or 'RETURNED'),
+                            'is_bounced': True,
+                            'is_pending': False,
+                            'is_cashed': False,
+                            'is_returned': True,
+                            'all_checks': [{
+                                'check_number': split_check_for_return.check_number,
+                                'check_bank': split_check_for_return.check_bank,
+                                'check_due_date': split_check_for_return.check_due_date,
+                                'status': str(getattr(split_check_for_return, 'status', 'RETURNED') or 'RETURNED'),
+                                'amount': float(split_check_for_return.amount or 0),
+                                'currency': split_check_for_return.currency or 'ILS',
+                            }],
+                        }
+
+                        entries.append({
+                            "date": split_check_for_return.check_date or getattr(p, "payment_date", None) or getattr(p, "created_at", None),
+                            "type": "CHECK_RETURNED",
+                            "ref": f"SPLIT-RETURN-{split.id}-CHK-{split_check_for_return.id}",
+                            "statement": returned_statement,
+                            "debit": split_amount_ils if is_in else D(0),
+                            "credit": split_amount_ils if not is_in else D(0),
+                            "payment_details": returned_details,
+                            "notes": notes,
+                            "affects_balance": True,
+                        })
+            else:
+                # ✅ الدفعة بدون splits - نعرضها كالمعتاد
+                entries.append({
+                    "date": getattr(p, "payment_date", None) or getattr(p, "created_at", None),
+                    "type": entry_type,
+                    "id": p.id,
+                    "model": "payment",
+                    "ref": getattr(p, "payment_number", None) or getattr(p, "receipt_number", None) or f"PMT-{p.id}",
+                    "statement": payment_statement,
+                    "debit": debit_val,
+                    "credit": credit_val,
+                    "currency": "ILS",
+                    "payment_details": payment_details,
+                    "notes": notes,
+                    "affects_balance": payment_status == "COMPLETED",
+                })
+                
+                # إضافة الشيكات المرتدة كقيود منفصلة (للدفعات بدون splits)
+                for returned_check_item in returned_checks_list:
                     check = returned_check_item['check']
                     check_amt = returned_check_item['amount']
                     check_status = str(getattr(check, 'status', 'RETURNED') or 'RETURNED').upper()
@@ -2057,6 +2158,7 @@ def account_statement(customer_id):
                         "statement": check_statement,
                         "debit": returned_debit,
                         "credit": returned_credit,
+                        "affects_balance": True,
                         "payment_details": {
                             'method': 'شيك',
                             'method_raw': 'cheque',
@@ -2317,16 +2419,12 @@ def account_statement(customer_id):
         })
 
     # Calculate opening balance (brought forward)
-    from utils.balance_as_of import calculate_balance_before_date
+    from utils.balance_calculator import calculate_balance_before_date
     from utils.period_close_service import get_opening_balance_for_entity
 
     opening_balance = None
     if start_date:
-        snap_open = get_opening_balance_for_entity(
-            "CUSTOMER",
-            c.id,
-            start_date.date() if hasattr(start_date, "date") else start_date,
-        )
+        snap_open = get_opening_balance_for_entity("CUSTOMER", c.id, start_date.date() if hasattr(start_date, "date") else start_date)
         if snap_open is not None:
             opening_balance = D(snap_open)
     if opening_balance is None:
@@ -2414,8 +2512,10 @@ def account_statement(customer_id):
         if e.get("type") == "OPENING_BALANCE":
             e["balance"] = running
             continue
-        if e.get("affects_balance", True):
-            running = running + e["credit"] - e["debit"]
+        if e.get("affects_balance") is False:
+            e["balance"] = running
+            continue
+        running = running + e["credit"] - e["debit"]
         e["balance"] = running
 
     total_debit = sum(e["debit"] for e in entries)
@@ -2862,10 +2962,10 @@ def reset_passwords():
         db.session.commit()
 
         if total_candidates == 0:
-            utils.flash_info('لا يوجد زبائن بحاجة لتعيين كلمة مرور (الحقل موجود بالفعل).', 'info')
+            flash('ℹ️ لا يوجد زبائن بحاجة لتعيين كلمة مرور (الحقل موجود بالفعل).', 'info')
             return redirect(url_for('customers_bp.list_customers'))
 
-        utils.flash_success(f'تم تعيين كلمة مرور فريدة لعدد {updated} زبون من أصل {total_candidates}.', 'success')
+        flash(f'✅ تم تعيين كلمة مرور فريدة لعدد {updated} زبون من أصل {total_candidates}.', 'success')
         from markupsafe import escape as _esc
         rows_html = ''.join(
             f"<tr><td>{c['id']}</td><td>{_esc(c['name'])}</td><td>{_esc(c['phone'])}</td><td style='font-family:monospace'>{_esc(c['password'])}</td></tr>"
@@ -2931,7 +3031,7 @@ def make_online_all():
         db.session.commit()
 
         if new_passwords:
-            utils.flash_success(f'تم تحويل {updated} زبون للأونلاين. تم توليد كلمات مرور لـ {len(new_passwords)} زبون.', 'success')
+            flash(f'✅ تم تحويل {updated} زبون للأونلاين. تم توليد كلمات مرور لـ {len(new_passwords)} زبون.', 'success')
             from markupsafe import escape as _esc
             rows_html = ''.join(
                 f"<tr><td>{c['id']}</td><td>{_esc(c['name'])}</td><td>{_esc(c['phone'])}</td><td style='font-family:monospace'>{_esc(c['password'])}</td></tr>"
@@ -2951,12 +3051,12 @@ def make_online_all():
                 )
             )
 
-        utils.flash_success(f'تم تحويل جميع الزبائن ({updated}) إلى وضع الأونلاين.', 'success')
+        flash(f'✅ تم تحويل جميع الزبائن ({updated}) إلى وضع الأونلاين.', 'success')
         return redirect(url_for('customers_bp.list_customers'))
     except Exception as e:
         db.session.rollback()
         current_app.logger.error("خطأ في تحويل الزبائن للأونلاين: %s", e)
-        utils.flash_error('خطأ أثناء تحويل الزبائن للأونلاين')
+        flash('خطأ أثناء تحويل الزبائن للأونلاين', 'error')
         return redirect(url_for('customers_bp.list_customers'))
 
 
@@ -2988,7 +3088,7 @@ def set_default_emails():
             cust.email = target_email
             updated += 1
         db.session.commit()
-        utils.flash_success(f'تم ضبط بريد افتراضي لـ {updated} زبون. تم تخطي {skipped} بسبب تعارض أو عدم وجود هاتف.', 'success')
+        flash(f'✅ تم ضبط بريد افتراضي لـ {updated} زبون. تم تخطي {skipped} بسبب تعارض أو عدم وجود هاتف.', 'success')
         return redirect(url_for('customers_bp.list_customers'))
     except Exception as e:
         db.session.rollback()

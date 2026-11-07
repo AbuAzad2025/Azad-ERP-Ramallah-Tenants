@@ -82,7 +82,14 @@ from routes.supplier_settlements import supplier_settlements_bp
 from routes.ledger_blueprint import ledger_bp
 from routes.ledger_control import ledger_control_bp
 from routes.fiscal_periods import fiscal_periods_bp
-from routes.tenant_fiscal_periods import tenant_fiscal_bp
+from routes.companies import companies_bp
+from routes.purchases import purchases_bp
+from routes.accounting_hub import accounting_hub_bp
+from routes.payroll import payroll_bp
+from routes.pos import pos_bp
+from routes.tax_compliance import tax_compliance_bp
+from routes.enterprise_security import enterprise_security_bp
+from routes.hr_portal import hr_portal_bp
 from routes.financial_reports import financial_reports_bp
 from routes.accounting_validation import accounting_validation_bp
 from routes.accounting_docs import accounting_docs_bp
@@ -186,7 +193,10 @@ def load_user(user_id):
 
     stmt_user = (
         select(User)
-        .options(joinedload(User.role).joinedload(Role.permissions))
+        .options(
+            joinedload(User.role).joinedload(Role.permissions),
+            joinedload(User.user_branches),
+        )
         .where(User.id == ident)
     )
     user = db.session.execute(stmt_user).unique().scalar_one_or_none()
@@ -393,6 +403,13 @@ def _init_extensions_stack(app):
     except Exception:
         pass
     try:
+        from utils.branding_assets import register_branding_cli, register_company_branding_hooks
+
+        register_branding_cli(app)
+        register_company_branding_hooks(app)
+    except Exception:
+        pass
+    try:
         with app.app_context():
             _ensure_minimum_postgres_schema(app)
     except Exception as _e:
@@ -459,25 +476,34 @@ def _register_template_support(app):
 
     def get_unique_flashes(with_categories=True):
         from flask import get_flashed_messages
-        from utils.flash_messages import normalize_flash_category
+        from utils.ux_messages import clean_flash_text, normalize_flash_category
 
         msgs = get_flashed_messages(with_categories=with_categories)
         seen = set()
         if with_categories:
             uniq = []
             for cat, msg in msgs:
-                text = (msg or "").strip()
-                if not text or text in seen:
+                norm_cat = normalize_flash_category(cat)
+                cleaned = clean_flash_text(msg)
+                if not cleaned:
                     continue
-                uniq.append((normalize_flash_category(cat), text))
-                seen.add(text)
+                dedupe_key = (norm_cat, cleaned)
+                if dedupe_key not in seen:
+                    uniq.append((norm_cat, cleaned))
+                    seen.add(dedupe_key)
             return uniq
         uniq = []
         for msg in msgs:
-            if msg not in seen:
-                uniq.append(msg)
-                seen.add(msg)
+            cleaned = clean_flash_text(msg)
+            if cleaned and cleaned not in seen:
+                uniq.append(cleaned)
+                seen.add(cleaned)
         return uniq
+
+    def prepare_flash(category, message):
+        from utils.ux_messages import prepare_flash as _prepare_flash
+
+        return _prepare_flash(category, message)
 
     @app.template_filter('static_version')
     def static_version_filter(filename):
@@ -507,6 +533,7 @@ def _register_template_support(app):
     @app.context_processor
     def inject_common():
         from utils.arabic_ux import ZB, UI_LABELS
+        from utils.ux_messages import STANDARD_MESSAGES, flash_msg as _flash_msg
 
         def zb(key: str, default: str = "") -> str:
             return ZB.get(key, default or key)
@@ -517,63 +544,15 @@ def _register_template_support(app):
         return {
             "current_app": current_app,
             "get_unique_flashes": get_unique_flashes,
+            "prepare_flash": prepare_flash,
             "static_url": static_url,
             "ZB": ZB,
             "UI_LABELS": UI_LABELS,
+            "UX_MSG": STANDARD_MESSAGES,
             "zb": zb,
             "ui_label": ui_label,
+            "flash_msg": _flash_msg,
         }
-
-    @app.context_processor
-    def inject_platform_footer():
-        from utils.branding_scope import build_platform_footer
-
-        try:
-            return {
-                "platform_footer": build_platform_footer(
-                    dev_email_default=app.config.get("DEV_EMAIL") or "",
-                ),
-            }
-        except Exception:
-            return {
-                "platform_footer": build_platform_footer(
-                    dev_email_default="rafideen.ahmadghannam@gmail.com",
-                ),
-            }
-
-    @app.context_processor
-    def inject_tenant_console_nav():
-        slug = str(getattr(g, "tenant_slug", None) or "").strip()
-        if not slug:
-            return {}
-        from flask_login import current_user
-        from utils.tenant_permissions import build_tenant_console_nav, user_can_access_hub_endpoint
-
-        user = current_user if getattr(current_user, "is_authenticated", False) else None
-        return {
-            "tenant_console_nav_groups": build_tenant_console_nav(user),
-            "can_access_endpoint": (
-                lambda ep: user_can_access_hub_endpoint(user, ep) if user else False
-            ),
-        }
-
-    @app.context_processor
-    def inject_branding_helpers():
-        from models import SystemSettings as _SS
-        from utils.branding_assets import build_static_url, rel_path_platform, rel_path_tenant
-
-        def branding_url(scope="platform", slug=None, asset_type="logos", name="primary.png"):
-            try:
-                ver = _SS.get_setting("assets_version", "") or ""
-            except Exception:
-                ver = ""
-            if scope == "tenant" and slug:
-                rel = rel_path_tenant(slug, asset_type, name)
-            else:
-                rel = rel_path_platform(asset_type, name)
-            return build_static_url(rel, assets_version=ver)
-
-        return {"branding_url": branding_url}
 
     @app.context_processor
     def inject_permissions():
@@ -700,6 +679,18 @@ def _register_template_support(app):
             "is_module_enabled": is_module_enabled,
             "gm_auth": gm_auth,
         }
+
+    @app.context_processor
+    def inject_tenant_ui():
+        from utils.tenant_ui import build_tenant_context
+
+        return build_tenant_context()
+
+    @app.before_request
+    def _tenant_scope_guard():
+        from utils.tenant_ui import guard_posted_branch_ids
+
+        guard_posted_branch_ids()
 
     @app.context_processor
     def inject_enums():
@@ -932,6 +923,14 @@ def _register_blueprints(app):
         barcode_scanner_bp,
         ledger_control_bp,
         fiscal_periods_bp,
+        companies_bp,
+        purchases_bp,
+        accounting_hub_bp,
+        payroll_bp,
+        pos_bp,
+        tax_compliance_bp,
+        enterprise_security_bp,
+        hr_portal_bp,
         ai_bp,
         ai_admin_bp,
         user_guide_bp,
@@ -1126,15 +1125,10 @@ def _register_app_handlers(app):
 
     @app.errorhandler(403)
     def _forbidden(e):
-        app.logger.warning("403 FORBIDDEN: %s", request.path)
-        msg = "ليس لديك صلاحية للوصول إلى هذه الصفحة أو تنفيذ هذا الإجراء."
-        if (
-            request.path.startswith("/api/")
-            or request.accept_mimetypes.best == "application/json"
-            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
-        ):
-            from flask import jsonify
-            return jsonify({"error": msg, "message": msg}), 403
+        app.logger.error("403 FORBIDDEN: %s", request.path)
+        if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            from utils.ux_messages import json_error
+            return json_error(403, key="permission_denied")
         try:
             from flask import redirect
             from flask_login import current_user
@@ -1156,8 +1150,9 @@ def _register_app_handlers(app):
     @app.errorhandler(404)
     def _not_found(e):
         app.logger.error("404 NOT FOUND: %s", request.path)
-        if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
-            return {"error": "Not Found"}, 404
+        if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            from utils.ux_messages import json_error
+            return json_error(404, key="not_found")
         try:
             return render_template("errors/404.html", path=request.path), 404
         except Exception:
@@ -1345,20 +1340,32 @@ def create_app(config_object=Config) -> Flask:
         "barcode_scanner_bp": barcode_scanner_bp,
         "checks_bp": checks_bp,
         "balances_api_bp": balances_api_bp,
+        "companies_bp": companies_bp,
+        "purchases_bp": purchases_bp,
+        "accounting_hub_bp": accounting_hub_bp,
+        "fiscal_periods_bp": fiscal_periods_bp,
+        "branches_bp": branches_bp,
+        "budgets_bp": budgets_bp,
+        "payroll_bp": payroll_bp,
+        "pos_bp": pos_bp,
+        "tax_compliance_bp": tax_compliance_bp,
+        "enterprise_security_bp": enterprise_security_bp,
         "returns_bp": returns_bp,
+        "recurring_bp": recurring_bp,
+        "assets_bp": assets_bp,
         "bank_bp": bank_bp,
-        "cost_centers_bp": cost_centers_bp,
-        "cost_centers_advanced_bp": cost_centers_advanced_bp,
+        "workflows_bp": workflows_bp,
         "engineering_bp": engineering_bp,
+        "archive_bp": archive_bp,
+        "archive_routes_bp": archive_routes_bp,
         "projects_bp": projects_bp,
         "project_advanced_bp": project_advanced_bp,
-        "workflows_bp": workflows_bp,
-        "assets_bp": assets_bp,
-        "archive_bp": archive_bp,
+        "cost_centers_bp": cost_centers_bp,
+        "cost_centers_advanced_bp": cost_centers_advanced_bp,
+        "accounting_validation_bp": accounting_validation_bp,
         "accounting_docs_bp": accounting_docs_bp,
-        "recurring_bp": recurring_bp,
+        "hr_portal_bp": hr_portal_bp,
         "performance_bp": performance_bp,
-        "ai_admin_bp": ai_admin_bp,
     }
     for _name, _opts in get_blueprint_guard_config():
         if _name in _blueprints_for_acl:
@@ -1443,6 +1450,55 @@ def create_app(config_object=Config) -> Flask:
                     db.session.rollback()
             except Exception:
                 pass
+
+    @app.before_request
+    def _guard_sensitive_print():
+        from flask_login import current_user
+        from models import SystemSettings
+        from permissions_config.enums import SystemPermissions
+
+        if not getattr(current_user, "is_authenticated", False):
+            return
+        if request.method != "GET":
+            return
+        blocked = str(SystemSettings.get_setting("block_document_print", "false")).lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+        if not blocked:
+            return
+        path = request.path or ""
+        if not any(x in path for x in ("/print", "/receipt", "/invoice", "/payslip")):
+            return
+        if hasattr(current_user, "has_permission") and current_user.has_permission(
+            SystemPermissions.EXPORT_DATA.value
+        ):
+            return
+        from flask import abort
+
+        abort(403, description="الطباعة تتطلب صلاحية تصدير")
+
+    @app.before_request
+    def _enforce_login_schedule():
+        from flask import flash, redirect, url_for
+        from flask_login import current_user, logout_user
+
+        if not getattr(current_user, "is_authenticated", False):
+            return
+        ep = request.endpoint or ""
+        if ep.startswith("auth.") or ep.startswith("static.") or ep == "health.health":
+            return
+        try:
+            from utils.enterprise_security import user_may_login_now
+
+            ok, msg = user_may_login_now(current_user)
+            if not ok:
+                logout_user()
+                flash(msg or "خارج أوقات الدخول المسموحة", "danger")
+                return redirect(url_for("auth.login"))
+        except Exception:
+            pass
 
     @app.before_request
     def _mark_request_start():
@@ -1554,8 +1610,9 @@ def create_app(config_object=Config) -> Flask:
     @app.errorhandler(400)
     def _bad_request(e):
         app.logger.warning("400 BAD REQUEST: %s - %s", request.path, str(e))
-        if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
-            return {"error": "Bad Request", "message": "طلب غير صالح"}, 400
+        if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            from utils.ux_messages import json_error
+            return json_error(400, key="validation_error")
         try:
             return render_template("errors/400.html", path=request.path, error="طلب غير صالح"), 400
         except Exception:
@@ -1564,8 +1621,9 @@ def create_app(config_object=Config) -> Flask:
     @app.errorhandler(401)
     def _unauthorized(e):
         app.logger.warning("401 UNAUTHORIZED: %s", request.path)
-        if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
-            return {"error": "Unauthorized"}, 401
+        if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            from utils.ux_messages import json_error
+            return json_error(401, key="session_expired")
         try:
             return render_template("errors/401.html", path=request.path), 401
         except Exception:
@@ -1574,8 +1632,9 @@ def create_app(config_object=Config) -> Flask:
     @app.errorhandler(429)
     def _too_many_requests(e):
         app.logger.warning("429 TOO MANY REQUESTS: %s", request.path)
-        if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
-            return {"error": "Too Many Requests"}, 429
+        if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            from utils.ux_messages import json_error
+            return json_error(429, key="network_error", message="طلبات كثيرة. انتظر قليلاً ثم أعد المحاولة.")
         try:
             return render_template("errors/429.html", path=request.path), 429
         except Exception:
@@ -1605,12 +1664,9 @@ def create_app(config_object=Config) -> Flask:
             import traceback
             return f"500 Internal Server Error: {str(e)}\n\n{traceback.format_exc()}", 500
         request_id = getattr(g, "request_id", None)
-        if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
-            return {
-                "error": "Internal Server Error",
-                "message": "حدث خطأ داخلي في الخادم. تم تسجيل الخطأ للمراجعة.",
-                "request_id": request_id,
-            }, 500
+        if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            from utils.ux_messages import json_error
+            return json_error(500, key="internal_error", request_id=request_id)
         try:
             return render_template("errors/500.html", path=request.path, request_id=request_id), 500
         except Exception:
@@ -1724,7 +1780,7 @@ def create_app(config_object=Config) -> Flask:
             "customers_bp.list_customers",
             "users_bp.list_users",
             "service.list_requests",
-            "sales_bp.index",
+            "sales_bp.list_sales",
             "permissions.list",
             "roles.list_roles",
         ],
@@ -1780,25 +1836,63 @@ def create_app(config_object=Config) -> Flask:
         def _get(key, default=None):
             return _coerce(raw_settings.get(key, raw_settings.get(str(key).upper())), default)
 
-        from utils.branding_assets import (
-            normalize_rel_path,
-            rel_path_platform,
-            resolve_active_branding,
-            ASSET_FAVICONS,
-            ASSET_LOGOS,
-            FAVICON_FILE,
-            LOGO_PRIMARY,
-        )
+        def _safe_static_path(value, default='img/branding/platform/logos/primary.png'):
+            s = str(value or '').strip().replace('\\', '/')
+            if not s:
+                return default
+            lowered = s.lower()
+            if lowered.startswith(('http://', 'https://', '//')):
+                return default
+            s = s.lstrip('/')
+            if s.startswith('static/'):
+                s = s[len('static/'):]
+            if '/' not in s:
+                s = f'img/{s}'
+            parts = [p for p in s.split('/') if p]
+            if not parts or any(p in {'.', '..'} for p in parts):
+                return default
+            return '/'.join(parts)
 
         from utils.branding_scope import PLATFORM_DEFAULT_COMPANY_NAME, PLATFORM_DEFAULT_SYSTEM_NAME
 
-        system_name_val = _get('system_name') or _get('SystemName') or PLATFORM_DEFAULT_SYSTEM_NAME
-        company_name_val = _get('company_name') or _get('CompanyName') or PLATFORM_DEFAULT_COMPANY_NAME
-
         assets_version = _get('assets_version', '') or ''
 
-        custom_logo = _get('custom_logo')
-        favicon_val = _get('custom_favicon', '') or ''
+        def _with_ver(u: str) -> str:
+            v = str(assets_version or '').strip()
+            if not v:
+                return u
+            sep = '&' if '?' in u else '?'
+            return f"{u}{sep}v={v}"
+
+        def _static_file_exists(rel_filename: str) -> bool:
+            rel = str(rel_filename or '').strip().replace('\\', '/').lstrip('/')
+            if rel.startswith('static/'):
+                rel = rel[len('static/'):]
+            if not rel:
+                return False
+            abs_path = os.path.join(current_app.root_path, 'static', rel.replace('/', os.sep))
+            return os.path.isfile(abs_path)
+
+        from utils.branding import resolve_branding_bundle
+
+        branding = resolve_branding_bundle(
+            raw_settings=raw_settings,
+            get_setting=_get,
+            with_ver=_with_ver,
+            safe_static_path=_safe_static_path,
+            safe_static_path_allow_root=_safe_static_path_allow_root,
+            static_file_exists=_static_file_exists,
+        )
+
+        system_name_val = branding['tenant_system_name']
+        tenant_company_name_val = branding['tenant_company_name']
+        company_name_val = branding['platform_company_name']
+        logo_url = branding['tenant_logo_url']
+        emblem_url = branding['tenant_logo_emblem_url']
+        white_logo_url = branding['tenant_logo_white_url']
+        favicon_url = branding['tenant_favicon_url']
+        custom_logo = branding['custom_logo']
+        favicon_val = branding['custom_favicon']
 
         tenant_name = ''
         try:
@@ -1829,23 +1923,25 @@ def create_app(config_object=Config) -> Flask:
                             pass
                     tenant_name = domains.get(host) or ''
                 if tenant_name:
-                    tcn = SystemSettings.get_setting(f'tenant_{tenant_name}_company_name', '') or ''
-                    if str(tcn).strip():
-                        company_name_val = str(tcn).strip()
-                    tsn = SystemSettings.get_setting(f'tenant_{tenant_name}_system_name', '') or ''
-                    if str(tsn).strip():
-                        system_name_val = str(tsn).strip()
-                    else:
-                        try:
-                            from models import TenantRegistry
+                    tenant_logo = SystemSettings.get_setting(f'tenant_{tenant_name}_logo', '') or ''
+                    tenant_logo_filename = _safe_static_path(tenant_logo, default='')
+                    if tenant_logo_filename and _static_file_exists(tenant_logo_filename):
+                        logo_url = _with_ver(url_for('static', filename=tenant_logo_filename))
 
-                            tr = TenantRegistry.query.filter_by(slug=tenant_name).first()
-                            if tr and str(tr.display_name or "").strip():
-                                system_name_val = str(tr.display_name).strip()
-                                if not str(tcn).strip():
-                                    company_name_val = str(tr.display_name).strip()
-                        except Exception:
-                            pass
+                    domain_company_name = SystemSettings.get_setting(f'tenant_{tenant_name}_company_name', '') or ''
+                    if str(domain_company_name).strip():
+                        tenant_company_name_val = str(domain_company_name).strip()
+
+                    domain_system_name = SystemSettings.get_setting(f'tenant_{tenant_name}_system_name', '') or ''
+                    if str(domain_system_name).strip():
+                        system_name_val = str(domain_system_name).strip()
+
+                    tenant_favicon = SystemSettings.get_setting(f'tenant_{tenant_name}_favicon', '') or ''
+                    if str(tenant_favicon).strip():
+                        favicon_val = str(tenant_favicon).strip()
+                        favicon_filename = _safe_static_path_allow_root(favicon_val, default='img/branding/platform/favicons/favicon.png')
+                        if _static_file_exists(favicon_filename):
+                            favicon_url = _with_ver(url_for('static', filename=favicon_filename))
         except Exception:
             tenant_name = ''
 
@@ -1868,14 +1964,28 @@ def create_app(config_object=Config) -> Flask:
         settings = {
             'system_name': system_name_val,
             'company_name': company_name_val,
+            'platform_company_name': branding['platform_company_name'],
+            'platform_product_name': branding['platform_product_name'],
+            'platform_logo_url': branding['platform_logo_url'],
+            'platform_logo_emblem_url': branding['platform_logo_emblem_url'],
+            'platform_logo_white_url': branding['platform_logo_white_url'],
+            'platform_favicon_url': branding['platform_favicon_url'],
+            'platform_login_bg_url': branding.get('platform_login_bg_url', ''),
+            'tenant_company_name': tenant_company_name_val,
+            'tenant_system_name': system_name_val,
+            'tenant_logo_url': logo_url,
+            'tenant_logo_emblem_url': emblem_url,
+            'tenant_logo_white_url': white_logo_url,
+            'tenant_favicon_url': favicon_url,
+            'tenant_company_code': branding.get('tenant_company_code', ''),
             'login_title': _get('login_title', 'مرحباً بك'),
             'login_subtitle': _get('login_subtitle', 'سجل دخولك للمتابعة'),
             'footer_text': _get('footer_text', 'جميع الحقوق محفوظة'),
             'custom_logo': branding.get('logo_rel') or custom_logo or '',
             'custom_logo_url': logo_url,
-            'custom_logo_primary_url': logo_primary_url,
-            'custom_logo_emblem_url': branding.get('logo_emblem_url') or logo_url,
-            'custom_favicon': branding.get('favicon_rel') or favicon_val,
+            'custom_logo_emblem_url': emblem_url,
+            'custom_logo_white_url': white_logo_url,
+            'custom_favicon': favicon_val,
             'custom_favicon_url': favicon_url,
             'custom_header_url': header_url,
             'branding_scope': branding.get('scope') or 'platform',
@@ -2004,6 +2114,35 @@ def create_app(config_object=Config) -> Flask:
             pass
 
     @app.before_request
+    def apply_runtime_system_settings():
+        """تطبيق إعدادات الجلسة وAPI من قاعدة البيانات."""
+        from datetime import timedelta
+        from flask import session, jsonify
+
+        if request.path.startswith("/api"):
+            try:
+                val = SystemSettings.get_setting("api_enabled", True)
+                if str(val).strip().lower() not in ("true", "1", "yes", "on"):
+                    if current_user.is_authenticated and (
+                        getattr(current_user, "has_permission", None)
+                        and current_user.has_permission("access_owner_dashboard")
+                    ):
+                        return None
+                    return jsonify({"success": False, "error": "API معطّل من إعدادات النظام"}), 503
+            except Exception:
+                pass
+
+        if current_user.is_authenticated and not request.path.startswith("/static/"):
+            try:
+                secs = int(SystemSettings.get_setting("SESSION_TIMEOUT", 3600))
+                if secs > 0:
+                    app.permanent_session_lifetime = timedelta(seconds=secs)
+                    session.permanent = True
+            except Exception:
+                pass
+        return None
+
+    @app.before_request
     def check_maintenance_mode():
         """فحص وضع الصيانة - المنطق المحسّن"""
         if request.path.startswith('/static/'):
@@ -2038,6 +2177,13 @@ def create_app(config_object=Config) -> Flask:
 
     from cli import register_cli
     register_cli(app)
+    try:
+        from utils.branding_assets import register_branding_cli, register_company_branding_hooks
+
+        register_branding_cli(app)
+        register_company_branding_hooks(app)
+    except Exception:
+        pass
 
     # ========== إضافة العملات الافتراضية تلقائياً ==========
     with app.app_context():

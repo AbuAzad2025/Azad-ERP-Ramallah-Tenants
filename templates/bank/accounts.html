@@ -4,44 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
-<style>
-.bank-card {
-    transition: all 0.3s ease;
-    border-right: 4px solid transparent;
-}
 
-.bank-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.bank-card.active {
-    border-right-color: #28a745;
-}
-
-.bank-card.inactive {
-    border-right-color: #dc3545;
-    opacity: 0.7;
-}
-
-.stat-card {
-    text-align: center;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
-
-.stat-value {
-    font-size: 1.5rem;
-    font-weight: bold;
-    margin: 5px 0;
-}
-
-.stat-label {
-    font-size: 0.9rem;
-    color: #6c757d;
-}
-</style>
 {% endblock %}
 
 {% from 'macros/permissions.html' import readonly_banner with context %}
@@ -87,7 +50,7 @@
     {% for data in accounts %}
     <div class="col-md-6 col-lg-4 mb-4">
         <div class="card bank-card shadow-sm h-100">
-            <div class="card-header bg-gradient-primary text-white">
+            <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-primary text-white">
                 <div class="d-flex justify-content-between align-items-start">
                     <h3 class="card-title h5 mb-0 font-weight-bold">
                         <i class="fas fa-university mr-2"></i>

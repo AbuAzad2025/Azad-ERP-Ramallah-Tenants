@@ -427,7 +427,14 @@ class BlooprintAdapter(GatewayAdapter):
     def handle_webhook(self, request) -> dict:
         secret = current_app.config.get("BLOOPRINT_WEBHOOK_SECRET") or ""
         sig = (request.headers.get("X-Blooprint-Signature") or "").strip()
-        if secret and sig != secret:
+        require_secret = current_app.config.get(
+            "REQUIRE_WEBHOOK_SECRET",
+            not current_app.debug and current_app.config.get("ENV") == "production",
+        )
+        if require_secret:
+            if not secret or not sig or sig != secret:
+                return {"ok": False, "error": "invalid_signature"}
+        elif secret and sig and sig != secret:
             return {"ok": False, "error": "invalid_signature"}
         payload = request.get_json(silent=True) or {}
         ref = (payload.get("payment_ref") or "").strip()
@@ -460,6 +467,14 @@ def _get_adapter(name: Optional[str] = None) -> GatewayAdapter:
 @shop_bp.route("/webhook/<gateway>", methods=["POST"], endpoint="gateway_webhook")
 @csrf.exempt
 def gateway_webhook(gateway: str):
+    secret = current_app.config.get("BLOOPRINT_WEBHOOK_SECRET") or ""
+    require_secret = current_app.config.get(
+        "REQUIRE_WEBHOOK_SECRET",
+        not current_app.debug and current_app.config.get("ENV") == "production",
+    )
+    if require_secret and not secret:
+        current_app.logger.warning("shop webhook rejected: BLOOPRINT_WEBHOOK_SECRET not configured")
+        return jsonify({"ok": False, "error": "webhook_not_configured"}), 503
     adp = _get_adapter(gateway)
     result = adp.handle_webhook(request)
     code = 200 if result.get("ok") else 400

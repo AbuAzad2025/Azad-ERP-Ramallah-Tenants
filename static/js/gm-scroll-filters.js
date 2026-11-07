@@ -3,24 +3,29 @@
 
   var DEFAULT_HINT = "اسحب أفقياً أو استخدم الأسهم لعرض كل الأعمدة";
   var MIN_COLS_AUTO = 4;
+  var WRAP_SELECTOR = [
+    ".content .table-responsive",
+    ".content [data-gm-auto-scroll]",
+    ".content .dataTables_wrapper .table-responsive",
+    ".content .dataTables_scrollBody"
+  ].join(",");
 
   function isRtl(el) {
-    var node = el || document.documentElement;
-    return (window.getComputedStyle(node).direction || "rtl") === "rtl";
+    return (window.getComputedStyle(el || document.documentElement).direction || "rtl") === "rtl";
   }
 
   function getScrollEl(card) {
     return (
       card.querySelector(".gm-ledger-scroll-inner") ||
       card.querySelector(".gm-ledger-scroll") ||
-      card.querySelector(".table-responsive")
+      card.querySelector(".table-responsive") ||
+      card.querySelector("table")
     );
   }
 
   function scrollMetrics(el) {
     var max = Math.max(0, el.scrollWidth - el.clientWidth);
-    var sl = Math.abs(el.scrollLeft);
-    return { max: max, sl: sl, needs: max > 4 };
+    return { max: max, sl: Math.abs(el.scrollLeft), needs: max > 4 };
   }
 
   function scrollStep(el) {
@@ -92,11 +97,12 @@
     var rail = document.createElement("div");
     rail.className = "gm-scroll-rail gm-scroll-rail-" + position;
     rail.setAttribute("role", "toolbar");
+    rail.setAttribute("aria-label", "تمرير الجدول");
     rail.innerHTML =
-      '<button type="button" class="gm-scroll-btn" data-gm-scroll-dir="start" title="بداية الجدول"><i class="fas fa-chevron-right"></i></button>' +
+      '<button type="button" class="gm-scroll-btn" data-gm-scroll-dir="start" title="بداية الجدول" aria-label="بداية الجدول"><i class="fas fa-chevron-right"></i></button>' +
       '<div class="gm-scroll-rail-center"><i class="fas fa-arrows-alt-h gm-scroll-rail-icon"></i>' +
       '<span class="gm-scroll-hint-text">' + hint + '</span><span class="gm-scroll-position"></span></div>' +
-      '<button type="button" class="gm-scroll-btn" data-gm-scroll-dir="end" title="نهاية الجدول"><i class="fas fa-chevron-left"></i></button>';
+      '<button type="button" class="gm-scroll-btn" data-gm-scroll-dir="end" title="نهاية الجدول" aria-label="نهاية الجدول"><i class="fas fa-chevron-left"></i></button>';
     return rail;
   }
 
@@ -107,7 +113,7 @@
     if (wrap.getAttribute("data-gm-no-scroll") === "1") return false;
     var table = wrap.querySelector("table");
     if (!table || table.getAttribute("data-gm-no-scroll") === "1") return false;
-    if (wrap.getAttribute("data-gm-force-scroll") === "1") return true;
+    if (wrap.getAttribute("data-gm-force-scroll") === "1" || wrap.hasAttribute("data-gm-auto-scroll")) return true;
     if (table.querySelectorAll("thead th").length >= MIN_COLS_AUTO) return true;
     return wrap.scrollWidth > wrap.clientWidth + 8;
   }
@@ -119,7 +125,6 @@
     card.className = "gm-ledger-scroll-card";
     card.setAttribute("data-gm-scroll-table", "");
     card.setAttribute("data-gm-scroll-hint", hint);
-    card.setAttribute("data-gm-auto-wrap", "1");
     wrap.parentNode.insertBefore(card, wrap);
     card.appendChild(createRail("top", hint));
     card.appendChild(wrap);
@@ -129,6 +134,15 @@
     bindScrollCard(card);
   }
 
+  function isFilterCard(card) {
+    if (card.dataset.gmFilterBound === "1" || card.classList.contains("gm-filter-panel")) return false;
+    if (card.querySelector("table")) return false;
+    if (card.querySelector("form[id*='filter'], form.filter-form, .gm-filter-row")) return true;
+    var body = card.querySelector(".card-body");
+    if (!body || !body.querySelector(".form-control, select")) return false;
+    return body.querySelectorAll(".form-control, select").length >= 2;
+  }
+
   function enhanceFilterPanel(panel) {
     if (!panel || panel.dataset.gmFilterBound === "1") return;
     var header = panel.querySelector(".gm-filter-panel-header, .card-header");
@@ -136,6 +150,7 @@
     if (!header || !body) return;
     header.classList.add("gm-filter-panel-header");
     body.classList.add("gm-filter-panel-body");
+    panel.classList.add("gm-filter-panel");
     var toggle = header.querySelector(".gm-filter-toggle");
     if (!toggle) {
       toggle = document.createElement("button");
@@ -157,18 +172,12 @@
     }
     if (panel.getAttribute("data-gm-filter-collapsed") === "1") setCollapsed(true);
     toggle.addEventListener("click", function (e) { e.stopPropagation(); setCollapsed(!collapsed()); });
-    header.addEventListener("click", function (e) {
-      if (e.target === toggle || toggle.contains(e.target)) return;
-      if (e.target.closest("a, input, select, button:not(.gm-filter-toggle)")) return;
-      setCollapsed(!collapsed());
-    });
     function syncActive() {
       var active = false;
       body.querySelectorAll("input, select, textarea").forEach(function (f) {
         if (f.type === "hidden" || f.type === "submit" || f.type === "button") return;
         if (f.name === "page" || f.name === "csrf_token") return;
-        var v = (f.value || "").trim();
-        if (v && v !== "all") active = true;
+        if ((f.value || "").trim() && f.value !== "all") active = true;
       });
       panel.classList.toggle("gm-filter-has-active", active);
     }
@@ -179,14 +188,8 @@
   }
 
   function enhanceLegacyFilterCards(root) {
-    (root || document).querySelectorAll(".content .card").forEach(function (card) {
-      if (card.dataset.gmFilterBound === "1" || card.classList.contains("gm-filter-panel")) return;
-      if (card.querySelector("table")) return;
-      var body = card.querySelector(".card-body");
-      if (!body || !body.querySelector(".form-control, select")) return;
-      var inputs = body.querySelectorAll(".form-control, select");
-      if (inputs.length < 2) return;
-      card.classList.add("gm-filter-panel");
+    (root || document).querySelectorAll(".content .card, .content .sales-toolbar").forEach(function (card) {
+      if (!isFilterCard(card)) return;
       if (!card.hasAttribute("data-gm-filter-collapsed")) {
         var compact = window.GMLayout && window.GMLayout.isCompactLayout && window.GMLayout.isCompactLayout();
         card.setAttribute("data-gm-filter-collapsed", compact ? "1" : "0");
@@ -207,32 +210,22 @@
       document.body.appendChild(box);
     }
     if (box.dataset.gmVscrollBound === "1") return;
-    var root = document.querySelector(".content-wrapper") || window;
     function sync() {
-      var st = root === window ? window.scrollY : root.scrollTop;
-      var max = root === window
-        ? document.documentElement.scrollHeight - window.innerHeight
-        : root.scrollHeight - root.clientHeight;
+      var st = window.scrollY;
+      var max = document.documentElement.scrollHeight - window.innerHeight;
       var up = box.querySelector('[data-gm-vscroll="up"]');
       var down = box.querySelector('[data-gm-vscroll="down"]');
-      if (max < 80) {
-        up && up.classList.add("gm-vscroll-hidden");
-        down && down.classList.add("gm-vscroll-hidden");
-        return;
-      }
-      up && up.classList.toggle("gm-vscroll-hidden", st < 40);
-      down && down.classList.toggle("gm-vscroll-hidden", st >= max - 40);
+      if (max < 80) return;
+      if (up) up.classList.toggle("gm-vscroll-hidden", st < 40);
+      if (down) down.classList.toggle("gm-vscroll-hidden", st >= max - 40);
     }
     box.querySelectorAll("[data-gm-vscroll]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var n = Math.min(480, window.innerHeight * 0.7);
-        var d = btn.getAttribute("data-gm-vscroll") === "up" ? -n : n;
-        if (root === window) window.scrollBy({ top: d, behavior: "smooth" });
-        else root.scrollBy({ top: d, behavior: "smooth" });
+        window.scrollBy({ top: btn.getAttribute("data-gm-vscroll") === "up" ? -n : n, behavior: "smooth" });
       });
     });
-    if (root === window) window.addEventListener("scroll", sync, { passive: true });
-    else root.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("scroll", sync, { passive: true });
     window.addEventListener("resize", sync);
     sync();
     box.dataset.gmVscrollBound = "1";
@@ -241,21 +234,23 @@
   function init(root) {
     var scope = root || document;
     scope.querySelectorAll("[data-gm-scroll-table]").forEach(bindScrollCard);
-    scope.querySelectorAll(".content .table-responsive").forEach(wrapResponsive);
+    scope.querySelectorAll(WRAP_SELECTOR).forEach(wrapResponsive);
     scope.querySelectorAll("[data-gm-filter-panel]").forEach(enhanceFilterPanel);
     enhanceLegacyFilterCards(scope);
     initVerticalHints();
   }
 
   window.GMScrollFilters = { init: init, bind: bindScrollCard, wrap: wrapResponsive, refresh: init };
-  window.GMFinancialScroll = window.GMFinancialScroll || { init: init, bind: bindScrollCard };
+  window.GMFinancialScroll = { init: init, bind: bindScrollCard };
 
-  document.addEventListener("DOMContentLoaded", init);
+  document.addEventListener("DOMContentLoaded", function () {
+    init();
+    if (window.jQuery) {
+      window.jQuery(document).on("draw.dt shown.bs.tab", function () { setTimeout(init, 60); });
+    }
+  });
   window.addEventListener("gm:layout-change", function () {
     document.querySelectorAll("[data-gm-scroll-table]").forEach(updateScrollCard);
     init(document);
   });
-  if (window.jQuery) {
-    window.jQuery(document).on("draw.dt", function () { setTimeout(init, 60); });
-  }
 })(window, document);

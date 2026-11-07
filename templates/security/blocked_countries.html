@@ -1,16 +1,16 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}blocked_countries{% endblock %}
-{% block security_title %}Blocked Countries{% endblock %}
+{% block security_title %}الدول المحظورة{% endblock %}
 {% block security_icon %}<i class="fas fa-globe"></i>{% endblock %}
 {% block security_description %}إدارة الدول المحظورة من الوصول للنظام{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">Blocked Countries</li>{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">الدول المحظورة</li>{% endblock %}
 {% block security_content %}
   
   <a href="{{ url_for('security.block_country') }}" class="btn btn-warning mb-3"><i class="fas fa-flag"></i> حظر دولة</a>
   <div class="card"><div class="card-body">
     {% if blocked %}
     <table class="table table-striped">
-      <thead><tr><th>الدولة</th><th>السبب</th><th>تاريخ الحظر</th></tr></thead>
+      <thead class="table-header-primary text-white"><tr><th>الدولة</th><th>السبب</th><th>تاريخ الحظر</th></tr></thead>
       <tbody>{% for item in blocked %}<tr><td><code>{{ item.country_code }}</code></td><td>{{ item.reason or '—' }}</td><td>{{ item.blocked_at }}</td></tr>{% endfor %}</tbody>
     </table>
     {% else %}<p class="text-muted text-center py-4">لا توجد دول محظورة</p>{% endif %}

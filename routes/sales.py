@@ -11,7 +11,7 @@ from sqlalchemy import func, or_, desc, extract, case, and_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload, selectinload, load_only
 from extensions import db, cache
-from models import Sale, SaleLine, Invoice, Customer, Product, AuditLog, Warehouse, User, Payment, StockLevel, Employee, CostCenter, SaleStatus, PaymentStatus, PaymentMethod, PaymentProgress
+from models import Sale, SaleLine, Invoice, InvoiceLine, InvoiceSource, Customer, Product, AuditLog, Warehouse, User, Payment, StockLevel, Employee, CostCenter, SaleStatus, PaymentStatus, PaymentMethod
 from models import convert_amount, run_sale_gl_sync_after_commit
 
 
@@ -125,8 +125,11 @@ def _available_qty(product_id: int, warehouse_id: int) -> int:
     return int(row.avail or 0) if row else 0
 
 def _auto_pick_warehouse(product_id: int, required_qty: int, preferred_wid: Optional[int] = None) -> Optional[int]:
+    from utils.company_scope import filter_warehouses_query, assert_warehouse_access
+
     if preferred_wid:
         if _available_qty(product_id, preferred_wid) >= required_qty:
+            assert_warehouse_access(int(preferred_wid))
             return preferred_wid
     order_expr = case(
         (Warehouse.warehouse_type == "MAIN", 0),
@@ -136,8 +139,10 @@ def _auto_pick_warehouse(product_id: int, required_qty: int, preferred_wid: Opti
         else_=9,
     )
     row = (
-        db.session.query(StockLevel.warehouse_id, Warehouse.warehouse_type, _available_expr().label("avail"))
-        .join(Warehouse, Warehouse.id == StockLevel.warehouse_id)
+        filter_warehouses_query(
+            db.session.query(StockLevel.warehouse_id, Warehouse.warehouse_type, _available_expr().label("avail"))
+            .join(Warehouse, Warehouse.id == StockLevel.warehouse_id)
+        )
         .filter(StockLevel.product_id == product_id)
         .filter(_available_expr() >= required_qty)
         .order_by(order_expr.asc(), Warehouse.id.asc())
@@ -313,6 +318,58 @@ def _safe_generate_number_after_flush(sale: Sale) -> None:
         sale.sale_number = f"INV-{_utc_now_naive():%Y%m%d}-{sale.id:04d}"
         db.session.flush()
 
+def _ensure_invoice_for_sale(sale: Sale) -> Invoice | None:
+    if not sale or not getattr(sale, "id", None) or not getattr(sale, "customer_id", None):
+        return None
+    inv = Invoice.query.filter_by(sale_id=int(sale.id)).first()
+    if not inv:
+        inv = Invoice(
+            invoice_number=f"FINV-{int(sale.id):06d}",
+            invoice_date=getattr(sale, "sale_date", None) or _utc_now_naive(),
+            due_date=None,
+            customer_id=int(sale.customer_id),
+            sale_id=int(sale.id),
+            source=InvoiceSource.SALE.value,
+            kind="INVOICE",
+            currency=(getattr(sale, "currency", None) or "ILS").upper(),
+            total_amount=D(getattr(sale, "total_amount", 0) or 0),
+            tax_amount=D(getattr(sale, "tax_amount", 0) or 0),
+            discount_amount=D(getattr(sale, "discount_total", 0) or 0),
+            notes=getattr(sale, "notes", None),
+        )
+        db.session.add(inv)
+        db.session.flush()
+    else:
+        inv.customer_id = int(sale.customer_id)
+        inv.invoice_date = getattr(sale, "sale_date", None) or inv.invoice_date
+        inv.currency = (getattr(sale, "currency", None) or inv.currency or "ILS").upper()
+        inv.total_amount = D(getattr(sale, "total_amount", 0) or 0)
+        inv.tax_amount = D(getattr(sale, "tax_amount", 0) or 0)
+        inv.discount_amount = D(getattr(sale, "discount_total", 0) or 0)
+        inv.notes = getattr(sale, "notes", None)
+
+    inv.lines = []
+    for ln in (getattr(sale, "lines", None) or []):
+        prod = None
+        try:
+            prod = db.session.get(Product, int(getattr(ln, "product_id", 0) or 0))
+        except Exception:
+            prod = None
+        inv.lines.append(
+            InvoiceLine(
+                invoice_id=int(inv.id),
+                product_id=int(getattr(ln, "product_id", 0) or 0) or None,
+                description=(getattr(prod, "name", None) or f"ITEM-{getattr(ln, 'product_id', '')}"),
+                quantity=float(getattr(ln, "quantity", 0) or 0),
+                unit_price=D(getattr(ln, "unit_price", 0) or 0),
+                discount=D(getattr(ln, "discount_rate", 0) or 0),
+                tax_rate=D(getattr(ln, "tax_rate", 0) or 0),
+            )
+        )
+    db.session.add(inv)
+    db.session.flush()
+    return inv
+
 @sales_bp.route("/<int:id>/archive", methods=["POST"])
 @login_required
 def archive_sale(id):
@@ -365,10 +422,11 @@ def restore_sale(id):
 def dashboard():
     from decimal import Decimal
     from models import convert_amount
+    from utils.company_scope import filter_warehouses_query, filter_customers_query, filter_sales_query
+
+    total_sales = filter_sales_query(db.session.query(Sale)).with_entities(func.count(Sale.id)).scalar() or 0
     
-    total_sales = db.session.query(func.count(Sale.id)).scalar() or 0
-    
-    all_sales = db.session.query(Sale).all()
+    all_sales = filter_sales_query(db.session.query(Sale)).all()
     total_revenue = Decimal('0.00')
     for s in all_sales:
         amt = Decimal(str(s.total_amount or 0))
@@ -381,9 +439,9 @@ def dashboard():
                 current_app.logger.debug('Currency conversion skipped')
     total_revenue = float(total_revenue)
     
-    pending_sales = db.session.query(func.count(Sale.id)).filter(Sale.status == SaleStatus.DRAFT.value).scalar() or 0
+    pending_sales = filter_sales_query(db.session.query(Sale)).filter(Sale.status == SaleStatus.DRAFT.value).with_entities(func.count(Sale.id)).scalar() or 0
     
-    customers = db.session.query(Customer).all()
+    customers = filter_customers_query(Customer.query).all()
     top_customers_data = []
     for cust in customers:
         cust_sales = db.session.query(Sale).filter(Sale.customer_id == cust.id).all()
@@ -457,19 +515,22 @@ def dashboard():
                            months=months, sales_count=counts, revenue=revenue)
 
 @sales_bp.route("/", endpoint="list_sales")
-@sales_bp.route("/", endpoint="index")
 @login_required
 def list_sales():
     from utils.company_scope import filter_sales_query
 
     f = request.args
-    q = filter_sales_query(
-        Sale.query.filter(Sale.is_archived == False)
-    ).options(
+    from utils.company_scope import filter_sales_query
+
+    q = (Sale.query
+         .filter(Sale.is_archived == False)
+        .options(
             joinedload(Sale.customer).load_only(Customer.id, Customer.name, Customer.phone),
             joinedload(Sale.seller).load_only(User.id, User.username),
-            joinedload(Sale.seller_employee).load_only(Employee.id, Employee.name),
-        ).outerjoin(Customer)
+            joinedload(Sale.seller_employee).load_only(Employee.id, Employee.name)
+        )
+         .outerjoin(Customer))
+    q = filter_sales_query(q)
     st = (f.get("status") or "").upper().strip()
     status_filter_enabled = bool(st and st != "ALL")
     if status_filter_enabled:
@@ -828,12 +889,14 @@ def list_sales():
               </a>
               {% if sale.customer_id and sale.is_receivable %}
               <a href="{{ url_for('payments.create_payment',
-                                         entity_type='CUSTOMER',
-                                         entity_id=sale.customer_id,
-                                         reference='دفعة من ' ~ (sale.customer.name if sale.customer else 'زبون') ~ ' - مبيعة ' ~ (sale.sale_number or sale.id),
-                                         notes='تسجيل على حساب الزبون — مبيعة: ' ~ (sale.sale_number or sale.id),
-                                         customer_id=sale.customer_id) }}" class="dropdown-item text-success">
-                <i class="fas fa-money-bill-wave mr-2"></i> دفعة على حساب الزبون
+                                   entity_type='SALE',
+                                   entity_id=sale.id,
+                                   amount=sale.balance_due,
+                                   currency=sale.currency if sale.currency else 'ILS',
+                                   reference='دفع مبيعة من ' ~ (sale.customer.name if sale.customer else 'زبون') ~ ' - ' ~ (sale.sale_number or sale.id),
+                                   notes='دفع مبيعة: ' ~ (sale.sale_number or sale.id) ~ ' - الزبون: ' ~ (sale.customer.name if sale.customer else 'غير محدد'),
+                                   customer_id=sale.customer_id) }}" class="dropdown-item text-success">
+                <i class="fas fa-money-bill-wave mr-2"></i> إضافة دفعة
               </a>
               {% endif %}
               <div class="dropdown-divider"></div>
@@ -1004,7 +1067,7 @@ def _resolve_unit_price(product_id: int, warehouse_id: Optional[int]) -> float:
 @sales_bp.route("/new", methods=["GET", "POST"], endpoint="create_sale")
 @login_required
 def create_sale():
-    from utils.company_scope import filter_warehouses_query
+    from utils.company_scope import filter_warehouses_query, filter_customers_query, assert_customer_access, assert_warehouse_access
 
     form = SaleForm()
     if request.method == "POST" and not form.validate_on_submit():
@@ -1021,12 +1084,18 @@ def create_sale():
                                        products=Product.query.options(
                                            load_only(Product.id, Product.name, Product.sku, Product.price, Product.currency, Product.is_active)
                                        ).filter(Product.is_active == True).order_by(Product.name).all(),
-                                       warehouses=filter_warehouses_query(
-                                           Warehouse.query.options(
-                                               load_only(Warehouse.id, Warehouse.name)
-                                           )
+                                       warehouses=filter_warehouses_query(Warehouse.query).options(
+                                           load_only(Warehouse.id, Warehouse.name)
                                        ).order_by(Warehouse.name).all(),
                                        cost_centers=CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all())
+            from utils.company_scope import assert_customer_access, assert_warehouse_access
+
+            if form.customer_id.data:
+                assert_customer_access(int(form.customer_id.data))
+            for d in lines_payload:
+                wid = d.get("warehouse_id")
+                if wid:
+                    assert_warehouse_access(int(wid))
             for d in lines_payload:
                 if (d.get("unit_price") or 0) <= 0:
                     d["unit_price"] = _resolve_unit_price(d["product_id"], d.get("warehouse_id"))
@@ -1064,6 +1133,7 @@ def create_sale():
             _safe_generate_number_after_flush(sale)
             _attach_lines(sale, lines_payload)
             db.session.flush()
+            _ensure_invoice_for_sale(sale)
             if require_stock and target_status == "CONFIRMED":
                 _deduct_stock(sale)
             _log(sale, "CREATE", None, sale_to_dict(sale))
@@ -1078,10 +1148,8 @@ def create_sale():
                 current_app.logger.error(f"⚠️ GL Sync Failed for Sale #{sale.id}: {e}")
                 # Don't flash error to user as the sale is valid, but log it for admin
             try:
-                from models import run_invoice_gl_sync_after_commit
-                inv_row = Invoice.query.filter_by(sale_id=sale.id).first()
-                if inv_row:
-                    run_invoice_gl_sync_after_commit(inv_row.id)
+                from utils.customer_balance_updater import update_customer_balance_components
+                update_customer_balance_components(int(sale.customer_id))
             except Exception:
                 pass
             utils.flash_success("تم إنشاء المبيعة وسجل الذمة (الفاتورة) على حساب الزبون.")
@@ -1148,7 +1216,7 @@ def sale_detail(id: int):
         invoice_tax_amount = (base_for_tax * sale_tax_rate / Decimal("100")).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
         grand_total = (base_for_tax + invoice_tax_amount).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
         sale.total_amount = float(grand_total)
-        sale.balance_due = float(grand_total)
+        sale.balance_due = float(grand_total.quantize(TWOPLACES, rounding=ROUND_HALF_UP))
         # حساب عرض بالشيكل عند الحاجة
         try:
             from models import convert_amount, PaymentStatus
@@ -1242,7 +1310,12 @@ def sale_payments(id: int):
 @login_required
 @utils.permission_required(SystemPermissions.MANAGE_SALES)
 def edit_sale(id):
-    from utils.company_scope import assert_sale_access, filter_warehouses_query
+    from utils.company_scope import (
+        assert_sale_access,
+        assert_customer_access,
+        assert_warehouse_access,
+        filter_warehouses_query,
+    )
 
     assert_sale_access(id)
     sale = _get_or_404(Sale, id)
@@ -1284,11 +1357,15 @@ def edit_sale(id):
                                        products=Product.query.options(
                                            load_only(Product.id, Product.name, Product.sku, Product.price, Product.currency, Product.is_active)
                                        ).filter(Product.is_active == True).order_by(Product.name).all(),
-                                       warehouses=filter_warehouses_query(
-                                           Warehouse.query.options(
-                                               load_only(Warehouse.id, Warehouse.name)
-                                           )
+                                       warehouses=filter_warehouses_query(Warehouse.query).options(
+                                           load_only(Warehouse.id, Warehouse.name)
                                        ).order_by(Warehouse.name).all())
+            if form.customer_id.data:
+                assert_customer_access(int(form.customer_id.data))
+            for d in lines_payload:
+                wid = d.get("warehouse_id")
+                if wid:
+                    assert_warehouse_access(int(wid))
             # جلب السعر التلقائي فقط إذا كان 0 أو سالب
             for d in lines_payload:
                 if (d.get("unit_price") or 0) <= 0:
@@ -1320,6 +1397,7 @@ def edit_sale(id):
             db.session.flush()
             if require_stock:
                 _reserve_stock(sale)
+            _ensure_invoice_for_sale(sale)
             _log(sale, "UPDATE", old, sale_to_dict(sale))
             from utils.sale_billing import ensure_invoice_for_sale, refresh_customer_balance_for_sale
             ensure_invoice_for_sale(sale)
@@ -1328,6 +1406,7 @@ def edit_sale(id):
                 run_sale_gl_sync_after_commit(sale.id)
             except Exception as e:
                 current_app.logger.error(f"⚠️ GL Sync Failed for Sale #{sale.id} (Update): {e}")
+            # تحديث رصيد الزبون
             try:
                 inv_row = Invoice.query.filter_by(sale_id=sale.id).first()
                 if inv_row:
@@ -1398,6 +1477,7 @@ def quick_sell():
         db.session.flush()
         if status == "CONFIRMED":
             _reserve_stock(sale)
+        _ensure_invoice_for_sale(sale)
         _log(sale, "CREATE", None, sale_to_dict(sale))
         db.session.commit()
         try:
@@ -1459,11 +1539,7 @@ def change_status(id: int, status: str):
             sale.status = "CONFIRMED"
             db.session.flush()
             _reserve_stock(sale)
-            try:
-                from utils.sale_billing import ensure_invoice_for_sale, refresh_customer_balance_for_sale
-                ensure_invoice_for_sale(sale)
-            except Exception:
-                current_app.logger.exception("ensure_invoice_for_sale on confirm")
+            _ensure_invoice_for_sale(sale)
         elif status == "CANCELLED":
             _release_stock(sale)
             sale.status = "CANCELLED"
@@ -1471,20 +1547,8 @@ def change_status(id: int, status: str):
             _release_stock(sale)
             sale.status = "REFUNDED"
         db.session.commit()
-        if status == "CONFIRMED":
-            try:
-                from models import Invoice, run_invoice_gl_sync_after_commit
-                inv = Invoice.query.filter_by(sale_id=sale.id).first()
-                if inv:
-                    run_invoice_gl_sync_after_commit(inv.id)
-            except Exception:
-                pass
-        if status in ("CANCELLED", "REFUNDED"):
-            try:
-                from models import run_sale_gl_sync_after_commit
-                run_sale_gl_sync_after_commit(sale.id)
-            except Exception:
-                current_app.logger.warning(f"Failed to sync sale GL reversal: {sale.id}")
+
+        # تحديث رصيد الزبون فوراً
         try:
             from utils.sale_billing import refresh_customer_balance_for_sale
             refresh_customer_balance_for_sale(sale)
@@ -1537,10 +1601,44 @@ def generate_invoice(id: int):
     base_for_tax = (subtotal_after_discount + sale_shipping).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
     invoice_tax_amount = (base_for_tax * sale_tax_rate / Decimal("100")).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
     grand_total = (base_for_tax + invoice_tax_amount).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
-    from utils.sale_billing import compute_sale_paid_display
-
-    paid_display, balance_due_display = compute_sale_paid_display(sale, grand_total)
-
+    try:
+        sale.total_amount = float(grand_total)
+        paid = D(getattr(sale, "total_paid", 0) or 0)
+        # إعادة حساب المتبقي بدقة مع تحويل عملات الدفعات إلى عملة البيع عند العرض
+        paid_display = D(0)
+        sale_curr = (getattr(sale, "currency", None) or "ILS").upper()
+        from models import convert_amount as _convert_amount
+        for p in getattr(sale, "payments", []) or []:
+            if getattr(p, "status", None) == "COMPLETED":
+                splits = getattr(p, "splits", None) or []
+                if splits:
+                    for s in splits:
+                        amt = D(str(getattr(s, "converted_amount", 0) or 0))
+                        cur = (getattr(s, "converted_currency", None) or getattr(s, "currency", None) or getattr(p, "currency", None) or sale_curr).upper()
+                        if amt <= 0:
+                            amt = D(str(getattr(s, "amount", 0) or 0))
+                            cur = (getattr(s, "currency", None) or getattr(p, "currency", None) or sale_curr).upper()
+                        if cur != sale_curr:
+                            try:
+                                amt = D(str(_convert_amount(amt, cur, sale_curr, getattr(p, "payment_date", None))))
+                            except Exception:
+                                current_app.logger.debug('Currency conversion skipped')
+                        paid_display += amt
+                else:
+                    amt = D(str(getattr(p, "total_amount", 0) or 0))
+                    cur = (getattr(p, "currency", None) or sale_curr).upper()
+                    if cur != sale_curr:
+                        try:
+                            amt = D(str(_convert_amount(amt, cur, sale_curr, getattr(p, "payment_date", None))))
+                        except Exception:
+                            current_app.logger.debug('Currency conversion skipped')
+                    paid_display += amt
+        invoice_paid_display = float(paid_display.quantize(TWOPLACES, rounding=ROUND_HALF_UP))
+        invoice_balance_display = float(grand_total.quantize(TWOPLACES, rounding=ROUND_HALF_UP))
+    except Exception:
+        invoice_paid_display = float(getattr(sale, "total_paid", 0) or 0)
+        invoice_balance_display = float(grand_total)
+    
     # التحقق من نوع القالب (بسيط أو ملون)
     use_simple = request.args.get('simple', '').strip().lower() in ('1', 'true', 'yes')
     template_name = "sales/receipt_simple.html" if use_simple else "sales/receipt.html"
@@ -1560,3 +1658,80 @@ def generate_invoice(id: int):
         balance_due_display=balance_due_display,
         money_fmt=money_fmt,
     )
+
+
+@sales_bp.route("/quotations")
+@login_required
+@utils.permission_required(SystemPermissions.VIEW_SALES)
+def quotations():
+    quotes = (
+        Sale.query.filter(Sale.is_quotation.is_(True))
+        .order_by(Sale.sale_date.desc())
+        .limit(200)
+        .all()
+    )
+    return render_template("sales/quotations.html", quotes=quotes)
+
+
+@sales_bp.route("/quotations/new", methods=["GET", "POST"])
+@login_required
+@utils.permission_required(SystemPermissions.MANAGE_SALES)
+def create_quotation():
+    form = SaleForm()
+    if form.validate_on_submit():
+        try:
+            lines_payload, err = _resolve_lines_from_form(form, require_stock=False)
+            if err:
+                flash(err, "danger")
+                return redirect(url_for("sales_bp.create_quotation"))
+            for d in lines_payload:
+                if (d.get("unit_price") or 0) <= 0:
+                    d["unit_price"] = _resolve_unit_price(d["product_id"], d.get("warehouse_id"))
+            sale = Sale(
+                sale_number=None,
+                customer_id=form.customer_id.data,
+                seller_id=current_user.id,
+                sale_date=form.sale_date.data or _utc_now_naive(),
+                status=SaleStatus.DRAFT.value,
+                payment_status="PENDING",
+                currency=(form.currency.data or "ILS").upper(),
+                tax_rate=form.tax_rate.data or 0,
+                discount_total=form.discount_total.data or 0,
+                is_quotation=True,
+                notes=((form.notes.data or "").strip() + " [عرض سعر]").strip(),
+                cost_center_id=int(form.cost_center_id.data) if form.cost_center_id.data else None,
+            )
+            db.session.add(sale)
+            db.session.flush()
+            _safe_generate_number_after_flush(sale)
+            _attach_lines(sale, lines_payload)
+            db.session.commit()
+            flash(f"تم إنشاء عرض السعر {sale.sale_number or sale.id}", "success")
+            return redirect(url_for("sales_bp.quotations"))
+        except Exception as e:
+            db.session.rollback()
+            flash(str(e), "danger")
+    return render_template(
+        "sales/form.html",
+        form=form,
+        title="عرض سعر جديد",
+        products=Product.query.filter_by(is_active=True).order_by(Product.name).limit(500).all(),
+        warehouses=Warehouse.query.filter_by(is_active=True).order_by(Warehouse.name).all(),
+        cost_centers=CostCenter.query.filter_by(is_active=True).order_by(CostCenter.code).all(),
+    )
+
+
+@sales_bp.route("/quotations/<int:id>/convert", methods=["POST"])
+@login_required
+@utils.permission_required(SystemPermissions.MANAGE_SALES)
+def convert_quotation(id):
+    sale = db.session.get(Sale, id) or abort(404)
+    if not sale.is_quotation:
+        flash("ليست عرض سعر", "warning")
+        return redirect(url_for("sales_bp.sale_detail", id=id))
+    sale.is_quotation = False
+    sale.status = SaleStatus.CONFIRMED.value
+    sale.notes = (sale.notes or "").replace("[عرض سعر]", "").strip()
+    db.session.commit()
+    flash("تم تحويل عرض السعر إلى فاتورة مؤكدة", "success")
+    return redirect(url_for("sales_bp.sale_detail", id=id))

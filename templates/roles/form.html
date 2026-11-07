@@ -4,12 +4,7 @@
 {% block head_extra %}
   {{ super() }}
   <link href="{{ url_for('static', filename='adminlte/plugins/select2/css/select2.min.css') }}" rel="stylesheet"/>
-  <style>
-    .select2-container .select2-selection--multiple{min-height:42px;padding:4px 6px}
-    .select2-container--default .select2-selection--multiple .select2-selection__choice{margin:4px 0 0 6px}
-    .module-chip{font-size:.85rem}
-    .btn-group-sm .btn{padding:.15rem .45rem}
-  </style>
+  
 {% endblock %}
 
 {% block content %}

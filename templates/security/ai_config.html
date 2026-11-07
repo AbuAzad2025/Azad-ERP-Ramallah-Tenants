@@ -1,94 +1,81 @@
-{% extends 'base.html' %}
+{% extends 'security/base_security.html' %}
 
-{% block content %}
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="card bg-gradient-dark text-white mb-4">
-        <div class="card-body d-flex justify-content-between align-items-center">
-            <div>
-                <h3 class="mb-1"><i class="fas fa-robot me-2"></i>إعدادات المساعد الذكي (AI Config)</h3>
-                <p class="mb-0 opacity-75">إدارة وتخصيص قدرات الذكاء الاصطناعي في النظام</p>
-            </div>
-            <div>
-                <a href="{{ url_for('ai.hub') }}" class="btn btn-outline-light"><i class="fas fa-brain me-2"></i>AI Hub</a>
+{% block security_title %}إعدادات المساعد الذكي{% endblock %}
+{% block security_icon %}<i class="fas fa-robot"></i>{% endblock %}
+{% block security_description %}إدارة وتخصيص قدرات الذكاء الاصطناعي{% endblock %}
+
+{% block security_breadcrumb %}
+<li class="breadcrumb-item active">إعدادات المساعد الذكي</li>
+{% endblock %}
+
+{% block security_actions %}
+<a href="{{ url_for('ai.hub') }}" class="btn btn-glass btn-sm"><i class="fas fa-brain"></i> مركز الذكاء</a>
+{% endblock %}
+
+{% block security_content %}
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="sec-card h-100">
+            <div class="sec-card-body text-center p-4">
+                <div class="mb-3"><i class="fas fa-sliders-h fa-2x text-primary"></i></div>
+                <h5 class="card-title">الإعدادات العامة</h5>
+                <p class="text-muted small mb-3">تفعيل المساعد، إعدادات الخصوصية، والتحكم في الميزات.</p>
+                <a href="{{ url_for('ai_admin.ai_settings') }}" class="btn btn-primary btn-sm w-100">إدارة الإعدادات</a>
             </div>
         </div>
     </div>
-
-    <!-- Quick Actions -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-4">
-            <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
-                <div class="card-body text-center p-4">
-                    <div class="avatar avatar-lg bg-primary-subtle text-primary rounded-circle mb-3 mx-auto">
-                        <i class="fas fa-sliders-h fa-2x"></i>
-                    </div>
-                    <h5 class="card-title">الإعدادات العامة</h5>
-                    <p class="card-text text-muted small mb-3">تفعيل المساعد، إعدادات الخصوصية، والتحكم في الميزات.</p>
-                    <a href="{{ url_for('ai_admin.ai_settings') }}" class="btn btn-primary btn-sm w-100">إدارة الإعدادات</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
-                <div class="card-body text-center p-4">
-                    <div class="avatar avatar-lg bg-success-subtle text-success rounded-circle mb-3 mx-auto">
-                        <i class="fas fa-key fa-2x"></i>
-                    </div>
-                    <h5 class="card-title">مفاتيح API</h5>
-                    <p class="card-text text-muted small mb-3">إدارة مفاتيح OpenAI و Google Gemini ومزودي الخدمة الآخرين.</p>
-                    <button class="btn btn-success btn-sm w-100" data-toggle="modal" data-target="#apiKeysModal">إدارة المفاتيح</button>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
-                <div class="card-body text-center p-4">
-                    <div class="avatar avatar-lg bg-warning-subtle text-warning rounded-circle mb-3 mx-auto">
-                        <i class="fas fa-dumbbell fa-2x"></i>
-                    </div>
-                    <h5 class="card-title">تدريب النموذج</h5>
-                    <p class="card-text text-muted small mb-3">إعادة تدريب النموذج على بيانات النظام الجديدة.</p>
-                    <a href="{{ url_for('ai.hub', tab='training') }}" class="btn btn-warning btn-sm w-100 text-dark">مركز التدريب</a>
-                </div>
+    <div class="col-md-4">
+        <div class="sec-card h-100">
+            <div class="sec-card-body text-center p-4">
+                <div class="mb-3"><i class="fas fa-key fa-2x text-success"></i></div>
+                <h5 class="card-title">مفاتيح API</h5>
+                <p class="text-muted small mb-3">إدارة مفاتيح OpenAI و Google Gemini ومزودي الخدمة الآخرين.</p>
+                <button class="btn btn-success btn-sm w-100" data-toggle="modal" data-target="#apiKeysModal">إدارة المفاتيح</button>
             </div>
         </div>
     </div>
-
-    <!-- Status Overview -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-white py-3">
-            <h5 class="mb-0 fw-bold"><i class="fas fa-heartbeat me-2 text-danger"></i>حالة النظام الذكي</h5>
-        </div>
-        <div class="card-body">
-            <div class="row text-center">
-                <div class="col-md-3 border-end">
-                    <h6 class="text-muted text-uppercase small fw-bold">الحالة العامة</h6>
-                    {% if stats.status == 'active' %}
-                        <h4 class="text-success mb-0"><i class="fas fa-check-circle me-1"></i> نشط</h4>
-                    {% else %}
-                        <h4 class="text-danger mb-0"><i class="fas fa-times-circle me-1"></i> {{ stats.status }}</h4>
-                    {% endif %}
-                </div>
-                <div class="col-md-3 border-end">
-                    <h6 class="text-muted text-uppercase small fw-bold">آخر تدريب</h6>
-                    <h4 class="text-dark mb-0">{{ model_status.last_trained }}</h4>
-                </div>
-                <div class="col-md-3 border-end">
-                    <h6 class="text-muted text-uppercase small fw-bold">الاستجابة</h6>
-                    <h4 class="text-primary mb-0">{{ stats.latency }}s</h4>
-                </div>
-                <div class="col-md-3">
-                    <h6 class="text-muted text-uppercase small fw-bold">الاستعلامات اليوم</h6>
-                    <h4 class="text-info mb-0">{{ stats.queries_today }}</h4>
-                </div>
+    <div class="col-md-4">
+        <div class="sec-card h-100">
+            <div class="sec-card-body text-center p-4">
+                <div class="mb-3"><i class="fas fa-dumbbell fa-2x text-warning"></i></div>
+                <h5 class="card-title">تدريب النموذج</h5>
+                <p class="text-muted small mb-3">إعادة تدريب النموذج على بيانات النظام الجديدة.</p>
+                <a href="{{ url_for('ai.hub', tab='training') }}" class="btn btn-warning btn-sm w-100">مركز التدريب</a>
             </div>
         </div>
     </div>
-
 </div>
 
-<!-- API Keys Modal Placeholder -->
+<div class="sec-card mb-4">
+    <div class="sec-card-header bg-white py-3 border-bottom">
+        <h5 class="mb-0 fw-bold"><i class="fas fa-heartbeat text-danger me-2"></i> حالة النظام الذكي</h5>
+    </div>
+    <div class="sec-card-body">
+        <div class="row text-center g-3">
+            <div class="col-md-3">
+                <h6 class="text-muted text-uppercase small fw-bold">الحالة العامة</h6>
+                {% if stats.status == 'active' %}
+                    <h4 class="text-success mb-0"><i class="fas fa-check-circle me-1"></i> نشط</h4>
+                {% else %}
+                    <h4 class="text-danger mb-0"><i class="fas fa-times-circle me-1"></i> {{ stats.status }}</h4>
+                {% endif %}
+            </div>
+            <div class="col-md-3">
+                <h6 class="text-muted text-uppercase small fw-bold">آخر تدريب</h6>
+                <h4 class="text-dark mb-0">{{ model_status.last_trained }}</h4>
+            </div>
+            <div class="col-md-3">
+                <h6 class="text-muted text-uppercase small fw-bold">الاستجابة</h6>
+                <h4 class="text-primary mb-0">{{ stats.latency }}s</h4>
+            </div>
+            <div class="col-md-3">
+                <h6 class="text-muted text-uppercase small fw-bold">الاستعلامات اليوم</h6>
+                <h4 class="text-info mb-0">{{ stats.queries_today }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="apiKeysModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -97,7 +84,7 @@
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-info">يرجى الذهاب لصفحة الإعدادات الكاملة لإدارة المفاتيح بشكل آمن.</div>
+                <div class="alert alert-info mb-0">يرجى الذهاب لصفحة الإعدادات الكاملة لإدارة المفاتيح بشكل آمن.</div>
             </div>
             <div class="modal-footer">
                 <a href="{{ url_for('ai_admin.ai_settings') }}" class="btn btn-primary">الذهاب للإعدادات</a>

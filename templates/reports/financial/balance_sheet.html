@@ -1,13 +1,14 @@
 {% extends 'base.html' %}
-{% from 'macros/gm_mobile_ui.html' import financial_scroll_shell %}
+{% from 'macros/gm_mobile_ui.html' import scroll_table_start, scroll_table_end %}
 
 {% block title %}الميزانية العمومية{% endblock %}
+{% block page_title %}الميزانية العمومية{% endblock %}
 {% block body_class %}gm-financial-report{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="card shadow-sm">
-        <div class="card-header bg-gradient-primary text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-primary text-white">
             <h3 class="mb-0">
                 <i class="fas fa-balance-scale"></i>
                 الميزانية العمومية (Balance Sheet)
@@ -19,12 +20,37 @@
             <div class="alert alert-info">
                 تقرير الميزانية العمومية يعرض الأصول والخصوم وحقوق الملكية كما في تاريخ محدد
             </div>
+
+            <div class="row mb-4 gm-filter-row">
+                <div class="col-md-3">
+                    <label for="company_id">الشركة</label>
+                    <select id="company_id" class="form-control">
+                        <option value="">الكل (مجموعة)</option>
+                        {% for co in companies|default([]) %}
+                        <option value="{{ co.id }}" {% if company_id == co.id %}selected{% endif %}>{{ co.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="balance_date">كما في تاريخ</label>
+                    <input type="date" id="balance_date" class="form-control" value="{{ balance_date.strftime('%Y-%m-%d') }}">
+                </div>
+                <div class="col-md-3">
+                    <label>&nbsp;</label>
+                    <button type="button" class="btn btn-primary d-block w-100" onclick="updateReport()">
+                        <i class="fas fa-sync"></i> تحديث
+                    </button>
+                </div>
+            </div>
+            {% if company_filter_active %}
+            <div class="alert alert-info py-2 small erp-branch-hint">فروع الشركة المحددة فقط.</div>
+            {% endif %}
             
             <div class="row">
-                <div class="col-md-6 mb-3 mb-md-0">
-                    {% call financial_scroll_shell('الأصول') %}
-                    <table class="table table-bordered no-mobile-cards mb-0">
-                        <thead class="table-primary">
+                <div class="col-md-6">
+                    {{ scroll_table_start() }}
+                    <table class="table table-bordered">
+                        <thead class="table-header-primary text-white table-primary">
                             <tr>
                                 <th colspan="2"><h5 class="mb-0">💰 الأصول</h5></th>
                             </tr>
@@ -49,13 +75,13 @@
                             </tr>
                         </tfoot>
                     </table>
-                    {% endcall %}
+                    {{ scroll_table_end() }}
                 </div>
                 
                 <div class="col-md-6">
-                    {% call financial_scroll_shell('الخصوم وحقوق الملكية') %}
-                    <table class="table table-bordered no-mobile-cards mb-0">
-                        <thead class="table-warning">
+                    {{ scroll_table_start() }}
+                    <table class="table table-bordered">
+                        <thead class="table-header-primary text-white table-warning">
                             <tr>
                                 <th colspan="2"><h5 class="mb-0">📊 الخصوم وحقوق الملكية</h5></th>
                             </tr>
@@ -80,7 +106,7 @@
                             </tr>
                         </tfoot>
                     </table>
-                    {% endcall %}
+                    {{ scroll_table_end() }}
                 </div>
             </div>
             
@@ -116,6 +142,14 @@
 </div>
 
 <script>
+function updateReport() {
+    const d = document.getElementById('balance_date').value;
+    const cid = document.getElementById('company_id').value;
+    let url = `/reports/financial/balance-sheet?date=${d}`;
+    if (cid) url += `&company_id=${cid}`;
+    window.location.href = url;
+}
+
 function exportToExcel() {
     const table = document.querySelector('.table');
     if (!table) { alert('لا يوجد جدول للتصدير'); return; }

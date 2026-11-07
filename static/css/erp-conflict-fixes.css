@@ -1,0 +1,305 @@
+/**
+ * طبقة نهائية — تلغي تعارضات legacy مع ثيم ERP
+ * يُحمَّل آخراً في <head> (قبل extra_css للصفحات فقط)
+ * مرجع: docs/arabic_erp_ui_spacing_dropdowns_spec.json
+ */
+body.erp-unified {
+  --erp-field-h: 46px;
+  --erp-btn-h: 46px;
+}
+
+/* ——— body / خلفية ——— */
+body.erp-unified:not(.dark-mode),
+body.erp-unified:not(.dark-mode).electric-theme {
+  background: var(--erp-bg, #f5f7fb) !important;
+  background-image: none !important;
+  color: var(--erp-text, #1f2937) !important;
+}
+
+body.erp-unified:not(.dark-mode) .content-wrapper {
+  background: var(--erp-bg, #f5f7fb) !important;
+  color: var(--erp-text, #1f2937) !important;
+}
+
+/* ——— بطاقات (enhancements.css) ——— */
+body.erp-unified:not(.dark-mode) .content-wrapper .card,
+body.erp-unified:not(.dark-mode) .content-wrapper .card:not([class*="bg-"]) {
+  border: 1px solid var(--erp-border, #e5e7eb) !important;
+  border-top: 1px solid var(--erp-border, #e5e7eb) !important;
+  border-radius: var(--erp-radius, 16px) !important;
+  box-shadow: var(--erp-shadow-sm, 0 1px 3px rgba(6, 42, 90, 0.08)) !important;
+  background: var(--erp-card, #fff) !important;
+  transform: none !important;
+}
+
+body.erp-unified .content-wrapper .card:hover {
+  transform: none !important;
+}
+
+body.erp-unified:not(.dark-mode) .content-wrapper .card-header {
+  background: var(--erp-card, #fff) !important;
+  border-bottom: 1px solid var(--erp-border, #e5e7eb) !important;
+  color: var(--erp-navy, #062a5a) !important;
+  font-weight: 700;
+}
+
+/* ——— جداول (enhancements + ux-contrast + style.css) ——— */
+body.erp-unified .content-wrapper .table thead th,
+body.erp-unified .content-wrapper .table thead td,
+body.erp-unified .content-wrapper table.dataTable thead th,
+body.erp-unified .content-wrapper table.dataTable thead td,
+body.erp-unified.security-body .table thead th,
+body.erp-unified.security-body table.dataTable thead th {
+  background: var(--erp-bg, #f5f7fb) !important;
+  background-image: none !important;
+  color: var(--erp-navy, #062a5a) !important;
+  border-top: none !important;
+  border-bottom: 2px solid var(--erp-border, #e5e7eb) !important;
+  text-transform: none !important;
+  font-size: 0.88rem !important;
+  padding: 0.85rem 1rem !important;
+  font-weight: 700 !important;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+body.erp-unified .content-wrapper .table thead th.text-end,
+body.erp-unified .content-wrapper .table thead th.text-start,
+body.erp-unified .content-wrapper .table thead th.text-left {
+  text-align: inherit !important;
+}
+
+body.erp-unified .content-wrapper .table tbody td,
+body.erp-unified.security-body .table tbody td {
+  color: var(--erp-text, #1f2937) !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 0.7rem 1rem !important;
+  border-top: 1px solid var(--erp-border, #e5e7eb) !important;
+  vertical-align: middle !important;
+}
+
+body.erp-unified .content-wrapper .table-hover tbody tr:hover td {
+  color: var(--erp-text, #1f2937) !important;
+  background: rgba(11, 104, 255, 0.04) !important;
+}
+
+body.erp-unified .content-wrapper table.dataTable thead th.sorting::after,
+body.erp-unified .content-wrapper table.dataTable thead th.sorting_asc::after,
+body.erp-unified .content-wrapper table.dataTable thead th.sorting_desc::after {
+  color: var(--erp-muted, #6b7280) !important;
+}
+
+body.erp-unified .content-wrapper .dataTables_wrapper .paginate_button.current {
+  background: var(--erp-blue, #0b68ff) !important;
+  border-color: var(--erp-blue, #0b68ff) !important;
+}
+
+/* أزرار تصدير DataTables — نص ظاهر (لا يختفي إلا عند hover سابقاً) */
+body.erp-unified .content-wrapper .dataTables_wrapper div.dt-buttons .btn,
+body.erp-app .content-wrapper .dataTables_wrapper div.dt-buttons .btn {
+  color: var(--erp-text, #1f2937) !important;
+  background: var(--erp-surface, #fff) !important;
+  border: 1px solid var(--erp-border, #e5e7eb) !important;
+  opacity: 1 !important;
+}
+
+body.erp-unified .content-wrapper .dataTables_wrapper div.dt-buttons .btn i,
+body.erp-app .content-wrapper .dataTables_wrapper div.dt-buttons .btn i {
+  color: inherit !important;
+  opacity: 1 !important;
+}
+
+body.erp-unified .content-wrapper .dataTables_wrapper div.dt-buttons .btn:hover,
+body.erp-app .content-wrapper .dataTables_wrapper div.dt-buttons .btn:hover {
+  color: #fff !important;
+  background: var(--erp-primary, #006b3f) !important;
+  border-color: var(--erp-primary, #006b3f) !important;
+}
+
+/* ——— أزرار (enhancements gradients) ——— */
+body.erp-unified .content-wrapper .btn-primary,
+body.erp-unified.security-body .btn-primary {
+  background: var(--erp-blue, #0b68ff) !important;
+  background-image: none !important;
+  border-color: var(--erp-blue, #0b68ff) !important;
+  color: #fff !important;
+}
+
+body.erp-unified .content-wrapper .btn-primary:hover,
+body.erp-unified.security-body .btn-primary:hover {
+  background: #0952cc !important;
+  border-color: #0952cc !important;
+}
+
+body.erp-unified .content-wrapper .btn-success {
+  background: var(--erp-success, #16a34a) !important;
+  background-image: none !important;
+  border-color: var(--erp-success, #16a34a) !important;
+}
+
+body.erp-unified .content-wrapper .btn-danger {
+  background: var(--erp-danger, #dc2626) !important;
+  background-image: none !important;
+  border-color: var(--erp-danger, #dc2626) !important;
+}
+
+body.erp-unified .content-wrapper .btn-warning {
+  background: var(--erp-warning, #ea580c) !important;
+  background-image: none !important;
+  border-color: var(--erp-warning, #ea580c) !important;
+  color: #fff !important;
+}
+
+body.erp-unified .content-wrapper .btn-info {
+  background: var(--erp-info, #0b68ff) !important;
+  background-image: none !important;
+  border-color: var(--erp-info, #0b68ff) !important;
+}
+
+/* أزرار إجراءات الجدول — بدون دوائر مزدحمة */
+body.erp-unified .content-wrapper .table td .btn-sm {
+  width: auto !important;
+  min-width: 34px;
+  height: auto !important;
+  min-height: 34px;
+  padding: 0.25rem 0.5rem !important;
+  border-radius: var(--erp-radius-sm, 10px) !important;
+  margin: 0 0.15rem !important;
+}
+
+body.erp-unified .content-wrapper .table td .btn-sm:hover {
+  transform: none !important;
+}
+
+/* ——— حقول (style.css dark + inline base 45px) ——— */
+body.erp-unified:not(.dark-mode) .content-wrapper .form-control,
+body.erp-unified:not(.dark-mode) .content-wrapper .custom-select,
+body.erp-unified:not(.dark-mode) .content-wrapper select.form-control,
+body.erp-unified:not(.dark-mode) .content-wrapper textarea.form-control,
+body.erp-unified.security-body:not(.dark-mode) .form-control {
+  min-height: var(--erp-field-h) !important;
+  height: auto;
+  background: #fff !important;
+  color: var(--erp-text, #1f2937) !important;
+  border: 1px solid var(--erp-border, #e5e7eb) !important;
+  border-radius: var(--erp-radius-sm, 10px) !important;
+  font-size: 0.95rem !important;
+  padding: 0 0.85rem !important;
+}
+
+body.erp-unified:not(.dark-mode) .content-wrapper textarea.form-control,
+body.erp-unified.security-body textarea.form-control {
+  height: auto !important;
+  min-height: 100px !important;
+  padding: 0.65rem 0.85rem !important;
+  line-height: 1.55;
+}
+
+body.erp-unified:not(.dark-mode) .content-wrapper .form-control:focus,
+body.erp-unified.security-body .form-control:focus {
+  border-color: var(--erp-blue, #0b68ff) !important;
+  box-shadow: 0 0 0 0.2rem rgba(11, 104, 255, 0.15) !important;
+  background: #fff !important;
+  color: var(--erp-text, #1f2937) !important;
+}
+
+/* Select2 — ui.css dark + inline heights */
+body.erp-unified .content-wrapper .select2-container .select2-selection--single,
+body.erp-unified.security-body .select2-container .select2-selection--single {
+  min-height: var(--erp-field-h) !important;
+  height: var(--erp-field-h) !important;
+  background: #fff !important;
+  border: 1px solid var(--erp-border, #e5e7eb) !important;
+  border-radius: var(--erp-radius-sm, 10px) !important;
+}
+
+body.erp-unified .content-wrapper .select2-container--default .select2-selection--single .select2-selection__rendered,
+body.erp-unified.security-body .select2-selection__rendered {
+  line-height: calc(var(--erp-field-h) - 4px) !important;
+  color: var(--erp-text, #1f2937) !important;
+  font-weight: 500;
+}
+
+body.erp-unified .select2-container--default .select2-results__option--highlighted[aria-selected] {
+  background: var(--erp-blue, #0b68ff) !important;
+  color: #fff !important;
+}
+
+body.erp-unified .select2-container--default .select2-results__option {
+  color: var(--erp-text, #1f2937) !important;
+}
+
+/* ux-unified focus */
+body.erp-unified .content-wrapper .form-control:focus,
+body.erp-unified .content-wrapper .custom-select:focus {
+  border-color: var(--erp-blue, #0b68ff) !important;
+  box-shadow: 0 0 0 0.2rem rgba(11, 104, 255, 0.15) !important;
+}
+
+/* ——— الشريط الجانبي (style.css cyan vs erp navy) ——— */
+body.erp-unified .main-sidebar {
+  background: var(--erp-navy, #062a5a) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.erp-unified .nav-sidebar .nav-link.active {
+  background: rgba(11, 104, 255, 0.22) !important;
+  color: #fff !important;
+  box-shadow: inset 3px 0 0 var(--erp-cyan, #10c6e8) !important;
+}
+
+body.erp-unified .nav-sidebar .nav-link:hover {
+  transform: none !important;
+}
+
+/* ——— breadcrumb enhancements green ——— */
+body.erp-unified:not(.dark-mode) .content-wrapper .breadcrumb-item a {
+  color: var(--erp-blue, #0b68ff) !important;
+  font-weight: 600;
+}
+
+/* ——— موبايل: ارتفاع موحّد ——— */
+html[data-ui-mode="mobile"] body.erp-unified,
+html[data-ui-mode="tablet"] body.erp-unified {
+  --erp-field-h: 44px;
+  --erp-btn-h: 44px;
+}
+
+html[data-ui-mode="mobile"] body.erp-unified .content-wrapper .form-control,
+html[data-ui-mode="tablet"] body.erp-unified .content-wrapper .form-control,
+html[data-ui-mode="mobile"] body.erp-unified .content-wrapper .select2-container .select2-selection--single,
+html[data-ui-mode="tablet"] body.erp-unified .content-wrapper .select2-container .select2-selection--single {
+  min-height: var(--erp-field-h) !important;
+  font-size: 16px !important; /* منع zoom iOS */
+}
+
+/* بطاقات بأنماط inline متبقية */
+body.erp-unified .content-wrapper .card[style*="linear-gradient"],
+body.erp-unified .content-wrapper [class*="bg-gradient-stats"] {
+  background: var(--erp-card, #fff) !important;
+  background-image: none !important;
+  color: var(--erp-text, #1f2937) !important;
+}
+
+body.erp-unified .content-wrapper .card[style*="linear-gradient"] .text-white,
+body.erp-unified .content-wrapper .card[style*="linear-gradient"] * {
+  color: inherit !important;
+}
+
+body.erp-unified .card-hover {
+  transform: none !important;
+}
+
+body.erp-unified .card-hover:hover {
+  transform: none !important;
+}
+
+/* طباعة — لا تغيير */
+@media print {
+  body.erp-unified .content-wrapper .card,
+  body.erp-unified .content-wrapper .table thead th {
+    box-shadow: none !important;
+  }
+}

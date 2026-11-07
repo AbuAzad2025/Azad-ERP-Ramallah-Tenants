@@ -52,6 +52,7 @@ from models import (
     WarehouseType,
     UtilityAccount,
     StockAdjustment,
+    run_sale_gl_sync_after_commit,
 )
 from markupsafe import escape
 
@@ -61,81 +62,50 @@ bp = Blueprint("api", __name__, url_prefix="/api")
 
 @bp.errorhandler(404)
 def api_not_found(error):
-    return jsonify({
-        'success': False,
-        'error': 'المورد غير موجود',
-        'code': 404
-    }), 404
+    from utils.ux_messages import json_error
+    return json_error(404, key="not_found", code=404)
 
 @bp.errorhandler(400)
 def api_bad_request(error):
-    return jsonify({
-        'success': False,
-        'error': 'طلب غير صحيح',
-        'code': 400
-    }), 400
+    from utils.ux_messages import json_error
+    return json_error(400, key="validation_error", code=400)
 
 @bp.errorhandler(401)
 def api_unauthorized(error):
-    return jsonify({
-        'success': False,
-        'error': 'غير مصرح لك بالوصول',
-        'code': 401
-    }), 401
+    from utils.ux_messages import json_error
+    return json_error(401, key="session_expired", code=401)
 
 @bp.errorhandler(403)
 def api_forbidden(error):
-    return jsonify({
-        'success': False,
-        'error': 'غير مصرح لك بهذا الإجراء',
-        'code': 403
-    }), 403
+    from utils.ux_messages import json_error
+    return json_error(403, key="permission_denied", code=403)
 
 @bp.errorhandler(500)
 def api_internal_error(error):
     logging.error(f"API Internal Error: {str(error)}")
-    
-    return jsonify({
-        'success': False,
-        'error': 'خطأ داخلي في الخادم',
-        'code': 500
-    }), 500
+    from utils.ux_messages import json_error
+    return json_error(500, key="internal_error", code=500)
 
 @bp.errorhandler(SQLAlchemyError)
 def api_database_error(error):
     logging.error(f"API Database Error: {str(error)}")
-    
     db.session.rollback()
-    
-    return jsonify({
-        'success': False,
-        'error': 'خطأ في قاعدة البيانات',
-        'code': 500
-    }), 500
+    from utils.ux_messages import json_error
+    return json_error(500, key="internal_error", code=500)
 
 @bp.errorhandler(IntegrityError)
 def api_integrity_error(error):
     logging.error(f"API Integrity Error: {str(error)}")
-    
     db.session.rollback()
-    
-    return jsonify({
-        'success': False,
-        'error': 'انتهاك قيود قاعدة البيانات',
-        'code': 400
-    }), 400
+    from utils.ux_messages import json_error
+    return json_error(400, key="duplicate", code=400)
 
 @bp.errorhandler(OperationalError)
 def api_operational_error(error):
     logging.error(f"API Operational Error: {str(error)}")
-    
     db.session.rollback()
-    
-    return jsonify({
-        'success': False,
-        'error': 'خطأ في تشغيل قاعدة البيانات',
-        'code': 500
-    }), 500
+    from utils.ux_messages import json_error
+    return json_error(500, key="internal_error", code=500)
 
 @bp.route("/", methods=["GET"], endpoint="index")
 @bp.route("/docs", methods=["GET"], endpoint="docs")
@@ -180,71 +150,62 @@ def get_current_exchange_rates():
     """
     """جلب أسعار الصرف الحالية - متاح للجميع لعرضها في navbar
     
-    محمي بـ Rate Limiting (20 طلب/دقيقة) والنتائج محفوظة مؤقتاً (5 دقائق)
+    محمي بـ Rate Limiting (20 طلب/دقيقة) والنتائج محفوظة مؤقتاً حسب fx_update_interval.
     """
     try:
-        from models import get_fx_rate_with_fallback, _fetch_external_fx_rate, SystemSettings
         from flask import current_app
         import time
-        
-        # محاولة الحصول على القيم من Cache
-        cache_key = 'exchange_rates_cache'
-        cached_data = current_app.config.get('_exchange_rates_cache', {})
-        cache_time = current_app.config.get('_exchange_rates_cache_time', 0)
-        
-        # إذا كانت البيانات محفوظة وصالحة (أقل من 5 دقائق)
-        if cached_data and (time.time() - cache_time) < 300:
-            return jsonify(cached_data)
-        
-        # جلب سعر الدولار مقابل الشيقل
-        try:
-            online_enabled = SystemSettings.get_setting('online_fx_enabled', True)
-        except Exception:
-            online_enabled = True
 
-        if online_enabled:
-            usd_rate = None
-            jod_rate = None
-            try:
-                r = _fetch_external_fx_rate('USD', 'ILS', datetime.now(timezone.utc))
-                if r and r > 0:
-                    usd_rate = float(r)
-            except Exception:
-                usd_rate = None
-            try:
-                r = _fetch_external_fx_rate('JOD', 'ILS', datetime.now(timezone.utc))
-                if r and r > 0:
-                    jod_rate = float(r)
-            except Exception:
-                jod_rate = None
-            if usd_rate is None:
-                usd_rate = float(get_fx_rate_with_fallback('USD', 'ILS').get('rate', 3.65))
-            if jod_rate is None:
-                jod_rate = float(get_fx_rate_with_fallback('JOD', 'ILS').get('rate', 5.15))
-        else:
-            usd_rate = float(get_fx_rate_with_fallback('USD', 'ILS').get('rate', 3.65))
-            jod_rate = float(get_fx_rate_with_fallback('JOD', 'ILS').get('rate', 5.15))
-        
-        # تجهيز الاستجابة (بدون معلومات حساسة)
+        from services.fx_resolution import get_fx_update_interval_seconds, is_online_fx_enabled
+
+        cache_ttl = get_fx_update_interval_seconds()
+
+        # محاولة الحصول على القيم من Cache
+        cache_key = '_exchange_rates_cache_v4'
+        cached_data = current_app.config.get(cache_key, {})
+        cache_time = current_app.config.get('_exchange_rates_cache_v4_time', 0)
+
+        if cached_data and (time.time() - cache_time) < cache_ttl:
+            if 'refresh_interval_seconds' not in cached_data:
+                cached_data = {**cached_data, 'refresh_interval_seconds': cache_ttl}
+            return jsonify(cached_data)
+
+        online_enabled = is_online_fx_enabled()
+
+        from services.fx_navbar_provider import fetch_navbar_fx_bundle
+
+        bundle = fetch_navbar_fx_bundle(online_enabled=online_enabled)
+        usd = bundle.get('USD') or {}
+        jod = bundle.get('JOD') or {}
+
         response_data = {
-            'success': True,
-            'USD': float(usd_rate),
-            'JOD': float(jod_rate)
+            'success': bool(bundle.get('success')),
+            'online_enabled': online_enabled,
+            'fetched_at': bundle.get('fetched_at'),
+            'refresh_interval_seconds': cache_ttl,
+            'USD': usd,
+            'JOD': jod,
+            'USD_rate': usd.get('rate'),
+            'JOD_rate': jod.get('rate'),
         }
-        
+
         # حفظ في Cache
-        current_app.config['_exchange_rates_cache'] = response_data
-        current_app.config['_exchange_rates_cache_time'] = time.time()
+        current_app.config[cache_key] = response_data
+        current_app.config['_exchange_rates_cache_v4_time'] = time.time()
         
         return jsonify(response_data)
         
-    except Exception as e:
-        # في حالة الخطأ، إرجاع قيم افتراضية
+    except Exception:
+        from services.fx_resolution import get_fx_update_interval_seconds, is_online_fx_enabled
         return jsonify({
             'success': False,
-            'USD': 3.65,
-            'JOD': 5.15
-        }), 200  # نرجع 200 حتى لا يعتقد المتصفح أن هناك خطأ
+            'online_enabled': is_online_fx_enabled(),
+            'refresh_interval_seconds': get_fx_update_interval_seconds(),
+            'USD': {'rate': None, 'source': 'unavailable', 'success': False},
+            'JOD': {'rate': None, 'source': 'unavailable', 'success': False},
+            'USD_rate': None,
+            'JOD_rate': None,
+        }), 200
 
 from utils import D as _D, _q2
 
@@ -1557,7 +1518,14 @@ def api_customers():
         Customer.is_archived == False,
         Customer.is_active == True
     ]
-    return utils.search_model(Customer, ["name", "phone", "email"], label_attr="name", extra_filters=extra_filters)
+    from utils.company_scope import filter_customers_query
+    return utils.search_model(
+        Customer,
+        ["name", "phone", "email"],
+        label_attr="name",
+        extra_filters=extra_filters,
+        base_query=filter_customers_query(Customer.query),
+    )
 
 @bp.post("/customers")
 @login_required
@@ -1956,11 +1924,14 @@ def create_category():
 @login_required
 @limiter.limit("60/minute")
 def api_warehouses():
+    from utils.company_scope import assert_warehouse_access, filter_warehouses_query
+
     wid = (request.args.get("id") or "").strip()
     if wid.isdigit():
         w = db.session.get(Warehouse, int(wid))
         if not w:
             return jsonify({"results": []})
+        assert_warehouse_access(int(wid))
         wt = getattr(w.warehouse_type, "value", w.warehouse_type)
         wt = str(wt or "")
         return jsonify({
@@ -1980,8 +1951,6 @@ def api_warehouses():
     type_param = (request.args.get("type") or "").strip().upper()
     active_only_arg = (request.args.get("active_only") or "1").strip()
     limit = _limit_from_request(20, 50)
-
-    from utils.company_scope import filter_warehouses_query
 
     qry = filter_warehouses_query(Warehouse.query)
     if active_only_arg in {"1", "true", "True"}:
@@ -2582,8 +2551,10 @@ def update_partner_shares(warehouse_id: int):
 @login_required
 @limiter.limit("60/minute")
 def invoices():
+    from utils.company_scope import filter_invoices_query
+
     q = utils.q
-    qry = Invoice.query
+    qry = filter_invoices_query(Invoice.query)
     if q:
         like = f"%{q}%"
         qry = qry.filter(or_(Invoice.invoice_number.ilike(like), Invoice.currency.ilike(like)))
@@ -3191,6 +3162,8 @@ def payments():
     from utils.company_scope import filter_payments_query
 
     q = utils.q
+    from utils.company_scope import filter_payments_query
+
     qry = filter_payments_query(Payment.query)
     if q:
         like = f"%{q}%"
@@ -3215,6 +3188,8 @@ def payments():
 @permission_required(SystemPermissions.MANAGE_SALES)
 @limiter.limit("30/minute")
 def create_sale_api():
+    from utils.company_scope import assert_customer_access, assert_warehouse_access
+
     d = request.get_json(silent=True) or {}
     errors = {}
 
@@ -3225,6 +3200,7 @@ def create_sale_api():
     if errors:
         return _err("validation_error", "Invalid input", 422, errors)
 
+    assert_customer_access(customer_id)
     s = Sale(
         sale_number=None,
         customer_id=customer_id,
@@ -3252,6 +3228,8 @@ def create_sale_api():
         if not (pid and qty and qty > 0):
             continue
         chosen = wid or _auto_pick_warehouse(pid, qty, preferred_wid=None)
+        if chosen:
+            assert_warehouse_access(chosen)
         if status == "CONFIRMED":
             if not chosen or _available_qty(pid, chosen) < qty:
                 db.session.rollback()
@@ -3281,6 +3259,7 @@ def create_sale_api():
 
     try:
         db.session.commit()
+        run_sale_gl_sync_after_commit(s.id)
         return _created(f"/api/sales/{s.id}", {"id": s.id, "sale_number": s.sale_number})
     except Exception as e:
         db.session.rollback()
@@ -3292,6 +3271,9 @@ def create_sale_api():
 @permission_required(SystemPermissions.MANAGE_SALES)
 @limiter.limit("30/minute")
 def update_sale_api(id: int):
+    from utils.company_scope import assert_sale_access
+
+    assert_sale_access(id)
     s = db.session.query(Sale).options(joinedload(Sale.lines)).filter_by(id=id).first()
     if not s:
         return jsonify({"error": "Not Found"}), 404
@@ -3360,6 +3342,7 @@ def update_sale_api(id: int):
         elif old_status == "CONFIRMED" and new_status == "CONFIRMED" and replace_lines:
             _reserve_stock(s)
         db.session.commit()
+        run_sale_gl_sync_after_commit(s.id)
         return jsonify({"success": True, "id": s.id})
     except Exception as e:
         db.session.rollback()
@@ -3371,6 +3354,9 @@ def update_sale_api(id: int):
 @permission_required(SystemPermissions.MANAGE_SALES)
 @limiter.limit("30/minute")
 def change_sale_status_api(id: int):
+    from utils.company_scope import assert_sale_access
+
+    assert_sale_access(id)
     s = db.session.query(Sale).options(joinedload(Sale.lines)).filter_by(id=id).first()
     if not s:
         return jsonify({"error": "Not Found"}), 404
@@ -3395,6 +3381,7 @@ def change_sale_status_api(id: int):
             _release_stock(s)
             s.status = target
         db.session.commit()
+        run_sale_gl_sync_after_commit(s.id)
         return jsonify({"success": True})
     except Exception as e:
         db.session.rollback()
@@ -3407,6 +3394,9 @@ def change_sale_status_api(id: int):
 @login_required
 @limiter.limit("60/minute")
 def sale_payments_api(id: int):
+    from utils.company_scope import assert_sale_access
+
+    assert_sale_access(id)
     rows = (
         db.session.query(Payment)
         .filter(Payment.sale_id == id)
@@ -3436,6 +3426,8 @@ def sale_payments_api(id: int):
 @permission_required(SystemPermissions.MANAGE_SALES)
 @limiter.limit("30/minute")
 def quick_sell_api():
+    from utils.company_scope import assert_customer_access, assert_warehouse_access
+
     d = request.get_json(silent=True) or {}
     pid = int(d.get("product_id") or 0)
     qty = int(float(d.get("quantity") or 0))
@@ -3448,7 +3440,10 @@ def quick_sell_api():
     status = (d.get("status") or "DRAFT").upper()
     if not (pid and qty > 0 and customer_id and seller_id):
         return jsonify({"success": False, "error": "invalid"}), 400
+    assert_customer_access(customer_id)
     chosen = wid or _auto_pick_warehouse(pid, qty, preferred_wid=None)
+    if chosen:
+        assert_warehouse_access(chosen)
     if status == "CONFIRMED":
         if not chosen or _available_qty(pid, chosen) < qty:
             return jsonify({"success": False, "error": "insufficient_stock"}), 400
@@ -3472,6 +3467,7 @@ def quick_sell_api():
         _reserve_stock(s)
     try:
         db.session.commit()
+        run_sale_gl_sync_after_commit(s.id)
         return jsonify({"success": True, "id": s.id, "sale_number": s.sale_number}), 201
     except Exception as e:
         db.session.rollback()
@@ -3787,21 +3783,25 @@ def search_supplier_loans():
 
 @bp.app_errorhandler(403)
 def forbidden(e):
-    return jsonify({"error": "Forbidden"}), 403
+    from utils.ux_messages import json_error
+    return json_error(403, key="permission_denied")
 
 @bp.app_errorhandler(429)
 def ratelimit_handler(e):
-    return jsonify({"error": "Too Many Requests", "detail": str(e.description)}), 429
+    from utils.ux_messages import json_error
+    return json_error(429, key="network_error", message="طلبات كثيرة. انتظر قليلاً ثم أعد المحاولة.", detail=str(e.description))
 
 @bp.app_errorhandler(404)
 def not_found(e):
-    return jsonify({"error": "Not Found"}), 404
+    from utils.ux_messages import json_error
+    return json_error(404, key="not_found")
 
 @bp.app_errorhandler(500)
 def server_error(e):
     db.session.rollback()
     current_app.logger.exception("API 500: %s", getattr(e, "description", e))
-    return jsonify({"error": "Server Error"}), 500
+    from utils.ux_messages import json_error
+    return json_error(500, key="internal_error")
 
 # =============================================================================
 # Users search
@@ -4754,7 +4754,7 @@ def get_partners():
 
 # ===== Suppliers API =====
 
-@bp.route('/suppliers', methods=['GET'])
+@bp.route('/suppliers/catalog', methods=['GET'], endpoint='api_suppliers_catalog')
 @login_required
 def get_suppliers():
     """جلب قائمة الموردين"""

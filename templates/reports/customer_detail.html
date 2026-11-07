@@ -29,7 +29,7 @@
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card border-0 shadow-sm">
-                <div class="card-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+ <div class="card-header erp-card-header-row erp-theme-header--primary">
                     <h5 class="mb-0"><i class="fas fa-info-circle ml-2"></i>معلومات الزبون</h5>
                 </div>
                 <div class="card-body">
@@ -53,7 +53,7 @@
         </div>
         <div class="col-md-6">
             <div class="card border-0 shadow-sm">
-                <div class="card-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+ <div class="card-header erp-card-header-row erp-theme-header--primary">
                     <h5 class="mb-0"><i class="fas fa-chart-bar ml-2"></i>ملخص الإجماليات</h5>
                 </div>
                 <div class="card-body">
@@ -232,7 +232,7 @@
 
     {% if sales %}
     <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-success text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white">
             <h5 class="mb-0">
                 <i class="fas fa-shopping-cart ml-2"></i>
                 المبيعات ({{ sales_count|default(sales|length) }} عملية)
@@ -244,7 +244,7 @@
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover">
-                    <thead>
+                    <thead class="table-header-primary text-white">
                         <tr>
                             <th>رقم البيع</th>
                             <th>التاريخ</th>
@@ -280,7 +280,7 @@
 
     {% if invoices %}
     <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary">
             <h5 class="mb-0">
                 <i class="fas fa-file-invoice ml-2"></i>
                 الفواتير ({{ invoices_count|default(invoices|length) }} فاتورة)
@@ -292,7 +292,7 @@
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover">
-                    <thead>
+                    <thead class="table-header-primary text-white">
                         <tr>
                             <th>رقم الفاتورة</th>
                             <th>التاريخ</th>
@@ -335,7 +335,7 @@
 
     {% if services %}
     <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-warning text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-white">
             <h5 class="mb-0">
                 <i class="fas fa-tools ml-2"></i>
                 طلبات الصيانة ({{ services_count|default(services|length) }} طلب)
@@ -347,7 +347,7 @@
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover">
-                    <thead>
+                    <thead class="table-header-primary text-white">
                         <tr>
                             <th>رقم الطلب</th>
                             <th>تاريخ الاستلام</th>
@@ -387,7 +387,7 @@
 
     {% if payments %}
     <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-info text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
             <h5 class="mb-0">
                 <i class="fas fa-credit-card ml-2"></i>
                 المدفوعات ({{ payments_count|default(payments|length) }} دفعة)
@@ -399,7 +399,7 @@
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover">
-                    <thead>
+                    <thead class="table-header-primary text-white">
                         <tr>
                             <th>رقم الدفعة</th>
                             <th>التاريخ</th>
@@ -435,7 +435,7 @@
 
     {% if preorders %}
     <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-secondary text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-secondary text-white">
             <h5 class="mb-0">
                 <i class="fas fa-shopping-bag ml-2"></i>
                 الطلبات المسبقة ({{ preorders_count|default(preorders|length) }} طلب)
@@ -447,7 +447,7 @@
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover">
-                    <thead>
+                    <thead class="table-header-primary text-white">
                         <tr>
                             <th>رقم الطلب</th>
                             <th>تاريخ الإنشاء</th>

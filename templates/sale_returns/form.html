@@ -1,111 +1,25 @@
 {% extends "base.html" %}
 
 {% block title %}{{ title }}{% endblock %}
+{% block page_title %}<i class="fas fa-undo-alt ml-1"></i> {{ title }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('returns.list_returns') }}">المرتجعات</a></li>
+<li class="breadcrumb-item active">{{ 'تعديل' if sale_return is defined and sale_return else 'جديد' }}</li>
+{% endblock %}
 
-{% block head_extra %}
-<style>
-.form-card {
-    border-radius: 12px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
-}
-
-.form-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 20px;
-    border-radius: 12px 12px 0 0;
-}
-
-.form-label {
-    font-weight: 600;
-    color: #343a40;
-}
-
-.required::after {
-    content: " *";
-    color: red;
-}
-
-.line-item {
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-    transition: all 0.3s;
-}
-
-.line-item:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.line-number {
-    display: inline-block;
-    background: #667eea;
-    color: white;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    text-align: center;
-    line-height: 30px;
-    font-weight: bold;
-}
-
-.btn-remove-line {
-    background: #dc3545;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.btn-remove-line:hover {
-    background: #c82333;
-}
-
-.total-section {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 20px;
-    border-radius: 8px;
-    margin-top: 20px;
-}
-
-.total-amount {
-    font-size: 2rem;
-    font-weight: bold;
-}
-
-#sale-info-alert {
-    display: none;
-}
-</style>
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/sale-returns-form.css', v=1) }}">
 {% endblock %}
 
 {% block content %}
-<div class="content-header">
-  <div class="container-fluid">
-    <div class="row mb-2">
-      <div class="col-sm-6">
-        <h1><i class="fas fa-undo-alt"></i> {{ title }}</h1>
-      </div>
-      <div class="col-sm-6">
-        <div class="float-left">
-          <a href="{{ url_for('returns.list_returns') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-right"></i> إلغاء
-          </a>
-        </div>
-      </div>
-    </div>
+<div class="sale-return-form-page">
+  <div class="d-flex justify-content-end mb-3">
+    <a href="{{ url_for('returns.list_returns') }}" class="btn btn-light btn-sm">
+      <i class="fas fa-arrow-right ml-1"></i> رجوع للقائمة
+    </a>
   </div>
-</div>
 
-<section class="content">
-  <div class="container-fluid">
-    
-    <form method="POST" id="returnForm">
+  <form method="POST" id="returnForm">
       {{ form.hidden_tag() }}
       
       <!-- Legend -->
@@ -306,9 +220,7 @@
       </div>
       
     </form>
-    
-  </div>
-</section>
+</div>
 
 <!-- Line Template -->
 <template id="line-template">

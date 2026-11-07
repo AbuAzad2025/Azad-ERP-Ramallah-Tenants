@@ -4,7 +4,7 @@
 {% block content %}
 <div class="container py-5">
   <div class="card shadow-lg rounded-4 border-0 card-hover">
-    <div class="card-header gradient-header text-white py-4" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+    <div class="card-header erp-card-header-row erp-theme-header--primary py-3">
       <div class="d-flex flex-wrap align-items-center justify-content-between">
         <h3 class="mb-0 mr-2 fw-bold">
           <i class="fas fa-truck-loading ml-2"></i>{{ form.name.data and 'تعديل' or 'إضافة' }} مورد
@@ -240,7 +240,7 @@
 <div class="modal fade" id="settlementModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-4 border-0 shadow-lg">
-      <div class="modal-header gradient-header text-white">
+      <div class="modal-header text-white">
         <h5 class="modal-title"><i class="fas fa-scale-balanced ml-2"></i> تسوية رصيد</h5>
         <button type="button" class="close text-white" data-dismiss="modal" aria-label="إغلاق" style="opacity: 1;">
             <span aria-hidden="true">&times;</span>

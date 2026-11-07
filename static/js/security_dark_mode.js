@@ -9,7 +9,17 @@
   if (window.__GM_THEME_INIT__) return;
   window.__SECURITY_DARK_MODE_INIT__ = true;
   'use strict';
-  
+
+  function isSecurityArea() {
+    try {
+      return window.location.pathname.indexOf('/security') === 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  if (!isSecurityArea()) return;
+
   const DARK_MODE_KEY = 'securityDarkMode';
   
   /**

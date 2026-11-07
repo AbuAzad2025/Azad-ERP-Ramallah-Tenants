@@ -52,9 +52,6 @@ def sync_fiscal_periods(
     include_year: bool = True,
 ) -> Dict[str, int]:
     from models import FiscalPeriod
-    from utils.tenant_fiscal_schema import ensure_fiscal_tables_for_request
-
-    ensure_fiscal_tables_for_request()
 
     now = datetime.now().year
     fy_start = get_fiscal_year_start_month()
@@ -147,9 +144,7 @@ def _existing_period_close(period_id: int):
 
 def generate_closing_entries_for_period(period_id: int) -> Dict[str, Any]:
     from models import FiscalPeriod
-    from utils.tenant_fiscal_schema import ensure_fiscal_tables_for_request
 
-    ensure_fiscal_tables_for_request()
     period = db.session.get(FiscalPeriod, period_id)
     if not period:
         raise ValueError("الفترة غير موجودة")
@@ -263,7 +258,7 @@ def _snapshot_entity_balances(period, period_close_id: int) -> int:
 
     for c in Customer.query.filter(Customer.is_archived == False).all():  # noqa: E712
         view = build_customer_balance_view(c.id, db.session)
-        bal = Decimal(str((view.get("balance") or {}).get("net", 0) if view.get("success") else 0))
+        bal = Decimal(str((view.get("balance") or {}).get("amount", 0) if view.get("success") else 0))
         db.session.add(
             EntityPeriodBalance(
                 period_close_id=period_close_id,
@@ -278,7 +273,7 @@ def _snapshot_entity_balances(period, period_close_id: int) -> int:
 
     for s in Supplier.query.filter(Supplier.is_archived == False).all():  # noqa: E712
         view = build_supplier_balance_view(s.id, db.session)
-        bal = Decimal(str((view.get("balance") or {}).get("net", 0) if view.get("success") else 0))
+        bal = Decimal(str((view.get("balance") or {}).get("amount", 0) if view.get("success") else 0))
         db.session.add(
             EntityPeriodBalance(
                 period_close_id=period_close_id,
@@ -293,7 +288,7 @@ def _snapshot_entity_balances(period, period_close_id: int) -> int:
 
     for p in Partner.query.filter(Partner.is_archived == False).all():  # noqa: E712
         view = build_partner_balance_view(p.id, db.session)
-        bal = Decimal(str((view.get("balance") or {}).get("net", 0) if view.get("success") else 0))
+        bal = Decimal(str((view.get("balance") or {}).get("amount", 0) if view.get("success") else 0))
         db.session.add(
             EntityPeriodBalance(
                 period_close_id=period_close_id,
@@ -338,7 +333,10 @@ def carry_forward_annual_opening(period, period_close_id: int, user_id: Optional
         sync_fiscal_periods(from_year=period.fiscal_year + 1, to_year=period.fiscal_year + 1)
         next_period_id = _next_annual_period(period)
 
-    update_opening = bool(SystemSettings.get_setting("annual_carry_updates_opening_balance", False))
+    raw = SystemSettings.get_setting("annual_carry_updates_opening_balance", False)
+    if isinstance(raw, str):
+        raw = raw.strip().lower() in ("1", "true", "yes", "on")
+    update_opening = bool(raw)
     applied = {"customers": 0, "suppliers": 0, "partners": 0, "snapshots": 0, "opening_updated": update_opening}
     snapshots = EntityPeriodBalance.query.filter_by(
         period_close_id=period_close_id, fiscal_period_id=period.id
@@ -383,9 +381,7 @@ def close_fiscal_period(
     notes: Optional[str] = None,
 ) -> Dict[str, Any]:
     from models import FiscalPeriod, PeriodClose
-    from utils.tenant_fiscal_schema import ensure_fiscal_tables_for_request
 
-    ensure_fiscal_tables_for_request()
     period = db.session.get(FiscalPeriod, period_id)
     if not period:
         raise ValueError("الفترة غير موجودة")

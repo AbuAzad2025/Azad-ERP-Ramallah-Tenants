@@ -1,0 +1,916 @@
+/**
+ * وحدة الأمان — توحيد مع واجهة ERP العربية (ثيم فاتح مؤسسي)
+ */
+body.security-body.erp-app {
+  --erp-blue: var(--erp-primary, #006b3f);
+  --erp-navy: var(--erp-primary-dark, #004c2f);
+  --main-navbar_height: 0px;
+  background: var(--erp-bg, #f5f7fb) !important;
+  color: var(--erp-text, #1f2937) !important;
+  padding-top: 0 !important;
+}
+
+/* هيكل مستقل — إخفاء نافبار/سايدبار ERP العام */
+body.security-body.erp-app .main-header.navbar,
+body.security-body.erp-app .main-sidebar,
+body.security-body.erp-app .content-header,
+body.security-body.erp-app .gm-mobile-bottom-nav,
+body.security-body.erp-app #gm-open-in-app-banner {
+  display: none !important;
+}
+
+/* فوتر موحّد — يظهر تحت منطقة المحتوى فقط (لا يغطي السايدبار) */
+body.security-body.erp-app > .wrapper > .main-footer.erp-footer {
+  display: block !important;
+  margin: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: auto !important;
+  z-index: 1010;
+}
+
+@media (min-width: 992px) {
+  html[dir="rtl"] body.security-body.erp-app:not(.sec-sidebar-collapsed) > .wrapper > .main-footer.erp-footer,
+  html[dir="rtl"] body.security-body.erp-app:has(.security-sidebar:not(.collapsed)) > .wrapper > .main-footer.erp-footer {
+    right: var(--sidebar-width, 260px) !important;
+    left: 0 !important;
+    width: auto !important;
+  }
+
+  html[dir="ltr"] body.security-body.erp-app:not(.sec-sidebar-collapsed) > .wrapper > .main-footer.erp-footer,
+  html[dir="ltr"] body.security-body.erp-app:has(.security-sidebar:not(.collapsed)) > .wrapper > .main-footer.erp-footer {
+    left: var(--sidebar-width, 260px) !important;
+    right: 0 !important;
+    width: auto !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  body.security-body.erp-app > .wrapper > .main-footer.erp-footer {
+    right: 0 !important;
+    left: 0 !important;
+    width: auto !important;
+  }
+}
+
+body.security-body.erp-app .content-wrapper {
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  min-height: 100vh !important;
+  background: transparent !important;
+}
+
+body.security-body.erp-app .content-wrapper > .content,
+body.security-body.erp-app .content-wrapper .container-fluid {
+  padding: 0 !important;
+  max-width: 100% !important;
+}
+
+body.security-body.erp-app .security-wrapper {
+  min-height: 100vh;
+}
+
+body.security-body.erp-app .security-sidebar {
+  top: 0 !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+}
+
+body.security-body.erp-app .security-main {
+  min-height: calc(100dvh - var(--erp-footer-height, 72px));
+  height: calc(100dvh - var(--erp-footer-height, 72px));
+  min-width: 0;
+  max-width: 100%;
+  background: var(--erp-bg, #f5f7fb);
+}
+
+body.security-body.erp-app .security-header {
+  top: 0 !important;
+}
+
+body.security-body.erp-app .security-main__scroll {
+  padding-bottom: calc(
+    var(--erp-footer-height, 72px) + env(safe-area-inset-bottom, 0px)
+  );
+}
+
+/* ── قائمة جانبية: إلغاء صندوق أبيض من erp-security-migrated (.collapse) ── */
+body.security-body.erp-app .security-sidebar .collapse,
+body.security-body.erp-app .security-sidebar .collapse.show,
+body.security-body.erp-app .security-sidebar .sec-nav-section > .collapse {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  border-radius: 0 !important;
+}
+
+body.security-body.erp-app .security-sidebar .collapse > .p-2 {
+  padding: 0.35rem 0.5rem 0.5rem !important;
+  background: transparent !important;
+}
+
+/* روابط القائمة — داكنة دائماً، واضحة عند hover/active */
+body.security-body.erp-app .security-sidebar .nav-link,
+body.security-body.erp-app .security-sidebar .collapse .nav-link,
+body.security-body.erp-app .security-sidebar .collapse.show .nav-link,
+body.security-body.erp-app .security-sidebar .sec-nav-section .nav-link {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+body.security-body.erp-app .security-sidebar .nav-link span,
+body.security-body.erp-app .security-sidebar .collapse .nav-link span,
+body.security-body.erp-app .security-sidebar .sec-nav-section .nav-link span {
+  color: inherit !important;
+}
+
+body.security-body.erp-app .security-sidebar .nav-link i,
+body.security-body.erp-app .security-sidebar .collapse .nav-link i,
+body.security-body.erp-app .security-sidebar .sec-nav-section .nav-link i {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+body.security-body.erp-app .security-sidebar .nav-link:hover,
+body.security-body.erp-app .security-sidebar .nav-link:focus,
+body.security-body.erp-app .security-sidebar .collapse .nav-link:hover,
+body.security-body.erp-app .security-sidebar .collapse .nav-link:focus {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #fff !important;
+}
+
+body.security-body.erp-app .security-sidebar .nav-link:hover span,
+body.security-body.erp-app .security-sidebar .nav-link:hover i,
+body.security-body.erp-app .security-sidebar .nav-link:focus span,
+body.security-body.erp-app .security-sidebar .nav-link:focus i {
+  color: #fff !important;
+}
+
+body.security-body.erp-app .security-sidebar .nav-link.active,
+body.security-body.erp-app .security-sidebar .collapse .nav-link.active {
+  background: var(--erp-success, #22c55e) !important;
+  color: #fff !important;
+}
+
+body.security-body.erp-app .security-sidebar .nav-link.active span,
+body.security-body.erp-app .security-sidebar .nav-link.active i {
+  color: #fff !important;
+}
+
+/* شريط الأمان — أزرار واضحة (لا outline-light على أبيض) */
+body.security-body.erp-app .security-header .btn-outline-light,
+body.security-body.erp-app .security-header .erp-theme-switcher .btn-outline-light,
+body.security-body.erp-app .security-header .erp-theme-switcher .btn-outline-secondary {
+  color: var(--erp-primary-dark) !important;
+  border-color: var(--erp-border) !important;
+  background: var(--erp-surface, #fff) !important;
+  font-weight: 600;
+}
+
+body.security-body.erp-app .security-header .btn-outline-light:hover,
+body.security-body.erp-app .security-header .btn-outline-light.active,
+body.security-body.erp-app .security-header .erp-theme-switcher .btn.active {
+  background: var(--erp-primary) !important;
+  border-color: var(--erp-primary) !important;
+  color: #fff !important;
+}
+
+body.security-body.erp-app .security-header .vr,
+body.security-body.erp-app .security-header .bg-white.opacity-10 {
+  background: var(--erp-border) !important;
+  opacity: 1 !important;
+}
+
+/* شريط علوي — أزرار وأيقونات داكنة (أولوية على layout-shell) */
+body.security-body.erp-app .security-header .btn-glass,
+body.security-body.erp-app .security-header .btn-glass.btn-sm {
+  background: var(--erp-surface, #fff) !important;
+  border: 1px solid var(--erp-border) !important;
+  color: var(--erp-primary-dark) !important;
+}
+
+body.security-body.erp-app .security-header .btn-glass i,
+body.security-body.erp-app .security-header .btn-glass .fas,
+body.security-body.erp-app .security-header .btn-glass .far {
+  color: var(--erp-primary) !important;
+}
+
+body.security-body.erp-app .security-header .btn-glass:hover,
+body.security-body.erp-app .security-header .btn-glass:focus {
+  background: var(--erp-primary) !important;
+  border-color: var(--erp-primary) !important;
+  color: #fff !important;
+}
+
+body.security-body.erp-app .security-header .btn-glass:hover i {
+  color: #fff !important;
+}
+
+body.security-body.erp-app .security-header .nav-link.dropdown-toggle {
+  color: var(--erp-text) !important;
+}
+
+body.security-body.erp-app .security-header .erp-header-user-name {
+  color: var(--erp-text) !important;
+  font-weight: 600;
+}
+
+body.security-body.erp-app .security-header .erp-header-user-role {
+  color: var(--erp-muted) !important;
+}
+
+body.security-body.erp-app .security-header .dropdown-menu {
+  background: var(--erp-surface) !important;
+  border: 1px solid var(--erp-border) !important;
+}
+
+body.security-body.erp-app .erp-section-title {
+  color: var(--erp-primary-dark) !important;
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin: 1.25rem 0 0.75rem;
+}
+
+body.security-body.erp-app .erp-page-title {
+  color: var(--erp-primary-dark) !important;
+}
+
+body.security-body.erp-app .security-sidebar {
+  background: var(--erp-sidebar-bg, var(--erp-primary-dark)) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+}
+
+body.security-body.erp-app .security-brand {
+  background: rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.security-body.erp-app .security-brand h5 {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+body.security-body.erp-app .security-brand .brand-badge {
+  background: rgba(34, 197, 94, 0.25);
+  color: #fff;
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  font-size: 0.7rem;
+  letter-spacing: 0;
+}
+
+body.security-body.erp-app .security-brand-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  margin-left: 0.75rem;
+}
+
+body.security-body.erp-app .sec-nav-section {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.security-body.erp-app .sec-nav-section-toggle {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+body.security-body.erp-app .sec-nav-section--danger {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(127, 29, 29, 0.15);
+}
+
+body.security-body.erp-app .security-sidebar .nav-link.danger-link {
+  color: rgba(254, 202, 202, 0.95);
+}
+
+body.security-body.erp-app .security-sidebar .nav-link.danger-link:hover,
+body.security-body.erp-app .security-sidebar .nav-link.danger-link.active {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fff;
+}
+
+body.security-body.erp-app .security-sidebar .nav-link {
+  color: rgba(255, 255, 255, 0.85);
+  border-radius: 10px;
+}
+
+body.security-body.erp-app .security-sidebar .nav-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+body.security-body.erp-app .security-sidebar .nav-link.active {
+  background: var(--erp-success, #22c55e) !important;
+  color: #fff !important;
+  box-shadow: none;
+  border: none;
+}
+
+body.security-body.erp-app .security-main {
+  background: var(--erp-bg, #f5f7fb);
+}
+
+body.security-body.erp-app .security-header {
+  background: #fff !important;
+  border-bottom: 1px solid var(--erp-border, #e5e7eb);
+  box-shadow: var(--erp-shadow-sm);
+}
+
+body.security-body.erp-app .security-header .breadcrumb-item a {
+  color: var(--erp-muted, #6b7280);
+}
+
+body.security-body.erp-app .security-header .breadcrumb-item.active {
+  color: var(--erp-navy, #062a5a);
+}
+
+body.security-body.erp-app .security-header h2,
+body.security-body.erp-app .security-header .text-white {
+  color: var(--erp-navy, #062a5a) !important;
+  text-shadow: none !important;
+}
+
+body.security-body.erp-app .security-header .text-muted,
+body.security-body.erp-app .text-muted {
+  color: var(--erp-muted, #6b7280) !important;
+}
+
+body.security-body.erp-app .sec-card {
+  background: #fff !important;
+  border: 1px solid var(--erp-border, #e5e7eb) !important;
+  border-radius: var(--erp-radius, 16px);
+  box-shadow: var(--erp-shadow-sm);
+  backdrop-filter: none;
+}
+
+body.security-body.erp-app .sec-card-header {
+  background: #fff !important;
+  border-bottom: 1px solid var(--erp-border, #e5e7eb);
+  padding: 1rem 1.25rem;
+}
+
+body.security-body.erp-app .sec-card-header h5,
+body.security-body.erp-app .sec-card-header .text-white {
+  color: var(--erp-navy, #062a5a) !important;
+  font-weight: 700;
+}
+
+body.security-body.erp-app .sec-card-body {
+  color: var(--erp-text, #1f2937) !important;
+  padding: 1.25rem;
+}
+
+body.security-body.erp-app .btn-glass {
+  background: #fff;
+  border: 1px solid var(--erp-border, #e5e7eb);
+  color: var(--erp-navy, #062a5a);
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+body.security-body.erp-app .btn-glass:hover {
+  background: var(--erp-blue, #0b68ff);
+  border-color: var(--erp-blue, #0b68ff);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(11, 104, 255, 0.2);
+  transform: none;
+}
+
+body.security-body.erp-app .erp-sec-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--erp-border, #e5e7eb);
+  border-radius: var(--erp-radius, 12px);
+  border-inline-start: 4px solid var(--erp-primary);
+  background: var(--erp-surface, #fff) !important;
+  color: var(--erp-text, #1f2937);
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--erp-shadow-sm);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+body.security-body.erp-app .erp-sec-action:hover {
+  border-color: var(--erp-primary);
+  border-inline-start-color: var(--erp-primary);
+  box-shadow: var(--erp-shadow);
+  color: var(--erp-primary-dark);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+body.security-body.erp-app .erp-sec-action__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--erp-primary) 14%, transparent);
+  color: var(--erp-primary);
+  flex-shrink: 0;
+  font-size: 1.1rem;
+}
+
+body.security-body.erp-app .erp-sec-action--info {
+  border-inline-start-color: var(--erp-info);
+}
+body.security-body.erp-app .erp-sec-action--info .erp-sec-action__icon {
+  background: color-mix(in srgb, var(--erp-info) 14%, transparent);
+  color: var(--erp-info);
+}
+
+body.security-body.erp-app .erp-sec-action--success {
+  border-inline-start-color: var(--erp-success);
+}
+body.security-body.erp-app .erp-sec-action--success .erp-sec-action__icon {
+  background: color-mix(in srgb, var(--erp-success) 14%, transparent);
+  color: var(--erp-success);
+}
+
+body.security-body.erp-app .erp-sec-action--warning {
+  border-inline-start-color: var(--erp-warning);
+}
+body.security-body.erp-app .erp-sec-action--warning .erp-sec-action__icon {
+  background: color-mix(in srgb, var(--erp-warning) 14%, transparent);
+  color: var(--erp-warning);
+}
+
+body.security-body.erp-app .erp-sec-action--danger {
+  border-inline-start-color: var(--erp-danger);
+}
+body.security-body.erp-app .erp-sec-action--danger .erp-sec-action__icon {
+  background: color-mix(in srgb, var(--erp-danger) 14%, transparent);
+  color: var(--erp-danger);
+}
+
+body.security-body.erp-app .security-summary-box,
+body.security-body.erp-app .erp-sec-kpi {
+  background: #fff !important;
+  border: 1px solid var(--erp-border, #e5e7eb);
+  border-radius: var(--erp-radius, 16px);
+  box-shadow: var(--erp-shadow-sm);
+  color: var(--erp-text, #1f2937) !important;
+  position: relative;
+  overflow: hidden;
+  min-height: 120px;
+}
+
+body.security-body.erp-app .security-summary-box::before,
+body.security-body.erp-app .erp-sec-kpi::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--erp-blue, #0b68ff);
+}
+
+body.security-body.erp-app .security-summary-box--green::before,
+body.security-body.erp-app .erp-sec-kpi--success::before {
+  background: var(--erp-success, #22c55e);
+}
+
+body.security-body.erp-app .security-summary-box--red::before,
+body.security-body.erp-app .erp-sec-kpi--danger::before {
+  background: var(--erp-danger, #dc2626);
+}
+
+body.security-body.erp-app .security-summary-box--amber::before,
+body.security-body.erp-app .erp-sec-kpi--warning::before {
+  background: var(--erp-warning, #ea580c);
+}
+
+body.security-body.erp-app .security-summary-box .inner h3,
+body.security-body.erp-app .erp-sec-kpi__value {
+  color: var(--erp-navy, #062a5a) !important;
+  font-size: 1.75rem;
+  font-weight: 800;
+}
+
+body.security-body.erp-app .security-summary-box .inner p,
+body.security-body.erp-app .erp-sec-kpi__label {
+  color: var(--erp-muted, #6b7280) !important;
+  font-weight: 500;
+}
+
+body.security-body.erp-app .security-summary-box .icon {
+  color: var(--erp-primary);
+  opacity: 0.4;
+}
+
+body.security-body.erp-app .security-summary-box--blue::before {
+  background: var(--erp-info);
+}
+
+body.security-body.erp-app .security-summary-box--blue .icon {
+  color: var(--erp-info);
+}
+
+body.security-body.erp-app .security-summary-box--green .icon {
+  color: var(--erp-success);
+}
+
+body.security-body.erp-app .security-summary-box--red .icon {
+  color: var(--erp-danger);
+}
+
+body.security-body.erp-app .security-summary-box--amber .icon {
+  color: var(--erp-warning);
+}
+
+body.security-body.erp-app .btn-primary {
+  background: var(--erp-primary) !important;
+  border-color: var(--erp-primary) !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+
+body.security-body.erp-app .btn-primary:hover {
+  background: var(--erp-primary-dark) !important;
+  border-color: var(--erp-primary-dark) !important;
+  color: #fff !important;
+}
+
+body.security-body.erp-app .table thead.table-header-primary th {
+  background: linear-gradient(135deg, var(--erp-primary) 0%, var(--erp-primary-dark) 100%) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+body.security-body.erp-app .timeline-item {
+  border-bottom: 1px solid var(--erp-border, #e5e7eb) !important;
+  padding: 0.85rem 1.25rem !important;
+}
+
+body.security-body.erp-app .timeline-item strong,
+body.security-body.erp-app .timeline-item .text-white {
+  color: var(--erp-text, #1f2937) !important;
+}
+
+body.security-body.erp-app .alert {
+  background: #fff !important;
+  color: var(--erp-text, #1f2937) !important;
+  border-radius: 12px;
+  border: 1px solid var(--erp-border, #e5e7eb);
+}
+
+body.security-body.erp-app .table {
+  color: var(--erp-text, #1f2937);
+}
+
+body.security-body.erp-app .table thead th {
+  background: var(--erp-bg, #f5f7fb);
+  color: var(--erp-navy, #062a5a);
+}
+
+body.security-body.erp-app ::-webkit-scrollbar-track {
+  background: #eef2f7;
+}
+
+body.security-body.erp-app ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+body.security-body.erp-app #sidebarToggle i {
+  color: var(--erp-navy, #062a5a) !important;
+}
+
+body.security-body.erp-app .dropdown-menu.bg-dark {
+  background: #fff !important;
+  color: var(--erp-text, #1f2937);
+  border: 1px solid var(--erp-border, #e5e7eb);
+}
+
+body.security-body.erp-app .dropdown-menu .dropdown-item.text-light {
+  color: var(--erp-text, #1f2937) !important;
+}
+
+/* إلغاء تناقض الثيم الداكن المضمّن في base_security */
+body.security-body.erp-app {
+  background: var(--erp-bg, #f5f7fb) !important;
+  color: var(--erp-text, #1f2937) !important;
+}
+
+body.security-body.erp-app .security-header {
+  background: #fff !important;
+  border-bottom: 1px solid var(--erp-border, #e5e7eb) !important;
+  box-shadow: 0 1px 3px rgba(6, 42, 90, 0.06);
+}
+
+body.security-body.erp-app .security-header .breadcrumb-item a {
+  color: var(--erp-muted, #6b7280) !important;
+}
+
+body.security-body.erp-app .security-header .breadcrumb-item a:hover,
+body.security-body.erp-app .security-header .breadcrumb-item.active {
+  color: var(--erp-navy, #062a5a) !important;
+}
+
+body.security-body.erp-app .security-main h1,
+body.security-body.erp-app .security-main h2,
+body.security-body.erp-app .security-main h3,
+body.security-body.erp-app .security-main h4,
+body.security-body.erp-app .security-main h5,
+body.security-body.erp-app .security-main h6 {
+  color: var(--erp-navy, #062a5a) !important;
+  text-shadow: none !important;
+}
+
+body.security-body.erp-app .security-main .text-muted {
+  color: var(--erp-muted, #6b7280) !important;
+}
+
+body.security-body.erp-app .card:not([class*="bg-"]) {
+  background: #fff !important;
+  border: 1px solid var(--erp-border, #e5e7eb) !important;
+  color: var(--erp-text, #1f2937) !important;
+  box-shadow: var(--erp-shadow-sm, 0 1px 3px rgba(6, 42, 90, 0.08)) !important;
+}
+
+body.security-body.erp-app .card:not([class*="bg-"]) .card-header {
+  background: var(--erp-bg, #f5f7fb) !important;
+  border-bottom: 1px solid var(--erp-border, #e5e7eb) !important;
+  color: var(--erp-navy, #062a5a) !important;
+}
+
+body.security-body.erp-app .card:not([class*="bg-"]) .card-title,
+body.security-body.erp-app .card:not([class*="bg-"]) .card-text {
+  color: var(--erp-text, #1f2937) !important;
+}
+
+body.security-body.erp-app .modal-content {
+  background: #fff !important;
+  color: var(--erp-text, #1f2937) !important;
+  border: 1px solid var(--erp-border, #e5e7eb) !important;
+}
+
+body.security-body.erp-app .modal-header,
+body.security-body.erp-app .modal-footer {
+  background: var(--erp-bg, #f5f7fb) !important;
+  border-color: var(--erp-border, #e5e7eb) !important;
+}
+
+body.security-body.erp-app .modal .form-control {
+  background: #fff !important;
+  border: 1px solid var(--erp-border, #e5e7eb) !important;
+  color: var(--erp-text, #1f2937) !important;
+}
+
+/* موبايل: قائمة جانبية منزلقة + خلفية */
+@media (max-width: 991.98px) {
+  body.security-body.erp-app .security-sidebar {
+    transform: translateX(100%);
+    box-shadow: -8px 0 32px rgba(6, 42, 90, 0.15);
+  }
+
+  body.security-body.erp-app .security-sidebar.show {
+    transform: translateX(0);
+  }
+
+  body.security-body.erp-app.sec-sidebar-open::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    top: 0;
+    background: rgba(6, 42, 90, 0.35);
+    z-index: 1035;
+  }
+
+  body.security-body.erp-app .security-main {
+    margin-right: 0 !important;
+  }
+}
+
+body.security-body.erp-app .security-header .sec-header-divider {
+  background: var(--erp-border) !important;
+  opacity: 1 !important;
+  width: 1px;
+  min-height: 1.5rem;
+}
+
+/* أولوية نهائية: القائمة الجانبية لا تُلوَّن بخلفية collapse عامة */
+body.security-body.erp-app .security-sidebar .sec-nav-section .collapse,
+body.security-body.erp-app .security-sidebar .sec-nav-section .collapsing {
+  background: none !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* ── لوحة التحكم (index) ── */
+body.security-body.erp-app .erp-sec-kpi-card {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  min-height: 132px;
+  background: var(--erp-surface, #fff);
+  border: 1px solid var(--erp-border, #e5e7eb);
+  border-radius: var(--erp-radius-lg, 16px);
+  box-shadow: var(--erp-shadow-sm);
+  overflow: hidden;
+}
+
+body.security-body.erp-app .erp-sec-kpi-card::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--erp-primary);
+}
+
+body.security-body.erp-app .erp-sec-kpi-card--success::before { background: var(--erp-success, #22c55e); }
+body.security-body.erp-app .erp-sec-kpi-card--danger::before { background: var(--erp-danger, #ef4444); }
+body.security-body.erp-app .erp-sec-kpi-card--warning::before { background: var(--erp-warning, #f59e0b); }
+
+body.security-body.erp-app .erp-sec-kpi-card__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+body.security-body.erp-app .erp-sec-kpi-card__value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--erp-primary-dark);
+}
+
+body.security-body.erp-app .erp-sec-kpi-card__label {
+  font-size: 0.82rem;
+  color: #4b5563;
+  margin-top: 0.15rem;
+}
+
+body.security-body.erp-app .erp-sec-kpi-card__chart {
+  height: 40px;
+  margin-top: auto;
+  padding-top: 0.35rem;
+}
+
+body.security-body.erp-app .erp-sec-kpi-card__icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  background: color-mix(in srgb, var(--erp-primary) 12%, transparent);
+  color: var(--erp-primary);
+  align-self: flex-start;
+}
+
+body.security-body.erp-app .erp-sec-kpi-card--success .erp-sec-kpi-card__icon {
+  background: color-mix(in srgb, var(--erp-success) 12%, transparent);
+  color: var(--erp-success);
+}
+
+body.security-body.erp-app .erp-sec-kpi-card--danger .erp-sec-kpi-card__icon {
+  background: color-mix(in srgb, var(--erp-danger) 12%, transparent);
+  color: var(--erp-danger);
+}
+
+body.security-body.erp-app .erp-sec-kpi-card--warning .erp-sec-kpi-card__icon {
+  background: color-mix(in srgb, var(--erp-warning) 12%, transparent);
+  color: var(--erp-warning);
+}
+
+body.security-body.erp-app .erp-sec-stat-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  height: 100%;
+}
+
+body.security-body.erp-app .erp-sec-stat-link:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
+body.security-body.erp-app .erp-sec-stat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 96px;
+  padding: 1rem 1.1rem;
+  padding-inline-end: 3rem;
+  background: var(--erp-surface, #fff);
+  border: 1px solid var(--erp-border);
+  border-radius: var(--erp-radius-lg, 16px);
+  box-shadow: var(--erp-shadow-sm);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+body.security-body.erp-app .erp-sec-stat-link:hover .erp-sec-stat {
+  border-color: color-mix(in srgb, var(--erp-primary) 35%, var(--erp-border));
+  box-shadow: var(--erp-shadow);
+  transform: translateY(-1px);
+}
+
+body.security-body.erp-app .erp-sec-stat__value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--erp-primary-dark);
+  line-height: 1.2;
+}
+
+body.security-body.erp-app .erp-sec-stat__value--sm {
+  font-size: 1.05rem;
+}
+
+body.security-body.erp-app .erp-sec-stat__label {
+  font-size: 0.82rem;
+  color: #4b5563;
+  margin-top: 0.2rem;
+}
+
+body.security-body.erp-app .erp-sec-stat__icon {
+  position: absolute;
+  inset-inline-end: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.35rem;
+  color: color-mix(in srgb, var(--erp-primary) 55%, transparent);
+  opacity: 0.85;
+}
+
+body.security-body.erp-app .erp-sec-stat__icon--live {
+  color: var(--erp-success);
+  font-size: 0.65rem;
+  top: 1rem;
+  transform: none;
+}
+
+body.security-body.erp-app .erp-sec-table thead th {
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+body.security-body.erp-app .nav-tabs {
+  border-bottom: 2px solid var(--erp-border);
+  background: var(--erp-surface-alt, #f8fafc);
+  padding: 0.35rem 0.5rem 0;
+  gap: 0.25rem;
+}
+
+body.security-body.erp-app .nav-tabs .nav-link {
+  border: none;
+  border-radius: 10px 10px 0 0;
+  color: var(--erp-primary-dark, #062a5a);
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 0.65rem 1rem;
+  margin-bottom: -2px;
+  background: transparent;
+}
+
+body.security-body.erp-app .nav-tabs .nav-link:hover {
+  color: var(--erp-primary-dark);
+  background: color-mix(in srgb, var(--erp-primary) 6%, transparent);
+}
+
+body.security-body.erp-app .nav-tabs .nav-link.active {
+  color: var(--erp-primary-dark) !important;
+  background: var(--erp-surface) !important;
+  border-bottom: 2px solid var(--erp-primary) !important;
+  font-weight: 700;
+}
+
+/* توافق شارات Bootstrap 4 — تباين كافٍ */
+body.security-body.erp-app .badge.badge-success,
+body.security-body.erp-app .badge.bg-success { background-color: var(--erp-success, #22c55e) !important; color: #fff !important; }
+body.security-body.erp-app .badge.badge-danger,
+body.security-body.erp-app .badge.bg-danger { background-color: var(--erp-danger, #ef4444) !important; color: #fff !important; }
+body.security-body.erp-app .badge.badge-warning,
+body.security-body.erp-app .badge.bg-warning { background-color: var(--erp-warning, #f59e0b) !important; color: #1f2937 !important; }
+body.security-body.erp-app .badge.badge-info,
+body.security-body.erp-app .badge.bg-info { background-color: var(--erp-info, #0ea5e9) !important; color: #fff !important; }
+body.security-body.erp-app .badge.badge-primary,
+body.security-body.erp-app .badge.bg-primary { background-color: var(--erp-primary) !important; color: #fff !important; }
+body.security-body.erp-app .badge.badge-secondary,
+body.security-body.erp-app .badge.bg-secondary { background-color: #6b7280 !important; color: #fff !important; }

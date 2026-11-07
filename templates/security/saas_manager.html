@@ -1,106 +1,13 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}saas{% endblock %}
-{% block security_title %}SaaS Manager{% endblock %}
+{% block security_title %}إدارة SaaS{% endblock %}
 {% block security_icon %}<i class="fas fa-cloud"></i>{% endblock %}
-{% block security_description %}إدارة الاشتراكات • الباقات • الفواتير المتكررة{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">SaaS Manager</li>{% endblock %}
+{% block security_description %}اشتراكات وباقات{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">إدارة SaaS</li>{% endblock %}
 
 {% block head_extra %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-.saas-card {
-  border-radius: 12px;
-  border: none;
-  transition: all 0.3s ease;
-}
 
-.saas-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-}
-
-.plan-card {
-  border-radius: 16px;
-  border: 2px solid transparent;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-  background: #fff;
-}
-
-.plan-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 30px rgba(0,0,0,0.1);
-}
-
-.plan-card.recommended {
-  border-color: #4e73df;
-  box-shadow: 0 0 20px rgba(78, 115, 223, 0.2);
-}
-
-.plan-header {
-  padding: 2rem;
-  text-align: center;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.plan-header h4 {
-    font-weight: 700;
-    margin-bottom: 1rem;
-}
-
-.plan-price {
-  font-size: 2.5rem;
-  font-weight: 800;
-  color: #2c3e50;
-  margin: 1rem 0;
-}
-
-.plan-price small {
-  font-size: 0.9rem;
-  color: #7f8c8d;
-  font-weight: normal;
-}
-
-.plan-features-list {
-    padding: 1.5rem;
-}
-
-.plan-feature {
-  padding: 0.5rem 0;
-  display: flex;
-  align-items: center;
-  color: #5a5c69;
-}
-
-.plan-feature i {
-  color: #1cc88a;
-  margin-right: 0.75rem;
-  min-width: 20px;
-}
-
-.plan-feature.disabled {
-    color: #b0b3b8;
-    text-decoration: line-through;
-}
-
-.plan-feature.disabled i {
-    color: #e74a3b;
-}
-
-.badge-popular {
-    position: absolute;
-    top: 20px;
-    right: -35px;
-    background: #4e73df;
-    color: white;
-    padding: 5px 40px;
-    transform: rotate(45deg);
-    font-size: 0.8rem;
-    font-weight: bold;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-</style>
 {% endblock %}
 
 {% block security_content %}
@@ -293,7 +200,7 @@
                 <div class="card-body p-0">
                   <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                      <thead class="bg-light">
+                      <thead class="table-header-primary text-white bg-light">
                         <tr>
                           <th class="ps-4">الزبون / الشركة</th>
                           <th>الباقة الحالية</th>
@@ -378,7 +285,7 @@
         <h5><i class="fas fa-file-invoice-dollar ml-2"></i>الفواتير والمدفوعات ({{ invoices|length }})</h5>
         <div class="btn-group">
           <button class="btn btn-sm btn-outline-primary" onclick="if(typeof showToast!=='undefined') showToast('🔧 ميزة الفلترة قيد التطوير', 'info'); else alert('🔧 ميزة الفلترة قيد التطوير')"><i class="fas fa-filter"></i> فلترة</button>
-          <button class="btn btn-sm btn-outline-success" onclick="window.location.href='/security/saas-manager?export=invoices'"><i class="fas fa-download"></i> تصدير</button>
+          <a href="{{ url_for('security.saas_manager', export='invoices') }}" class="btn btn-sm btn-glass"><i class="fas fa-download"></i> تصدير</a>
           <button class="btn btn-sm btn-primary" onclick="createInvoice()">
             <i class="fas fa-plus ml-1"></i> فاتورة جديدة
           </button>
@@ -389,7 +296,7 @@
         <div class="card-body">
           <div class="table-responsive">
             <table class="table table-striped">
-              <thead class="table-dark">
+              <thead class="table-header-primary text-white ">
                 <tr>
                   <th>رقم الفاتورة</th>
                   <th>الزبون</th>
@@ -459,35 +366,30 @@
       
       <div class="row g-4">
         <div class="col-lg-4">
-          <div class="card shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-            <div class="card-body text-center">
-              <i class="fas fa-dollar-sign fa-3x mb-3 opacity-75"></i>
-              <h6>الإيرادات الشهرية</h6>
-              <h2 class="mb-0">{{ stats.monthly_revenue }}</h2>
-              <small class="opacity-75"><i class="fas fa-arrow-up"></i> MRR</small>
+          <div class="erp-sec-kpi-card erp-sec-kpi-card--primary">
+            <div class="erp-sec-kpi-card__body">
+              <div class="erp-sec-kpi-card__value">{{ stats.monthly_revenue }}</div>
+              <div class="erp-sec-kpi-card__label">الإيرادات الشهرية (MRR)</div>
             </div>
+            <div class="erp-sec-kpi-card__icon"><i class="fas fa-dollar-sign"></i></div>
           </div>
         </div>
-        
         <div class="col-lg-4">
-          <div class="card shadow-sm" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white;">
-            <div class="card-body text-center">
-              <i class="fas fa-chart-line fa-3x mb-3 opacity-75"></i>
-              <h6>معدل النمو</h6>
-              <h2 class="mb-0">+23%</h2>
-              <small class="opacity-75">مقارنة بالشهر الماضي</small>
+          <div class="erp-sec-kpi-card erp-sec-kpi-card--success">
+            <div class="erp-sec-kpi-card__body">
+              <div class="erp-sec-kpi-card__value">{{ stats.total_subscribers }}</div>
+              <div class="erp-sec-kpi-card__label">إجمالي المشتركين</div>
             </div>
+            <div class="erp-sec-kpi-card__icon"><i class="fas fa-users"></i></div>
           </div>
         </div>
-        
         <div class="col-lg-4">
-          <div class="card shadow-sm" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
-            <div class="card-body text-center">
-              <i class="fas fa-percent fa-3x mb-3 opacity-75"></i>
-              <h6>معدل التحويل</h6>
-              <h2 class="mb-0">65%</h2>
-              <small class="opacity-75">Trial → Paid</small>
+          <div class="erp-sec-kpi-card erp-sec-kpi-card--info">
+            <div class="erp-sec-kpi-card__body">
+              <div class="erp-sec-kpi-card__value">{{ stats.active_subscribers }}</div>
+              <div class="erp-sec-kpi-card__label">اشتراكات نشطة</div>
             </div>
+            <div class="erp-sec-kpi-card__icon"><i class="fas fa-check-circle"></i></div>
           </div>
         </div>
       </div>
@@ -518,39 +420,25 @@
             <div class="card-body">
               <h6 class="mb-3"><i class="fas fa-table ml-2"></i>ملخص الأداء</h6>
               <div class="table-responsive">
-                <table class="table">
-                  <thead>
+                <table class="table erp-sec-table mb-0">
+                  <thead class="table-header-primary">
                     <tr>
                       <th>المقياس</th>
                       <th>القيمة</th>
-                      <th>الهدف</th>
-                      <th>الحالة</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td><i class="fas fa-users ml-2"></i>إجمالي المشتركين</td>
                       <td><strong>{{ stats.total_subscribers }}</strong></td>
-                      <td>100</td>
-                      <td><span class="badge bg-{% if stats.total_subscribers >= 100 %}success{% else %}warning{% endif %}">{{ "%.0f"|format((stats.total_subscribers / 100) * 100) }}%</span></td>
                     </tr>
                     <tr>
                       <td><i class="fas fa-dollar-sign ml-2"></i>الإيرادات الشهرية</td>
                       <td><strong>{{ stats.monthly_revenue }}</strong></td>
-                      <td>$10,000</td>
-                      <td><span class="badge bg-info">قيد التقدم</span></td>
                     </tr>
                     <tr>
-                      <td><i class="fas fa-chart-line ml-2"></i>معدل التحويل</td>
-                      <td><strong>65%</strong></td>
-                      <td>75%</td>
-                      <td><span class="badge bg-warning text-dark">يحتاج تحسين</span></td>
-                    </tr>
-                    <tr>
-                      <td><i class="fas fa-redo ml-2"></i>معدل التجديد</td>
-                      <td><strong>92%</strong></td>
-                      <td>90%</td>
-                      <td><span class="badge bg-success">ممتاز</span></td>
+                      <td><i class="fas fa-check-circle ml-2"></i>اشتراكات نشطة</td>
+                      <td><strong>{{ stats.active_subscribers }}</strong></td>
                     </tr>
                   </tbody>
                 </table>
@@ -567,7 +455,7 @@
       <div class="row g-4">
         <div class="col-lg-6">
           <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header erp-card-header-row erp-theme-header--primary">
               <h6 class="mb-0"><i class="fas fa-credit-card ml-2"></i>إعدادات الدفع</h6>
             </div>
             <div class="card-body">
@@ -604,7 +492,7 @@
         
         <div class="col-lg-6">
           <div class="card shadow-sm">
-            <div class="card-header bg-success text-white">
+            <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white">
               <h6 class="mb-0"><i class="fas fa-clock ml-2"></i>إعدادات الاشتراك</h6>
             </div>
             <div class="card-body">
@@ -645,7 +533,7 @@
       <div class="row g-4 mt-2">
         <div class="col-12">
           <div class="card shadow-sm">
-            <div class="card-header bg-warning text-dark">
+            <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-dark">
               <h6 class="mb-0"><i class="fas fa-envelope ml-2"></i>إعدادات البريد الإلكتروني</h6>
             </div>
             <div class="card-body">

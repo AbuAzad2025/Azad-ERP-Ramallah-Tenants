@@ -1,0 +1,366 @@
+/**
+ * Expenses / payments list pages — KPI grids, module nav, table helpers
+ */
+body.erp-app .erp-page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-bottom: var(--erp-gap);
+}
+
+/* ── Expenses module nav ── */
+body.erp-app .expense-nav {
+  background: linear-gradient(135deg, var(--erp-primary) 0%, var(--erp-primary-dark) 100%);
+  border-radius: var(--erp-radius-lg);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: var(--erp-gap-lg);
+  box-shadow: var(--erp-shadow);
+  direction: rtl;
+}
+
+body.erp-app .expense-nav .nav-link {
+  color: #fff;
+  font-weight: 600;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--erp-radius);
+  transition: background 0.2s ease, transform 0.2s ease;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 0.15rem;
+  text-align: center;
+}
+
+body.erp-app .expense-nav .nav-link:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+body.erp-app .expense-nav .nav-link.active {
+  background: var(--erp-surface);
+  color: var(--erp-primary-dark);
+  box-shadow: var(--erp-shadow-sm);
+}
+
+/* ── Expenses gradient KPI grid ── */
+body.erp-app .erp-summary-grid,
+body.erp-app .summary-cards.erp-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--erp-gap);
+  align-items: stretch;
+  margin-bottom: var(--erp-gap-lg);
+}
+
+@media (max-width: 1199.98px) {
+  body.erp-app .erp-summary-grid,
+  body.erp-app .summary-cards.erp-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  body.erp-app .erp-summary-grid,
+  body.erp-app .summary-cards.erp-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+body.erp-app .summary-card {
+  border-radius: var(--erp-radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--erp-shadow);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  min-height: 8.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+body.erp-app .summary-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+body.erp-app .summary-card__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+body.erp-app .summary-card h6 {
+  font-size: 0.82rem;
+  margin: 0 0 0.35rem;
+  letter-spacing: 0.03em;
+  font-weight: 600;
+  opacity: 0.92;
+}
+
+body.erp-app .summary-card h3 {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.2vw, 1.85rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+body.erp-app .summary-card small {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  opacity: 0.88;
+}
+
+body.erp-app .summary-card__icon {
+  font-size: 2.25rem;
+  opacity: 0.28;
+  flex-shrink: 0;
+}
+
+body.erp-app .summary-card--total {
+  background: linear-gradient(135deg, #f5365c 0%, #fb8c00 100%);
+}
+
+body.erp-app .summary-card--count {
+  background: linear-gradient(135deg, #43a047 0%, #26c6da 100%);
+}
+
+body.erp-app .summary-card--average {
+  background: linear-gradient(135deg, #3949ab 0%, #5c6bc0 100%);
+}
+
+body.erp-app .summary-card--latest {
+  background: linear-gradient(135deg, #4a148c 0%, #7b1fa2 100%);
+}
+
+body.erp-app .summary-card--latest .latest-meta {
+  margin-top: 0.85rem;
+  font-size: 0.88rem;
+  opacity: 0.92;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  padding-top: 0.65rem;
+}
+
+/* ── Payments KPI row (Bootstrap 4 grid) ── */
+body.erp-app .erp-kpi-row > [class*="col"] {
+  display: flex;
+}
+
+body.erp-app .erp-kpi-row .erp-kpi-card {
+  width: 100%;
+}
+
+body.erp-app .erp-kpi-row .erp-kpi-card .card-body {
+  padding: 1rem 1.15rem;
+}
+
+body.erp-app .erp-kpi-row .erp-kpi-sub {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--erp-muted);
+  font-weight: 600;
+}
+
+/* Legacy payment summary classes (when used inside cards) */
+body.erp-app .summary-card-body {
+  padding: 1.15rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+body.erp-app .summary-card-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--erp-muted);
+}
+
+body.erp-app .summary-card-value {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--erp-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+body.erp-app .summary-card-value small {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--erp-muted);
+  margin-top: 0.3rem;
+}
+
+/* ── Payee / payment chips ── */
+body.erp-app .payee-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border-radius: 999px;
+  margin-left: 0.3rem;
+}
+
+body.erp-app .payee-chip--employee {
+  background: rgba(13, 202, 240, 0.15);
+  color: #04505c;
+  border: 1px solid rgba(13, 202, 240, 0.4);
+}
+
+body.erp-app .payee-chip--utility {
+  background: rgba(111, 66, 193, 0.12);
+  color: #301a68;
+  border: 1px solid rgba(111, 66, 193, 0.35);
+}
+
+body.erp-app .payee-chip--supplier {
+  background: rgba(255, 193, 7, 0.18);
+  color: #7a4d00;
+  border: 1px solid rgba(255, 193, 7, 0.4);
+}
+
+body.erp-app .payee-chip--partner {
+  background: rgba(23, 162, 184, 0.14);
+  color: #0b4b58;
+  border: 1px solid rgba(23, 162, 184, 0.35);
+}
+
+body.erp-app .payee-chip--customer {
+  background: rgba(40, 167, 69, 0.16);
+  color: #0f5132;
+  border: 1px solid rgba(40, 167, 69, 0.38);
+}
+
+body.erp-app .payee-chip--other {
+  background: rgba(108, 117, 125, 0.14);
+  color: var(--erp-text);
+  border: 1px solid var(--erp-border);
+}
+
+body.erp-app .payee-chip-guess {
+  border-style: dashed;
+  opacity: 0.9;
+}
+
+body.erp-app .payment-badge {
+  border: 1px solid var(--erp-border);
+  background: var(--erp-surface);
+  color: var(--erp-text);
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+}
+
+/* ── Payments table ── */
+body.erp-app #paymentsTable th,
+body.erp-app #paymentsTable td {
+  font-size: 0.82rem;
+  vertical-align: middle;
+}
+
+body.erp-app #paymentsTable .sort-buttons {
+  display: inline-flex;
+  flex-direction: column;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+body.erp-app #paymentsTable .btn-sort {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.65rem;
+  line-height: 0.75;
+  cursor: pointer;
+}
+
+body.erp-app #paymentsTable .btn-sort:hover {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+body.erp-app #paymentsTable .btn-sort.active {
+  color: var(--erp-gold, #ffc107);
+}
+
+body.erp-app .action-btns .btn {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+body.erp-app .action-btns .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+@media print {
+  body.erp-app .summary-cards,
+  body.erp-app .erp-summary-grid,
+  body.erp-app .erp-kpi-row,
+  body.erp-app .no-print {
+    display: none !important;
+  }
+}
+
+/* ── Extended KPI grid (customers, reports) ── */
+body.erp-app .erp-summary-grid--5col {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 1399.98px) {
+  body.erp-app .erp-summary-grid--5col {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 991.98px) {
+  body.erp-app .erp-summary-grid--5col {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* summary-card / erp-kpi-tile: kpi-cards-global.css */
+
+body.erp-app .summary-card.summary-card--primary {
+  padding: 1.25rem;
+}
+
+/* ── Expense module nav: tablet/mobile ── */
+@media (max-width: 991.98px) {
+  body.erp-app .expense-nav .nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    padding-bottom: 0.25rem;
+  }
+
+  body.erp-app .expense-nav .nav-link {
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+}
+
+/* ── Sales list header ── */
+body.erp-app .sales-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+@media (max-width: 767.98px) {
+  body.erp-app .sales-header-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  body.erp-app .sales-header-actions .btn {
+    flex: 1 1 auto;
+    min-width: calc(50% - 0.25rem);
+  }
+}

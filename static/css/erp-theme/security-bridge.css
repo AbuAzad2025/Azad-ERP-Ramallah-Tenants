@@ -1,0 +1,22 @@
+/**
+ * وحدة الأمان — tokens فقط (التفاصيل في erp-security.css)
+ */
+body.security-body.erp-app {
+  background: var(--erp-bg) !important;
+  color: var(--erp-text) !important;
+}
+
+body.security-body.erp-app .security-sidebar {
+  background: var(--erp-sidebar-bg) !important;
+}
+
+body.security-body.erp-app .security-sidebar .nav-link.active {
+  background: var(--erp-sidebar-active) !important;
+  color: #fff !important;
+}
+
+body.security-body.erp-app .badge.bg-primary,
+body.security-body.erp-app .badge.badge-primary {
+  background: var(--erp-primary) !important;
+  color: #fff !important;
+}

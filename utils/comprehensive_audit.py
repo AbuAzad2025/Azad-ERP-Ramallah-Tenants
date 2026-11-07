@@ -85,10 +85,12 @@ def audit_orphan_fk_rows(app, *, sample_limit: int = 5) -> Dict[str, Any]:
     from extensions import db
 
     checks = [
+        ("branches", "company_id", "companies", "id"),
         ("sales", "customer_id", "customers", "id"),
-        ("payments", "customer_id", "customers", "id", True),
-        ("invoices", "customer_id", "customers", "id", True),
-        ("gl_entries", "batch_id", "gl_batches", "id"),
+        ("payments", "supplier_invoice_id", "supplier_invoices", "id", True),
+        ("gl_entries", "cost_center_id", "cost_centers", "id", True),
+        ("goods_receipts", "purchase_order_id", "purchase_orders", "id"),
+        ("payroll_lines", "employee_id", "employees", "id"),
     ]
     issues: List[Dict[str, Any]] = []
     with app.app_context():
@@ -296,6 +298,22 @@ def run_comprehensive_audit(app, *, project_root: str | None = None) -> Dict[str
 
     sections["integration"] = run_integration_audit(app)
 
+    try:
+        from audit_service_gl import audit_service_gl_section
+
+        sections["service_gl"] = audit_service_gl_section(app)
+    except Exception as exc:
+        sections["service_gl"] = {
+            "missing_gl_count": 0,
+            "issues": [
+                {
+                    "level": "warning",
+                    "category": "service_gl",
+                    "msg": f"service GL audit skipped: {exc}",
+                }
+            ],
+        }
+
     all_issues: List[Dict[str, Any]] = []
     for name, data in sections.items():
         if isinstance(data, dict):
@@ -325,7 +343,7 @@ def run_comprehensive_audit(app, *, project_root: str | None = None) -> Dict[str
 
 def format_audit_report_text(report: Dict[str, Any]) -> str:
     lines = [
-        "=== تدقيق شامل Garage Manager ===",
+        "=== تدقيق شامل أزاد ===",
         f"الحالة: {'OK' if report.get('ok') else 'ISSUES FOUND'}",
         f"حرج: {report['summary']['critical']} | تحذير: {report['summary']['warning']}",
         f"مسارات: {report['summary']['routes']} | موديلات: {report['summary']['models']}",

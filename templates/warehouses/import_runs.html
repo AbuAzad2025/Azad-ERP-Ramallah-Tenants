@@ -4,29 +4,7 @@
 
 {% block head_extra %}
   {{ super() }}
-  <style>
-    .stat-card {
-      transition: all 0.3s ease;
-    }
-    .stat-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-    }
-    .stat-icon {
-      font-size: 2rem;
-      opacity: 0.8;
-    }
-    .badge-dry-run {
-      background: #6c757d;
-    }
-    .badge-real {
-      background: #28a745;
-    }
-    .duration-badge {
-      font-size: 0.75rem;
-      padding: 0.25rem 0.5rem;
-    }
-  </style>
+  
 {% endblock %}
 
 {% block content %}
@@ -137,7 +115,7 @@
     {% if runs and runs|length > 0 %}
     <div class="table-responsive">
       <table class="table table-striped table-hover align-middle mb-0" id="runs-table" style="width:100%">
-        <thead class="table-light">
+        <thead class="table-header-primary text-white table-light">
           <tr>
             <th style="width: 60px">#</th>
             <th style="width: 150px">التاريخ والوقت</th>

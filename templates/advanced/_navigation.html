@@ -1,5 +1,5 @@
 {% set is_owner = current_user.is_authenticated and (current_user.is_system_account or (current_user.username|default('')|upper == '__OWNER__') or (current_user.role and current_user.role.name|default('')|upper == 'OWNER')) %}
-<nav class="navbar navbar-expand-lg navbar-dark mb-4 gradient-header" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+<nav class="navbar navbar-expand-lg navbar-dark mb-4 " style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
     <div class="container-fluid">
         <a class="navbar-brand font-weight-bold" href="{% if is_owner %}{{ url_for('security.index') }}{% else %}{{ url_for('main.dashboard') }}{% endif %}">
             <i class="fas fa-crown ml-2"></i> Security Panel

@@ -9,31 +9,7 @@
 
 {% block styles %}
 {{ super() }}
-<style>
-    /* تحسين تباين النصوص في الجدول */
-    .table td {
-        font-weight: 500;
-        color: inherit; /* يرث من الـ body أو الـ card */
-    }
-    
-    /* دعم الوضع الداكن */
-    body.dark-mode .table td {
-        color: #e1e1e1 !important;
-        border-color: #4b545c;
-    }
-    
-    body.dark-mode .card {
-        background-color: #343a40;
-        color: #e1e1e1;
-    }
-    
-    /* تحسين الترويسة */
-    .table thead th {
-        color: #fff !important;
-        background-color: #007bff !important;
-        border-color: #007bff;
-    }
-</style>
+
 {% endblock %}
 
 {% from 'macros/permissions.html' import readonly_banner with context %}
@@ -41,7 +17,7 @@
 <div class="row">
     <div class="col-12">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header erp-card-header-row erp-theme-header--primary">
                 <h3 class="card-title">
                     <i class="fas fa-coins ml-2"></i>
                     العملات المتاحة
@@ -72,8 +48,8 @@
                 
                 <!-- إحصائيات سريعة -->
                 <div class="row mb-4">
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="col-12 col-sm-6 col-xl-3 mb-3 mb-xl-0">
+                        <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--primary text-white">
                             <div class="card-body text-white text-center">
                                 <i class="fas fa-coins fa-2x mb-2 opacity-75"></i>
                                 <h3 class="mb-1">{{ currencies.total }}</h3>
@@ -81,8 +57,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);">
+                    <div class="col-12 col-sm-6 col-xl-3 mb-3 mb-xl-0">
+                        <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--success text-white">
                             <div class="card-body text-white text-center">
                                 <i class="fas fa-check-circle fa-2x mb-2 opacity-75"></i>
                                 <h3 class="mb-1">{{ currencies.items|selectattr('is_active', 'equalto', true)|list|length }}</h3>
@@ -90,8 +66,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <div class="col-12 col-sm-6 col-xl-3 mb-3 mb-xl-0">
+                        <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--info text-white">
                             <div class="card-body text-white text-center">
                                 <i class="fas fa-exchange-alt fa-2x mb-2 opacity-75"></i>
                                 <h3 class="mb-1">ILS</h3>
@@ -99,8 +75,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="col-12 col-sm-6 col-xl-3 mb-3 mb-xl-0">
+                        <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--danger text-white">
                             <div class="card-body text-white text-center">
                                 <i class="fas fa-globe fa-2x mb-2 opacity-75"></i>
                                 <h3 class="mb-1">عالمي</h3>
@@ -112,7 +88,7 @@
                 
                 <div class="table-responsive">
                     <table class="table table-hover table-bordered table-striped">
-                        <thead class="table-primary">
+                        <thead class="table-header-primary text-white table-primary">
                             <tr>
                                 <th>#</th>
                                 <th>رمز العملة</th>
@@ -127,15 +103,15 @@
                             {% for currency in currencies.items %}
                             <tr>
                                 <td>{{ loop.index + (currencies.page - 1) * currencies.per_page }}</td>
-                                <td class="fw-bold">{{ currency.code }}</td>
+                                <td class="font-weight-bold">{{ currency.code }}</td>
                                 <td>{{ currency.name }}</td>
                                 <td>{{ currency.symbol }}</td>
                                 <td>{{ currency.decimals }}</td>
                                 <td>
                                     {% if currency.is_active %}
-                                    <span class="badge bg-success">نشط</span>
+                                    <span class="badge badge-success">نشط</span>
                                     {% else %}
-                                    <span class="badge bg-secondary">غير نشط</span>
+                                    <span class="badge badge-secondary">غير نشط</span>
                                     {% endif %}
                                 </td>
                                 <td>

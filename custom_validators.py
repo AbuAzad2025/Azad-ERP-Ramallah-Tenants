@@ -20,11 +20,17 @@ class Unique:
         data = field.data
         if self.normalizer:
             data = self.normalizer(data)
-            field.data = data  # ✅ تحديث field.data بالقيمة المُعدّلة
+            if data is not None:
+                field.data = data
         if not data:
             return
 
-        model = self.model() if callable(self.model) else self.model
+        if isinstance(self.model, type):
+            model = self.model
+        elif callable(self.model):
+            model = self.model()
+        else:
+            model = self.model
         query = model.query
         column = getattr(model, self.field)
 

@@ -3,131 +3,7 @@
 
 {% block head_extra %}
   {{ super() }}
-  <style>
-    .partners-container {
-      max-width: 92vw;
-      width: 100%;
-      margin: 0 auto;
-    }
-
-    .partners-table-wrapper {
-      width: 100%;
-      overflow-x: auto;
-    }
-
-    #partnersTable {
-      min-width: 1400px;
-      font-size: 0.95rem;
-    }
-
-    #partnersTable th {
-      font-size: 0.95rem;
-      white-space: nowrap;
-    }
-
-    .partners-actions-col {
-      min-width: 620px;
-    }
-
-    .partner-actions {
-      gap: 0.6rem !important;
-      flex-wrap: nowrap !important;
-      align-items: center;
-      overflow-x: auto;
-    }
-
-    .partner-actions .btn {
-      padding: 0.5rem 1rem;
-      font-size: 0.95rem;
-      border-radius: 0.65rem;
-      white-space: nowrap;
-      min-width: 90px;
-    }
-
-    .toolbar-section .form-control {
-      min-width: 220px;
-    }
-
-    .toolbar-section .btn {
-      padding: 0.55rem 1.15rem;
-      font-size: 0.95rem;
-      border-radius: 0.75rem;
-      min-width: 150px;
-    }
-
-    .metric-card {
-      border-radius: 14px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-      border: none;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .metric-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
-    }
-
-    .card-hover {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .card-hover:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
-    }
-
-    .table-rounded {
-        border-radius: 10px;
-        overflow: hidden;
-    }
-
-    .metric-card .metric-value {
-      font-size: 1.85rem;
-      font-weight: 600;
-    }
-
-    .card.shadow-sm.rounded-4,
-    .card.shadow-sm.rounded-4 .card-body {
-      overflow: visible;
-    }
-
-    /* Fix Dropdown Menu Visibility */
-    .dropdown-menu {
-      background-color: #ffffff !important;
-      color: #333333 !important;
-      border: 1px solid rgba(0,0,0,0.15);
-    }
-    .dropdown-item {
-      color: #333333 !important;
-      background-color: transparent !important;
-    }
-    .dropdown-item:hover, .dropdown-item:focus {
-      background-color: #f8f9fa !important;
-      color: #16181b !important;
-    }
-    .dropdown-item.text-danger {
-      color: #dc3545 !important;
-    }
-    .dropdown-item.text-danger:hover {
-      background-color: #dc3545 !important;
-      color: #ffffff !important;
-    }
-    .dropdown-item.text-success {
-      color: #28a745 !important;
-    }
-    .dropdown-item.text-warning {
-      color: #ffc107 !important;
-    }
-
-    @media (max-width: 992px) {
-      .partner-actions {
-        flex-wrap: wrap !important;
-      }
-
-      .partners-container {
-        max-width: 100%;
-      }
-    }
-  </style>
+  
 {% endblock %}
 
 {% block content %}
@@ -210,7 +86,7 @@
   </div>
 
   <div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card-header erp-card-header-row erp-theme-header--primary d-flex justify-content-between align-items-center">
       <div class="d-flex align-items-center gap-2">
         <i class="fas fa-exclamation-triangle text-warning"></i>
         <span>قطع الشركاء غير المسعّرة</span>
@@ -296,7 +172,7 @@
     <div class="card-body p-0">
       <div class="table-responsive table-rounded">
       <table class="table table-striped table-hover mb-0" id="partnersTable">
-        <thead class="table-dark gradient-header">
+        <thead class="table-header-primary text-white ">
           <tr>
             <th style="width:70px">#</th>
             <th>الاسم</th>
@@ -436,7 +312,7 @@
 <div class="modal fade" id="partnerServiceModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
-      <div class="modal-header gradient-header text-white">
+      <div class="modal-header text-white">
         <h5 class="modal-title"><i class="fas fa-file-signature ml-2"></i>توريد خدمة للشريك</h5>
         <button type="button" class="close text-white" data-dismiss="modal" aria-label="إغلاق"></button>
       </div>
@@ -480,7 +356,7 @@
 <div class="modal fade" id="partnerServicePayModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+      <div class="modal-header text-white card-header-primary">
         <h5 class="modal-title"><i class="fas fa-money-check-alt ml-2"></i>تسديد فاتورة خدمة الشريك</h5>
         <button type="button" class="close text-white" data-dismiss="modal" aria-label="إغلاق"></button>
       </div>
@@ -536,7 +412,7 @@
 <div class="modal fade" id="settlementModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-4">
-      <div class="modal-header gradient-header text-white">
+      <div class="modal-header text-white">
         <h5 class="modal-title"><i class="fas fa-scale-balanced ml-2"></i> تسوية رصيد</h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="إغلاق"></button>
       </div>

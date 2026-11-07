@@ -1,0 +1,19 @@
+<aside class="erp-public-drawer" id="erpPublicDrawer" dir="rtl" aria-hidden="true">
+  <div class="erp-public-drawer__head">
+    <span class="font-weight-bold"><i class="fas fa-bars ml-2"></i> القائمة</span>
+    <button type="button" class="btn btn-link text-white p-0" id="erpPublicDrawerClose" aria-label="إغلاق"><i class="fas fa-times"></i></button>
+  </div>
+  <nav class="erp-public-drawer__nav">
+    {% block erp_public_drawer_links %}
+    <a href="{{ url_for('auth.login') }}"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a>
+    <a href="{{ url_for('auth.customer_register') }}"><i class="fas fa-user-plus"></i> إنشاء حساب</a>
+    <a href="{{ url_for('shop.catalog') }}"><i class="fas fa-store"></i> المتجر</a>
+    <a href="{{ url_for('user_guide.index') }}"><i class="fas fa-star"></i> المميزات</a>
+    <a href="{{ url_for('pricing.index') }}"><i class="fas fa-tags"></i> الأسعار</a>
+  {% if system_settings and system_settings.COMPANY_PHONE %}
+    <a href="tel:{{ system_settings.COMPANY_PHONE }}"><i class="fas fa-phone"></i> {{ system_settings.COMPANY_PHONE }}</a>
+  {% endif %}
+    {% endblock %}
+  </nav>
+</aside>
+<div class="erp-public-drawer-backdrop" id="erpPublicDrawerBackdrop" hidden></div>

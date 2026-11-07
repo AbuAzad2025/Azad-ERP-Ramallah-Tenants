@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}مركز المحاسبة{% endblock %}
+{% block content %}
+<div class="container-fluid py-3" dir="rtl">
+  <h4><i class="fas fa-calculator"></i> مركز المحاسبة</h4>
+  <div class="row mb-3">
+    <div class="col-md-8">
+      <form class="form-inline" method="get">
+        <label class="mr-2">الشركة:</label>
+        <select name="company_id" class="form-control form-control-sm" onchange="this.form.submit()">
+          {% for c in companies %}<option value="{{ c.id }}" {% if company_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+        </select>
+      </form>
+    </div>
+    <div class="col-md-4 text-left">
+      <a href="{{ url_for('accounting_hub_bp.collect') }}" class="btn btn-success btn-sm">تحصيل سريع</a>
+      <a href="{{ url_for('fiscal_periods_bp.index') }}" class="btn btn-dark btn-sm">الفترات والإقفال</a>
+      <a href="{{ url_for('accounting_hub_bp.settings') }}" class="btn btn-outline-secondary btn-sm">إعدادات</a>
+    </div>
+  </div>
+  {% if dashboard %}
+  <div class="row">
+    <div class="col-md-3"><div class="card"><div class="card-body text-center"><h5>{{ dashboard.branches_count }}</h5><small>فروع</small></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body text-center"><h5>{{ dashboard.customers_balance_net|round(2) }}</h5><small>صافي ذمم زبائن (عينة)</small></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body text-center"><h5>{{ dashboard.fiscal_open_periods }}</h5><small>فترات مفتوحة</small></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body text-center"><h5>{% if auto_allocate %}نعم{% else %}لا{% endif %}</h5><small>توزيع تلقائي</small></div></div></div>
+  </div>
+  {% endif %}
+  <div class="card mt-3"><div class="card-header erp-card-header-row erp-theme-header--primary">اختصارات</div><div class="card-body row text-center">
+    <div class="col"><a href="{{ url_for('companies_bp.index') }}">الشركات</a></div>
+    <div class="col"><a href="{{ url_for('purchases_bp.index') }}">أوامر شراء</a></div>
+    <div class="col"><a href="{{ url_for('ledger_control.index') }}">مراقبة الدفتر</a></div>
+    <div class="col"><a href="{{ url_for('budgets.index') }}">موازنات</a></div>
+    <div class="col"><a href="{{ url_for('financial_reports.index') }}">تقارير مالية</a></div>
+    <div class="col"><a href="{{ url_for('ledger.chart_of_accounts') }}">دليل حسابات</a></div>
+    <div class="col"><a href="{{ url_for('payroll_bp.index') }}">رواتب</a></div>
+    <div class="col"><a href="{{ url_for('pos_bp.terminal') }}">نقطة بيع</a></div>
+    <div class="col"><a href="{{ url_for('tax_compliance_bp.vat_settlement') }}">تسوية VAT</a></div>
+    <div class="col"><a href="{{ url_for('enterprise_security_bp.posting_controls') }}">ضوابط إدخال</a></div>
+    <div class="col"><a href="{{ url_for('financial_reports.comparative') }}">مقارنة سنوات</a></div>
+    <div class="col"><a href="{{ url_for('financial_reports.prepaid_accrual') }}">مقدمات/مستحقات</a></div>
+    <div class="col"><a href="{{ url_for('financial_reports.pending_inventory') }}">مخزون معلق</a></div>
+    <div class="col"><a href="{{ url_for('hr_portal_bp.index') }}">بوابة HR</a></div>
+    <div class="col"><a href="{{ url_for('sales_bp.quotations') }}">عروض أسعار</a></div>
+  </div></div>
+</div>
+{% endblock %}

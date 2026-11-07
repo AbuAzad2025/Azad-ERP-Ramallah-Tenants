@@ -139,10 +139,8 @@ def entity_balance_verification():
     try:
         verification_results = []
         
-        from utils.company_scope import filter_customers_query
-
         # فحص أرصدة الزبائن
-        customers = filter_customers_query(Customer.query).limit(10).all()  # عينة من الزبائن
+        customers = Customer.query.limit(10).all()  # عينة من الزبائن
         for customer in customers:
             try:
                 # حساب الرصيد من GL
@@ -452,6 +450,25 @@ def fix_unbalanced_batches():
             difference = total_debit - total_credit
             
             if abs(difference) > 0.01:
+                # حارس قفل: لا تُعدّل قيداً في فترة مقفلة
+                _bp = batch.posted_at
+                try:
+                    _cs = _bp.date() if hasattr(_bp, "date") else _bp
+                except Exception:
+                    _cs = _bp
+                if _cs:
+                    _lk = db.session.execute(
+                        __import__("sqlalchemy").text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"),
+                        {"d": _cs},
+                    ).first()
+                    if _lk:
+                        unfixable_batches.append({
+                            'batch_id': batch.id,
+                            'batch_code': batch.code,
+                            'difference': difference,
+                            'reason': 'الفترة مقفلة — لا يمكن إصلاح',
+                        })
+                        continue
                 # محاولة الإصلاح التلقائي
                 if len(batch.entries) >= 2:
                     # إضافة قيد تصحيح

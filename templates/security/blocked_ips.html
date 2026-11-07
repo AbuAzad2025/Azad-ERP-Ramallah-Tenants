@@ -2,12 +2,12 @@
 
 {% block tour_name %}blocked_ips{% endblock %}
 
-{% block security_title %}Blocked IPs{% endblock %}
+{% block security_title %}عناوين IP المحظورة{% endblock %}
 {% block security_icon %}<i class="fas fa-ban"></i>{% endblock %}
 {% block security_description %}إدارة IPs المحظورة وجدار الحماية{% endblock %}
 
 {% block security_breadcrumb %}
-<li class="breadcrumb-item active">Blocked IPs</li>
+<li class="breadcrumb-item active">عناوين IP المحظورة</li>
 {% endblock %}
 
 {% block security_content %}
@@ -21,7 +21,7 @@
       {% if blocked %}
       <div class="table-responsive">
         <table class="table table-striped">
-          <thead>
+          <thead class="table-header-primary text-white">
             <tr>
               <th>IP</th>
               <th>السبب</th>

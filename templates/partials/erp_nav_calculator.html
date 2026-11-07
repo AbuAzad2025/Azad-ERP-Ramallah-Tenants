@@ -1,0 +1,110 @@
+{# حاسبة سريعة — عادي / مالي / علمي — بجانب أسعار الصرف #}
+<div class="erp-calc-wrap dropdown d-none d-lg-block" id="erpCalcDropdownWrap">
+  <button type="button"
+          class="erp-meta-chip erp-meta-chip--calc dropdown-toggle"
+          id="erpCalcToggle"
+          data-toggle="dropdown"
+          aria-haspopup="true"
+          aria-expanded="false"
+          title="حاسبة — عادي، مالي، علمي">
+    <i class="fas fa-calculator" aria-hidden="true"></i>
+    <span class="erp-calc-toggle-label d-none d-xl-inline">حاسبة</span>
+  </button>
+  <div class="dropdown-menu dropdown-menu-left erp-calc-panel shadow-lg"
+       id="erpCalcPanel"
+       role="dialog"
+       aria-label="حاسبة ERP"
+       onclick="event.stopPropagation()">
+    <div class="erp-calc-panel__head">
+      <div class="erp-calc-panel__title">
+        <i class="fas fa-calculator"></i>
+        <span>حاسبة سريعة</span>
+      </div>
+      <div class="erp-calc-mode-tabs btn-group btn-group-sm" role="group" aria-label="نوع الحاسبة">
+        <button type="button" class="btn btn-sm active" data-erp-calc-mode="standard" title="عادي">
+          <i class="fas fa-calculator"></i><span>عادي</span>
+        </button>
+        <button type="button" class="btn btn-sm" data-erp-calc-mode="financial" title="مالي — صرف وضرائب">
+          <i class="fas fa-coins"></i><span>مالي</span>
+        </button>
+        <button type="button" class="btn btn-sm" data-erp-calc-mode="scientific" title="علمي">
+          <i class="fas fa-square-root-alt"></i><span>علمي</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="erp-calc-display-wrap">
+      <div class="erp-calc-display-expr" id="erpCalcExpr" aria-hidden="true"></div>
+      <div class="erp-calc-display" id="erpCalcDisplay" dir="ltr">0</div>
+      <div class="erp-calc-display-hint small text-muted" id="erpCalcHint"></div>
+    </div>
+
+    {# ── مالي: صرف حسب أسعار النافبار ── #}
+    <div class="erp-calc-financial d-none" id="erpCalcFinancial" data-erp-calc-panel="financial">
+      <div class="erp-calc-fx-rates">
+        <span class="erp-calc-fx-pill" title="سعر اليوم من النافبار">
+          <i class="fas fa-dollar-sign"></i> USD <strong id="erpCalcFxUsd">--</strong> ₪
+        </span>
+        <span class="erp-calc-fx-pill">
+          <i class="fas fa-coins"></i> د.أ <strong id="erpCalcFxJod">--</strong> ₪
+        </span>
+      </div>
+      <div class="erp-calc-fx-form">
+        <div class="form-row align-items-end">
+          <div class="col-5">
+            <label class="small mb-1">المبلغ</label>
+            <input type="text" class="form-control form-control-sm" id="erpCalcFxAmount" inputmode="decimal" placeholder="0.00" dir="ltr">
+          </div>
+          <div class="col-3">
+            <label class="small mb-1">من</label>
+            <select class="custom-select custom-select-sm" id="erpCalcFxFrom">
+              <option value="USD">USD</option>
+              <option value="JOD">JOD</option>
+              <option value="ILS">₪</option>
+            </select>
+          </div>
+          <div class="col-1 text-center pb-2"><i class="fas fa-arrow-left text-muted"></i></div>
+          <div class="col-3">
+            <label class="small mb-1">إلى</label>
+            <select class="custom-select custom-select-sm" id="erpCalcFxTo">
+              <option value="ILS" selected>₪</option>
+              <option value="USD">USD</option>
+              <option value="JOD">JOD</option>
+            </select>
+          </div>
+        </div>
+        <div class="erp-calc-fx-result mt-2" id="erpCalcFxResult" dir="ltr">—</div>
+        <div class="erp-calc-fx-quick mt-2">
+          <button type="button" class="btn btn-xs btn-outline-secondary btn-sm" data-erp-calc-fx-quick="100">100</button>
+          <button type="button" class="btn btn-xs btn-outline-secondary btn-sm" data-erp-calc-fx-quick="500">500</button>
+          <button type="button" class="btn btn-xs btn-outline-secondary btn-sm" data-erp-calc-fx-quick="1000">1,000</button>
+          <button type="button" class="btn btn-xs btn-outline-secondary btn-sm" data-erp-calc-vat="16">ض.ق.م 16%</button>
+          <button type="button" class="btn btn-xs btn-outline-secondary btn-sm" data-erp-calc-margin="20">هامش 20%</button>
+        </div>
+      </div>
+      <hr class="erp-calc-divider">
+    </div>
+
+    <div class="erp-calc-keypad" id="erpCalcKeypad" data-erp-calc-panel="standard">
+      <!-- buttons injected by JS for standard / scientific -->
+    </div>
+
+    <div class="erp-calc-panel__foot small text-muted">
+      <span><kbd>Esc</kbd> إغلاق</span>
+      <span class="erp-calc-foot-rates" id="erpCalcFootNote">أسعار الصرف من الشريط العلوي</span>
+    </div>
+  </div>
+</div>
+
+{# موبايل: فتح نفس الحاسبة كمودال #}
+<div class="modal fade" id="erpCalcModal" tabindex="-1" role="dialog" aria-labelledby="erpCalcModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered erp-calc-modal-dialog" role="document">
+    <div class="modal-content erp-calc-modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title" id="erpCalcModalTitle"><i class="fas fa-calculator ml-1"></i> حاسبة ERP</h6>
+        <button type="button" class="close" data-dismiss="modal" aria-label="إغلاق"><span aria-hidden="true">&times;</span></button>
+      </div>
+      <div class="modal-body p-0" id="erpCalcModalBody"></div>
+    </div>
+  </div>
+</div>

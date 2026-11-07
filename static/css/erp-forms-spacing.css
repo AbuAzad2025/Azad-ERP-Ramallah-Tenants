@@ -1,0 +1,306 @@
+/**
+ * مسافات، قوائم منسدلة، جداول، أزرار — RTL
+ * مرجع: docs/arabic_erp_ui_spacing_dropdowns_spec.json
+ */
+:root {
+  --erp-field-h: 46px;
+  --erp-btn-h: 46px;
+  --erp-field-pad-x: 0.85rem;
+  --erp-label-gap: 0.45rem;
+  --erp-field-gap: 0.85rem;
+  --erp-section-gap: 1.25rem;
+  --erp-line-ar: 1.55;
+}
+
+/* ——— تباعد النصوص والنماذج ——— */
+body:not(.auth-page) .content-wrapper,
+body.security-body.erp-unified .security-main {
+  line-height: var(--erp-line-ar);
+}
+
+body:not(.auth-page) .content-wrapper .form-group,
+body:not(.auth-page) .content-wrapper .mb-3,
+body.security-body.erp-unified .form-group {
+  margin-bottom: var(--erp-field-gap);
+}
+
+body:not(.auth-page) .content-wrapper .form-label,
+body:not(.auth-page) .content-wrapper label.col-form-label,
+body:not(.auth-page) .content-wrapper .control-label,
+body.security-body.erp-unified .form-label {
+  display: block;
+  font-weight: 600;
+  color: var(--erp-text, #1f2937);
+  margin-bottom: var(--erp-label-gap);
+  line-height: 1.4;
+}
+
+body:not(.auth-page) .content-wrapper .card-body > .row,
+body.security-body.erp-unified .card-body > .row {
+  row-gap: var(--erp-field-gap);
+}
+
+body:not(.auth-page) .content-wrapper .erp-section-title,
+body:not(.auth-page) .content-wrapper .content-header {
+  margin-bottom: var(--erp-section-gap);
+}
+
+body:not(.auth-page) .content-wrapper .card + .card,
+body:not(.auth-page) .content-wrapper .card + .table-responsive,
+body:not(.auth-page) .content-wrapper .table-responsive + .card {
+  margin-top: var(--erp-section-gap);
+}
+
+/* ——— حقول الإدخال ——— */
+body:not(.auth-page) .content-wrapper .form-control,
+body:not(.auth-page) .content-wrapper .custom-select,
+body:not(.auth-page) .content-wrapper select.form-control:not([multiple]),
+body.security-body.erp-unified .form-control,
+body.security-body.erp-unified .custom-select {
+  min-height: var(--erp-field-h);
+  height: var(--erp-field-h);
+  padding: 0  var(--erp-field-pad-x);
+  font-size: 0.95rem;
+  line-height: calc(var(--erp-field-h) - 2px);
+  border: 1px solid var(--erp-border, #e5e7eb);
+  border-radius: var(--erp-radius-sm, 10px);
+  color: var(--erp-text, #1f2937);
+  background-color: #fff;
+}
+
+body:not(.auth-page) .content-wrapper textarea.form-control,
+body.security-body.erp-unified textarea.form-control {
+  height: auto;
+  min-height: 100px;
+  line-height: var(--erp-line-ar);
+  padding: 0.65rem var(--erp-field-pad-x);
+  display: block;
+}
+
+body:not(.auth-page) .content-wrapper .form-control::placeholder {
+  color: var(--erp-muted, #6b7280);
+  opacity: 1;
+}
+
+body:not(.auth-page) .content-wrapper .form-control:focus,
+body:not(.auth-page) .content-wrapper .custom-select:focus,
+body.security-body.erp-unified .form-control:focus {
+  border-color: var(--erp-blue, #0b68ff);
+  box-shadow: 0 0 0 0.2rem rgba(11, 104, 255, 0.15);
+}
+
+/* select أصلي — سهم واضح */
+body:not(.auth-page) .content-wrapper select.form-control,
+body.security-body.erp-unified select.form-control {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7280' d='M1.41 0 6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 0.85rem center;
+  background-size: 12px 8px;
+  padding-left: 2rem;
+  padding-right: var(--erp-field-pad-x);
+}
+
+/* ——— Select2 ——— */
+body:not(.auth-page) .content-wrapper .select2-container,
+body.security-body.erp-unified .select2-container {
+  width: 100% !important;
+  max-width: 100%;
+}
+
+body:not(.auth-page) .content-wrapper .select2-container .select2-selection--single,
+body:not(.auth-page) .content-wrapper .select2-container--default .select2-selection--multiple,
+body.security-body.erp-unified .select2-container .select2-selection--single {
+  min-height: var(--erp-field-h) !important;
+  height: var(--erp-field-h) !important;
+  border: 1px solid var(--erp-border, #e5e7eb) !important;
+  border-radius: var(--erp-radius-sm, 10px) !important;
+  background: #fff !important;
+  display: flex;
+  align-items: center;
+}
+
+body:not(.auth-page) .content-wrapper .select2-container--default .select2-selection--single .select2-selection__rendered,
+body.security-body.erp-unified .select2-selection__rendered {
+  line-height: calc(var(--erp-field-h) - 4px) !important;
+  padding-right: var(--erp-field-pad-x) !important;
+  padding-left: 2.25rem !important;
+  color: var(--erp-text, #1f2937) !important;
+  font-weight: 500;
+}
+
+body:not(.auth-page) .content-wrapper .select2-container--default .select2-selection--single .select2-selection__placeholder,
+body.security-body.erp-unified .select2-selection__placeholder {
+  color: var(--erp-muted, #6b7280) !important;
+}
+
+body:not(.auth-page) .content-wrapper .select2-container--default .select2-selection--single .select2-selection__arrow,
+body.security-body.erp-unified .select2-selection__arrow {
+  height: 100% !important;
+  top: 0 !important;
+  left: 0.65rem !important;
+  right: auto !important;
+  width: 1.25rem;
+}
+
+body:not(.auth-page) .content-wrapper .select2-container--default .select2-selection--single .select2-selection__arrow b,
+body.security-body.erp-unified .select2-selection__arrow b {
+  border-color: var(--erp-muted, #6b7280) transparent transparent transparent !important;
+  border-width: 6px 5px 0 5px !important;
+  margin-top: -2px;
+}
+
+body:not(.auth-page) .content-wrapper .select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b,
+body.security-body.erp-unified .select2-container--open .select2-selection__arrow b {
+  border-color: transparent transparent var(--erp-blue, #0b68ff) transparent !important;
+  border-width: 0 5px 6px 5px !important;
+}
+
+/* قائمة منسدلة مفتوحة */
+.select2-dropdown {
+  border: 1px solid var(--erp-border, #e5e7eb) !important;
+  border-radius: var(--erp-radius-sm, 10px) !important;
+  box-shadow: var(--erp-shadow, 0 4px 24px rgba(6, 42, 90, 0.1)) !important;
+  overflow: hidden;
+  z-index: 1060;
+}
+
+.select2-results__option {
+  padding: 0.65rem 1rem !important;
+  line-height: 1.45 !important;
+  font-size: 0.95rem;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+  background: var(--erp-blue, #0b68ff) !important;
+  color: #fff !important;
+}
+
+.select2-container--default .select2-results__option[aria-selected="true"] {
+  background: rgba(11, 104, 255, 0.1) !important;
+  color: var(--erp-navy, #062a5a) !important;
+  font-weight: 600;
+}
+
+.select2-search--dropdown .select2-search__field {
+  min-height: 40px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--erp-border, #e5e7eb);
+}
+
+/* ——— عناوين الجداول ——— */
+body:not(.auth-page) .content-wrapper .table thead th,
+body.security-body.erp-unified .table thead th {
+  background: var(--erp-bg, #f5f7fb) !important;
+  color: var(--erp-navy, #062a5a) !important;
+  font-weight: 700;
+  font-size: 0.88rem;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0.85rem 1rem !important;
+  border-bottom: 2px solid var(--erp-border, #e5e7eb) !important;
+  white-space: nowrap;
+  line-height: 1.35;
+}
+
+body:not(.auth-page) .content-wrapper .table thead th.text-end,
+body:not(.auth-page) .content-wrapper .table thead th.text-left,
+body:not(.auth-page) .content-wrapper .table thead th.text-start {
+  text-align: inherit;
+}
+
+body:not(.auth-page) .content-wrapper .table td,
+body.security-body.erp-unified .table td {
+  vertical-align: middle;
+  padding: 0.7rem 1rem !important;
+  line-height: 1.45;
+}
+
+body:not(.auth-page) .content-wrapper .table + .btn,
+body:not(.auth-page) .content-wrapper .table-responsive + .erp-page-toolbar {
+  margin-top: var(--erp-section-gap);
+}
+
+/* ——— الأزرار ——— */
+body:not(.auth-page) .content-wrapper .btn,
+body.security-body.erp-unified .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: var(--erp-btn-h);
+  padding: 0.5rem 1.1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  border-radius: var(--erp-radius-sm, 10px);
+  white-space: nowrap;
+}
+
+body:not(.auth-page) .content-wrapper .btn-sm,
+body.security-body.erp-unified .btn-sm {
+  min-height: 38px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.875rem;
+}
+
+body:not(.auth-page) .content-wrapper .btn-lg,
+body.security-body.erp-unified .btn-lg {
+  min-height: 50px;
+  padding: 0.6rem 1.35rem;
+}
+
+body:not(.auth-page) .content-wrapper .btn-group,
+body:not(.auth-page) .content-wrapper .page-actions,
+body:not(.auth-page) .content-wrapper .erp-page-toolbar,
+body.security-body.erp-unified .erp-page-toolbar {
+  gap: 0.5rem;
+}
+
+body:not(.auth-page) .content-wrapper .card-header .btn + .btn {
+  margin-inline-start: 0.5rem;
+}
+
+/* input-group — محاذاة عمودية */
+body:not(.auth-page) .content-wrapper .input-group .form-control {
+  height: var(--erp-field-h);
+}
+
+body:not(.auth-page) .content-wrapper .input-group-text {
+  min-height: var(--erp-field-h);
+  display: flex;
+  align-items: center;
+  padding: 0 0.85rem;
+  border-color: var(--erp-border, #e5e7eb);
+  background: var(--erp-bg, #f5f7fb);
+  color: var(--erp-muted, #6b7280);
+}
+
+/* شارات الحالة في الجداول — نقطة لونية (مثل الموكب) */
+.erp-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
+.erp-status-dot--success { background: var(--erp-success, #16a34a); }
+.erp-status-dot--warning { background: var(--erp-warning, #ea580c); }
+.erp-status-dot--danger { background: var(--erp-danger, #dc2626); }
+.erp-status-dot--info { background: var(--erp-blue, #0b68ff); }
+
+@media (max-width: 575.98px) {
+  :root {
+    --erp-field-h: 44px;
+    --erp-btn-h: 44px;
+    --erp-field-gap: 0.75rem;
+  }
+
+  body:not(.auth-page) .content-wrapper .table thead th {
+    font-size: 0.8rem;
+    padding: 0.65rem 0.5rem !important;
+  }
+}

@@ -1,0 +1,226 @@
+/**
+ * فوتر ثابت — يبقى ظاهراً؛ المحتوى يتمركز بين النافبار والفوتر
+ */
+:root {
+  --erp-footer-height: 72px;
+}
+
+body.erp-app .main-footer.erp-footer {
+  margin: 0 !important;
+  float: none;
+  padding: 0;
+  min-height: 0;
+  background: linear-gradient(
+    100deg,
+    #041e3f 0%,
+    #06325f 38%,
+    #0a4a72 72%,
+    #062a5a 100%
+  );
+  border-top: 2px solid rgba(201, 162, 39, 0.85);
+  box-shadow: 0 -6px 28px rgba(0, 0, 0, 0.18);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+body.erp-app .main-footer.erp-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1018;
+}
+
+body.erp-app .erp-footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.25rem;
+  padding: 0.55rem 1.15rem;
+  max-width: 100%;
+  font-family: var(--erp-font);
+}
+
+body.erp-app .erp-footer__brand-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+body.erp-app .erp-footer__azad-logo {
+  max-height: 36px;
+  width: auto;
+  max-width: 120px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+}
+
+body.erp-app .erp-footer__azad-name {
+  font-weight: 800;
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(240px, 28vw);
+}
+
+body.erp-app .erp-footer__dev {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem 0.85rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+}
+
+body.erp-app .erp-footer__dev-text {
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.45;
+}
+
+body.erp-app .erp-footer__dev-text strong {
+  font-weight: 800;
+  color: #fff;
+}
+
+body.erp-app .erp-footer__dev-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+body.erp-app .erp-footer__contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none !important;
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+body.erp-app .erp-footer__contact:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+body.erp-app .erp-footer__contact--wa {
+  background: rgba(37, 211, 102, 0.22);
+  border-color: rgba(37, 211, 102, 0.45);
+}
+
+body.erp-app .erp-footer__contact--wa:hover {
+  background: rgba(37, 211, 102, 0.35);
+}
+
+body.erp-app .erp-footer__meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem 0.75rem;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.72);
+  flex: 0 1 auto;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+body.erp-app .erp-footer__version {
+  opacity: 0.85;
+}
+
+/* منطقة المحتوى القابلة للتمرير بين النافبار والفوتر */
+body.erp-app:not(.security-body) .content-wrapper {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(
+    var(--erp-footer-height, 72px) + env(safe-area-inset-bottom, 0px)
+  ) !important;
+  max-height: calc(
+    100vh
+    - var(--gm-navbar-height, var(--erp-header-h, 60px))
+    - var(--erp-footer-height, 72px)
+    - env(safe-area-inset-top, 0px)
+    - env(safe-area-inset-bottom, 0px)
+  );
+  min-height: 0 !important;
+}
+
+body.erp-app:not(.security-body).layout-navbar-fixed .content-wrapper {
+  margin-top: calc(
+    var(--gm-navbar-height, var(--erp-header-h, 60px)) + env(safe-area-inset-top, 0px)
+  ) !important;
+}
+
+@media (max-width: 991.98px) {
+  body.erp-app:not(.security-body) .main-footer.erp-footer {
+    bottom: calc(var(--gm-bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px));
+  }
+
+  body.erp-app:not(.security-body) .content-wrapper {
+    max-height: calc(
+      100vh
+      - var(--gm-navbar-height, var(--erp-header-h, 60px))
+      - var(--erp-footer-height, 72px)
+      - var(--gm-bottom-nav-height, 64px)
+      - env(safe-area-inset-top, 0px)
+      - env(safe-area-inset-bottom, 0px)
+    );
+    padding-bottom: calc(
+      var(--erp-footer-height, 72px) + var(--gm-bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px)
+    ) !important;
+  }
+
+  body.erp-app .erp-footer__inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0.5rem 0.75rem;
+  }
+
+  body.erp-app .erp-footer__azad-name {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  body.erp-app .erp-footer__meta {
+    justify-content: center;
+  }
+}
+
+@media (min-width: 992px) {
+  html[dir="rtl"] body.erp-app .main-footer.erp-footer {
+    right: 0;
+    left: 0;
+    width: auto;
+  }
+}
+
+/* طباعة: إخفاء الفوتر الثابت */
+@media print {
+  body.erp-app .main-footer.erp-footer {
+    position: static !important;
+  }
+
+  body.erp-app .content-wrapper {
+    max-height: none !important;
+    padding-bottom: 0 !important;
+  }
+}

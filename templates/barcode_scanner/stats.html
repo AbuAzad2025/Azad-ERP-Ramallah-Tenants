@@ -3,129 +3,7 @@
 {% block title %}إحصائيات الباركود{% endblock %}
 
 {% block extra_head %}
-<style>
-/* تحسينات التصميم الشاملة */
-.stat-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-    transition: transform 0.3s ease;
-}
 
-.stat-card:hover {
-    transform: translateY(-5px);
-}
-
-.stat-icon {
-    font-size: 2.5rem;
-    opacity: 0.8;
-}
-
-.card-modern {
-    border: none;
-    border-radius: 15px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-.card-modern:hover {
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
-}
-
-.card-header-modern {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 15px 15px 0 0 !important;
-    border: none;
-    padding: 20px;
-}
-
-.card-header-modern h3 {
-    margin: 0;
-    font-weight: 600;
-}
-
-.chart-container {
-    background: white;
-    border-radius: 15px;
-    padding: 20px;
-    margin: 20px 0;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-}
-
-.table-modern {
-    border-radius: 15px;
-    overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-}
-
-.table-modern th {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    font-weight: 600;
-    padding: 15px;
-}
-
-.table-modern td {
-    padding: 12px 15px;
-    border-color: #f1f3f4;
-}
-
-.progress-modern {
-    height: 12px;
-    border-radius: 10px;
-    background: #e9ecef;
-    overflow: hidden;
-    margin: 10px 0;
-}
-
-.progress-bar-modern {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    height: 100%;
-    transition: width 0.3s ease;
-    border-radius: 10px;
-}
-
-/* تحسينات للـ animations */
-.fade-in {
-    animation: fadeIn 0.5s ease-in;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* تحسينات للـ responsive */
-@media (max-width: 768px) {
-    .stat-card {
-        margin-bottom: 15px;
-    }
-    
-    .card-modern {
-        margin-bottom: 20px;
-    }
-}
-
-/* تحسينات للـ charts */
-.chart-wrapper {
-    position: relative;
-    height: 300px;
-    margin: 20px 0;
-}
-
-.chart-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 15px;
-    text-align: center;
-}
-</style>
 {% endblock %}
 
 {% block content %}
@@ -170,7 +48,7 @@
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6 col-12 mb-4">
-                    <div class="stat-card fade-in" style="background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);">
+                    <div class="stat-card erp-kpi-tile erp-kpi-tile--primary fade-in">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <h2 class="mb-1">{{ stats.products_with_barcode }}</h2>
@@ -183,7 +61,7 @@
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6 col-12 mb-4">
-                    <div class="stat-card fade-in" style="background: linear-gradient(135deg, #ff9a56 0%, #ffad56 100%);">
+                    <div class="stat-card erp-kpi-tile erp-kpi-tile--primary fade-in">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <h2 class="mb-1">{{ stats.products_without_barcode }}</h2>
@@ -196,7 +74,7 @@
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6 col-12 mb-4">
-                    <div class="stat-card fade-in" style="background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);">
+                    <div class="stat-card erp-kpi-tile erp-kpi-tile--primary fade-in">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <h2 class="mb-1">{{ stats.barcode_percentage }}%</h2>
@@ -215,7 +93,7 @@
                 <!-- مخطط التغطية -->
                 <div class="col-lg-6 col-md-12 mb-4">
                     <div class="card card-modern">
-                        <div class="card-header-modern">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary-modern">
                             <h3>
                                 <i class="fas fa-chart-pie ml-2"></i>
                                 توزيع الباركود
@@ -248,7 +126,7 @@
                 <!-- شريط التقدم -->
                 <div class="col-lg-6 col-md-12 mb-4">
                     <div class="card card-modern">
-                        <div class="card-header-modern">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary-modern">
                             <h3>
                                 <i class="fas fa-chart-bar ml-2"></i>
                                 نسبة التغطية
@@ -288,7 +166,7 @@
             <div class="row">
                 <div class="col-12 mb-4">
                     <div class="card card-modern">
-                        <div class="card-header-modern">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary-modern">
                             <h3>
                                 <i class="fas fa-table ml-2"></i>
                                 توزيع أطوال الباركود
@@ -297,7 +175,7 @@
                         <div class="card-body">
                             <div class="table-responsive">
                                 <table class="table table-modern">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                             <th>طول الباركود</th>
                                             <th>عدد المنتجات</th>
@@ -338,7 +216,7 @@
             <div class="row">
                 <div class="col-12 mb-4">
                     <div class="card card-modern">
-                        <div class="card-header-modern">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary-modern">
                             <h3>
                                 <i class="fas fa-lightbulb ml-2"></i>
                                 التوصيات والإجراءات

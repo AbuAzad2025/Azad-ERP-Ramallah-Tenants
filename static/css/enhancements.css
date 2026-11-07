@@ -1,7 +1,8 @@
 /* gm-pro-ui pages use gm-design-system + gm-spacing-dropdowns */
 /* 
    ═══════════════════════════════════════════════════════════════════
-   ✨ Safe Enhancements Styles - (Palestinian Elegance Edition 🇵🇸) - FINAL FIX
+   ✨ Safe Enhancements — ثيم legacy (فلسطيني)
+   على الصفحات العادية يُعطّل التعارض عبر body.erp-unified + erp-conflict-fixes.css
    ═══════════════════════════════════════════════════════════════════
 */
 
@@ -40,14 +41,14 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ترويسة الجدول: فرض اللون الأبيض للنص والخلفية الداكنة */
 /* استهداف DataTables بقوة لمنع تغيير اللون بعد التحميل */
-.table thead th, 
-.table thead td,
-.table-dark thead th,
-table.dataTable thead th,
-table.dataTable thead td,
-table.dataTable thead th.sorting,
-table.dataTable thead th.sorting_asc,
-table.dataTable thead th.sorting_desc {
+body:not(.erp-unified) .table thead th,
+body:not(.erp-unified) .table thead td,
+body:not(.erp-unified) .table-dark thead th,
+body:not(.erp-unified) table.dataTable thead th,
+body:not(.erp-unified) table.dataTable thead td,
+body:not(.erp-unified) table.dataTable thead th.sorting,
+body:not(.erp-unified) table.dataTable thead th.sorting_asc,
+body:not(.erp-unified) table.dataTable thead th.sorting_desc {
   background-color: #1a1d20 !important; /* أسود كحلي فخم */
   color: #ffffff !important; /* أبيض ناصع إجباري */
   border-bottom: none !important;
@@ -127,7 +128,7 @@ table.dataTable thead th.sorting_desc::after {
 }
 
 /* ═══ 4. Cards (البطاقات) ═══ */
-.card {
+body:not(.erp-unified) .card {
   border: none !important;
   border-radius: 10px !important;
   box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
@@ -136,11 +137,11 @@ table.dataTable thead th.sorting_desc::after {
   background-color: #fff;
 }
 
-.card:hover {
+body:not(.erp-unified) .card:hover {
   transform: translateY(-3px);
 }
 
-.card-header {
+body:not(.erp-unified) .card-header {
   background-color: #f8f9fc !important;
   border-bottom: 1px solid #e3e6f0 !important;
   padding: 1rem 1.25rem;
@@ -149,12 +150,12 @@ table.dataTable thead th.sorting_desc::after {
 }
 
 /* ═══ 5. Light Mode (الوضع النهاري النظيف) ═══ */
-body:not(.gm-pro-ui):not(.dark-mode) {
+body:not(.erp-unified):not(.dark-mode) {
   background-color: #f8f9fc !important;
   color: #5a5c69 !important;
 }
 
-body:not(.gm-pro-ui):not(.dark-mode) .content-wrapper {
+body:not(.erp-unified):not(.dark-mode) .content-wrapper {
   background-color: #f8f9fc !important;
 }
 
@@ -272,11 +273,11 @@ body.dark-mode:not(.gm-pro-ui) .form-control {
 }
 
 /* ألوان الأزرار - فاقعة وواضحة */
-body:not(.gm-pro-ui) .btn-primary { background: linear-gradient(135deg, #4e73df 0%, #224abe 100%) !important; }
-body:not(.gm-pro-ui) .btn-success { background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%) !important; }
-body:not(.gm-pro-ui) .btn-danger  { background: linear-gradient(135deg, #e74a3b 0%, #be2617 100%) !important; }
-body:not(.gm-pro-ui) .btn-warning { background: linear-gradient(135deg, #f6c23e 0%, #dda20a 100%) !important; color: #fff !important; }
-body:not(.gm-pro-ui) .btn-info    { background: linear-gradient(135deg, #36b9cc 0%, #258391 100%) !important; }
+body:not(.erp-unified) .btn-primary { background: linear-gradient(135deg, #4e73df 0%, #224abe 100%) !important; }
+body:not(.erp-unified) .btn-success { background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%) !important; }
+body:not(.erp-unified) .btn-danger  { background: linear-gradient(135deg, #e74a3b 0%, #be2617 100%) !important; }
+body:not(.erp-unified) .btn-warning { background: linear-gradient(135deg, #f6c23e 0%, #dda20a 100%) !important; color: #fff !important; }
+body:not(.erp-unified) .btn-info    { background: linear-gradient(135deg, #36b9cc 0%, #258391 100%) !important; }
 
 /* ═══ 8. Inputs & Forms (General) — legacy pages only ═══ */
 body:not(.gm-pro-ui) .form-control {

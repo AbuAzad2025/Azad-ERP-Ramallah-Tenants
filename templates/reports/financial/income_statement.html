@@ -1,13 +1,14 @@
 {% extends 'base.html' %}
-{% from 'macros/gm_mobile_ui.html' import financial_scroll_shell %}
+{% from 'macros/gm_mobile_ui.html' import scroll_table_start, scroll_table_end %}
 
 {% block title %}قائمة الدخل{% endblock %}
+{% block page_title %}قائمة الدخل{% endblock %}
 {% block body_class %}gm-financial-report{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="card shadow-sm">
-        <div class="card-header bg-gradient-primary text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-primary text-white">
             <h3 class="mb-0">
                 <i class="fas fa-chart-line"></i>
                 قائمة الدخل (Income Statement / P&L)
@@ -18,30 +19,42 @@
         <div class="card-body">
             
 
-            <div class="row mb-4">
-                <div class="col-md-4">
+            <div class="row mb-4 gm-filter-row">
+                <div class="col-md-3">
+                    <label for="company_id">الشركة</label>
+                    <select id="company_id" class="form-control">
+                        <option value="">الكل (مجموعة)</option>
+                        {% for co in companies|default([]) %}
+                        <option value="{{ co.id }}" {% if company_id == co.id %}selected{% endif %}>{{ co.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
                     <label for="from_date">من تاريخ:</label>
                     <input type="date" id="from_date" class="form-control" value="{{ from_date.strftime('%Y-%m-%d') }}" title="من تاريخ" aria-label="من تاريخ">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="to_date">إلى تاريخ:</label>
                     <input type="date" id="to_date" class="form-control" value="{{ to_date.strftime('%Y-%m-%d') }}" title="إلى تاريخ" aria-label="إلى تاريخ">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label>&nbsp;</label>
                     <button class="btn btn-primary d-block w-100" onclick="updateReport()">
                         <i class="fas fa-sync"></i> تحديث
                     </button>
                 </div>
             </div>
+            {% if company_filter_active %}
+            <div class="alert alert-info py-2 small erp-branch-hint">فروع الشركة المحددة فقط.</div>
+            {% endif %}
             
             <div class="row">
                 <div class="col-md-12">
-                    {% call financial_scroll_shell('قائمة الدخل — التفاصيل') %}
-                    <table class="table table-bordered no-mobile-cards mb-0">
+                    {{ scroll_table_start('قائمة الدخل — اسحب أفقياً') }}
+                    <table class="table table-bordered">
                         
 
-                        <thead class="table-success">
+                        <thead class="table-header-primary text-white table-success">
                             <tr>
                                 <th colspan="2"><h5 class="mb-0">📈 الإيرادات</h5></th>
                             </tr>
@@ -66,7 +79,7 @@
                             </tr>
                         </tfoot>
 
-                        <thead class="table-secondary mt-3">
+                        <thead class="table-header-primary text-white table-secondary mt-3">
                             <tr>
                                 <th colspan="2"><h5 class="mb-0">📦 تكلفة البضاعة المباعة (COGS)</h5></th>
                             </tr>
@@ -95,7 +108,7 @@
                             </tr>
                         </tfoot>
 
-                        <thead class="table-danger mt-3">
+                        <thead class="table-header-primary text-white table-danger mt-3">
                             <tr>
                                 <th colspan="2"><h5 class="mb-0">📉 المصاريف التشغيلية</h5></th>
                             </tr>
@@ -124,7 +137,7 @@
                             </tr>
                         </tfoot>
 
-                        <thead class="table-info">
+                        <thead class="table-header-primary text-white table-info">
                             <tr>
                                 <th colspan="2"><h5 class="mb-0">🏛 ضريبة الدخل (مخصومة من الربح)</h5></th>
                             </tr>
@@ -157,7 +170,9 @@
                             </tr>
                         </tfoot>
                     </table>
-                    {% endcall %}
+                    {{ scroll_table_end() }}
+                    
+                    
 
                     <div class="row mt-4">
                         <div class="col-md-6">
@@ -178,7 +193,10 @@
 function updateReport() {
     const fromDate = document.getElementById('from_date').value;
     const toDate = document.getElementById('to_date').value;
-    window.location.href = (window.gmPath||window.gmU||function(p){return p;})(`/reports/financial/income-statement?start_date=${fromDate}&end_date=${toDate}`);
+    const cid = document.getElementById('company_id').value;
+    let url = `/reports/financial/income-statement?start_date=${fromDate}&end_date=${toDate}`;
+    if (cid) url += `&company_id=${cid}`;
+    window.location.href = url;
 }
 
 function exportToExcel() {

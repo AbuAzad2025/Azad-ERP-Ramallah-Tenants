@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}تفاصيل قيد GL{% endblock %}
+{% block content %}
+<div class="container py-3" dir="rtl">
+  <h4>تفاصيل قيد GL</h4>
+  <div id="panel" class="card card-body">جاري التحميل…</div>
+</div>
+<script>
+(async function() {
+  const bid = {{ batch_id or 'null' }};
+  if (!bid) { document.getElementById('panel').textContent = 'معرّف القيد مطلوب'; return; }
+  const r = await fetch('/reports/financial/drill-down?batch_id=' + bid);
+  const j = await r.json();
+  if (!j.success) { document.getElementById('panel').textContent = j.error; return; }
+  let html = '<p><strong>' + j.batch.code + '</strong> — ' + (j.batch.memo || '') + '</p>';
+  if (j.source_link) html += '<p><a href="' + j.source_link + '">المستند المصدر</a></p>';
+  html += '<table class="table table-sm"><thead class="table-header-primary text-white"><tr><th>حساب</th><th>مدين</th><th>دائن</th></tr></thead><tbody>';
+  j.entries.forEach(e => { html += '<tr><td>' + e.account + '</td><td>' + e.debit + '</td><td>' + e.credit + '</td></tr>'; });
+  html += '</tbody></table>';
+  const panel = document.getElementById('panel');
+  if (window.AzadDom && AzadDom.setHtmlTrusted) AzadDom.setHtmlTrusted(panel, html);
+  else panel.innerHTML = html;
+})();
+</script>
+{% endblock %}

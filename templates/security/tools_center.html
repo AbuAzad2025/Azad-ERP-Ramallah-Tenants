@@ -4,22 +4,18 @@
 
 {% block security_title %}مركز الأدوات والتكامل{% endblock %}
 {% block security_icon %}<i class="fas fa-toolbox"></i>{% endblock %}
-{% block security_description %}تكاملات • بريد • كروت • تصدير بيانات{% endblock %}
+{% block security_description %}تكاملات وتصدير{% endblock %}
 
 {% block security_breadcrumb %}
 <li class="breadcrumb-item active">مركز الأدوات</li>
 {% if active_tab %}
-<li class="breadcrumb-item active">{{ active_tab|title }}</li>
+{% set tools_tab_labels = {'integrations': 'التكاملات', 'email': 'البريد', 'cards': 'الكروت', 'export': 'التصدير'} %}
+<li class="breadcrumb-item active">{{ tools_tab_labels.get(active_tab, active_tab) }}</li>
 {% endif %}
 {% endblock %}
 
 {% block security_actions %}
-<div class="d-flex flex-column flex-md-row gap-2">
-  <span class="badge bg-success fs-6">4 أدوات</span>
-  <a class="btn btn-outline-primary btn-sm" href="{{ url_for('security.owner_branding') }}">
-    <i class="fas fa-file-invoice"></i> مصمم الفواتير
-  </a>
-</div>
+<span class="badge bg-primary">4 أقسام</span>
 {% endblock %}
 
 {% block security_content %}
@@ -174,7 +170,7 @@
           <div class="row g-4">
             <div class="col-lg-6">
               <div class="card border-primary">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header erp-card-header-row erp-theme-header--primary">
                   <i class="fab fa-stripe"></i> Stripe Payment Gateway
                 </div>
                 <div class="card-body">
@@ -199,7 +195,7 @@
             
             <div class="col-lg-6">
               <div class="card border-info">
-                <div class="card-header bg-info text-white">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
                   <i class="fab fa-paypal"></i> PayPal
                 </div>
                 <div class="card-body">
@@ -224,7 +220,7 @@
             
             <div class="col-lg-6">
               <div class="card border-success">
-                <div class="card-header bg-success text-white">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white">
                   <i class="fas fa-sms"></i> SMS / WhatsApp
                 </div>
                 <div class="card-body">
@@ -249,7 +245,7 @@
             
             <div class="col-lg-6">
               <div class="card border-warning">
-                <div class="card-header bg-warning text-dark">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-dark">
                   <i class="fas fa-envelope"></i> البريد الإلكتروني / SMTP
                 </div>
                 <div class="card-body">
@@ -335,10 +331,10 @@
           {% endif %}
           
           <div class="card shadow-sm mb-3">
-            <div class="card-header bg-gradient-info text-white d-flex justify-content-between align-items-center flex-wrap">
+            <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-info text-white d-flex justify-content-between align-items-center flex-wrap">
               <h5 class="mb-0"><i class="fas fa-envelope"></i> إدارة البريد الإلكتروني</h5>
               <div class="d-flex gap-2">
-                <a href="{{ url_for('security.email_manager') }}" class="btn btn-sm btn-light">
+                <a href="{{ url_for('security.tools_center', tab='email') }}" class="btn btn-sm btn-light">
                   <i class="fas fa-cog"></i> إعدادات SMTP
                 </a>
                 <a href="{{ url_for('security.notifications_log') }}" class="btn btn-sm btn-outline-light">
@@ -392,7 +388,7 @@
               {% if email_logs %}
                   <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                  <thead class="table-light">
+                  <thead class="table-header-primary text-white table-light">
                     <tr>
                       <th>التاريخ</th>
                       <th>المستلم</th>
@@ -473,7 +469,7 @@
               </div>
             </div>
             <div class="col-md-3">
-              <div class="card border-0 shadow-sm bg-warning text-white">
+              <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--warning text-white card-hover">
                 <div class="card-body text-center">
                   <h4 class="mb-0">{{ card_stats.pending }}</h4>
                   <small>معلقة</small>
@@ -492,7 +488,7 @@
           {% endif %}
           
           <div class="card shadow-sm">
-            <div class="card-header bg-gradient-danger text-white d-flex justify-content-between align-items-center flex-wrap">
+            <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-danger text-white d-flex justify-content-between align-items-center flex-wrap">
               <h5 class="mb-0"><i class="fas fa-credit-card"></i> خزنة الكروت المشفرة</h5>
               <a href="{{ url_for('security.card_vault') }}" class="btn btn-sm btn-light">
                 <i class="fas fa-external-link-alt"></i> عرض جميع السجلات
@@ -502,7 +498,7 @@
               {% if recent_cards %}
               <div class="table-responsive">
                 <table class="table table-striped mb-0">
-                  <thead class="table-light">
+                  <thead class="table-header-primary text-white table-light">
                     <tr>
                       <th>التاريخ</th>
                       <th>المبلغ</th>
@@ -586,7 +582,7 @@
           <div class="row g-3">
             <div class="col-lg-8">
               <div class="card shadow-sm h-100">
-                <div class="card-header bg-gradient-success text-white">
+                <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-success text-white">
                   <h5 class="mb-0"><i class="fas fa-sliders-h"></i> التصدير الديناميكي</h5>
                 </div>
                 <div class="card-body">
@@ -635,9 +631,14 @@
                         <i class="fas fa-database text-primary"></i> Database Manager
                       </a>
                     </li>
-                    <li>
+                    <li class="mb-2">
                       <a href="{{ url_for('security.data_export') }}" class="text-decoration-none">
                         <i class="fas fa-download text-info"></i> مركز تصدير البيانات المتقدم
+                      </a>
+                    </li>
+                    <li class="mb-2">
+                      <a href="{{ url_for('security.printing_panel') }}" class="text-decoration-none">
+                        <i class="fas fa-print text-warning"></i> إعدادات الطباعة والطابعات
                       </a>
                     </li>
                   </ul>

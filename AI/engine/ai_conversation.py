@@ -83,7 +83,7 @@ def get_local_faq_responses() -> Dict[str, str]:
 
 def get_local_quick_answers() -> Dict[str, Any]:
     return {
-        "greetings": {"patterns": ["مرحبا", "هلا", "السلام", "صباح", "مساء", "hello", "hi"], "responses": ["أهلاً، كيف أساعدك في النظام؟"]},
+        "greetings": {"patterns": ["مرحبا", "هلا", "السلام", "صباح", "مساء", "hello", "hi", "كيفك", "كيف حالك", "كيف الحال"], "responses": ["أهلاً وسهلاً 👋 كيف أساعدك في النظام اليوم؟"]},
         "thanks": {"patterns": ["شكرا", "مشكور", "thanks", "thank you"], "responses": ["على الرحب والسعة."]},
         "help": {"patterns": ["مساعدة", "help", "ساعدني"], "responses": ["اسألني عن زبون، مورد، منتج، مبيعة، دفعة، مصروف، صيانة، مخزون، صفحة، أو خطأ."]},
     }
@@ -193,10 +193,53 @@ def _execute_local_command(message: str, session_id: str = None) -> Optional[str
     return None
 
 
+def _normalize_chat_text(message: str) -> str:
+    text = str(message or "").lower().strip()
+    text = re.sub(r"[\u0617-\u061A\u064B-\u0652]", "", text)
+    return re.sub("[إأٱآا]", "ا", text).replace("ى", "ي").replace("ة", "ه")
+
+
+def get_small_talk_response(message: str) -> Optional[str]:
+    text = _normalize_chat_text(message)
+    if not text or len(text.split()) > 8:
+        return None
+    company = _company_profile()
+    if any(w in text for w in ["شكر", "مشكور", "thanks", "thank you"]):
+        return "العفو! إذا احتجت أي شيء في النظام أنا هنا."
+    if text in {"كيفك", "كيف حالك", "كيف الحال", "كيفكم", "shlom"} or any(
+        p in text for p in ["كيفك", "كيف حالك", "كيف امورك", "كيف الامور", "كيفك اليوم"]
+    ):
+        return (
+            f"أهلاً! بخير والحمد لله.\n"
+            f"أنا مساعدك في **{company['system_name']}**.\n"
+            f"اسألني عن المبيعات، المخزون، الزبائن، التقارير، أو أي صفحة في النظام."
+        )
+    if any(w in text for w in ["مرحب", "هلا", "سلام", "صباح", "مساء", "hello", "hi", "اهلا"]):
+        return f"أهلاً وسهلاً!\nكيف أساعدك اليوم في **{company['company_name']}**؟"
+    if any(w in text for w in ["من انت", "من أنت", "what are you", "who are you"]):
+        return (
+            f"أنا المساعد الذكي داخل **{company['system_name']}**.\n"
+            f"أساعدك في قراءة بيانات ERP، التنقل بين الصفحات، والحسابات البسيطة."
+        )
+    if any(w in text for w in ["مساعدة", "help", "ساعدني", "ماذا تستطيع", "شو بتعمل"]):
+        return (
+            "يمكنني مساعدتك في:\n"
+            "• ملخص مبيعات أو مصروفات\n"
+            "• البحث عن زبون أو منتج\n"
+            "• التنقل لصفحات النظام\n"
+            "• حساب VAT\n"
+            "• شرح الأرصدة والتقارير"
+        )
+    return None
+
+
 def match_local_response(message: str, session_id: str = None) -> Optional[str]:
     message = str(message or "").strip()
     if not message:
         return None
+    casual = get_small_talk_response(message)
+    if casual:
+        return casual
     command = _execute_local_command(message, session_id=session_id)
     if command:
         return command
@@ -211,4 +254,4 @@ def match_local_response(message: str, session_id: str = None) -> Optional[str]:
     return None
 
 
-__all__ = ["get_or_create_session_memory", "add_to_memory", "clear_session_memory", "get_conversation_context", "get_local_faq_responses", "get_local_quick_answers", "match_local_response"]
+__all__ = ["get_or_create_session_memory", "add_to_memory", "clear_session_memory", "get_conversation_context", "get_local_faq_responses", "get_local_quick_answers", "get_small_talk_response", "match_local_response"]

@@ -1,0 +1,18 @@
+/**
+ * Arabic ERP Theme System — نقطة دخول واحدة
+ * docs/arabic_erp_theme_system.json
+ */
+@import url("tokens.css");
+@import url("patterns.css");
+@import url("components.css");
+@import url("layout-shell.css");
+@import url("layout-app.css");
+@import url("erp-topbar.css");
+@import url("erp-sidebar-brand.css");
+@import url("erp-footer.css");
+@import url("public-layout.css");
+@import url("responsive.css");
+@import url("security-bridge.css");
+@import url("pages-financial.css");
+@import url("pages-dashboard.css");
+/* بطاقات KPI: تُحمَّل مرة واحدة آخر <head> — انظر erp_head_assets + base.html */

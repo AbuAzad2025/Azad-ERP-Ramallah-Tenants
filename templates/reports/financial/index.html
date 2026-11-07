@@ -1,488 +1,321 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>التقارير المالية - نظام إدارة المرآب</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="{{ url_for('static', filename='adminlte/plugins/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/public_mobile.css') }}">
-    {% include 'partials/gm_tenant_runtime.html' %}
-    <style>
-        .report-card {
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        .report-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
-        }
-        .report-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            transition: transform 0.3s ease;
-        }
-        .report-card:hover .report-icon {
-            transform: scale(1.1);
-        }
-        .date-range {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 1rem;
-            margin-bottom: 2rem;
-        }
-        .summary-card {
-            background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
-            color: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-        }
-        .metric-value {
-            font-size: 2rem;
-            font-weight: bold;
-        }
-        .metric-label {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-    </style>
-</head>
-<body class="public-page">
-    <nav class="navbar navbar-dark bg-dark d-md-none sticky-top">
-        <a class="navbar-brand font-weight-bold" href="{{ url_for('financial_reports.index') }}">
-            <i class="fas fa-chart-line ml-2"></i> التقارير المالية
-        </a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#financeMobileNav" aria-controls="financeMobileNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
+{% extends 'base.html' %}
+
+{% block title %}التقارير المالية{% endblock %}
+{% block page_title %}<i class="fas fa-chart-line text-primary ml-2"></i> التقارير المالية{% endblock %}
+{% block body_class %}gm-financial-hub{% endblock %}
+
+{% block breadcrumb %}
+  <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">الرئيسية</a></li>
+  <li class="breadcrumb-item active">التقارير المالية</li>
+{% endblock %}
+
+{% block head_extra %}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/gm-financial-pages.css') }}">
+  
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-2">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <ul class="nav nav-pills gm-financial-hub-nav flex-wrap">
+      {% if current_user.is_authenticated and (current_user.is_system_account or (current_user.username|default('')|upper == '__OWNER__') or (current_user.role and current_user.role.name|default('')|upper == 'OWNER')) %}
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('ledger_control.index') }}"><i class="fas fa-tachometer-alt ml-1"></i> لوحة التحكم</a>
+      </li>
+      {% endif %}
+      <li class="nav-item">
+        <a class="nav-link active" href="{{ url_for('financial_reports.index') }}"><i class="fas fa-chart-line ml-1"></i> التقارير المالية</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('accounting_validation.index') }}"><i class="fas fa-check-circle ml-1"></i> التحقق المحاسبي</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('accounting_docs.index') }}"><i class="fas fa-book ml-1"></i> التوثيق المحاسبي</a>
+      </li>
+    </ul>
+    <button type="button" class="btn btn-outline-secondary" onclick="refreshReports()">
+      <i class="fas fa-sync-alt ml-1"></i> تحديث
+    </button>
+  </div>
+
+  <div class="date-range">
+    <div class="row g-2">
+      <div class="col-12 col-md-4">
+        <label for="startDate" class="form-label">من تاريخ</label>
+        <input type="date" class="form-control" id="startDate">
+      </div>
+      <div class="col-12 col-md-4">
+        <label for="endDate" class="form-label">إلى تاريخ</label>
+        <input type="date" class="form-control" id="endDate">
+      </div>
+      <div class="col-12 col-md-4">
+        <label for="companyId" class="form-label">الشركة (اختياري)</label>
+        <select id="companyId" class="form-control">
+          <option value="">الكل</option>
+          {% for co in companies|default([]) %}
+          <option value="{{ co.id }}">{{ co.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-4 d-flex align-items-end">
+        <button type="button" class="btn btn-primary w-100" onclick="applyDateRange()">
+          <i class="fas fa-filter ml-1"></i> تطبيق الفترة
         </button>
-        <div class="collapse navbar-collapse" id="financeMobileNav">
-            <div class="navbar-nav">
-                {% if current_user.is_authenticated and (current_user.is_system_account or (current_user.username|default('')|upper == '__OWNER__') or (current_user.role and current_user.role.name|default('')|upper == 'OWNER')) %}
-                <a class="nav-item nav-link text-white" href="{{ url_for('ledger_control.index') }}">
-                    <i class="fas fa-tachometer-alt ml-2"></i> لوحة التحكم
-                </a>
-                {% endif %}
-                <a class="nav-item nav-link text-white active" href="{{ url_for('financial_reports.index') }}">
-                    <i class="fas fa-chart-line ml-2"></i> التقارير المالية
-                </a>
-                <a class="nav-item nav-link text-white" href="{{ url_for('accounting_validation.index') }}">
-                    <i class="fas fa-check-circle ml-2"></i> التحقق المحاسبي
-                </a>
-                <a class="nav-item nav-link text-white" href="{{ url_for('accounting_docs.index') }}">
-                    <i class="fas fa-book ml-2"></i> التوثيق المحاسبي
-                </a>
-            </div>
-        </div>
-    </nav>
-    <div class="container-fluid">
-        <div class="row">
-            
-
-            <div class="col-md-3 col-lg-2 d-md-block bg-dark sidebar">
-                <div class="position-sticky pt-3">
-                    <ul class="nav flex-column">
-                        {% if current_user.is_authenticated and (current_user.is_system_account or (current_user.username|default('')|upper == '__OWNER__') or (current_user.role and current_user.role.name|default('')|upper == 'OWNER')) %}
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="{{ url_for('ledger_control.index') }}">
-                                <i class="fas fa-tachometer-alt ml-2"></i>
-                                لوحة التحكم
-                            </a>
-                        </li>
-                        {% endif %}
-                        <li class="nav-item">
-                            <a class="nav-link text-white active" href="{{ url_for('financial_reports.index') }}">
-                                <i class="fas fa-chart-line ml-2"></i>
-                                التقارير المالية
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="{{ url_for('accounting_validation.index') }}">
-                                <i class="fas fa-check-circle ml-2"></i>
-                                التحقق المحاسبي
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="{{ url_for('accounting_docs.index') }}">
-                                <i class="fas fa-book ml-2"></i>
-                                التوثيق المحاسبي
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-
-            
-
-            <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">
-                        <i class="fas fa-chart-line text-primary ml-2"></i>
-                        التقارير المالية
-                    </h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <button type="button" class="btn btn-outline-secondary" onclick="refreshReports()">
-                            <i class="fas fa-sync-alt ml-1"></i>
-                            تحديث
-                        </button>
-                    </div>
-                </div>
-
-                
-
-                <div class="date-range">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <label for="startDate" class="form-label">من تاريخ</label>
-                            <input type="date" class="form-control form-control-modern" id="startDate">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="endDate" class="form-label">إلى تاريخ</label>
-                            <input type="date" class="form-control form-control-modern" id="endDate">
-                        </div>
-                        <div class="col-md-4 d-flex align-items-end">
-                            <button type="button" class="btn btn-primary" onclick="applyDateRange()">
-                                <i class="fas fa-filter ml-1"></i>
-                                تطبيق الفترة
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                
-
-                <div class="row">
-                    <div class="col-md-6 col-lg-3 mb-4">
-                        <div class="card report-card h-100" onclick="generateReport('income-statement')">
-                            <div class="card-body text-center">
-                                <i class="fas fa-chart-pie report-icon text-success"></i>
-                                <h5 class="card-title">قائمة الدخل</h5>
-                                <p class="card-text">P&L Statement</p>
-                                <small class="text-muted">الإيرادات - المصروفات = صافي الربح</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-3 mb-4">
-                        <div class="card report-card h-100" onclick="generateReport('balance-sheet')">
-                            <div class="card-body text-center">
-                                <i class="fas fa-balance-scale report-icon text-info"></i>
-                                <h5 class="card-title">الميزانية العمومية</h5>
-                                <p class="card-text">Balance Sheet</p>
-                                <small class="text-muted">الأصول = الخصوم + حقوق الملكية</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-3 mb-4">
-                        <div class="card report-card h-100" onclick="generateReport('cash-flow')">
-                            <div class="card-body text-center">
-                                <i class="fas fa-coins report-icon text-warning"></i>
-                                <h5 class="card-title">التدفق النقدي</h5>
-                                <p class="card-text">Cash Flow</p>
-                                <small class="text-muted">تدفق النقدية من العمليات والاستثمارات</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-3 mb-4">
-                        <div class="card report-card h-100" onclick="generateReport('balances-summary')">
-                            <div class="card-body text-center">
-                                <i class="fas fa-users report-icon text-primary"></i>
-                                <h5 class="card-title">الأرصدة المجمعة</h5>
-                                <p class="card-text">Balances Summary</p>
-                                <small class="text-muted">أرصدة الزبائن والموردين والشركاء</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                
-
-                <div id="reportResults" class="mt-4" style="display: none;">
-                    <div class="card shadow-sm">
-                        <div class="card-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
-                            <h5 id="reportTitle" class="mb-0">نتائج التقرير</h5>
-                        </div>
-                        <div class="card-body">
-                            <div id="reportContent">
-                                
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                
-
-                <div id="loadingSpinner" class="text-center mt-4" style="display: none;">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">جاري التحميل...</span>
-                    </div>
-                    <p class="mt-2">جاري إعداد التقرير...</p>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+  </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // Set default date range (current month)
-        function setDefaultDateRange() {
-            const today = new Date();
-            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-            
-            document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
-            document.getElementById('endDate').value = today.toISOString().split('T')[0];
-        }
+  <div class="row">
+    <div class="col-md-6 col-lg-3 mb-4">
+      <button type="button" class="report-card h-100" onclick="generateReport('income-statement')" aria-label="فتح تقرير قائمة الدخل">
+        <div class="card-body text-center">
+          <i class="fas fa-chart-pie report-icon text-success" aria-hidden="true"></i>
+          <h5 class="card-title">قائمة الدخل</h5>
+          <p class="card-text text-muted mb-1">P&amp;L Statement</p>
+          <small class="text-muted">الإيرادات − المصروفات = صافي الربح</small>
+        </div>
+      </button>
+    </div>
+    <div class="col-md-6 col-lg-3 mb-4">
+      <button type="button" class="report-card h-100" onclick="generateReport('balance-sheet')" aria-label="فتح تقرير الميزانية العمومية">
+        <div class="card-body text-center">
+          <i class="fas fa-balance-scale report-icon text-info" aria-hidden="true"></i>
+          <h5 class="card-title">الميزانية العمومية</h5>
+          <p class="card-text text-muted mb-1">Balance Sheet</p>
+          <small class="text-muted">الأصول = الخصوم + حقوق الملكية</small>
+        </div>
+      </button>
+    </div>
+    <div class="col-md-6 col-lg-3 mb-4">
+      <button type="button" class="report-card h-100" onclick="generateReport('cash-flow')" aria-label="فتح تقرير التدفق النقدي">
+        <div class="card-body text-center">
+          <i class="fas fa-coins report-icon text-warning" aria-hidden="true"></i>
+          <h5 class="card-title">التدفق النقدي</h5>
+          <p class="card-text text-muted mb-1">Cash Flow</p>
+          <small class="text-muted">تدفق النقدية من العمليات والاستثمارات</small>
+        </div>
+      </button>
+    </div>
+    <div class="col-md-6 col-lg-3 mb-4">
+      <button type="button" class="report-card h-100" onclick="generateReport('balances-summary')" aria-label="فتح تقرير الأرصدة المجمعة">
+        <div class="card-body text-center">
+          <i class="fas fa-users report-icon text-primary" aria-hidden="true"></i>
+          <h5 class="card-title">الأرصدة المجمعة</h5>
+          <p class="card-text text-muted mb-1">Balances Summary</p>
+          <small class="text-muted">أرصدة الزبائن والموردين والشركاء</small>
+        </div>
+      </button>
+    </div>
+  </div>
 
-        // Generate report
-        function generateReport(reportType) {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            
-            if (!startDate || !endDate) {
-                alert('يرجى تحديد فترة زمنية');
-                return;
-            }
+  <div id="reportResults" class="mt-4" style="display: none;">
+    <div class="card shadow-sm">
+      <div class="card-header erp-card-header-row erp-theme-header--primary text-white bg-primary">
+        <h5 id="reportTitle" class="mb-0">نتائج التقرير</h5>
+      </div>
+      <div class="card-body">
+        <div id="reportContent"></div>
+      </div>
+    </div>
+  </div>
 
-            showLoading();
-            
-            const gp = window.gmPath || window.gmU || function(p){ return p; };
-            let url = gp(`/reports/financial/${reportType}?start_date=${startDate}&end_date=${endDate}`);
-            if (reportType === 'balance-sheet') {
-                url = gp(`/reports/financial/${reportType}?date=${endDate}`);
-            } else if (reportType === 'balances-summary') {
-                url = gp(`/reports/financial/${reportType}`);
-            }
+  <div id="loadingSpinner" class="text-center mt-4" style="display: none;" role="status" aria-live="polite">
+    <div class="spinner-border text-primary"></div>
+    <p class="mt-2">جاري إعداد التقرير...</p>
+  </div>
+</div>
+{% endblock %}
 
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    hideLoading();
-                    if (data.success) {
-                        displayReport(reportType, data);
-                    } else {
-                        showError(data.error);
-                    }
-                })
-                .catch(error => {
-                    hideLoading();
-                    showError('حدث خطأ في تحميل التقرير: ' + error.message);
-                });
-        }
+{% block scripts %}
+  {{ super() }}
+  <script>
+    function setDefaultDateRange() {
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
+      document.getElementById('endDate').value = today.toISOString().split('T')[0];
+    }
 
-        // Display report results
-        function displayReport(reportType, data) {
-            const reportResults = document.getElementById('reportResults');
-            const reportTitle = document.getElementById('reportTitle');
-            const reportContent = document.getElementById('reportContent');
-            
-            let title = '';
-            let content = '';
-            
-            switch(reportType) {
-                case 'income-statement':
-                    title = 'قائمة الدخل';
-                    content = generateIncomeStatementHTML(data);
-                    break;
-                case 'balance-sheet':
-                    title = 'الميزانية العمومية';
-                    content = generateBalanceSheetHTML(data);
-                    break;
-                case 'cash-flow':
-                    title = 'قائمة التدفق النقدي';
-                    content = generateCashFlowHTML(data);
-                    break;
-                case 'balances-summary':
-                    title = 'الأرصدة المجمعة';
-                    content = generateBalancesSummaryHTML(data);
-                    break;
-            }
-            
-            reportTitle.textContent = title;
-            reportContent.innerHTML = content;
-            reportResults.style.display = 'block';
-            
-            // Scroll to results
-            reportResults.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        // Generate HTML for Income Statement
-        function generateIncomeStatementHTML(data) {
-            const summary = data.summary;
-            return `
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>ملخص قائمة الدخل</h6>
-                        <table class="table table-striped">
-                            <tr><td>إجمالي الإيرادات</td><td class="text-end">${summary.total_revenue.toLocaleString()} ₪</td></tr>
-                            <tr><td>تكلفة البضاعة المباعة</td><td class="text-end">${summary.total_cogs.toLocaleString()} ₪</td></tr>
-                            <tr><td class="fw-bold">إجمالي الربح</td><td class="text-end fw-bold">${summary.gross_profit.toLocaleString()} ₪</td></tr>
-                            <tr><td>المصروفات التشغيلية</td><td class="text-end">${summary.operating_expenses.toLocaleString()} ₪</td></tr>
-                            <tr><td class="fw-bold">الربح التشغيلي</td><td class="text-end fw-bold">${summary.operating_profit.toLocaleString()} ₪</td></tr>
-                            <tr><td>ضريبة الدخل (مخصومة من الربح)</td><td class="text-end">${summary.total_taxes.toLocaleString()} ₪</td></tr>
-                            <tr><td class="fw-bold text-success">صافي الربح بعد الضريبة</td><td class="text-end fw-bold text-success">${summary.net_profit.toLocaleString()} ₪</td></tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>تفاصيل الإيرادات</h6>
-                        <table class="table table-sm">
-                            ${data.details.revenue.map(r => `
-                                <tr><td>${r.account}</td><td class="text-end">${r.amount.toLocaleString()} ₪</td></tr>
-                            `).join('')}
-                        </table>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Generate HTML for Balance Sheet
-        function generateBalanceSheetHTML(data) {
-            const summary = data.summary;
-            return `
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>الأصول</h6>
-                        <table class="table table-striped">
-                            <tr><td>الأصول المتداولة</td><td class="text-end">${summary.current_assets.toLocaleString()} ₪</td></tr>
-                            <tr><td>الأصول الثابتة</td><td class="text-end">${summary.fixed_assets.toLocaleString()} ₪</td></tr>
-                            <tr><td class="fw-bold">إجمالي الأصول</td><td class="text-end fw-bold">${summary.total_assets.toLocaleString()} ₪</td></tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>الخصوم وحقوق الملكية</h6>
-                        <table class="table table-striped">
-                            <tr><td>الخصوم المتداولة</td><td class="text-end">${summary.current_liabilities.toLocaleString()} ₪</td></tr>
-                            <tr><td>حقوق الملكية</td><td class="text-end">${summary.equity.toLocaleString()} ₪</td></tr>
-                            <tr><td class="fw-bold">إجمالي الخصوم وحقوق الملكية</td><td class="text-end fw-bold">${summary.total_liabilities_equity.toLocaleString()} ₪</td></tr>
-                        </table>
-                    </div>
-                </div>
-                <div class="alert ${summary.is_balanced ? 'alert-success' : 'alert-danger'} mt-3">
-                    <i class="fas ${summary.is_balanced ? 'fa-check-circle' : 'fa-exclamation-triangle'} ml-2"></i>
-                    ${summary.is_balanced ? 'الميزانية متوازنة ✓' : 'الميزانية غير متوازنة ⚠️'}
-                </div>
-            `;
-        }
-
-        // Generate HTML for Cash Flow
-        function generateCashFlowHTML(data) {
-            const summary = data.summary;
-            return `
-                <div class="row">
-                    <div class="col-md-4">
-                        <h6>التدفق من العمليات</h6>
-                        <table class="table table-striped">
-                            <tr><td>النقدية الواردة</td><td class="text-end">${summary.operating_cash_in.toLocaleString()} ₪</td></tr>
-                            <tr><td>النقدية الصادرة</td><td class="text-end">${summary.operating_cash_out.toLocaleString()} ₪</td></tr>
-                            <tr><td class="fw-bold">صافي التدفق من العمليات</td><td class="text-end fw-bold">${summary.net_operating_cash.toLocaleString()} ₪</td></tr>
-                        </table>
-                    </div>
-                    <div class="col-md-4">
-                        <h6>التدفق من الاستثمارات</h6>
-                        <table class="table table-striped">
-                            <tr><td>النقدية الواردة</td><td class="text-end">${summary.investing_cash_in.toLocaleString()} ₪</td></tr>
-                            <tr><td>النقدية الصادرة</td><td class="text-end">${summary.investing_cash_out.toLocaleString()} ₪</td></tr>
-                            <tr><td class="fw-bold">صافي التدفق من الاستثمارات</td><td class="text-end fw-bold">${summary.net_investing_cash.toLocaleString()} ₪</td></tr>
-                        </table>
-                    </div>
-                    <div class="col-md-4">
-                        <h6>التدفق من التمويل</h6>
-                        <table class="table table-striped">
-                            <tr><td>النقدية الواردة</td><td class="text-end">${summary.financing_cash_in.toLocaleString()} ₪</td></tr>
-                            <tr><td>النقدية الصادرة</td><td class="text-end">${summary.financing_cash_out.toLocaleString()} ₪</td></tr>
-                            <tr><td class="fw-bold">صافي التدفق من التمويل</td><td class="text-end fw-bold">${summary.net_financing_cash.toLocaleString()} ₪</td></tr>
-                        </table>
-                    </div>
-                </div>
-                <div class="alert alert-info mt-3">
-                    <i class="fas fa-coins ml-2"></i>
-                    <strong>صافي التدفق النقدي الإجمالي: ${summary.net_cash_flow.toLocaleString()} ₪</strong>
-                </div>
-            `;
-        }
-
-        // Generate HTML for Balances Summary
-        function generateBalancesSummaryHTML(data) {
-            const summary = data.summary;
-            return `
-                <div class="row">
-                    <div class="col-md-4">
-                        <h6>أرصدة الزبائن</h6>
-                        <div class="alert alert-info">
-                            <strong>إجمالي أرصدة الزبائن: ${summary.total_customer_balance.toLocaleString()} ₪</strong>
-                        </div>
-                        <table class="table table-sm">
-                            ${data.details.customers.slice(0, 10).map(c => `
-                                <tr><td>${c.name}</td><td class="text-end" data-balance-customer="${c.id}">${c.balance.toLocaleString()} ₪</td></tr>
-                            `).join('')}
-                        </table>
-                    </div>
-                    <div class="col-md-4">
-                        <h6>أرصدة الموردين</h6>
-                        <div class="alert alert-warning">
-                            <strong>إجمالي أرصدة الموردين: ${summary.total_supplier_balance.toLocaleString()} ₪</strong>
-                        </div>
-                        <table class="table table-sm">
-                            ${data.details.suppliers.slice(0, 10).map(s => `
-                                <tr><td>${s.name}</td><td class="text-end">${s.balance.toLocaleString()} ₪</td></tr>
-                            `).join('')}
-                        </table>
-                    </div>
-                    <div class="col-md-4">
-                        <h6>أرصدة الشركاء</h6>
-                        <div class="alert alert-secondary">
-                            <strong>إجمالي أرصدة الشركاء: ${summary.total_partner_balance.toLocaleString()} ₪</strong>
-                        </div>
-                        <table class="table table-sm">
-                            ${data.details.partners.slice(0, 10).map(p => `
-                                <tr><td>${p.name}</td><td class="text-end">${p.balance.toLocaleString()} ₪</td></tr>
-                            `).join('')}
-                        </table>
-                    </div>
-                </div>
-                <div class="alert alert-primary mt-3">
-                    <i class="fas fa-calculator ml-2"></i>
-                    <strong>الوضع المالي الصافي: ${summary.net_position.toLocaleString()} ₪</strong>
-                </div>
-            `;
-        }
-
-        // Utility functions
-        function showLoading() {
-            document.getElementById('loadingSpinner').style.display = 'block';
-            document.getElementById('reportResults').style.display = 'none';
-        }
-
-        function hideLoading() {
-            document.getElementById('loadingSpinner').style.display = 'none';
-        }
-
-        function showError(message) {
-            const reportResults = document.getElementById('reportResults');
-            const reportContent = document.getElementById('reportContent');
-            
-            reportContent.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle ml-2"></i>
-                    ${message}
-                </div>
-            `;
-            reportResults.style.display = 'block';
-        }
-
-        function applyDateRange() {
-            // This function can be used to apply date range filters
-        }
-
-        function refreshReports() {
-            location.reload();
-        }
-
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
-            setDefaultDateRange();
+    function generateReport(reportType) {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      if (!startDate || !endDate) {
+        alert('يرجى تحديد فترة زمنية');
+        return;
+      }
+      showLoading();
+      const companyId = document.getElementById('companyId').value;
+      let url = `/reports/financial/${reportType}?start_date=${startDate}&end_date=${endDate}`;
+      if (reportType === 'balance-sheet') {
+        url = `/reports/financial/${reportType}?date=${endDate}`;
+      } else if (reportType === 'balances-summary') {
+        url = `/reports/financial/${reportType}`;
+      }
+      if (companyId) {
+        url += (url.includes('?') ? '&' : '?') + `company_id=${companyId}`;
+      }
+      fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(response => response.json())
+        .then(data => {
+          hideLoading();
+          if (data.success) displayReport(reportType, data);
+          else showError(data.error || 'فشل تحميل التقرير');
+        })
+        .catch(error => {
+          hideLoading();
+          showError('حدث خطأ في تحميل التقرير: ' + error.message);
         });
-    </script>
-</body>
-</html>
+    }
+
+    function displayReport(reportType, data) {
+      const reportResults = document.getElementById('reportResults');
+      const reportTitle = document.getElementById('reportTitle');
+      const reportContent = document.getElementById('reportContent');
+      const titles = {
+        'income-statement': 'قائمة الدخل',
+        'balance-sheet': 'الميزانية العمومية',
+        'cash-flow': 'قائمة التدفق النقدي',
+        'balances-summary': 'الأرصدة المجمعة'
+      };
+      const generators = {
+        'income-statement': generateIncomeStatementHTML,
+        'balance-sheet': generateBalanceSheetHTML,
+        'cash-flow': generateCashFlowHTML,
+        'balances-summary': generateBalancesSummaryHTML
+      };
+      reportTitle.textContent = titles[reportType] || 'نتائج التقرير';
+      const content = (generators[reportType] || function () { return ''; })(data);
+      if (window.AzadDom && AzadDom.setHtmlTrusted) AzadDom.setHtmlTrusted(reportContent, content);
+      else reportContent.innerHTML = content;
+      reportResults.style.display = 'block';
+      if (window.GMScrollFilters && typeof window.GMScrollFilters.init === 'function') {
+        window.GMScrollFilters.init(reportContent);
+      }
+      reportResults.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function generateIncomeStatementHTML(data) {
+      const summary = data.summary;
+      return `
+        <div class="row">
+          <div class="col-md-6">
+            <h6>ملخص قائمة الدخل</h6>
+            <table class="table table-striped">
+              <tr><td>إجمالي الإيرادات</td><td class="text-end">${summary.total_revenue.toLocaleString()} ₪</td></tr>
+              <tr><td>تكلفة البضاعة المباعة</td><td class="text-end">${summary.total_cogs.toLocaleString()} ₪</td></tr>
+              <tr><td class="font-weight-bold">إجمالي الربح</td><td class="text-end font-weight-bold">${summary.gross_profit.toLocaleString()} ₪</td></tr>
+              <tr><td>المصروفات التشغيلية</td><td class="text-end">${summary.operating_expenses.toLocaleString()} ₪</td></tr>
+              <tr><td class="font-weight-bold">الربح التشغيلي</td><td class="text-end font-weight-bold">${summary.operating_profit.toLocaleString()} ₪</td></tr>
+              <tr><td>ضريبة الدخل</td><td class="text-end">${summary.total_taxes.toLocaleString()} ₪</td></tr>
+              <tr><td class="font-weight-bold text-success">صافي الربح بعد الضريبة</td><td class="text-end font-weight-bold text-success">${summary.net_profit.toLocaleString()} ₪</td></tr>
+            </table>
+          </div>
+          <div class="col-md-6">
+            <h6>تفاصيل الإيرادات</h6>
+            <table class="table table-sm">
+              ${data.details.revenue.map(r => `<tr><td>${r.account}</td><td class="text-end">${r.amount.toLocaleString()} ₪</td></tr>`).join('')}
+            </table>
+          </div>
+        </div>`;
+    }
+
+    function generateBalanceSheetHTML(data) {
+      const summary = data.summary;
+      return `
+        <div class="row">
+          <div class="col-md-6">
+            <h6>الأصول</h6>
+            <table class="table table-striped">
+              <tr><td>الأصول المتداولة</td><td class="text-end">${summary.current_assets.toLocaleString()} ₪</td></tr>
+              <tr><td>الأصول الثابتة</td><td class="text-end">${summary.fixed_assets.toLocaleString()} ₪</td></tr>
+              <tr><td class="font-weight-bold">إجمالي الأصول</td><td class="text-end font-weight-bold">${summary.total_assets.toLocaleString()} ₪</td></tr>
+            </table>
+          </div>
+          <div class="col-md-6">
+            <h6>الخصوم وحقوق الملكية</h6>
+            <table class="table table-striped">
+              <tr><td>الخصوم المتداولة</td><td class="text-end">${summary.current_liabilities.toLocaleString()} ₪</td></tr>
+              <tr><td>حقوق الملكية</td><td class="text-end">${summary.equity.toLocaleString()} ₪</td></tr>
+              <tr><td class="font-weight-bold">إجمالي الخصوم وحقوق الملكية</td><td class="text-end font-weight-bold">${summary.total_liabilities_equity.toLocaleString()} ₪</td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="alert ${summary.is_balanced ? 'alert-success' : 'alert-danger'} mt-3">
+          ${summary.is_balanced ? 'الميزانية متوازنة ✓' : 'الميزانية غير متوازنة ⚠️'}
+        </div>`;
+    }
+
+    function generateCashFlowHTML(data) {
+      const summary = data.summary;
+      return `
+        <div class="row">
+          <div class="col-md-4"><h6>التدفق من العمليات</h6>
+            <table class="table table-striped">
+              <tr><td>النقدية الواردة</td><td class="text-end">${summary.operating_cash_in.toLocaleString()} ₪</td></tr>
+              <tr><td>النقدية الصادرة</td><td class="text-end">${summary.operating_cash_out.toLocaleString()} ₪</td></tr>
+              <tr><td class="font-weight-bold">صافي التدفق</td><td class="text-end font-weight-bold">${summary.net_operating_cash.toLocaleString()} ₪</td></tr>
+            </table>
+          </div>
+          <div class="col-md-4"><h6>التدفق من الاستثمارات</h6>
+            <table class="table table-striped">
+              <tr><td>النقدية الواردة</td><td class="text-end">${summary.investing_cash_in.toLocaleString()} ₪</td></tr>
+              <tr><td>النقدية الصادرة</td><td class="text-end">${summary.investing_cash_out.toLocaleString()} ₪</td></tr>
+              <tr><td class="font-weight-bold">صافي التدفق</td><td class="text-end font-weight-bold">${summary.net_investing_cash.toLocaleString()} ₪</td></tr>
+            </table>
+          </div>
+          <div class="col-md-4"><h6>التدفق من التمويل</h6>
+            <table class="table table-striped">
+              <tr><td>النقدية الواردة</td><td class="text-end">${summary.financing_cash_in.toLocaleString()} ₪</td></tr>
+              <tr><td>النقدية الصادرة</td><td class="text-end">${summary.financing_cash_out.toLocaleString()} ₪</td></tr>
+              <tr><td class="font-weight-bold">صافي التدفق</td><td class="text-end font-weight-bold">${summary.net_financing_cash.toLocaleString()} ₪</td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="alert alert-info mt-3"><strong>صافي التدفق النقدي: ${summary.net_cash_flow.toLocaleString()} ₪</strong></div>`;
+    }
+
+    function generateBalancesSummaryHTML(data) {
+      const summary = data.summary;
+      return `
+        <div class="row">
+          <div class="col-md-4">
+            <div class="alert alert-info"><strong>إجمالي أرصدة الزبائن: ${summary.total_customer_balance.toLocaleString()} ₪</strong></div>
+            <table class="table table-sm">${data.details.customers.slice(0, 10).map(c => `<tr><td>${c.name}</td><td class="text-end">${c.balance.toLocaleString()} ₪</td></tr>`).join('')}</table>
+          </div>
+          <div class="col-md-4">
+            <div class="alert alert-warning"><strong>إجمالي أرصدة الموردين: ${summary.total_supplier_balance.toLocaleString()} ₪</strong></div>
+            <table class="table table-sm">${data.details.suppliers.slice(0, 10).map(s => `<tr><td>${s.name}</td><td class="text-end">${s.balance.toLocaleString()} ₪</td></tr>`).join('')}</table>
+          </div>
+          <div class="col-md-4">
+            <div class="alert alert-secondary"><strong>إجمالي أرصدة الشركاء: ${summary.total_partner_balance.toLocaleString()} ₪</strong></div>
+            <table class="table table-sm">${data.details.partners.slice(0, 10).map(p => `<tr><td>${p.name}</td><td class="text-end">${p.balance.toLocaleString()} ₪</td></tr>`).join('')}</table>
+          </div>
+        </div>
+        <div class="alert alert-primary mt-3"><strong>الوضع المالي الصافي: ${summary.net_position.toLocaleString()} ₪</strong></div>`;
+    }
+
+    function showLoading() {
+      document.getElementById('loadingSpinner').style.display = 'block';
+      document.getElementById('reportResults').style.display = 'none';
+    }
+    function hideLoading() { document.getElementById('loadingSpinner').style.display = 'none'; }
+    function showError(message) {
+      const reportResults = document.getElementById('reportResults');
+      const reportContent = document.getElementById('reportContent');
+      const esc = (window.AzadDom && AzadDom.escapeHtml) ? AzadDom.escapeHtml(String(message)) : String(message);
+      const errHtml = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle ml-2"></i> ' + esc + '</div>';
+      if (window.AzadDom && AzadDom.setHtmlTrusted) AzadDom.setHtmlTrusted(reportContent, errHtml);
+      else reportContent.innerHTML = errHtml;
+      reportResults.style.display = 'block';
+    }
+    function applyDateRange() {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      if (!startDate || !endDate) { alert('يرجى تحديد فترة زمنية'); return; }
+      document.getElementById('reportResults').style.display = 'none';
+    }
+    function refreshReports() { location.reload(); }
+    document.addEventListener('DOMContentLoaded', setDefaultDateRange);
+  </script>
+{% endblock %}

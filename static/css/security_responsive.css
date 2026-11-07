@@ -4,6 +4,18 @@
  * ═══════════════════════════════════════════════════════════════════
  */
 
+body.security-body.erp-unified .card:focus-within {
+  outline-color: var(--erp-blue, #0b68ff);
+}
+
+body.security-body.erp-unified .btn:focus {
+  box-shadow: 0 0 0 0.2rem rgba(11, 104, 255, 0.35) !important;
+}
+
+body.security-body.erp-unified .card.loading::after {
+  border-top-color: var(--erp-blue, #0b68ff);
+}
+
 /* ═══ Mobile (< 576px) ═══ */
 @media (max-width: 575.98px) {
   /* تصغير البطاقات على الموبايل */

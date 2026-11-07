@@ -1,83 +1,16 @@
 ﻿<!-- File: templates/sales/list.html -->
 {% extends 'base_print.html' if print_mode else 'base.html' %}
-{% from 'macros/permissions.html' import readonly_banner with context %}
+{% from 'macros/gm_mobile_ui.html' import scroll_table_start, scroll_table_end, filter_panel_start, filter_panel_end %}
+
 {% block title %}قائمة فواتير المبيعات{% endblock %}
 
 {% block head_extra %}
   {{ super() }}
   {% if not print_mode %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/sales.css') }}">
-  <style>
-    .card{border:0;border-radius:1rem;box-shadow:0 0.5rem 1rem rgba(0,0,0,.08)}
-    .card-hover {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .card-hover:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
-    }
-    .table-rounded {
-        border-radius: 10px;
-        overflow: hidden;
-    }
-    /* زر إنشاء واضح على الخلفية الزرقاء */
-    .btn-create{
-      background:#ffc107;        /* أصفر واضح */
-      color:#1b2a4e;             /* نص غامق مقروء */
-      border:none;
-      font-weight:700;
-      border-radius:.65rem;
-      padding:.55rem 1rem;
-      box-shadow:0 .35rem .9rem rgba(0,0,0,.12);
-      transition:transform .08s ease, box-shadow .12s ease, background .12s ease;
-      white-space:nowrap;
-    }
-    .btn-create i{margin-left:.35rem}
-    .btn-create:hover{background:#ffb300;color:#12203a;transform:translateY(-1px)}
-    .btn-create:active{transform:translateY(0);box-shadow:0 .25rem .7rem rgba(0,0,0,.16)}
-    .btn-create:focus{outline:0;box-shadow:0 0 0 .2rem rgba(255,193,7,.35)}
-    /* تحسين تباين أزرار الفلاتر */
-    .btn-filter{padding:.45rem .9rem;border-radius:.55rem}
-    .sales-summary-card h3{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .sales-summary-card .card-title{color:rgba(0,0,0,.85);font-size:1.05rem;font-weight:700}
-    .sales-summary-card small{font-size:0.95rem;font-weight:600;color:rgba(0,0,0,.7)}
-    .table thead th{white-space:nowrap}
-    .sales-toolbar .form-control{border-radius:.65rem}
-    .sales-toolbar .input-group-text{border-radius:.65rem 0 0 .65rem}
-    .sales-toolbar .btn{border-radius:.65rem}
-    .sales-header-actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end}
-    .table-actions{display:inline-flex;gap:.35rem;flex-wrap:nowrap;align-items:center}
-    .table-actions .btn{white-space:nowrap}
-    .table-actions .dropdown-menu{min-width:220px}
-    .table td{vertical-align:middle}
-  </style>
+  
   {% else %}
-  <style>
-@page { size: A4 portrait; margin: 4mm 4mm 6mm 4mm; }
-html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",sans-serif; font-size:11px; margin:0; padding:0; width:100%; }
-.print-sheet { width:100%; margin:0; padding:4mm 2mm; box-sizing:border-box; }
-.print-header { text-align:center; margin:0 0 8mm 0; }
-.print-header h1 { margin:0; font-size:18pt; font-weight:700; }
-.print-subtitle { margin:4px 0 0 0; font-size:11px; }
-.print-meta { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6mm; font-size:11px; }
-.print-meta-item { border:1px solid #b5b5b5; padding:4px 8px; min-width:55mm; }
-.print-meta-label { display:block; font-weight:600; margin-bottom:2px; }
-.print-meta-value { font-size:11px; direction:ltr; unicode-bidi:embed; }
-.print-summary { margin-top:12px; display:flex; gap:12px; flex-wrap:wrap; font-size:11px; }
-.print-summary-item { min-width:45mm; }
-.print-summary-item .label { font-weight:600; display:inline-block; margin-left:4px; }
-.print-summary-item .value { direction:ltr; unicode-bidi:embed; }
-.print-table-container { width:100%; overflow:visible; direction:rtl; }
-.print-table { width:100%; margin:0; border-collapse:collapse; table-layout:auto; }
-.print-table thead { background:#f3f3f3; }
-.print-table th, .print-table td { border:1px solid #c4c4c4; padding:4px 5px; text-align:center; font-size:11px; line-height:1.35; word-break:break-word; }
-.print-table th:nth-child(3), .print-table td:nth-child(3) { text-align:right; }
-.print-table th:nth-child(6), .print-table td:nth-child(6) { text-align:right; font-weight:600; }
-.print-table a { color:inherit; text-decoration:none; }
-.print-table tfoot td { font-weight:600; text-align:right; }
-.print-controls { text-align:left; margin-bottom:6mm; }
-@media print { .print-controls { display:none; } }
-  </style>
+  
   {% endif %}
 {% endblock %}
 
@@ -117,7 +50,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
           <col style="width:18%"><!-- ذمة -->
           <col style="width:6%"><!-- العملة -->
         </colgroup>
-        <thead>
+        <thead class="table-header-primary text-white">
           <tr>
             <th>#</th>
             <th>التاريخ</th>
@@ -157,7 +90,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
 <div class="container-fluid py-4">
   {{ readonly_banner('view_sales', 'manage_sales', 'المبيعات') }}
   <div class="card">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <div class="card-header erp-card-header-row erp-theme-header--primary">
       <h3 class="mb-0"><i class="fas fa-file-invoice mr-2"></i> فواتير المبيعات</h3>
       <div class="sales-header-actions">
         <button type="button" class="btn btn-light" data-toggle="modal" data-target="#printSalesModal"><i class="fas fa-print mr-1"></i> طباعة</button>
@@ -250,10 +183,9 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
       {% endif %}
       </div>
 
-      <div class="card border-0 shadow-sm mb-4 sales-toolbar">
-        <div class="card-body py-3">
+      {{ filter_panel_start('فلاتر البحث والترتيب', 'fa-search', collapsed=false, extra_class='sales-toolbar border-0 shadow-sm') }}
           <form id="filterForm" method="get" action="{{ url_for('sales_bp.list_sales') }}">
-            <div class="form-row">
+            <div class="form-row gm-filter-row">
               <div class="form-group col-lg-4 col-md-6">
                 <label class="mb-1">بحث</label>
                 <div class="input-group">
@@ -309,13 +241,12 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
               </div>
             </div>
           </form>
-        </div>
-      </div>
+      {{ filter_panel_end() }}
 
       <!-- الجدول -->
-      <div id="sales-table-wrapper" class="table-responsive">
-        <table id="salesTable" class="table table-hover align-middle">
-          <thead class="thead-light">
+      {{ scroll_table_start('جدول الفواتير — اسحب أفقياً أو استخدم الأسهم أعلاه وأسفل') }}
+        <table id="salesTable" class="table table-hover align-middle" data-gm-force-scroll="1">
+          <thead class="table-header-primary text-white thead-light">
             <tr>
               <th data-sortable="false">رقم</th>
               <th data-sortable="false">التاريخ</th>
@@ -323,7 +254,8 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
               <th data-sortable="false">الإجمالي</th>
               <th data-sortable="false" class="text-center">العملة</th>
               <th data-sortable="false" class="text-center d-none d-lg-table-cell">سعر الصرف</th>
-              <th data-sortable="false">الذمة</th>
+              <th data-sortable="false">مدفوع</th>
+              <th data-sortable="false">ذمة</th>
               <th class="text-center" data-sortable="false">إجراءات</th>
             </tr>
           </thead>
@@ -347,12 +279,9 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
                   <span class="text-muted">-</span>
                 {% endif %}
               </td>
+              <td data-sort-value="{{ sale.total_paid or 0 }}">{{ sale.paid_fmt }}</td>
               <td data-sort-value="{{ sale.total_amount or 0 }}">
-                {% if sale.is_receivable %}
-                <span class="badge {{ sale.receivable_class }}">{{ sale.receivable_label }}: {{ sale.receivable_fmt }}</span>
-                {% else %}
-                <span class="text-muted">—</span>
-                {% endif %}
+                <span class="badge bg-danger">{{ sale.total_fmt }}</span>
               </td>
               <td class="text-center">
                 <div class="table-actions">
@@ -371,12 +300,14 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
                       <a href="{{ url_for('sales_bp.generate_invoice', id=sale.id) }}" class="dropdown-item" target="_blank">
                         <i class="fas fa-file-invoice-dollar mr-2"></i> فاتورة ضريبية
                       </a>
-                      {% if sale.customer_id and sale.is_receivable and has_perm('manage_payments') %}
-                      <a href="{{ url_for('payments.create_payment',
-                                         entity_type='CUSTOMER',
+                      {% if sale.total_amount and sale.total_amount > 0 %}
+                      <a href="{{ url_for('payments.create_payment', 
+                                         entity_type='CUSTOMER', 
                                          entity_id=sale.customer_id,
-                                         reference='دفعة من ' ~ (sale.customer.name if sale.customer else 'زبون') ~ ' - مبيعة ' ~ (sale.sale_number or sale.id),
-                                         notes='تسجيل على حساب الزبون — مبيعة: ' ~ (sale.sale_number or sale.id),
+                                         amount=sale.total_amount,
+                                         currency=sale.currency if sale.currency else 'ILS',
+                                         reference='دفع مبيعة من ' ~ (sale.customer.name if sale.customer else 'زبون') ~ ' - ' ~ (sale.sale_number or sale.id),
+                                         notes='دفع مبيعة: ' ~ (sale.sale_number or sale.id) ~ ' - الزبون: ' ~ (sale.customer.name if sale.customer else 'غير محدد'),
                                          customer_id=sale.customer_id) }}" class="dropdown-item text-success">
                         <i class="fas fa-money-bill-wave mr-2"></i> دفعة على حساب الزبون
                       </a>
@@ -402,7 +333,7 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
             {% endfor %}
           </tbody>
         </table>
-      </div>
+      {{ scroll_table_end() }}
 
       <!-- ترقيم الصفحات -->
       <div id="sales-pagination-wrapper">
@@ -549,9 +480,9 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
         }
         
         url.searchParams.set('ajax', '1');
-        const previousTable = salesTableWrapper.innerHTML;
-        const previousPagination = paginationWrapper ? paginationWrapper.innerHTML : '';
-        const previousSummary = salesSummaryWrapper ? salesSummaryWrapper.innerHTML : '';
+        const previousTable = salesTableWrapper.cloneNode(true);
+        const previousPagination = paginationWrapper ? paginationWrapper.cloneNode(true) : null;
+        const previousSummary = salesSummaryWrapper ? salesSummaryWrapper.cloneNode(true) : null;
         const tbody = salesTableWrapper.querySelector('tbody');
         
         if(tbody && typeof window.setLoading === 'function') {
@@ -570,13 +501,19 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
         })
         .then(data => {
           if(typeof data.table_html === 'string') {
-            salesTableWrapper.innerHTML = data.table_html;
+            (window.AzadDom && AzadDom.setHtmlTrusted)
+              ? AzadDom.setHtmlTrusted(salesTableWrapper, data.table_html)
+              : (salesTableWrapper.innerHTML = data.table_html);
           }
           if(paginationWrapper) {
-            paginationWrapper.innerHTML = data.pagination_html || '';
+            (window.AzadDom && AzadDom.setHtmlTrusted)
+              ? AzadDom.setHtmlTrusted(paginationWrapper, data.pagination_html || '')
+              : (paginationWrapper.innerHTML = data.pagination_html || '');
           }
           if(salesSummaryWrapper) {
-            salesSummaryWrapper.innerHTML = data.summary_html || '';
+            (window.AzadDom && AzadDom.setHtmlTrusted)
+              ? AzadDom.setHtmlTrusted(salesSummaryWrapper, data.summary_html || '')
+              : (salesSummaryWrapper.innerHTML = data.summary_html || '');
           }
           if(salesSearchSummary && typeof data.total_filtered === 'number') {
             salesSearchSummary.textContent = `إجمالي النتائج: ${data.total_filtered}`;
@@ -594,12 +531,12 @@ html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",san
           window.history.replaceState({}, '', nextUrl);
         })
         .catch(() => {
-          salesTableWrapper.innerHTML = previousTable;
-          if(paginationWrapper) {
-            paginationWrapper.innerHTML = previousPagination;
+          salesTableWrapper.replaceChildren(...previousTable.childNodes);
+          if(paginationWrapper && previousPagination) {
+            paginationWrapper.replaceChildren(...previousPagination.childNodes);
           }
-          if(salesSummaryWrapper) {
-            salesSummaryWrapper.innerHTML = previousSummary;
+          if(salesSummaryWrapper && previousSummary) {
+            salesSummaryWrapper.replaceChildren(...previousSummary.childNodes);
           }
           if(typeof window.showNotification === 'function') {
             window.showNotification('تعذر تحديث القائمة', 'danger');

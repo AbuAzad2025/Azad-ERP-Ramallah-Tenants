@@ -1,0 +1,41 @@
+/**
+ * لوحة التحكم — تخصيصات إضافية (الأساس في kpi-cards-global.css)
+ */
+body.erp-app.dashboard-page .dashboard-chart-card {
+  border: 1px solid var(--erp-border) !important;
+  border-radius: var(--erp-radius, 12px);
+  box-shadow: var(--erp-shadow-sm);
+  background: var(--erp-surface) !important;
+  overflow: hidden;
+}
+
+body.erp-app.dashboard-page .alert-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--erp-surface-alt);
+}
+
+body.erp-app.dashboard-page .alert-amount {
+  font-size: 1rem;
+  color: var(--erp-danger);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+body.erp-app.dashboard-page .metric-value-sm {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--erp-primary-dark);
+}
+
+html[data-erp-mode="dark"] body.erp-app.dashboard-page .metric-value-sm {
+  color: var(--erp-text);
+}
+
+body.erp-app.dashboard-page .alert-card {
+  border: 1px solid var(--erp-border) !important;
+}

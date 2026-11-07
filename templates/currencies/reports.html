@@ -14,11 +14,11 @@
     <div class="col-12 mb-4">
         <div class="row">
             <div class="col-md-3">
-                <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card border-0 shadow-lg summary-card summary-card--primary text-white card-hover">
                     <div class="card-body text-white">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h3 class="mb-0 fw-bold">{{ total_rates }}</h3>
+                                <h3 class="mb-0 font-weight-bold">{{ total_rates }}</h3>
                                 <p class="mb-0 opacity-75">إجمالي أسعار الصرف</p>
                             </div>
                             <i class="fas fa-exchange-alt fa-3x opacity-25"></i>
@@ -31,7 +31,7 @@
                     <div class="card-body text-white">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h3 class="mb-0 fw-bold">{{ active_rates }}</h3>
+                                <h3 class="mb-0 font-weight-bold">{{ active_rates }}</h3>
                                 <p class="mb-0 opacity-75">أسعار نشطة</p>
                             </div>
                             <i class="fas fa-check-circle fa-3x opacity-25"></i>
@@ -44,7 +44,7 @@
                     <div class="card-body text-white">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h3 class="mb-0 fw-bold">{{ inactive_rates }}</h3>
+                                <h3 class="mb-0 font-weight-bold">{{ inactive_rates }}</h3>
                                 <p class="mb-0 opacity-75">أسعار غير نشطة</p>
                             </div>
                             <i class="fas fa-pause-circle fa-3x opacity-25"></i>
@@ -57,7 +57,7 @@
                     <div class="card-body text-white">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h3 class="mb-0 fw-bold">{{ used_currencies|length }}</h3>
+                                <h3 class="mb-0 font-weight-bold">{{ used_currencies|length }}</h3>
                                 <p class="mb-0 opacity-75">عملات مستخدمة</p>
                             </div>
                             <i class="fas fa-coins fa-3x opacity-25"></i>
@@ -71,7 +71,7 @@
     <!-- تقرير الزبائن -->
     <div class="col-md-4">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header erp-card-header-row erp-theme-header--primary">
                 <h3 class="card-title">
                     <i class="fas fa-users ml-2"></i>
                     أرصدة الزبائن بالشيكل
@@ -87,7 +87,7 @@
                 {% if customer_report.customers %}
                 <div class="table-responsive">
                     <table class="table table-sm">
-                        <thead>
+                        <thead class="table-header-primary text-white">
                             <tr>
                                 <th>الزبون</th>
                                 <th class="text-end">الرصيد</th>
@@ -120,7 +120,7 @@
     <!-- تقرير الموردين -->
     <div class="col-md-4">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header erp-card-header-row erp-theme-header--primary">
                 <h3 class="card-title">
                     <i class="fas fa-truck ml-2"></i>
                     أرصدة الموردين بالشيكل
@@ -136,7 +136,7 @@
                 {% if supplier_report.suppliers %}
                 <div class="table-responsive">
                     <table class="table table-sm">
-                        <thead>
+                        <thead class="table-header-primary text-white">
                             <tr>
                                 <th>المورد</th>
                                 <th class="text-end">الرصيد</th>
@@ -169,7 +169,7 @@
     <!-- تقرير الشركاء -->
     <div class="col-md-4">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header erp-card-header-row erp-theme-header--primary">
                 <h3 class="card-title">
                     <i class="fas fa-handshake ml-2"></i>
                     أرصدة الشركاء بالشيكل
@@ -185,7 +185,7 @@
                 {% if partner_report.partners %}
                 <div class="table-responsive">
                     <table class="table table-sm">
-                        <thead>
+                        <thead class="table-header-primary text-white">
                             <tr>
                                 <th>الشريك</th>
                                 <th class="text-end">الرصيد</th>
@@ -218,7 +218,7 @@
     <!-- العملات المستخدمة -->
     <div class="col-12">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header erp-card-header-row erp-theme-header--primary">
                 <h3 class="card-title">
                     <i class="fas fa-chart-pie ml-2"></i>
                     العملات المستخدمة

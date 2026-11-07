@@ -4,107 +4,7 @@
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/import.css') }}">
-  <style>
-    /* Drag & Drop Zone */
-    .drop-zone {
-      border: 3px dashed #cbd5e0;
-      border-radius: 1rem;
-      padding: 3rem 2rem;
-      text-align: center;
-      background: #f8f9fa;
-      transition: all 0.3s ease;
-      cursor: pointer;
-      position: relative;
-    }
-    .drop-zone:hover {
-      border-color: #007bff;
-      background: #e7f3ff;
-      transform: scale(1.01);
-    }
-    .drop-zone.drag-over {
-      border-color: #28a745;
-      background: #d4edda;
-      transform: scale(1.02);
-    }
-    .drop-zone-icon {
-      font-size: 4rem;
-      color: #6c757d;
-      margin-bottom: 1rem;
-    }
-    .drop-zone.drag-over .drop-zone-icon {
-      color: #28a745;
-      animation: bounce 0.5s;
-    }
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
-    }
-    
-    /* File Info */
-    .file-info {
-      background: #fff;
-      border: 2px solid #28a745;
-      border-radius: 0.5rem;
-      padding: 1rem;
-      margin-top: 1rem;
-    }
-    .file-info-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid #e9ecef;
-    }
-    .file-info-item:last-child {
-      border-bottom: none;
-    }
-    
-    /* Progress Bar */
-    .upload-progress {
-      display: none;
-      margin-top: 1rem;
-    }
-    .upload-progress.active {
-      display: block;
-    }
-    
-    /* Preview Table */
-    .preview-table {
-      max-height: 300px;
-      overflow: auto;
-      margin-top: 1rem;
-    }
-    .preview-table table {
-      font-size: 0.85rem;
-    }
-    
-    /* Field Guide */
-    .field-guide {
-      background: #f8f9fa;
-      border-radius: 0.5rem;
-      padding: 1rem;
-    }
-    .field-badge {
-      font-size: 0.75rem;
-      padding: 0.25rem 0.5rem;
-      border-radius: 0.25rem;
-      margin-left: 0.5rem;
-    }
-    .field-required { background: #dc3545; color: white; }
-    .field-important { background: #ffc107; color: #000; }
-    .field-optional { background: #6c757d; color: white; }
-    
-    /* Tabs */
-    .nav-tabs .nav-link {
-      border: none;
-      border-bottom: 3px solid transparent;
-      color: #6c757d;
-      font-weight: 600;
-    }
-    .nav-tabs .nav-link.active {
-      border-bottom-color: #007bff;
-      color: #007bff;
-    }
-  </style>
+  
 {% endblock %}
 
 {% block content %}
@@ -204,7 +104,7 @@
               </h6>
               <div class="preview-table">
                 <table class="table table-sm table-bordered mb-0" id="preview-table">
-                  <thead class="table-light">
+                  <thead class="table-header-primary text-white table-light">
                     <tr id="preview-headers"></tr>
                   </thead>
                   <tbody id="preview-body"></tbody>
@@ -364,7 +264,7 @@
           </h6>
           <div class="table-responsive">
             <table class="table table-sm table-hover">
-              <thead class="table-light">
+              <thead class="table-header-primary text-white table-light">
                 <tr>
                   <th style="width: 150px">اسم الحقل</th>
                   <th>الوصف</th>
@@ -387,7 +287,7 @@
           </h6>
           <div class="table-responsive">
             <table class="table table-sm table-hover">
-              <thead class="table-light">
+              <thead class="table-header-primary text-white table-light">
                 <tr>
                   <th style="width: 150px">اسم الحقل</th>
                   <th>الوصف</th>

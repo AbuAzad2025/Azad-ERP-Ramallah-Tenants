@@ -12,703 +12,18 @@
 {% block body_class %}ledger-page{% endblock %}
 
 {% block head_extra %}
-<style>
-html[data-ui-mode="mobile"] body.ledger-page .content-wrapper {
-  padding: 0 !important;
-}
-html[data-ui-mode="mobile"] body.ledger-page .content {
-  padding: 5px !important;
-  margin: 0 !important;
-}
-html[data-ui-mode="mobile"] body.ledger-page .content-header {
-  padding-left: 15px !important;
-  padding-right: 15px !important;
-}
-html[data-ui-mode="mobile"] body.ledger-page .content-wrapper .container-fluid {
-  max-width: 100% !important;
-  width: 100% !important;
-  padding-left: 5px !important;
-  padding-right: 5px !important;
-  margin: 0 !important;
-}
 
-@media (max-width: 991.98px) {
-  html:not([data-ui-mode="desktop"]) body.ledger-page .content-wrapper {
-    padding: 0 !important;
-  }
-  html:not([data-ui-mode="desktop"]) body.ledger-page .content {
-    padding: 5px !important;
-    margin: 0 !important;
-  }
-  html:not([data-ui-mode="desktop"]) body.ledger-page .content-header {
-    padding-left: 15px !important;
-    padding-right: 15px !important;
-  }
-  html:not([data-ui-mode="desktop"]) body.ledger-page .content-wrapper .container-fluid {
-    max-width: 100% !important;
-    width: 100% !important;
-    padding-left: 5px !important;
-    padding-right: 5px !important;
-    margin: 0 !important;
-  }
-}
-
-/* جعل الجدول يتمدد بشكل كامل */
-.table-responsive {
-    overflow-x: auto !important;
-    overflow-y: visible;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    -webkit-overflow-scrolling: touch;
-    max-width: 100%;
-}
-
-#ledger-table {
-    width: 100% !important;
-    min-width: 100% !important;
-    font-size: 0.85rem;
-    table-layout: auto !important;
-}
-
-#ledger-table th:nth-child(9),
-#ledger-table td:nth-child(9) {
-    white-space: nowrap !important;
-    min-width: 120px !important;
-    width: auto !important;
-    display: table-cell !important;
-    visibility: visible !important;
-}
-
-/* تقليل padding في card-body */
-.card-body {
-    padding: 10px 5px !important;
-    overflow-x: auto;
-}
-
-.card {
-    margin-bottom: 10px;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-}
-
-.card-header {
-    padding: 10px 15px !important;
-}
-
-/* إزالة margins من tab content */
-.tab-content {
-    padding: 0 !important;
-}
-
-.tab-pane {
-    padding: 0 !important;
-}
-
-html[data-ui-mode="mobile"] body.ledger-page .row {
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-}
-html[data-ui-mode="mobile"] body.ledger-page .col,
-html[data-ui-mode="mobile"] body.ledger-page .col-12,
-html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-}
-
-@media (max-width: 991.98px) {
-  html:not([data-ui-mode="desktop"]) body.ledger-page .row {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-  }
-  html:not([data-ui-mode="desktop"]) body.ledger-page .col,
-  html:not([data-ui-mode="desktop"]) body.ledger-page .col-12,
-  html:not([data-ui-mode="desktop"]) body.ledger-page .col-md-12 {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-  }
-}
-
-/* تنسيق موحد لجميع الجداول */
-.table {
-    font-size: 0.85rem;
-    margin-bottom: 0;
-    width: 100% !important;
-}
-
-.table th {
-    font-weight: 600;
-    white-space: nowrap;
-    padding: 6px 4px !important;
-    font-size: 0.85rem;
-}
-
-.table td {
-    padding: 5px 4px !important;
-    font-size: 0.85rem;
-}
-
-/* تحسين مظهر thead */
-.table thead th {
-    background-color: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
-    cursor: pointer;
-    user-select: none;
-    position: relative;
-}
-
-.table thead th.sorting,
-.table thead th.sorting_asc,
-.table thead th.sorting_desc {
-    padding-right: 25px !important;
-}
-
-.table thead th.sorting:after,
-.table thead th.sorting_asc:after,
-.table thead th.sorting_desc:after {
-    content: "";
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-family: "Font Awesome 5 Free";
-    font-weight: 900;
-    font-size: 0.7rem;
-    color: #6c757d;
-}
-
-.table thead th.sorting:after {
-    content: "\f0dc";
-    opacity: 0.3;
-}
-
-.table thead th.sorting_asc:after {
-    content: "\f0de";
-    color: #007bff;
-    opacity: 1;
-}
-
-.table thead th.sorting_desc:after {
-    content: "\f0dd";
-    color: #007bff;
-    opacity: 1;
-}
-
-.table thead th.sorting:hover:after {
-    opacity: 0.6;
-}
-
-/* تحسين تباين الألوان */
-.ledger-card {
-    border-radius: 12px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
-    margin-bottom: 20px;
-    border: none;
-}
-
-/* أزرار القطع غير المسعرة - واضحة وبارزة */
-#cost-warnings .card {
-    position: sticky;
-    top: 70px;
-    z-index: 1040;
-    animation: pulse-gradient 3s ease-in-out infinite;
-}
-
-@keyframes pulse-gradient {
-    0%, 100% { 
-        box-shadow: 0 4px 20px rgba(240, 147, 251, 0.5);
-        transform: scale(1);
-    }
-    50% { 
-        box-shadow: 0 8px 40px rgba(245, 87, 108, 0.7);
-        transform: scale(1.01);
-    }
-}
-
-#cost-warnings .btn-lg {
-    font-size: 1.1rem;
-    padding: 12px 24px;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    transition: all 0.3s ease;
-}
-
-#cost-warnings .btn-lg:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 25px rgba(0,0,0,0.3);
-}
-
-.ledger-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white !important;
-    padding: 15px 20px;
-    border-radius: 12px 12px 0 0;
-    font-weight: 600;
-}
-
-.stat-card {
-    border-radius: 12px;
-    padding: 20px;
-    color: white;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    transition: all 0.3s;
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-}
-
-.stat-card h3 {
-    font-size: 2rem;
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
-.stat-card p {
-    font-size: 0.9rem;
-    margin: 0;
-    opacity: 0.9;
-}
-
-.stat-icon {
-    font-size: 3rem;
-    opacity: 0.3;
-    position: absolute;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.table thead th {
-    background-color: #343a40 !important;
-    color: white !important;
-    font-weight: 600 !important;
-    border-color: #454d55 !important;
-    text-align: center !important;
-}
-.sort-buttons { display: inline-flex; flex-direction: column; margin-left: 4px; }
-.btn-sort { padding: 0; border: none; background: transparent; color: rgba(255,255,255,0.6); font-size: 0.7rem; line-height: 0.8; cursor: pointer; }
-.btn-sort:hover { color: rgba(255,255,255,0.9); }
-.btn-sort.active { color: #ffc107; }
-
-.table tbody td {
-    color: #343a40 !important;
-    font-weight: 500 !important;
-    vertical-align: middle !important;
-}
-
-.debit-cell {
-    background-color: #fff5f5 !important;
-    color: #dc3545 !important;
-    font-weight: bold !important;
-}
-
-.credit-cell {
-    background-color: #f1f9f4 !important;
-    color: #28a745 !important;
-    font-weight: bold !important;
-}
-
-.balance-cell {
-    background-color: #e3f2fd !important;
-    color: #2196f3 !important;
-    font-weight: bold !important;
-    font-size: 1.1rem !important;
-}
-
-.ledger-pagination-wrapper {
-    border-top: 1px solid #e9ecef;
-    padding-top: 10px;
-}
-
-.ledger-pagination-wrapper .page-link {
-    min-width: 36px;
-    text-align: center;
-}
-
-.form-label {
-    color: #343a40 !important;
-    font-weight: 600 !important;
-}
-
-.form-control, .custom-select {
-    border: 2px solid #e0e0e0 !important;
-    border-radius: 8px !important;
-}
-
-.form-control:focus, .custom-select:focus {
-    border-color: #667eea !important;
-    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
-}
-
-/* تحسين Tabs */
-.nav-tabs {
-    border-bottom: 3px solid #667eea !important;
-}
-
-.nav-tabs .nav-link {
-    color: #495057;
-    font-weight: 600;
-    font-size: 1.05rem;
-    padding: 12px 20px;
-    border: none !important;
-    transition: all 0.3s;
-}
-
-.nav-tabs .nav-link:hover {
-    color: #667eea;
-    background-color: #f8f9fa;
-}
-
-.nav-tabs .nav-link.active {
-    color: #667eea !important;
-    background-color: #f8f9fa !important;
-    border-bottom: 3px solid #667eea !important;
-    font-weight: bold;
-}
-
-.nav-tabs .nav-link i {
-    margin-right: 5px;
-}
-
-/* فلاتر سريعة */
-.btn-group-lg .btn {
-    font-size: 1rem;
-    padding: 0.75rem 1.25rem;
-    font-weight: 600;
-}
-
-.btn-group-lg .btn.active {
-    background-color: #667eea;
-    color: white;
-    border-color: #667eea;
-}
-
-.btn-group-lg .btn:hover:not(.active) {
-    background-color: #f8f9fa;
-    color: #667eea;
-}
-
-/* ============================================
-   🖨️ تحسينات الطباعة - Print Styles (مضغوط جداً)
-   ============================================ */
-@media print {
-    /* إعدادات عامة للطباعة */
-    @page {
-        size: A4 landscape; /* اتجاه أفقي لاستيعاب جميع الأعمدة */
-        margin: 5mm 3mm; /* هوامش صغيرة جداً للضغط الأقصى */
-    }
-    
-    /* إخفاء العناصر غير الضرورية */
-    .content-header,
-    .breadcrumb,
-    .card-header .btn,
-    .btn-print,
-    .btn-group,
-    .nav-tabs,
-    .filters-card,
-    .stat-card,
-    #filters-section,
-    #smart-assistant-section,
-    .pagination,
-    button,
-    .no-print,
-    .main-sidebar,
-    .main-header,
-    .content-wrapper > .content-header,
-    footer {
-        display: none !important;
-    }
-    
-    /* إعدادات الصفحة */
-    body {
-        margin: 0 !important;
-        padding: 0 !important;
-        font-size: 6pt !important;
-        background: white !important;
-        color: black !important;
-        line-height: 1.1 !important;
-    }
-    
-    .content-wrapper {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100% !important;
-    }
-    
-    .content {
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    
-    .container-fluid {
-        max-width: 100% !important;
-        width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    
-    /* Card للطباعة */
-    .card {
-        border: none !important;
-        box-shadow: none !important;
-        margin: 0 !important;
-        page-break-inside: avoid;
-    }
-    
-    .card-header {
-        background: white !important;
-        color: black !important;
-        border: 1px solid #000 !important;
-        padding: 2mm !important;
-        font-size: 8pt !important;
-        font-weight: bold !important;
-        text-align: center !important;
-    }
-    
-    .card-body {
-        padding: 0 !important;
-    }
-    
-    /* تنسيق الجدول للطباعة */
-    .table-responsive {
-        overflow: visible !important;
-        width: 100% !important;
-    }
-    
-    #ledger-table {
-        width: 100% !important;
-        max-width: 100% !important;
-        border-collapse: collapse !important;
-        font-size: 5.5pt !important;
-        table-layout: fixed !important;
-        page-break-inside: auto;
-        line-height: 1.1 !important; /* ✅ مضغوط أكثر */
-        transform: scale(0.97); /* ✅ تصغير طفيف للجدول بالكامل */
-        transform-origin: top right; /* ✅ من الأعلى لليمين */
-    }
-    
-    /* رأس الجدول */
-    #ledger-table thead {
-        display: table-header-group; /* تكرار الرأس في كل صفحة */
-        background: white !important;
-    }
-    
-    #ledger-table thead th {
-        background: #f0f0f0 !important;
-        color: black !important;
-        border: 0.5px solid #000 !important;
-        padding: 1mm 0.5mm !important; /* ✅ تقليل padding */
-        font-size: 6pt !important; /* ✅ تصغير الرأس */
-        font-weight: bold !important;
-        text-align: center !important;
-        white-space: normal !important; /* ✅ السماح بالالتفاف */
-        word-wrap: break-word !important;
-        vertical-align: middle !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    
-    /* خلايا الجدول */
-    #ledger-table tbody td {
-        border: 0.5px solid #999 !important;
-        padding: 0.8mm 0.5mm !important; /* ✅ تقليل padding جداً */
-        font-size: 5.5pt !important; /* ✅ تصغير أكثر */
-        color: black !important;
-        background: white !important;
-        page-break-inside: avoid;
-        white-space: normal !important; /* ✅ السماح بالالتفاف */
-        word-wrap: break-word !important; /* ✅ كسر الكلمات الطويلة */
-        overflow-wrap: break-word !important;
-        overflow: visible !important; /* ✅ إظهار كل النص */
-        text-overflow: clip !important;
-        vertical-align: top !important;
-        line-height: 1.2 !important;
-    }
-    
-    #ledger-table tbody tr {
-        page-break-inside: avoid;
-        page-break-after: auto;
-    }
-    
-    /* الصف الإجمالي */
-    #ledger-table tfoot td {
-        border: 1px solid #000 !important;
-        padding: 1mm 0.5mm !important;
-        font-size: 6pt !important;
-        font-weight: bold !important;
-        background: #e0e0e0 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    
-    /* تحسين عرض الأعمدة - توزيع مضغوط للغاية */
-    #ledger-table th:nth-child(1),
-    #ledger-table td:nth-child(1) { 
-        width: 6% !important; /* ✅ التاريخ - مضغوط أكثر */
-        font-size: 5pt !important;
-    }
-    
-    #ledger-table th:nth-child(2),
-    #ledger-table td:nth-child(2) { 
-        width: 7% !important; /* ✅ رقم العملية - مضغوط أكثر */
-        font-size: 5pt !important;
-    }
-    
-    #ledger-table th:nth-child(3),
-    #ledger-table td:nth-child(3) { 
-        width: 6% !important; /* ✅ النوع - مضغوط أكثر */
-        font-size: 5pt !important;
-    }
-    
-    #ledger-table th:nth-child(4),
-    #ledger-table td:nth-child(4) { 
-        width: 12% !important; /* ✅ الجهة المرتبطة */
-        white-space: normal !important;
-        word-wrap: break-word !important;
-        font-size: 5.5pt !important;
-    }
-    
-    #ledger-table th:nth-child(5),
-    #ledger-table td:nth-child(5) { 
-        width: 30% !important; /* ✅ الوصف - أكبر مساحة */
-        white-space: normal !important;
-        word-wrap: break-word !important;
-        overflow-wrap: break-word !important;
-        font-size: 5.5pt !important;
-    }
-    
-    #ledger-table th:nth-child(6),
-    #ledger-table td:nth-child(6) { 
-        width: 13% !important; /* ✅ مدين */
-        font-size: 5.5pt !important;
-    }
-    
-    #ledger-table th:nth-child(7),
-    #ledger-table td:nth-child(7) { 
-        width: 13% !important; /* ✅ دائن */
-        font-size: 5.5pt !important;
-    }
-    
-    #ledger-table th:nth-child(8),
-    #ledger-table td:nth-child(8) { 
-        width: 13% !important; /* ✅ الرصيد */
-        font-size: 5.5pt !important;
-    }
-    
-    /* إخفاء عمود الإجراءات */
-    #ledger-table th:nth-child(9),
-    #ledger-table td:nth-child(9) {
-        display: none !important;
-    }
-    
-    /* إزالة الألوان الزائدة لتوفير الحبر */
-    .debit-cell,
-    .credit-cell,
-    .balance-cell {
-        background: white !important;
-        color: black !important;
-        font-weight: bold !important;
-    }
-    
-    /* Badge للطباعة */
-    .badge {
-        border: 1px solid #000 !important;
-        background: white !important;
-        color: black !important;
-        padding: 1mm !important;
-        font-size: 6pt !important;
-    }
-    
-    /* عنوان التقرير */
-    .ledger-card::before {
-        content: "دفتر الأستاذ العام - General Ledger";
-        display: block;
-        text-align: center;
-        font-size: 14pt;
-        font-weight: bold;
-        margin-bottom: 3mm;
-        padding: 2mm;
-        border-bottom: 2px solid #000;
-    }
-    
-    /* معلومات الفترة */
-    .card-header::after {
-        content: " | تاريخ الطباعة: " attr(data-print-date);
-        font-size: 8pt;
-        font-weight: normal;
-    }
-    
-    /* منع قطع الصفحات في أماكن غير مناسبة */
-    h1, h2, h3, h4, h5, h6 {
-        page-break-after: avoid;
-    }
-    
-    /* رقم الصفحة */
-    @page {
-        @bottom-right {
-            content: "صفحة " counter(page) " من " counter(pages);
-            font-size: 8pt;
-        }
-        @bottom-left {
-            content: "{{ system_settings.company_name or system_settings.system_name }}";
-            font-size: 8pt;
-        }
-    }
-    
-    /* تحسين طباعة الأرقام */
-    .text-end {
-        text-align: left !important; /* الأرقام من اليسار */
-        direction: ltr !important;
-    }
-    
-    /* منع الطباعة الملونة */
-    * {
-        -webkit-print-color-adjust: economy !important;
-        print-color-adjust: economy !important;
-    }
-    
-    /* فقط الرؤوس والإجماليات بالرمادي */
-    #ledger-table thead th,
-    #ledger-table tfoot td {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-}
-
-/* زر الطباعة المحسّن */
-.btn-print-enhanced {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    z-index: 1050;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    animation: pulse-print 2s infinite;
-}
-
-@keyframes pulse-print {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-}
-
-@media print {
-    .btn-print-enhanced {
-        display: none !important;
-    }
-}
-</style>
 {% endblock %}
 
 {% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
-{{ readonly_banner('view_ledger', 'manage_ledger', 'دفتر الأستاذ') }}
+{% from 'macros/gm_mobile_ui.html' import scroll_table_start, scroll_table_end %}
 <section class="content">
     <div class="container-fluid">
         
         <!-- Navigation Tabs -->
         <div class="card">
-            <div class="card-header p-0">
+            <div class="card-header erp-card-header-row erp-theme-header--primary p-0">
                 <ul class="nav nav-tabs nav-justified" id="ledgerTabs" role="tablist">
                     <li class="nav-item">
                         <a class="nav-link active" id="dashboard-tab" data-toggle="tab" href="#dashboard" role="tab">
@@ -758,28 +73,28 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
             <!-- إحصائيات سريعة - الصف الأول -->
             <div class="row">
                 <div class="col-lg-3 col-md-6">
-                    <div class="stat-card position-relative" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="stat-card erp-kpi-tile erp-kpi-tile--primary position-relative">
                         <i class="fas fa-shopping-cart stat-icon"></i>
                         <h3 id="total-sales">0.00 ₪</h3>
                         <p>إجمالي المبيعات</p>
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <div class="stat-card position-relative" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <div class="stat-card erp-kpi-tile erp-kpi-tile--primary position-relative">
                         <i class="fas fa-tools stat-icon"></i>
                         <h3 id="total-services">0.00 ₪</h3>
                         <p>الصيانة والخدمات</p>
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <div class="stat-card position-relative" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                    <div class="stat-card erp-kpi-tile erp-kpi-tile--primary position-relative">
                         <i class="fas fa-calendar-check stat-icon"></i>
                         <h3 id="total-preorders">0.00 ₪</h3>
                         <p>الحجوزات المسبقة</p>
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <div class="stat-card position-relative" style="background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);">
+                    <div class="stat-card erp-kpi-tile erp-kpi-tile--primary position-relative">
                         <i class="fas fa-warehouse stat-icon"></i>
                         <h3 id="total-stock">0.00 ₪</h3>
                         <p>قيمة المخزون</p>
@@ -790,28 +105,28 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
             <!-- صف ثاني للإحصائيات -->
             <div class="row mt-3" id="stats-row-2">
                 <div class="col-lg-3 col-md-6">
-                    <div class="stat-card position-relative" style="background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);">
+                    <div class="stat-card erp-kpi-tile erp-kpi-tile--primary position-relative">
                         <i class="fas fa-boxes stat-icon"></i>
                         <h3 id="total-cogs">0.00 ₪</h3>
                         <p>تكلفة البضاعة المباعة</p>
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <div class="stat-card position-relative" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);">
+                    <div class="stat-card erp-kpi-tile erp-kpi-tile--primary position-relative">
                         <i class="fas fa-receipt stat-icon"></i>
                         <h3 id="total-expenses">0.00 ₪</h3>
                         <p>إجمالي النفقات</p>
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <div class="stat-card position-relative" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                    <div class="stat-card erp-kpi-tile erp-kpi-tile--primary position-relative">
                         <i class="fas fa-chart-line stat-icon"></i>
                         <h3 id="gross-profit">0.00 ₪</h3>
                         <p>إجمالي الربح</p>
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <div class="stat-card position-relative" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="stat-card erp-kpi-tile erp-kpi-tile--primary position-relative">
                         <i class="fas fa-hand-holding-usd stat-icon"></i>
                         <h3 id="net-profit">0.00 ₪</h3>
                         <p>صافي الربح</p>
@@ -823,7 +138,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
             <div class="row mt-4">
                 <div class="col-md-6">
                     <div class="card ledger-card">
-                        <div class="card-header bg-primary text-white">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary">
                             <h5 class="mb-0"><i class="fas fa-chart-line"></i> الإيرادات vs المصاريف</h5>
                         </div>
                         <div class="card-body">
@@ -833,7 +148,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                 </div>
                 <div class="col-md-6">
                     <div class="card ledger-card">
-                        <div class="card-header bg-success text-white">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white">
                             <h5 class="mb-0"><i class="fas fa-chart-pie"></i> توزيع الإيرادات</h5>
                         </div>
                         <div class="card-body">
@@ -846,7 +161,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
             <!-- أزرار إدارة القطع غير المسعرة - بديل للتنبيهات المزعجة -->
             <div class="row mt-3" id="cost-warnings" style="display: none;">
                 <div class="col-12">
-                    <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="card border-0 shadow-lg erp-kpi-tile erp-kpi-tile--danger text-white">
                         <div class="card-body">
                             <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                                 <div class="text-white">
@@ -906,7 +221,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
             <div class="row" id="advanced-filters" style="display: none;">
                 <div class="col-12">
                     <div class="card ledger-card">
-                        <div class="card-header ledger-header">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary ledger-header">
                             <h4 class="mb-0">
                                 <i class="fas fa-filter"></i>
                                 فلاتر البحث المتقدمة
@@ -984,7 +299,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
             <div class="row">
                 <div class="col-12">
                     <div class="card ledger-card">
-                        <div class="card-header ledger-header d-flex justify-content-between align-items-center">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary ledger-header d-flex justify-content-between align-items-center">
                             <h4 class="mb-0">
                                 <i class="fas fa-book-open"></i>
                                 سجل القيود المحاسبية
@@ -1024,16 +339,9 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                                     </div>
                                 </div>
                             </div>
-                            <div class="gm-financial-card mb-2">
-                              <div class="gm-financial-card__head gm-financial-card__head--compact-only">
-                                <span><i class="fas fa-book ml-1"></i> قيود الدفتر</span>
-                                <span class="text-muted small">تمرير أفقي</span>
-                              </div>
-                              <div class="gm-hscroll" data-gm-hscroll>
-                                <div class="gm-hscroll__track">
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-hover table-sm no-mobile-cards" id="ledger-table">
-                                    <thead class="table-light">
+                            {{ scroll_table_start('اسحب لعرض التاريخ، المدين، الدائن وجميع الأعمدة') }}
+                                <table class="table table-bordered table-hover table-sm no-mobile-cards gm-ledger-table" id="ledger-table">
+                                    <thead class="table-header-primary text-white table-light">
                                         <tr>
                                             <th style="width: 7%;">
                                               التاريخ
@@ -1113,16 +421,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                                         </tr>
                                     </tfoot>
                                 </table>
-                            </div>
-                                </div>
-                                <div class="gm-hscroll__fade gm-hscroll__fade--start" aria-hidden="true"></div>
-                                <div class="gm-hscroll__fade gm-hscroll__fade--end" aria-hidden="true"></div>
-                                <div class="gm-hscroll__hint d-lg-none">
-                                  <i class="fas fa-arrows-alt-h"></i>
-                                  <span>اسحب أفقياً لعرض كل الأعمدة</span>
-                                </div>
-                              </div>
-                            </div>
+                            {{ scroll_table_end() }}
                             <div class="ledger-pagination-wrapper d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 d-none">
                                 <div class="text-muted small" id="ledger-pagination-summary"></div>
                                 <div id="ledger-pagination"></div>
@@ -1142,7 +441,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                 <!-- الجدول -->
                 <div class="col-md-6">
                     <div class="card ledger-card">
-                        <div class="card-header" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white;">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary card-header-success text-white erp-card-header-row">
                             <h4 class="mb-0">
                                 <i class="fas fa-chart-line"></i>
                                 قائمة الدخل (P&L)
@@ -1222,7 +521,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                                         </tr>
                                         
                                         <!-- صافي الربح -->
-                                        <tr class="table-dark">
+                                        <tr class=" ">
                                             <td><strong style="font-size: 1.2rem;"><i class="fas fa-hand-holding-usd"></i> صافي الربح (Net Profit)</strong></td>
                                             <td class="text-end"><strong style="font-size: 1.2rem;" id="pnl-net-profit">0.00 ₪</strong></td>
                                         </tr>
@@ -1240,7 +539,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                 <!-- Waterfall Chart -->
                 <div class="col-md-6">
                     <div class="card ledger-card">
-                        <div class="card-header bg-info text-white">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
                             <h5 class="mb-0"><i class="fas fa-chart-bar"></i> رسم الشلال - تدفق الأرباح</h5>
                         </div>
                         <div class="card-body">
@@ -1259,7 +558,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
             <div class="row">
                 <div class="col-12">
                     <div class="card ledger-card">
-                        <div class="card-header" style="background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: white;">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary">
                             <h4 class="mb-0">
                                 <i class="fas fa-users"></i>
                                 كشف الذمم التفصيلي (Accounts Receivable & Payable)
@@ -1268,7 +567,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                         <div class="card-body">
                             <div class="table-responsive">
                                 <table class="table table-bordered table-hover table-sm" id="receivables-detailed-table">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                             <th>الجهة</th>
                                             <th>النوع</th>
@@ -1311,7 +610,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
             <div class="row">
                 <div class="col-12">
                     <div class="card ledger-card">
-                        <div class="card-header ledger-header">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary ledger-header">
                             <h4 class="mb-0">
                                 <i class="fas fa-chart-pie"></i>
                                 ميزان المراجعة (Trial Balance)
@@ -1321,7 +620,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                             <div id="trial-balance-unbalanced-warning" class="alert alert-danger py-2 mb-2" style="display: none;" role="alert"></div>
                             <div class="table-responsive">
                                 <table class="table table-bordered table-hover table-sm">
-                                    <thead class="table-light">
+                                    <thead class="table-header-primary text-white table-light">
                                         <tr>
                                             <th>الحساب</th>
                                             <th class="text-center">النوع</th>
@@ -1378,7 +677,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                     
                     <!-- النموذج -->
                     <div class="card ledger-card">
-                        <div class="card-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary card-header-danger text-white erp-card-header-row">
                             <h4 class="mb-0">
                                 <i class="fas fa-pen-alt"></i>
                                 إضافة قيد يدوي جديد
@@ -1508,7 +807,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                                         <div class="alert alert-light border">
                                             <h6 class="mb-3"><i class="fas fa-eye"></i> معاينة القيد:</h6>
                                             <table class="table table-sm table-bordered mb-0">
-                                                <thead class="table-dark">
+                                                <thead class="table-header-primary text-white ">
                                                     <tr>
                                                         <th>الحساب</th>
                                                         <th class="text-end">مدين (منه)</th>
@@ -1531,13 +830,13 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
             <div class="row mt-4">
                 <div class="col-12">
                     <div class="card ledger-card">
-                        <div class="card-header bg-secondary text-white">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary bg-secondary text-white">
                             <h5 class="mb-0"><i class="fas fa-history"></i> القيود اليدوية السابقة</h5>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
                                 <table class="table table-bordered table-hover table-sm" id="manual-entries-table">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                             <th>التاريخ</th>
                                             <th>الوصف</th>
@@ -1569,7 +868,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                         <div class="row">
                             <div class="col-12">
                                 <div class="card ledger-card">
-                                    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                    <div class="card-header erp-card-header-row erp-theme-header--primary">
                                         <h4 class="mb-0">
                                             <i class="fas fa-search-dollar"></i>
                                             فحص تكلفة البضاعة المباعة (COGS Audit)
@@ -1636,7 +935,7 @@ html[data-ui-mode="mobile"] body.ledger-page .col-md-12 {
                                         
                                         <div class="table-responsive" id="cogs-table-container" style="display: none;">
                                             <table class="table table-bordered table-hover table-sm" id="cogs-audit-table">
-                                                <thead class="table-dark">
+                                                <thead class="table-header-primary text-white ">
                                                     <tr>
                                                         <th>المنتج</th>
                                                         <th>SKU</th>
@@ -2056,6 +1355,15 @@ let revenueExpenseChart = null;
 let revenueDistributionChart = null;
 let waterfallChart = null;
 
+var LEDGER_KPI_VARIANTS = ['primary', 'success', 'danger', 'warning', 'neutral', 'info'];
+function setLedgerKpiVariant($card, variant) {
+    if (!$card || !$card.length) return;
+    LEDGER_KPI_VARIANTS.forEach(function(v) {
+        $card.removeClass('erp-kpi-tile--' + v);
+    });
+    $card.addClass('erp-kpi-tile--' + variant);
+}
+
 function updateStatistics(stats) {
     // الإيرادات
     $('#total-sales').text(formatCurrency(stats.total_sales || 0) + ' ₪');
@@ -2081,34 +1389,35 @@ function updateStatistics(stats) {
     $('#gross-profit').text(formatCurrency(Math.abs(grossProfit)) + ' ₪');
     $('#net-profit').text(formatCurrency(Math.abs(netProfit)) + ' ₪');
     
-    // تغيير اللون حسب الربح/الخسارة
+    // تغيير لون البطاقات حسب الربح/الخسارة (erp-kpi-tile variants)
     const netProfitCard = $('#net-profit').closest('.stat-card');
     const grossProfitCard = $('#gross-profit').closest('.stat-card');
-    
+
     if (netProfit < 0) {
-        netProfitCard.css('background', 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)');
+        setLedgerKpiVariant(netProfitCard, 'danger');
         netProfitCard.find('p').text('صافي الخسارة');
     } else {
-        netProfitCard.css('background', 'linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%)');
+        setLedgerKpiVariant(netProfitCard, 'success');
         netProfitCard.find('p').text('صافي الربح');
     }
-    
+
     if (grossProfit < 0) {
-        grossProfitCard.css('background', 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)');
+        setLedgerKpiVariant(grossProfitCard, 'danger');
         grossProfitCard.find('p').text('إجمالي الخسارة');
     } else {
-        grossProfitCard.css('background', 'linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%)');
+        setLedgerKpiVariant(grossProfitCard, 'success');
         grossProfitCard.find('p').text('إجمالي الربح');
     }
-    
-    // تنبيه إذا كان هامش الربح منخفض
+
     const marginCard = $('#profit-margin').closest('.stat-card');
-    if (profitMargin < 10) {
-        marginCard.css('background', 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)');
-    } else if (profitMargin < 20) {
-        marginCard.css('background', 'linear-gradient(135deg, #ffd89b 0%, #19547b 100%)');
-    } else {
-        marginCard.css('background', 'linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%)');
+    if (marginCard.length) {
+        if (profitMargin < 10) {
+            setLedgerKpiVariant(marginCard, 'danger');
+        } else if (profitMargin < 20) {
+            setLedgerKpiVariant(marginCard, 'warning');
+        } else {
+            setLedgerKpiVariant(marginCard, 'success');
+        }
     }
     
     // عرض أزرار القطع غير المسعرة
@@ -2152,7 +1461,7 @@ function showEstimatedProducts() {
     html += '<small><i class="fas fa-info-circle"></i> <strong>ملاحظة:</strong> يمكنك تحديث التكلفة مباشرة من هنا أو الذهاب إلى صفحة المنتج.</small>';
     html += '</div>';
     html += '<div class="table-responsive"><table class="table table-sm table-bordered table-hover" id="estimated-products-table">';
-    html += '<thead class="table-dark"><tr><th>المنتج</th><th>الكمية</th><th>سعر البيع</th><th>التكلفة المقدرة</th><th>التكلفة الفعلية</th><th>إجراءات</th></tr></thead><tbody>';
+    html += '<thead class="table-header-primary text-white "><tr><th>المنتج</th><th>الكمية</th><th>سعر البيع</th><th>التكلفة المقدرة</th><th>التكلفة الفعلية</th><th>إجراءات</th></tr></thead><tbody>';
     
     window.estimatedProducts.forEach(p => {
         html += `<tr data-product-id="${p.id}">
@@ -2223,7 +1532,7 @@ function showNoCostProducts() {
     html += '<small><i class="fas fa-info-circle"></i> <strong>ملاحظة:</strong> يمكنك تسعير المنتجات مباشرة من هنا أو الذهاب إلى صفحة المنتج.</small>';
     html += '</div>';
     html += '<div class="table-responsive"><table class="table table-sm table-bordered table-hover" id="no-cost-products-table">';
-    html += '<thead class="table-dark"><tr><th>المنتج</th><th>الكمية المباعة</th><th>سعر البيع</th><th>سعر الشراء (التكلفة)</th><th>إجراءات</th></tr></thead><tbody>';
+    html += '<thead class="table-header-primary text-white "><tr><th>المنتج</th><th>الكمية المباعة</th><th>سعر البيع</th><th>سعر الشراء (التكلفة)</th><th>إجراءات</th></tr></thead><tbody>';
     
     window.productsWithoutCost.forEach(p => {
         html += `<tr data-product-id="${p.id}">
@@ -3362,7 +2671,7 @@ function displayBatchDetails(data) {
         <hr>
         <h6 class="text-success"><i class="fas fa-list"></i> القيود الفرعية:</h6>
         <table class="table table-sm table-hover">
-            <thead class="table-dark">
+            <thead class="table-header-primary text-white ">
                 <tr>
                     <th>الحساب</th>
                     <th class="text-end">مدين</th>

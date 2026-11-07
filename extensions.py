@@ -813,6 +813,7 @@ def restore_database(app, backup_path):
                 import subprocess
                 from sqlalchemy.engine.url import make_url
                 from sqlalchemy import text
+                import re
                 
                 u = make_url(uri)
                 env = os.environ.copy()
@@ -873,7 +874,7 @@ def restore_database(app, backup_path):
                 pg_restore_bin = _get_pg_bin("pg_restore")
                 psql_bin = _get_pg_bin("psql")
 
-                if fast_restore:
+                def _reset_schema() -> bool:
                     reset_sql = (
                         "DO $$ DECLARE r record; BEGIN "
                         "FOR r IN (SELECT nspname FROM pg_namespace "
@@ -897,6 +898,48 @@ def restore_database(app, backup_path):
                     reset_proc = subprocess.run(reset_cmd, env=env, capture_output=True, text=True)
                     if reset_proc.returncode != 0:
                         app.logger.warning(f"Fast restore schema reset failed: {reset_proc.stderr}")
+                        return False
+                    return True
+
+                def _is_plain_sql_backup(path: str) -> bool:
+                    if path.lower().endswith(".sql"):
+                        return True
+                    try:
+                        with open(path, "rb") as f:
+                            return f.read(5) != b"PGDMP"
+                    except OSError:
+                        return False
+
+                if _is_plain_sql_backup(backup_path):
+                    if not _reset_schema():
+                        return False, "فشل الاستعادة: تعذر إعادة تهيئة المخطط"
+                    apply_cmd = [
+                        psql_bin,
+                        "-h", u.host or "localhost",
+                        "-p", str(u.port or 5432),
+                        "-U", u.username or "postgres",
+                        "-d", u.database,
+                        "-v", "ON_ERROR_STOP=1",
+                        "-f", backup_path,
+                    ]
+                    app.logger.info(f"Starting PostgreSQL plain-SQL restore from {backup_path}")
+                    process = subprocess.run(apply_cmd, env=env, capture_output=True, text=True)
+                    try:
+                        db.session.remove()
+                    except Exception:
+                        pass
+                    try:
+                        db.engine.dispose()
+                    except Exception:
+                        pass
+                    if process.returncode == 0:
+                        app.logger.info("PostgreSQL plain-SQL restore completed successfully")
+                        return True, "تمت استعادة قاعدة البيانات بنجاح"
+                    app.logger.error(f"PostgreSQL plain-SQL restore failed: {process.stderr}")
+                    return False, f"فشل الاستعادة: {process.stderr}"
+
+                if fast_restore:
+                    if not _reset_schema():
                         fast_restore = False
 
                 cmd = [
@@ -934,9 +977,76 @@ def restore_database(app, backup_path):
                     app.logger.info(f"PostgreSQL restore completed successfully")
                     return True, "تمت استعادة قاعدة البيانات بنجاح"
                 else:
+                    stderr_l = (process.stderr or "").lower()
+                    bad_params = set(re.findall(r'unrecognized configuration parameter \"([^\"]+)\"', process.stderr or ""))
+
+                    if bad_params:
+                        try:
+                            work_dir = os.path.join(app.instance_path, "imports", "restore_work")
+                            os.makedirs(work_dir, exist_ok=True)
+                            ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+                            raw_sql_path = os.path.join(work_dir, f"restore_raw_{ts}.sql")
+                            filtered_sql_path = os.path.join(work_dir, f"restore_filtered_{ts}.sql")
+
+                            gen_cmd = [
+                                pg_restore_bin,
+                                "-h", u.host or "localhost",
+                                "-p", str(u.port or 5432),
+                                "-U", u.username or "postgres",
+                                "--no-owner",
+                                "--no-privileges",
+                                "-f", raw_sql_path,
+                                backup_path,
+                            ]
+                            gen_proc = subprocess.run(gen_cmd, env=env, capture_output=True, text=True)
+                            if gen_proc.returncode != 0:
+                                app.logger.error(f"PostgreSQL restore SQL generation failed: {gen_proc.stderr}")
+                                return False, f"فشل الاستعادة: {process.stderr}"
+
+                            lower_bad = {p.lower() for p in bad_params}
+                            with open(raw_sql_path, "r", encoding="utf-8", errors="replace") as src, open(
+                                filtered_sql_path, "w", encoding="utf-8", errors="replace"
+                            ) as dst:
+                                for line in src:
+                                    l = line.lstrip().lower()
+                                    if any(p in l for p in lower_bad):
+                                        if l.startswith("set ") or "set_config(" in l:
+                                            continue
+                                    dst.write(line)
+
+                            if not _reset_schema():
+                                return False, f"فشل الاستعادة: {process.stderr}"
+
+                            apply_cmd = [
+                                psql_bin,
+                                "-h", u.host or "localhost",
+                                "-p", str(u.port or 5432),
+                                "-U", u.username or "postgres",
+                                "-d", u.database,
+                                "-v", "ON_ERROR_STOP=1",
+                                "-f", filtered_sql_path,
+                            ]
+                            apply_proc = subprocess.run(apply_cmd, env=env, capture_output=True, text=True)
+                            if apply_proc.returncode == 0:
+                                try:
+                                    os.remove(raw_sql_path)
+                                except Exception:
+                                    pass
+                                try:
+                                    os.remove(filtered_sql_path)
+                                except Exception:
+                                    pass
+                                app.logger.info("PostgreSQL restore completed successfully (filtered SET params)")
+                                return True, "تمت استعادة قاعدة البيانات بنجاح"
+                            app.logger.error(f"PostgreSQL restore failed after filtering: {apply_proc.stderr}")
+                            return False, f"فشل الاستعادة: {apply_proc.stderr}"
+                        except Exception as e:
+                            app.logger.error(f"PostgreSQL restore fallback exception: {e}")
+                            return False, f"فشل الاستعادة: {process.stderr}"
+
                     # pg_restore might return non-zero even on success with warnings
                     # Check if the error is fatal or just warnings
-                    if "fatal" in process.stderr.lower() or "error" in process.stderr.lower():
+                    if "fatal" in stderr_l or "error" in stderr_l:
                          app.logger.error(f"PostgreSQL restore failed: {process.stderr}")
                          return False, f"فشل الاستعادة: {process.stderr}"
                     else:
@@ -1008,7 +1118,9 @@ def _safe_start_scheduler(app):
 
 def init_extensions(app):
     db.init_app(app)
-    migrate.init_app(app, db)
+    from migrations.schema_compare import get_configure_args
+
+    migrate.init_app(app, db, **get_configure_args())
 
     login_manager.init_app(app)
     login_manager.login_view = app.config.get("LOGIN_VIEW", "auth.login")
@@ -1812,13 +1924,24 @@ def ensure_performance_indexes(app):
                     all_tables = inspector.get_table_names()
                     for table in all_tables:
                         fks = inspector.get_foreign_keys(table) or []
+                        existing_indexes = {
+                            idx.get("name")
+                            for idx in (inspector.get_indexes(table) or [])
+                        }
+                        indexed_cols = set()
+                        for idx in inspector.get_indexes(table) or []:
+                            for col in idx.get("column_names") or []:
+                                indexed_cols.add(col)
                         for fk in fks:
                             for col in fk.get("constrained_columns") or []:
-                                if not col:
+                                if not col or col in indexed_cols:
                                     continue
-                                idx_name = f"ix_{table}_{col}_fk_auto"
+                                idx_name = f"ix_{table}_{col}"
+                                if idx_name in existing_indexes:
+                                    continue
                                 fk_sql = f"CREATE INDEX IF NOT EXISTS {idx_name} ON {table} ({col})"
-                                _run(fk_sql)
+                                if _run(fk_sql):
+                                    indexed_cols.add(col)
                 except Exception:
                     # في أسوأ الأحوال، إذا فشل فهرسة FK لا نعطّل التطبيق
                     pass

@@ -4,199 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
-    <style>
-        .stat-box {
-            background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
-            border-radius: 15px;
-            padding: 25px;
-            color: white;
-            text-align: center;
-            margin-bottom: 20px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-box::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: rgba(255, 255, 255, 0.1);
-            transform: rotate(45deg);
-            transition: all 0.6s ease;
-        }
-
-        .stat-box:hover::before {
-            right: 100%;
-        }
-
-        .stat-number {
-            font-size: 3rem;
-            font-weight: bold;
-            margin: 10px 0;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .stat-label {
-            font-size: 1rem;
-            opacity: 0.9;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .setting-toggle {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .setting-toggle:hover {
-            background: #e9ecef;
-        }
-
-        .toggle-switch {
-            position: relative;
-            width: 60px;
-            height: 30px;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 30px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 22px;
-            width: 22px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked+.slider {
-            background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
-        }
-
-        input:checked+.slider:before {
-            transform: translateX(30px);
-        }
-
-        .alert-box {
-            border-left: 4px solid;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            animation: slideIn 0.5s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        .progress-ring {
-            transform: rotate(-90deg);
-        }
-
-        .progress-ring-circle {
-            transition: stroke-dashoffset 0.5s ease;
-        }
-
-        .module-status {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-left: 8px;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-        .gradient-bg-1 {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .gradient-bg-2 {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-
-        .gradient-bg-3 {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        }
-
-        .gradient-bg-4 {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-        }
-
-        .gradient-bg-5 {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-        }
-
-        .gradient-bg-6 {
-            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
-        }
-
-        .audit-entry {
-            border-left: 3px solid #667eea;
-            padding: 10px 15px;
-            margin-bottom: 10px;
-            background: #f8f9fa;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-
-        .audit-entry:hover {
-            background: #e9ecef;
-            transform: translateX(5px);
-        }
-
-        .mini-chart {
-            height: 80px;
-            width: 100%;
-        }
-    </style>
+    
 {% endblock %}
 
 {% block content %}
@@ -311,7 +119,7 @@
             <div class="col-lg-9">
                 
                 <div class="card control-card card-hover">
-                    <div class="card-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+ <div class="card-header erp-card-header-row erp-theme-header--primary">
                         <h3 class="card-title">
                             <i class="fas fa-cogs mr-2"></i> إعدادات الوحدات
                         </h3>
@@ -875,7 +683,7 @@
             <div class="col-lg-3">
                 
                 <div class="card shadow-lg rounded-4 border-0 mb-3">
-                    <div class="card-header gradient-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="card-header erp-card-header-row erp-theme-header--primary">
                         <h5 class="mb-0">
                             <i class="fas fa-bolt"></i> إجراءات سريعة
                         </h5>
@@ -920,7 +728,7 @@
                 </div>
 
                 <div class="card shadow-lg rounded-4 border-0">
-                    <div class="card-header gradient-header text-white" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                    <div class="card-header erp-card-header-row erp-theme-header--primary">
                         <h5 class="mb-0">
                             <i class="fas fa-chart-line"></i> صحة النظام
                         </h5>
@@ -974,7 +782,7 @@
         <div class="row">
             <div class="col-lg-6">
                 <div class="card control-card">
-                    <div class="card-header bg-gradient-warning">
+                    <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-warning">
                         <h5 class="mb-0 text-white">
                             <i class="fas fa-bell"></i> تنبيهات نشطة
                         </h5>
@@ -1009,7 +817,7 @@
 
             <div class="col-lg-6">
                 <div class="card shadow-lg rounded-4 border-0">
-                    <div class="card-header gradient-header text-white" style="background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);">
+                    <div class="card-header erp-card-header-row erp-theme-header--primary">
                         <h5 class="mb-0">
                             <i class="fas fa-history"></i> آخر الإجراءات
                         </h5>

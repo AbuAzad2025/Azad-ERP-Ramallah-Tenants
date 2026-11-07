@@ -37,7 +37,17 @@ AVAILABLE_MODELS = [
 
 
 def _normal_provider(api_name: str) -> str:
-    return (api_name or "").strip().lower()
+    s = (api_name or "").strip().lower().replace("_", " ")
+    aliases = {
+        "groq api": "groq",
+        "openai api": "openai",
+        "anthropic api": "anthropic",
+    }
+    if s in aliases:
+        return aliases[s]
+    if s.endswith(" api"):
+        s = s[:-4].strip()
+    return s.replace(" ", "")
 
 
 def _env_key(provider: str) -> Optional[str]:

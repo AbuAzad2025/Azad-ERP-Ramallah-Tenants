@@ -20,6 +20,11 @@
       <a href="{{ url_for('ledger.index') }}?q={{ 'PAY-' ~ payment.id }}" class="btn btn-outline-info">
         <i class="fas fa-book ml-1"></i> دفتر الأستاذ
       </a>
+      {% if payment.customer_id and payment.status == 'COMPLETED' and payment.direction == 'IN' %}
+      <a href="{{ url_for('accounting_hub_bp.allocate_payment', payment_id=payment.id) }}" class="btn btn-outline-warning">
+        <i class="fas fa-divide ml-1"></i> توزيع يدوي
+      </a>
+      {% endif %}
       {% if not active_split %}
         {% if payment.status == 'PENDING' %}
           <button id="completePayment" class="btn btn-success" data-payment-id="{{ payment.id }}">

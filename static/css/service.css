@@ -277,25 +277,25 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
-/* ألوان محسّنة للصناديق */
-.small-box.bg-info {
-  --box-color: #17a2b8;
-  --box-color-light: #1fc8e3;
+/* ألوان الصناديق — متوافقة مع ثيم ERP (لا تتعارض مع kpi-cards-global.css) */
+body.erp-app .small-box.bg-info {
+  --box-color: var(--erp-info, #17a2b8);
+  --box-color-light: color-mix(in srgb, var(--erp-info, #17a2b8) 75%, #fff);
 }
 
-.small-box.bg-warning {
-  --box-color: #ffc107;
-  --box-color-light: #ffcd39;
+body.erp-app .small-box.bg-warning {
+  --box-color: var(--erp-warning, #ffc107);
+  --box-color-light: color-mix(in srgb, var(--erp-warning, #ffc107) 75%, #fff);
 }
 
-.small-box.bg-primary {
-  --box-color: #007bff;
-  --box-color-light: #0d6efd;
+body.erp-app .small-box.bg-primary {
+  --box-color: var(--erp-primary, #007bff);
+  --box-color-light: var(--erp-primary-dark, #0d6efd);
 }
 
-.small-box.bg-success {
-  --box-color: #28a745;
-  --box-color-light: #2dce5d;
+body.erp-app .small-box.bg-success {
+  --box-color: var(--erp-success, #28a745);
+  --box-color-light: color-mix(in srgb, var(--erp-success, #28a745) 75%, #fff);
 }
 
 /* ========== تحسينات Pagination ========== */

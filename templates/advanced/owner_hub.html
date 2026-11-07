@@ -3,30 +3,7 @@
 {% block page_title %}👑 لوحة المالك الشاملة{% endblock %}
 
 {% block extra_css %}
-<style>
-    .bg-gradient-success {
-        background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);
-    }
-    .bg-gradient-warning {
-        background: linear-gradient(135deg, #f6c23e 0%, #dda20a 100%);
-    }
-    .bg-gradient-info {
-        background: linear-gradient(135deg, #36b9cc 0%, #258391 100%);
-    }
-    .bg-gradient-danger {
-        background: linear-gradient(135deg, #e74a3b 0%, #be2617 100%);
-    }
-    .bg-gradient-dark {
-        background: linear-gradient(135deg, #5a5c69 0%, #373840 100%);
-    }
-    .bg-gradient-secondary {
-        background: linear-gradient(135deg, #858796 0%, #60616f 100%);
-    }
-    .gradient-header {
-        background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
-        color: white;
-    }
-</style>
+
 {% endblock %}
 
 {% block content %}
@@ -133,7 +110,7 @@
   <div class="row mb-4">
     <div class="col-lg-8">
       <div class="card border-0 shadow-sm h-100 card-hover">
-        <div class="card-header gradient-header text-white d-flex justify-content-between align-items-center">
+        <div class="card-header erp-card-header-row erp-theme-header--primary text-white d-flex justify-content-between align-items-center">
           <span class="font-weight-bold"><i class="fas fa-bolt ml-2"></i> اختصارات فورية</span>
           <span class="badge bg-white text-primary rounded-pill">{{ quick_links|length }}</span>
         </div>
@@ -153,7 +130,7 @@
     </div>
     <div class="col-lg-4">
       <div class="card border-0 shadow-sm h-100 mb-3 card-hover">
-        <div class="card-header bg-gradient-dark text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-dark text-white">
           <span class="font-weight-bold"><i class="fas fa-shield-alt ml-2"></i> حالة الأمان</span>
         </div>
         <div class="card-body">
@@ -182,7 +159,7 @@
       </div>
       {% if owner_alerts %}
     <div class="card border-0 shadow-sm h-100 card-hover">
-      <div class="card-header bg-gradient-warning text-dark d-flex justify-content-between align-items-center">
+      <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-warning text-dark d-flex justify-content-between align-items-center">
         <span class="font-weight-bold"><i class="fas fa-exclamation-triangle ml-2"></i> تنبيهات سريعة</span>
         <span class="badge bg-dark text-white rounded-pill">{{ owner_alerts|length }}</span>
       </div>
@@ -218,13 +195,13 @@
   </div>
 
   <div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-gradient-info text-white d-flex justify-content-between align-items-center">
+    <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-info text-white d-flex justify-content-between align-items-center">
       <span><i class="fas fa-stream"></i> معايير رئيسية</span>
       <span class="badge bg-light text-dark">يتم التحديث لحظياً</span>
     </div>
     <div class="table-responsive table-rounded shadow-sm">
       <table class="table table-hover mb-0">
-        <thead class="table-light">
+        <thead class="table-header-primary text-white table-light">
           <tr>
             <th>المحور</th>
             <th>القيمة</th>
@@ -354,7 +331,7 @@
     </div>
     <div class="table-responsive">
       <table class="table table-sm align-middle mb-0">
-        <thead class="table-light">
+        <thead class="table-header-primary text-white table-light">
           <tr>
             <th>العملية</th>
             <th>الهدف</th>
@@ -423,7 +400,7 @@
   <div class="row mb-4">
     <div class="col-lg-7">
       <div class="card border-0 shadow-sm h-100">
-        <div class="card-header bg-gradient-secondary text-white d-flex justify-content-between align-items-center">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-secondary text-white d-flex justify-content-between align-items-center">
           <span><i class="fas fa-book-open"></i> دليل الوحدات</span>
           <span class="badge bg-light text-dark">{{ owner_guide|length }}</span>
         </div>

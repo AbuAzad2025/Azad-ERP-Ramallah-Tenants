@@ -177,61 +177,11 @@
   }
 
   function enhanceFilterCards() {
-    if (!isCompact()) return;
-    document.querySelectorAll(".content .card.gm-mobile-filter-card, .content .card[data-mobile-filter='1']").forEach(function (card) {
-      if (card.dataset.gmFilterEnhanced === "1") return;
-      applyFilterCollapse(card);
-    });
-    var cards = document.querySelectorAll(".content .card");
-    for (var i = 0; i < Math.min(cards.length, 3); i++) {
-      var card = cards[i];
-      if (card.dataset.gmFilterEnhanced === "1") continue;
-      if (card.querySelector("table")) continue;
-      var headerText = cleanLabel((card.querySelector(".card-header") || {}).textContent || "");
-      if (!/فلتر|بحث|filter|search/i.test(headerText) && !card.querySelector(".card-body form")) continue;
-      if (!card.querySelector(".card-body .form-control, .card-body select")) continue;
-      applyFilterCollapse(card);
-    }
+    /* delegated to GMScrollFilters */
   }
 
-  function applyFilterCollapse(card) {
-    if (card.dataset.gmFilterEnhanced === "1") return;
-    var header = card.querySelector(".card-header");
-    var body = card.querySelector(".card-body");
-    if (!body) return;
-
-    if (!header) {
-      header = document.createElement("div");
-      header.className = "card-header d-flex align-items-center justify-content-between py-2";
-      header.innerHTML = '<h3 class="card-title mb-0"><i class="fas fa-filter ml-2"></i> فلاتر البحث</h3>';
-      card.insertBefore(header, card.firstChild);
-    }
-
-    if (header.querySelector(".gm-filter-toggle")) {
-      card.dataset.gmFilterEnhanced = "1";
-      return;
-    }
-
-    var toggle = document.createElement("button");
-    toggle.type = "button";
-    toggle.className = "btn btn-sm btn-outline-secondary gm-filter-toggle";
-    toggle.innerHTML = '<i class="fas fa-chevron-down"></i>';
-    toggle.setAttribute("aria-expanded", "false");
-    header.classList.add("d-flex", "align-items-center", "justify-content-between");
-    header.appendChild(toggle);
-
-    body.classList.add("gm-filter-body");
-    body.style.display = "none";
-
-    toggle.addEventListener("click", function () {
-      var open = body.style.display !== "none";
-      body.style.display = open ? "none" : "block";
-      toggle.setAttribute("aria-expanded", open ? "false" : "true");
-      toggle.querySelector("i").className = open ? "fas fa-chevron-down" : "fas fa-chevron-up";
-    });
-
-    card.classList.add("gm-mobile-filter-card");
-    card.dataset.gmFilterEnhanced = "1";
+  function applyFilterCollapse() {
+    /* deprecated — see gm-scroll-filters.js */
   }
 
   function enhanceSelect2() {

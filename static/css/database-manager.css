@@ -1,0 +1,120 @@
+.db-manager-page .db-tabs-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+
+.db-manager-page #dbTabs {
+  flex-wrap: nowrap;
+  min-width: min(100%, max-content);
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.db-manager-page #dbTabs .nav-link {
+  border-radius: 50px;
+  margin: 0 0.2rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.db-manager-page #dbTabs .nav-link.active {
+  background-color: var(--erp-primary, #006b3f);
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.db-manager-page #dbTabs .nav-link:not(.active):hover {
+  background-color: #e9ecef;
+}
+
+.db-manager-page .db-table-list {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.db-manager-page .db-table-sidebar .card-header {
+  padding: 0.65rem 1rem;
+}
+
+.db-manager-page .db-table-filter {
+  direction: rtl;
+}
+
+.db-manager-page .db-data-panel .table-responsive {
+  max-height: 620px;
+}
+
+.db-manager-page .code-editor {
+  font-family: 'Consolas', 'Courier New', monospace;
+  background-color: #1e1e1e !important;
+  color: #d4d4d4 !important;
+  border: 1px solid #333;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  line-height: 1.55;
+  font-size: 0.875rem;
+  resize: vertical;
+  direction: ltr;
+  text-align: left;
+}
+
+.db-manager-page .code-editor:focus {
+  outline: none;
+  border-color: var(--erp-primary, #006b3f);
+  box-shadow: 0 0 0 2px rgba(0, 107, 63, 0.2);
+}
+
+.db-manager-page .action-btn-group {
+  display: flex;
+  gap: 0.35rem;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.db-manager-page .editable-cell:focus {
+  outline: 2px solid var(--erp-primary, #006b3f);
+  background-color: #fff8e1 !important;
+}
+
+.db-manager-page .log-pane {
+  display: none;
+}
+
+.db-manager-page .log-pane.show,
+.db-manager-page .log-pane.active {
+  display: block;
+}
+
+.db-manager-page .badge.bg-primary,
+.db-manager-page .badge.bg-secondary,
+.db-manager-page .badge.bg-success,
+.db-manager-page .badge.bg-info,
+.db-manager-page .badge.bg-warning,
+.db-manager-page .badge.bg-danger,
+.db-manager-page .badge.bg-light {
+  color: #fff;
+}
+
+.db-manager-page .badge.bg-warning,
+.db-manager-page .badge.bg-light.text-dark {
+  color: #212529 !important;
+}
+
+.db-manager-page .badge.bg-light.text-dark {
+  background-color: #f8f9fa !important;
+  border: 1px solid #dee2e6;
+}
+
+@media (max-width: 767.98px) {
+  .db-manager-page .db-table-sidebar {
+    margin-bottom: 1rem;
+  }
+
+  .db-manager-page .db-table-list {
+    max-height: 280px;
+  }
+}

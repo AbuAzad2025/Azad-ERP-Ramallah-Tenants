@@ -32,6 +32,14 @@ def main(dry=True):
         conn = db.session.connection()
         for r in rows:
             inv_id = int(r[2])
+            # idempotency: skip if already reversed
+            already = db.session.execute(
+                sa_text("SELECT 1 FROM gl_batches WHERE source_type='INVOICE_REVERSAL_HIST' AND source_id=:i AND status='POSTED' LIMIT 1"),
+                {"i": inv_id},
+            ).first()
+            if already:
+                print(f"  skip invoice {inv_id} (already reversed)")
+                continue
             inv = db.session.execute(sa_text("SELECT invoice_number, total_amount, currency, customer_id, invoice_date FROM invoices WHERE id=:i"), {"i": inv_id}).first()
             if not inv:
                 continue

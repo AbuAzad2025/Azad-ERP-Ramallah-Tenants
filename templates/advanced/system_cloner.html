@@ -4,36 +4,7 @@
 
 {% block head_extra %}
 {{ super() }}
-<style>
-.module-card {
-  transition: all 0.3s ease;
-  cursor: pointer;
-  border: 2px solid transparent;
-}
-.module-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-}
-.module-card.selected {
-  border-color: #0056b3;
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-}
-.module-card.required {
-  border-color: #28a745;
-  opacity: 0.7;
-}
-.dependency-badge {
-  font-size: 0.7rem;
-  padding: 0.2rem 0.4rem;
-}
-.info-box {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 1.5rem;
-  border-radius: 10px;
-  margin-bottom: 2rem;
-}
-</style>
+
 {% endblock %}
 
 {% block content %}
@@ -104,7 +75,7 @@
     </div>
 
     <div class="card border-0 shadow-sm mb-4">
-      <div class="card-header bg-gradient-primary text-white">
+      <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-primary text-white">
         <h5 class="mb-0"><i class="fas fa-filter"></i> فلترة سريعة</h5>
       </div>
       <div class="card-body">
@@ -207,13 +178,13 @@
 
   {% if cloned_systems %}
   <div class="card border-0 shadow-sm mt-4">
-    <div class="card-header bg-gradient-info text-white">
+    <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-info text-white">
       <h5 class="mb-0"><i class="fas fa-archive"></i> الأنظمة المستنسخة ({{ cloned_systems|length }})</h5>
     </div>
     <div class="card-body">
       <div class="table-responsive">
         <table class="table table-hover">
-          <thead class="table-light">
+          <thead class="table-header-primary text-white table-light">
             <tr>
               <th>الاسم</th>
               <th>الحجم</th>

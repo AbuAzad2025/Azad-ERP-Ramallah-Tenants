@@ -72,7 +72,9 @@ def add_account():
             iban = request.form.get('iban', '')
             swift_code = request.form.get('swift_code', '')
             currency = request.form.get('currency', 'ILS')
-            branch_id = request.form.get('branch_id', type=int)
+            from utils.tenant_ui import resolve_branch_id
+
+            branch_id = resolve_branch_id(request.form.get('branch_id'), required=True)
             gl_account_code = request.form.get('gl_account_code')
             try:
                 opening_balance = Decimal(request.form.get('opening_balance') or 0)
@@ -147,7 +149,9 @@ def add_account():
     gl_accounts = Account.query.filter_by(type='ASSET', is_active=True).filter(
         Account.code.like('101%')
     ).order_by(Account.code).all()
-    branches = Branch.query.filter_by(is_active=True).order_by(Branch.name).all()
+    from utils.tenant_ui import accessible_branches_query, resolve_branch_id
+
+    branches = accessible_branches_query().all()
     
     return render_template('bank/account_form.html',
                          gl_accounts=gl_accounts,
@@ -167,7 +171,9 @@ def edit_account(id):
             account.bank_name = request.form.get('bank_name')
             account.iban = request.form.get('iban', '')
             account.swift_code = request.form.get('swift_code', '')
-            account.branch_id = request.form.get('branch_id', type=int)
+            from utils.tenant_ui import resolve_branch_id
+
+            account.branch_id = resolve_branch_id(request.form.get('branch_id'), required=True)
             account.notes = request.form.get('notes', '')
             account.is_active = request.form.get('is_active') == 'on'
             account.updated_by = current_user.id
@@ -186,7 +192,9 @@ def edit_account(id):
     gl_accounts = Account.query.filter_by(type='ASSET', is_active=True).filter(
         Account.code.like('101%')
     ).order_by(Account.code).all()
-    branches = Branch.query.filter_by(is_active=True).order_by(Branch.name).all()
+    from utils.tenant_ui import accessible_branches_query, resolve_branch_id
+
+    branches = accessible_branches_query().all()
     
     return render_template('bank/account_form.html',
                          gl_accounts=gl_accounts,

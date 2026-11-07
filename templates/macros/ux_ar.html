@@ -7,6 +7,10 @@
   {{- UI_LABELS.get(key, key) -}}
 {%- endmacro %}
 
-{% macro zb_select_placeholder() -%}
-  {{- UI_LABELS.select_placeholder -}}
+{% macro ux_hint(text, icon='fa-info-circle') -%}
+<p class="ux-hint mb-2"><i class="fas {{ icon }} ml-1" aria-hidden="true"></i>{{ text }}</p>
+{%- endmacro %}
+
+{% macro ux_flash_key(key) -%}
+  {{- UX_MSG.get(key, key) -}}
 {%- endmacro %}

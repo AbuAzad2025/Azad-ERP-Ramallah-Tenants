@@ -11,7 +11,8 @@ import csv
 import io
 
 from extensions import db
-from models import Branch, Site, Employee, Expense, Warehouse, User
+from models import Branch, Site, Employee, Expense, Warehouse, User, Company
+from utils.company_scope import default_company, filter_branches_query
 from utils import _get_or_404, permission_required
 import utils
 from permissions_config.enums import SystemPermissions
@@ -39,8 +40,6 @@ def list_branches():
     search = request.args.get('q', '').strip()
     active_filter = request.args.get('active', '')
     
-    from utils.company_scope import filter_branches_query
-
     query = filter_branches_query(Branch.query)
     
     if search:
@@ -78,17 +77,13 @@ def create_branch():
     """إنشاء فرع جديد"""
     if request.method == 'POST':
         try:
-            from utils.branch_context import resolve_branch_id
-            from utils.company_scope import assert_company_access, default_company
-
-            company_id = request.form.get('company_id', type=int)
+            dc = default_company()
+            company_id = request.form.get('company_id', type=int) or (dc.id if dc else None)
             if not company_id:
-                dc = default_company()
-                company_id = dc.id if dc else None
-            if company_id:
-                assert_company_access(int(company_id))
+                flash("يجب اختيار شركة", "danger")
+                return redirect(request.url)
             b = Branch(
-                company_id=int(company_id) if company_id else None,
+                company_id=company_id,
                 name=request.form.get('name', '').strip(),
                 code=request.form.get('code', '').strip().upper(),
                 address=request.form.get('address', '').strip() or None,
@@ -131,15 +126,8 @@ def create_branch():
     from utils.company_scope import default_company, filter_companies_query
 
     employees = Employee.query.order_by(Employee.name).all()
-    companies = filter_companies_query(Company.query.filter_by(is_active=True).order_by(Company.name)).all()
-    dc = default_company()
-    return render_template(
-        'branches/form.html',
-        branch=None,
-        employees=employees,
-        companies=companies,
-        default_company_id=dc.id if dc else None,
-    )
+    companies = Company.query.filter_by(is_active=True).order_by(Company.name).all()
+    return render_template('branches/form.html', branch=None, employees=employees, companies=companies)
 
 
 @branches_bp.route('/<int:branch_id>/edit', methods=['GET', 'POST'], endpoint='edit_branch')
@@ -159,6 +147,9 @@ def edit_branch(branch_id):
                 b.company_id = int(company_id)
             b.name = request.form.get('name', '').strip()
             b.code = request.form.get('code', '').strip().upper()
+            cid = request.form.get('company_id', type=int)
+            if cid:
+                b.company_id = cid
             
             # حفظ إحداثيات GPS
             geo_lat = request.form.get('geo_lat', '').strip()
@@ -203,8 +194,8 @@ def edit_branch(branch_id):
     from utils.company_scope import filter_companies_query
 
     employees = Employee.query.order_by(Employee.name).all()
-    companies = filter_companies_query(Company.query.filter_by(is_active=True).order_by(Company.name)).all()
-    return render_template('branches/form.html', branch=b, employees=employees, companies=companies, default_company_id=b.company_id)
+    companies = Company.query.filter_by(is_active=True).order_by(Company.name).all()
+    return render_template('branches/form.html', branch=b, employees=employees, companies=companies)
 
 
 @branches_bp.route('/<int:branch_id>/archive', methods=['POST'], endpoint='archive_branch')

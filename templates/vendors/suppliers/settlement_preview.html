@@ -3,48 +3,7 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/statement-print.css') }}">
-<style>
-.settlement-detail-card {
-    border-radius: 12px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
-}
 
-.settlement-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white !important;
-    padding: 20px;
-    border-radius: 12px 12px 0 0;
-}
-
-.summary-box {
-    background: #f8f9fa;
-    border-left: 4px solid #667eea;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 8px;
-}
-
-.summary-label {
-    font-size: 0.85rem;
-    color: #6c757d;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.summary-value {
-    font-size: 1.8rem;
-    font-weight: bold;
-    color: #343a40;
-}
-
-.status-badge {
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-</style>
 {% endblock %}
 
 {% block content %}
@@ -153,7 +112,7 @@
                 <p>يرجى إدخال أسعار القطع التالية ثم الضغط على "حفظ" لكل قطعة:</p>
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered bg-white">
-                        <thead>
+                        <thead class="table-header-primary text-white">
                             <tr>
                                 <th>المنتج</th>
                                 <th>SKU</th>
@@ -327,7 +286,7 @@
                             {% if balance_data.rights.exchange_items.get('items', [])|length > 0 %}
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover table-bordered" id="exchangeTable">
-                                    <thead class="table-success">
+                                    <thead class="table-header-primary text-white table-success">
                                         <tr>
                                             <th>#</th>
                                             <th>القطعة</th>
@@ -365,7 +324,7 @@
                             <h5 class="mt-4 mb-3 text-info">🏭 المخزون المتبقي (غير المباع) ({{ balance_data.rights.exchange_items.get('current_stock_items', [])|length }})</h5>
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover table-bordered">
-                                    <thead class="table-info">
+                                    <thead class="table-header-primary text-white table-info">
                                         <tr>
                                             <th>#</th>
                                             <th>المنتج</th>
@@ -415,7 +374,7 @@
                             {% if balance_data.obligations.sales_to_supplier.get('items', [])|length > 0 %}
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover table-bordered">
-                                    <thead class="table-danger">
+                                    <thead class="table-header-primary text-white table-danger">
                                         <tr>
                                             <th>#</th>
                                             <th>رقم المبيعة</th>
@@ -452,7 +411,7 @@
                             {% if balance_data.obligations.services_to_supplier.get('items', [])|length > 0 %}
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover table-bordered">
-                                    <thead class="table-danger">
+                                    <thead class="table-header-primary text-white table-danger">
                                         <tr>
                                             <th>#</th>
                                             <th>رقم الطلب</th>
@@ -496,7 +455,7 @@
                                     {% if balance_data.payments.paid_to_supplier.get('items', [])|length > 0 %}
                                     <div class="table-responsive">
                                         <table class="table table-sm table-bordered">
-                                            <thead class="table-warning">
+                                            <thead class="table-header-primary text-white table-warning">
                                                 <tr>
                                                     <th>#</th>
                                                     <th>المبلغ</th>
@@ -530,7 +489,7 @@
                                     {% if balance_data.payments.received_from_supplier.get('items', [])|length > 0 %}
                                     <div class="table-responsive">
                                         <table class="table table-sm table-bordered">
-                                            <thead class="table-success">
+                                            <thead class="table-header-primary text-white table-success">
                                                 <tr>
                                                     <th>#</th>
                                                     <th>المبلغ</th>
@@ -570,7 +529,7 @@
             <!-- القطع الواردة من المورد -->
             {% if balance_data.rights.exchange_items.get('items', [])|length > 0 %}
             <div class="card settlement-detail-card">
-                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white d-flex justify-content-between align-items-center">
                     <h4 class="mb-0">
                         <i class="fas fa-boxes"></i> القطع من مستودع التبادل (حقوق المورد)
                         <span class="badge bg-light text-dark">{{ balance_data.rights.exchange_items.get('items', [])|length }}</span>
@@ -582,7 +541,7 @@
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-hover table-bordered table-sm" id="exchangeItemsTable">
-                            <thead class="table-light">
+                            <thead class="table-header-primary text-white table-light">
                                 <tr>
                                     <th>#</th>
                                     <th>المنتج</th>
@@ -624,7 +583,7 @@
                 {% if balance_data.obligations.sales_to_supplier.get('items', [])|length > 0 %}
                 <div class="col-md-6">
                     <div class="card settlement-detail-card">
-                        <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary bg-danger text-white d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">
                                 <i class="fas fa-shopping-cart"></i> المبيعات له (كزبون)
                                 <span class="badge bg-light text-dark">{{ balance_data.obligations.sales_to_supplier.get('count', 0) }}</span>
@@ -636,7 +595,7 @@
                         <div class="card-body">
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover" id="salesTable">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                             <th>الفاتورة</th>
                                             <th>التاريخ</th>
@@ -673,7 +632,7 @@
                 {% if balance_data.obligations.services_to_supplier.get('items', [])|length > 0 %}
                 <div class="col-md-6">
                     <div class="card settlement-detail-card">
-                        <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary bg-danger text-white d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">
                                 <i class="fas fa-wrench"></i> الصيانة له (كزبون)
                                 <span class="badge bg-light text-dark">{{ balance_data.obligations.services_to_supplier.get('count', 0) }}</span>
@@ -685,7 +644,7 @@
                         <div class="card-body">
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover" id="servicesTable">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                             <th>رقم الخدمة</th>
                                             <th>التاريخ</th>
@@ -723,7 +682,7 @@
                 {% if balance_data.obligations.preorders_to_supplier and balance_data.obligations.preorders_to_supplier.get('items', [])|length > 0 %}
                 <div class="col-md-6">
                     <div class="card settlement-detail-card">
-                        <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary bg-danger text-white d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">
                                 <i class="fas fa-shopping-bag"></i> الحجوزات المسبقة
                                 <span class="badge bg-light text-dark">{{ balance_data.obligations.preorders_to_supplier.get('count', 0) }}</span>
@@ -735,7 +694,7 @@
                         <div class="card-body">
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover" id="preordersTable">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                             <th>رقم الحجز</th>
                                             <th>التاريخ</th>
@@ -775,7 +734,7 @@
                 {% if balance_data.expenses and balance_data.expenses.get('items', [])|length > 0 %}
                 <div class="col-md-6">
                     <div class="card settlement-detail-card">
-                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">
                                 <i class="fas fa-file-invoice-dollar"></i> توريد خدمة (مصروفات)
                                 <span class="badge bg-light text-dark">{{ balance_data.expenses.get('count', 0) }}</span>
@@ -787,7 +746,7 @@
                         <div class="card-body">
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover" id="expensesTable">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                             <th>المرجع</th>
                                             <th>التاريخ</th>
@@ -834,7 +793,7 @@
                 {% if balance_data.payments.paid_to_supplier.get('items', [])|length > 0 %}
                 <div class="col-md-4">
                     <div class="card settlement-detail-card">
-                        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-dark d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">
                                 <i class="fas fa-money-bill-wave"></i> دفعنا له (OUT)
                                 <span class="badge bg-dark">{{ balance_data.payments.paid_to_supplier.get('count', 0) }}</span>
@@ -846,7 +805,7 @@
                         <div class="card-body">
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover" id="paymentOutTable">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                             <th>التاريخ</th>
                                             <th class="text-end">المبلغ (₪)</th>
@@ -876,7 +835,7 @@
                 {% if balance_data.payments.received_from_supplier.get('items', [])|length > 0 %}
                 <div class="col-md-4">
                     <div class="card settlement-detail-card">
-                        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-dark d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">
                                 <i class="fas fa-hand-holding-usd"></i> دفع لنا (IN)
                                 <span class="badge bg-dark">{{ balance_data.payments.received_from_supplier.get('count', 0) }}</span>
@@ -888,7 +847,7 @@
                         <div class="card-body">
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover" id="paymentInTable">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                             <th>التاريخ</th>
                                             <th class="text-end">المبلغ (₪)</th>
@@ -918,7 +877,7 @@
                 {% if balance_data.payments.returns_to_supplier.get('items', [])|length > 0 %}
                 <div class="col-md-4">
                     <div class="card settlement-detail-card">
-                        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-dark d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">
                                 <i class="fas fa-undo"></i> مرتجعات له
                                 <span class="badge bg-dark">{{ balance_data.payments.returns_to_supplier.get('count', 0) }}</span>
@@ -930,7 +889,7 @@
                         <div class="card-body">
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover" id="returnsTable">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                             <th>المنتج</th>
                                             <th class="text-end">الكمية</th>
@@ -963,7 +922,7 @@
             <!-- التسويات السابقة -->
             {% if balance_data.previous_settlements|length > 0 %}
             <div class="card settlement-detail-card border-secondary">
-                <div class="card-header bg-secondary text-white">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-secondary text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-history"></i> سجل التسويات السابقة
                         <span class="badge bg-light text-dark">{{ balance_data.previous_settlements|length }}</span>
@@ -1111,7 +1070,7 @@
     });
     document.querySelectorAll('style').forEach(styleTag => {
       if (styleTag.innerHTML) {
-        doc.write('<style>' + styleTag.innerHTML + '</style>');
+        doc.write('');
       }
     });
     const bodyClass = (document.body.getAttribute('class') || '').replace(/"/g, '&quot;');
@@ -1173,17 +1132,7 @@
     
     const printWindow = window.open('', '', 'height=600,width=800');
     printWindow.document.write('<html><head><title>' + title + '</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('body { font-family: Arial, sans-serif; direction: rtl; }');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin: 20px 0; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('.text-end { text-align: left; }');
-    printWindow.document.write('h2 { text-align: center; color: #333; margin-bottom: 20px; }');
-    printWindow.document.write('.print-header { text-align: center; margin-bottom: 20px; }');
-    printWindow.document.write('.print-footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }');
-    printWindow.document.write('@media print { .no-print { display: none; } }');
-    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('</head><body>');
     printWindow.document.write('<div class="print-header">');
     printWindow.document.write('<h2>' + title + '</h2>');
     printWindow.document.write('<p>{{ supplier.name|default('—') }} | {{ ss.from_date.strftime("%Y-%m-%d") }} - {{ ss.to_date.strftime("%Y-%m-%d") }}</p>');

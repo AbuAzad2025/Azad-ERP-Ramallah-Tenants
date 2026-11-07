@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}مسيرات الرواتب{% endblock %}
+{% block content %}
+<div class="container py-3" dir="rtl">
+  <h4>مسيرات الرواتب</h4>
+  <form method="post" action="{{ url_for('payroll_bp.generate') }}" class="card card-body mb-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row">
+      <div class="col-md-4"><label>الفترة (YYYY-MM)</label><input name="period_key" class="form-control" placeholder="2026-05"></div>
+      <div class="col-md-4"><label>الفرع</label><select name="branch_id" class="form-control">{% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-4 align-self-end"><button class="btn btn-primary">إنشاء مسير</button></div>
+    </div>
+  </form>
+  <table class="table table-sm table-bordered"><thead class="table-header-primary text-white"><tr><th>فترة</th><th>فرع</th><th>حالة</th><th>صافي</th><th></th></tr></thead>
+  <tbody>{% for r in runs %}<tr><td>{{ r.period_key }}</td><td>{{ r.branch.name if r.branch else r.branch_id }}</td><td>{{ r.status }}</td><td>{{ r.total_net }}</td><td><a href="{{ url_for('payroll_bp.detail', id=r.id) }}">تفاصيل</a></td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endblock %}

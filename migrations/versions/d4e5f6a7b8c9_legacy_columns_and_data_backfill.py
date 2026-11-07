@@ -96,7 +96,7 @@ def upgrade():
             "UPDATE service_tasks SET unit_price = 0 WHERE unit_price IS NULL",
             "UPDATE service_tasks SET discount = 0 WHERE discount IS NULL",
             "UPDATE customers SET currency = 'ILS' WHERE currency IS NULL OR TRIM(currency) = ''",
-            "UPDATE customers SET name = 'عميل غير محدد' WHERE name IS NULL OR TRIM(name) = ''",
+            "UPDATE customers SET name = 'زبون غير محدد' WHERE name IS NULL OR TRIM(name) = ''",
             "UPDATE customers SET phone = '—' WHERE phone IS NULL OR TRIM(phone) = ''",
             "UPDATE customers SET opening_balance = 0 WHERE opening_balance IS NULL",
             "UPDATE customers SET current_balance = 0 WHERE current_balance IS NULL",

@@ -1,0 +1,152 @@
+/**
+ * شريط علوي منظم — 3 مناطق: تحكم | معلومات | مستخدم
+ * الهوية (شعار + شركة) في السايدبار فقط
+ */
+
+body.erp-app:not(.security-body) .erp-topbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--erp-header-h);
+  padding-inline: 0.65rem;
+}
+
+body.erp-app:not(.security-body) .erp-topbar__nav,
+body.erp-app:not(.security-body) .erp-topbar__meta,
+body.erp-app:not(.security-body) .erp-topbar__actions {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+body.erp-app:not(.security-body) .erp-topbar__meta {
+  justify-content: center;
+  gap: 0.4rem;
+  overflow: hidden;
+}
+
+body.erp-app:not(.security-body) .erp-topbar__actions {
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+body.erp-app:not(.security-body) .erp-topbar-meta-strip {
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+body.erp-app:not(.security-body) .erp-topbar .erp-meta-chip {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.55rem;
+  white-space: nowrap;
+}
+
+body.erp-app:not(.security-body) .erp-topbar-search {
+  width: min(200px, 18vw);
+  flex-shrink: 0;
+}
+
+body.erp-app:not(.security-body) .erp-topbar-search .form-control {
+  font-size: 0.82rem;
+}
+
+body.erp-app:not(.security-body) .erp-nav-user-trigger {
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+body.erp-app:not(.security-body) .erp-nav-user-trigger:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+body.erp-app:not(.security-body) .erp-nav-user-label {
+  max-width: 9rem;
+  overflow: hidden;
+}
+
+body.erp-app:not(.security-body) .erp-nav-user-label .erp-header-user-name {
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.erp-app:not(.security-body) .erp-nav-user-label .erp-header-user-role {
+  font-size: 0.68rem;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.erp-app:not(.security-body) .erp-nav-user-chevron {
+  font-size: 0.65rem;
+  opacity: 0.75;
+}
+
+body.erp-app:not(.security-body) .erp-topbar-tools-menu {
+  min-width: 220px;
+}
+
+body.erp-app:not(.security-body) .tenant-branch-select {
+  max-width: 140px;
+  font-size: 0.8rem;
+}
+
+/* هوية المستأجر: erp-sidebar-brand.css */
+
+body.erp-app:not(.security-body) .garage-brand-text {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.35;
+  text-align: center;
+}
+
+body.erp-app:not(.security-body) .garage-brand-branch {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: 0.15rem;
+}
+
+@media (min-width: 1400px) {
+  .d-xxl-inline-flex {
+    display: inline-flex !important;
+  }
+}
+
+@media (max-width: 1199.98px) {
+  body.erp-app:not(.security-body) .erp-topbar {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  body.erp-app:not(.security-body) .erp-topbar__meta .tenant-scope-badge,
+  body.erp-app:not(.security-body) .erp-topbar__meta .tenant-branch-switch-form {
+    display: none !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  body.erp-app:not(.security-body) .erp-topbar {
+    display: flex;
+    flex-wrap: nowrap;
+    padding-inline: 0.35rem;
+  }
+
+  body.erp-app:not(.security-body) .erp-topbar__meta {
+    display: none !important;
+  }
+
+  body.erp-app:not(.security-body) .erp-topbar-search {
+    display: none !important;
+  }
+
+  body.erp-app:not(.security-body) .erp-topbar__actions {
+    margin-inline-start: auto;
+  }
+}

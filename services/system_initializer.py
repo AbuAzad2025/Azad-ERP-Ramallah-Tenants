@@ -67,7 +67,7 @@ class SystemInitializer:
 
     def _ensure_currencies(self):
         currencies = [
-            ('ILS', 'الشيقل الإسرائيلي', '₪', 2, True),
+            ('ILS', 'شيكل إسرائيلي', '₪', 2, True),
             ('USD', 'الدولار الأمريكي', '$', 2, True),
             ('JOD', 'الدينار الأردني', 'JD', 3, True),
             ('EUR', 'اليورو', '€', 2, True),

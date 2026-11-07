@@ -19,7 +19,7 @@
     <div class="row">
       <div class="col-lg-7">
         <div class="card shadow-sm mb-3">
-          <div class="card-header py-2"><strong>بيانات الحساب</strong></div>
+          <div class="card-header erp-card-header-row erp-theme-header--primary py-2"><strong>بيانات الحساب</strong></div>
           <div class="card-body">
             <div class="form-group mb-3">
               {{ form.username.label(class="form-label") }}
@@ -88,7 +88,7 @@
                 <div class="form-group mb-3">
                   {{ form.branch_ids.label(class="form-label") }}
                   {{ form.branch_ids(class="custom-select", multiple=true, size="4") }}
-                  <small class="text-muted d-block">حدّد الفروع التي يرى بياناتها هذا المستخدم.</small>
+                  <small class="text-muted d-block">كل مستخدم تشغيلي يجب أن يرتبط بفرع واحد على الأقل (شركة + فرع). أدوار المالك/عرض كل الفروع فقط يمكن تركها بدون ربط.</small>
                 </div>
               </div>
               <div class="col-md-5">
@@ -99,13 +99,13 @@
               </div>
             </div>
 
-            <div class="form-text text-muted">إن تركت كلمة المرور فارغة أثناء التعديل فلن تتغيّر.</div>
+            <div class="form-text text-muted erp-keep-hint">اتركها فارغة عند التعديل إن لم تُرد التغيير.</div>
           </div>
         </div>
 
-        {% if current_user.role and current_user.role.level == 0 %}
+        {% if can_edit_extra_permissions %}
         <div class="card shadow-sm mb-3">
-          <div class="card-header py-2 d-flex align-items-center justify-content-between">
+          <div class="card-header erp-card-header-row erp-theme-header--primary py-2 d-flex align-items-center justify-content-between">
             <strong>صلاحيات إضافية</strong>
             <div class="d-flex align-items-center" style="gap:.5rem">
               <input type="text" class="form-control form-control-sm" style="max-width:220px" id="perm-filter" placeholder="بحث في الصلاحيات…">
@@ -138,7 +138,7 @@
 
       <div class="col-lg-5">
         <div class="card shadow-sm mb-3">
-          <div class="card-header py-2"><strong>معلومات النشاط</strong></div>
+          <div class="card-header erp-card-header-row erp-theme-header--primary py-2"><strong>معلومات النشاط</strong></div>
           <div class="card-body">
             <div class="row">
               {% if form.last_seen is defined %}
@@ -166,7 +166,7 @@
               </div>
               {% endif %}
             </div>
-            <div class="small text-muted">هذه الحقول معلوماتية فقط ولا يمكن تعديلها.</div>
+            <div class="small text-muted erp-card-hint">للعرض فقط.</div>
           </div>
         </div>
 

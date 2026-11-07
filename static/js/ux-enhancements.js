@@ -18,13 +18,43 @@
     },
 
     initProgressLoader() {
-      if (typeof NProgress !== 'undefined') {
-        NProgress.configure({ showSpinner: false, minimum: 0.1 });
-        
-        // Bind to Ajax requests
+      if (typeof NProgress === 'undefined') return;
+      if (window.__NPROGRESS_BOUND__) return;
+      window.__NPROGRESS_BOUND__ = true;
+
+      NProgress.configure({
+        showSpinner: false,
+        minimum: 0.1,
+        speed: 500,
+        trickleSpeed: 200
+      });
+
+      if (typeof $ !== 'undefined') {
         $(document).ajaxStart(() => NProgress.start());
         $(document).ajaxStop(() => NProgress.done());
       }
+
+      const originalFetch = window.fetch;
+      window.fetch = function() {
+        NProgress.start();
+        return originalFetch.apply(this, arguments).then(res => {
+          NProgress.done();
+          return res;
+        }).catch(err => {
+          NProgress.done();
+          throw err;
+        });
+      };
+
+      document.body.addEventListener('click', function(e) {
+        const link = e.target.closest('a');
+        if (!link || !link.href) return;
+        if (link.href.startsWith('#') || link.href.startsWith('javascript:')) return;
+        if (link.target === '_blank' || e.ctrlKey || e.metaKey) return;
+        if (link.hostname !== window.location.hostname) return;
+        if (link.hasAttribute('download') || link.classList.contains('no-nprogress')) return;
+        NProgress.start();
+      }, true);
     },
 
     initTooltips() {
@@ -37,6 +67,10 @@
     },
 
     showToast(message, type = 'info') {
+      if (window.AzadUX && typeof window.AzadUX.notify === 'function') {
+        window.AzadUX.notify(type, message);
+        return;
+      }
       if (typeof toastr !== 'undefined') {
         const method = type === 'danger' ? 'error' : type;
         toastr[method](message);

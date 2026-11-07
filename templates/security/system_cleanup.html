@@ -3,7 +3,7 @@
 {% block tour_name %}system_cleanup{% endblock %}
 {% block security_title %}تنظيف وصيانة النظام{% endblock %}
 {% block security_icon %}<i class="fas fa-broom"></i>{% endblock %}
-{% block security_description %}صيانة النظام وتصفير الجداول (عمليات حقيقية){% endblock %}
+{% block security_description %}صيانة النظام وتصفير البيانات{% endblock %}
 
 {% block security_breadcrumb %}
 <li class="breadcrumb-item active">تنظيف النظام</li>
@@ -24,7 +24,7 @@
     </div>
 
     <div class="card mb-4 border-warning">
-        <div class="card-header bg-warning text-dark d-flex align-items-center justify-content-between">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-dark d-flex align-items-center justify-content-between">
             <div class="font-weight-bold">
                 <i class="fas fa-tools"></i> وضع الصيانة
                 {% if system_settings and system_settings.maintenance_mode %}
@@ -191,40 +191,7 @@
                 </div>
             </div>
 
-            <style>
-                .bg-primary-light { background-color: rgba(78, 115, 223, 0.1); }
-                .bg-warning-light { background-color: rgba(246, 194, 62, 0.1); }
-                .bg-info-light { background-color: rgba(54, 185, 204, 0.1); }
-                .bg-success-light { background-color: rgba(28, 200, 138, 0.1); }
-                .bg-danger-light { background-color: rgba(231, 74, 59, 0.1); }
-                
-                .icon-circle {
-                    height: 3rem;
-                    width: 3rem;
-                    border-radius: 100%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-                
-                .hover-lift {
-                    transition: transform 0.2s ease, box-shadow 0.2s ease;
-                }
-                .hover-lift:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
-                }
-                
-                .card-hover-effect {
-                    transition: all 0.3s ease;
-                }
-                .card-hover-effect:hover {
-                    transform: translateY(-3px);
-                }
-                
-                .opacity-8 { opacity: 0.8; }
-                .opacity-1 { opacity: 0.1; }
-            </style>
+            
         </div>
 
         <!-- Reset Tab (Functional) -->
@@ -358,20 +325,5 @@ function selectAllTables() {
 }
 </script>
 
-<style>
-.pulse-button {
-    animation: pulse 2s infinite;
-}
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-    }
-}
-</style>
+
 {% endblock %}

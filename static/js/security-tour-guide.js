@@ -1,7 +1,6 @@
 (function() {
   if (window.__SECURITY_TOUR_GUIDE_INIT__) return;
   window.__SECURITY_TOUR_GUIDE_INIT__ = true;
-  'use strict';
 
   window.SecurityTourGuide = {
     currentStep: 0,
@@ -10,99 +9,93 @@
     spotlight: null,
     tooltipBox: null,
     isActive: false,
-    
+
     tours: {
       dashboard: [
         {
           element: '.security-sidebar',
           title: 'القائمة الجانبية',
-          description: 'هنا تجد جميع أقسام الوحدة السرية منظمة في 9 فئات',
+          description: 'تنقل بين أقسام لوحة المالك: المراقبة، الإدارة، النظام، البيانات، والطوارئ.',
           position: 'right'
         },
         {
-          element: '#quickSearch',
+          element: '[data-target="#commandPaletteModal"]',
           title: 'البحث السريع',
-          description: 'اضغط Ctrl+K للبحث الفوري في جميع المراكز والأدوات',
+          description: 'اضغط Ctrl+K للبحث في الصفحات والأوامر.',
           position: 'bottom'
         },
         {
-          element: '.row.g-3.mb-4:first',
-          title: 'الإحصائيات الحية',
-          description: 'معلومات فورية عن المستخدمين والنشاطات',
+          element: '.erp-sec-kpi-row',
+          title: 'مؤشرات المستخدمين',
+          description: 'أرقام حقيقية من قاعدة البيانات مع رسوم بيانية لآخر 7 أيام.',
           position: 'top'
         },
         {
-          element: '[href*="database_manager"]',
-          title: 'Database Manager',
-          description: 'أقوى مركز تحكم بقاعدة البيانات - 11 أداة شاملة',
-          position: 'bottom'
-        },
-        {
-          element: '[href*="ai.hub"]',
-          title: 'AI Hub',
-          description: 'المساعد الذكي للتحليل والتنبؤات',
-          position: 'bottom'
+          element: '.erp-sec-stat',
+          title: 'التشغيل والبنية',
+          description: 'متصلون الآن، IPs محظورة، نشاط مشبوه، وحجم قاعدة البيانات.',
+          position: 'top'
         },
         {
           element: '#sidebarToggle',
-          title: 'إخفاء/إظهار القائمة',
-          description: 'اضغط هنا لإخفاء القائمة الجانبية وتوسيع المحتوى',
+          title: 'إظهار/إخفاء القائمة',
+          description: 'توسيع مساحة المحتوى بإخفاء الشريط الجانبي.',
           position: 'right'
         }
       ],
-      
+
       database_manager: [
         {
           element: '.nav-tabs',
-          title: 'التبويبات المنظمة',
-          description: 'جميع أدوات قاعدة البيانات منظمة في تبويبات سهلة',
+          title: 'التبويبات',
+          description: 'أدوات DR: تصفح، SQL، نسخ احتياطي، وصيانة.',
           position: 'bottom'
         },
         {
           element: '[data-toggle="tab"][href="#browse"]',
           title: 'تصفح الجداول',
-          description: 'تصفح وعرض جميع البيانات في قاعدة البيانات',
+          description: 'عرض بيانات الجداول مباشرة.',
           position: 'bottom'
         },
         {
           element: '[data-toggle="tab"][href="#sql"]',
-          title: 'SQL Editor',
-          description: 'محرر SQL احترافي لتنفيذ الاستعلامات المباشرة',
+          title: 'محرر SQL',
+          description: 'تنفيذ استعلامات على قاعدة البيانات.',
           position: 'bottom'
         }
       ],
-      
+
       security_center: [
         {
           element: '.card:first',
-          title: 'لوحة الأمان',
-          description: 'مراقبة شاملة لجميع الأنشطة الأمنية',
+          title: 'مركز الأمان',
+          description: 'مراقبة الأنشطة الأمنية والتهديدات.',
           position: 'bottom'
         }
       ]
     },
-    
+
     start: function(tourName = 'dashboard') {
       const tour = this.tours[tourName];
       if (!tour || tour.length === 0) {
         return;
       }
-      
+
       if (localStorage.getItem(`security_tour_${tourName}_completed`) === 'true') {
         if (!confirm('لقد أكملت هذه الجولة من قبل. هل تريد إعادتها؟')) {
           return;
         }
       }
-      
+
       this.currentStep = 0;
       this.totalSteps = tour.length;
       this.isActive = true;
       this.currentTour = tourName;
-      
+
       this.createOverlay();
       this.showStep(tour[0]);
     },
-    
+
     createOverlay: function() {
       this.overlay = document.createElement('div');
       this.overlay.id = 'tour-overlay';
@@ -116,7 +109,7 @@
         z-index: 99998;
         pointer-events: none;
       `;
-      
+
       this.spotlight = document.createElement('div');
       this.spotlight.id = 'tour-spotlight';
       this.spotlight.style.cssText = `
@@ -128,7 +121,7 @@
         pointer-events: none;
         z-index: 99999;
       `;
-      
+
       this.tooltipBox = document.createElement('div');
       this.tooltipBox.id = 'tour-tooltip';
       this.tooltipBox.style.cssText = `
@@ -141,31 +134,31 @@
         z-index: 100000;
         pointer-events: auto;
       `;
-      
+
       document.body.appendChild(this.overlay);
       document.body.appendChild(this.spotlight);
       document.body.appendChild(this.tooltipBox);
     },
-    
+
     showStep: function(step) {
       const element = document.querySelector(step.element);
       if (!element) {
         this.next();
         return;
       }
-      
+
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      
+
       setTimeout(() => {
         const rect = element.getBoundingClientRect();
-        
+
         this.spotlight.style.top = (rect.top - 10) + 'px';
         this.spotlight.style.left = (rect.left - 10) + 'px';
         this.spotlight.style.width = (rect.width + 20) + 'px';
         this.spotlight.style.height = (rect.height + 20) + 'px';
-        
+
         this.positionTooltip(rect, step.position);
-        
+
         this.tooltipBox.innerHTML = `
           <div class="tour-header mb-3">
             <h5 class="mb-0 text-primary">
@@ -189,11 +182,11 @@
         `;
       }, 100);
     },
-    
+
     positionTooltip: function(rect, position) {
       const tooltip = this.tooltipBox;
       const padding = 20;
-      
+
       switch(position) {
         case 'top':
           tooltip.style.top = (rect.top - tooltip.offsetHeight - padding) + 'px';
@@ -212,11 +205,11 @@
           tooltip.style.left = (rect.right + padding) + 'px';
           break;
       }
-      
+
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
       const tooltipRect = tooltip.getBoundingClientRect();
-      
+
       if (tooltipRect.right > viewportWidth) {
         tooltip.style.left = (viewportWidth - tooltipRect.width - 20) + 'px';
       }
@@ -230,10 +223,10 @@
         tooltip.style.top = '20px';
       }
     },
-    
+
     next: function() {
       this.currentStep++;
-      
+
       if (this.currentStep >= this.totalSteps) {
         this.complete();
       } else {
@@ -241,7 +234,7 @@
         this.showStep(tour[this.currentStep]);
       }
     },
-    
+
     previous: function() {
       if (this.currentStep > 0) {
         this.currentStep--;
@@ -249,30 +242,30 @@
         this.showStep(tour[this.currentStep]);
       }
     },
-    
+
     stop: function() {
       if (confirm('هل تريد إيقاف الجولة الإرشادية؟')) {
         this.cleanup();
       }
     },
-    
+
     complete: function() {
       localStorage.setItem(`security_tour_${this.currentTour}_completed`, 'true');
-      
+
       this.tooltipBox.innerHTML = `
         <div class="text-center">
           <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
-          <h5 class="text-success">تم إكمال الجولة! 🎉</h5>
-          <p>يمكنك الآن استكشاف الوحدة بحرية</p>
+          <h5 class="text-success">تم إكمال الجولة</h5>
+          <p>يمكنك الآن استكشاف اللوحة بحرية</p>
           <button class="btn btn-primary" onclick="SecurityTourGuide.cleanup()">إغلاق</button>
         </div>
       `;
-      
+
       setTimeout(() => {
         this.cleanup();
       }, 3000);
     },
-    
+
     cleanup: function() {
       this.overlay?.remove();
       this.spotlight?.remove();
@@ -284,7 +277,7 @@
 
   document.addEventListener('keydown', function(e) {
     if (!SecurityTourGuide.isActive) return;
-    
+
     if (e.key === 'ArrowLeft' || e.key === 'Enter') {
       SecurityTourGuide.next();
     } else if (e.key === 'ArrowRight') {
@@ -295,4 +288,3 @@
   });
 
 })();
-

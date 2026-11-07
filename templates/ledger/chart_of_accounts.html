@@ -221,99 +221,7 @@
     </div>
 </div>
 
-<style>
-    .account-group {
-        margin-bottom: 2rem;
-    }
-    
-    .account-group-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 1rem 1.5rem;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    
-    .account-group-header h4 {
-        margin: 0;
-        font-weight: 600;
-    }
-    
-    .account-group-header .badge {
-        font-size: 0.9rem;
-        padding: 0.4rem 0.8rem;
-    }
-    
-    .account-item {
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        padding: 1rem 1.5rem;
-        margin-bottom: 0.75rem;
-        transition: all 0.3s ease;
-        background: white;
-    }
-    
-    .account-item:hover {
-        border-color: #667eea;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-        transform: translateX(-3px);
-    }
-    
-    .account-code {
-        font-family: 'Courier New', monospace;
-        font-weight: bold;
-        font-size: 0.95rem;
-        color: #667eea;
-        min-width: 180px;
-        display: inline-block;
-    }
-    
-    .account-name {
-        font-weight: 500;
-        color: #2d3748;
-        font-size: 1rem;
-    }
-    
-    .account-badge {
-        font-size: 0.75rem;
-        padding: 0.3rem 0.7rem;
-        border-radius: 12px;
-    }
-    
-    .badge-ASSET { background: #e3f2fd; color: #1976d2; }
-    .badge-LIABILITY { background: #ffebee; color: #c62828; }
-    .badge-EQUITY { background: #f3e5f5; color: #7b1fa2; }
-    .badge-REVENUE { background: #e8f5e9; color: #388e3c; }
-    .badge-EXPENSE { background: #fff3e0; color: #f57c00; }
-    
-    .account-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        margin-right: 1rem;
-    }
-    
-    .icon-ASSET { background: #e3f2fd; color: #1976d2; }
-    .icon-LIABILITY { background: #ffebee; color: #c62828; }
-    .icon-EQUITY { background: #f3e5f5; color: #7b1fa2; }
-    .icon-REVENUE { background: #e8f5e9; color: #388e3c; }
-    .icon-EXPENSE { background: #fff3e0; color: #f57c00; }
-    
-    .empty-state {
-        text-align: center;
-        padding: 3rem;
-        color: #9e9e9e;
-    }
-    
-    .bg-gradient-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-</style>
+
 
 <script>
 let allAccounts = [];
@@ -352,12 +260,10 @@ async function loadAccounts() {
         
     } catch (error) {
         console.error('خطأ في تحميل الحسابات:', error);
-        document.getElementById('accountsContainer').innerHTML = `
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-triangle"></i>
-                حدث خطأ في تحميل الحسابات. يرجى المحاولة لاحقاً.
-            </div>
-        `;
+        const errBox = document.getElementById('accountsContainer');
+        const errHtml = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> حدث خطأ في تحميل الحسابات. يرجى المحاولة لاحقاً.</div>';
+        if (window.AzadDom && AzadDom.setHtmlTrusted) AzadDom.setHtmlTrusted(errBox, errHtml);
+        else errBox.innerHTML = errHtml;
     }
 }
 
@@ -386,16 +292,20 @@ function updateStats() {
 }
 
 // عرض الحسابات
+function _esc(s) {
+    return (window.AzadDom && AzadDom.escapeHtml) ? AzadDom.escapeHtml(String(s ?? '')) : String(s ?? '');
+}
+function _setHtml(el, html) {
+    if (!el) return;
+    if (window.AzadDom && AzadDom.setHtmlTrusted) AzadDom.setHtmlTrusted(el, html);
+    else el.innerHTML = html;
+}
+
 function displayAccounts(accounts) {
     const container = document.getElementById('accountsContainer');
     
     if (accounts.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-inbox fa-3x mb-3"></i>
-                <p>لا توجد حسابات لعرضها</p>
-            </div>
-        `;
+        _setHtml(container, '<div class="empty-state"><i class="fas fa-inbox fa-3x mb-3"></i><p>لا توجد حسابات لعرضها</p></div>');
         return;
     }
     
@@ -438,8 +348,8 @@ function displayAccounts(accounts) {
                             </div>
                             <div class="flex-grow-1">
                                 <div>
-                                    <span class="account-code">${acc.code}</span>
-                                    <span class="account-name">${acc.name}</span>
+                                    <span class="account-code">${_esc(acc.code)}</span>
+                                    <span class="account-name">${_esc(acc.name)}</span>
                                 </div>
                             </div>
                             <span class="account-badge badge-${acc.type}">${acc.type}</span>
@@ -455,7 +365,7 @@ function displayAccounts(accounts) {
         }
     });
     
-    container.innerHTML = html;
+    _setHtml(container, html);
 }
 
 // البحث والفلترة

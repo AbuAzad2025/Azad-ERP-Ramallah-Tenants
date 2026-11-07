@@ -1,167 +1,55 @@
 {% extends 'auth/auth_base.html' %}
 
-{% block title %}تسجيل الدخول - {{ system_settings.company_name or system_settings.system_name or 'النظام' }}{% endblock %}
+{% block title %}تسجيل الدخول — {{ system_settings.company_name or system_settings.system_name or 'النظام' }}{% endblock %}
 {% block title_text %}تسجيل الدخول{% endblock %}
 
-{% block content %}
-  {% set flash_variant = 'auth' %}
-  {% include 'partials/_flash_messages.html' %}
+{% block auth_content %}
+  <div class="auth-tenant-hint card mb-4">
+    <div class="card-body py-3">
+      <h6 class="mb-2 font-weight-bold text-primary"><i class="fas fa-building ml-1"></i> تسجيل الدخول حسب شركتك</h6>
+      <p class="small text-muted mb-2">سجّل دخولك باسم المستخدم — النظام يوجّهك لشركتك وفروعك تلقائياً.</p>
+      {% if login_company_hints %}
+      <div class="row small">
+        {% for hint in login_company_hints %}
+        <div class="col-md-6 mb-1"><i class="fas fa-check text-success"></i> {{ hint.company }}{% if hint.branch %} — {{ hint.branch }}{% endif %}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
 
-  <form class="auth-form" method="post"
-        action="{{ url_for('auth.login', next=request.args.get('next')) }}"
-        novalidate>
+  <form class="auth-form" method="post" action="{{ url_for('auth.login', next=request.args.get('next')) }}" novalidate>
     {{ form.hidden_tag() }}
-
     <div class="form-group mb-3">
       {{ form.username.label(class="form-label") }}
       <div class="input-group">
-        <div class="input-group-prepend">
-          <span class="input-group-text"><i class="fas fa-user"></i></span>
-        </div>
-        {{ form.username(class="form-control form-control-modern", placeholder="البريد / اسم المستخدم / رقم الهاتف", autocomplete="username", autofocus=True, dir="auto") }}
+        <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-user"></i></span></div>
+        {{ form.username(class="form-control", placeholder="البريد / اسم المستخدم / رقم الهاتف", autocomplete="username", autofocus=True, dir="auto") }}
       </div>
     </div>
-
     <div class="form-group mb-4">
       {{ form.password.label(class="form-label") }}
-      <div class="input-group luxury-input-group">
-        <div class="input-group-prepend">
-          <span class="input-group-text"><i class="fas fa-lock"></i></span>
-        </div>
-        {{ form.password(class="form-control form-control-modern", placeholder="كلمة المرور", autocomplete="current-password", id="login-password") }}
+      <div class="input-group">
+        <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-lock"></i></span></div>
+        {{ form.password(class="form-control", placeholder="كلمة المرور", autocomplete="current-password", id="login-password") }}
         <div class="input-group-append">
-          <button class="btn btn-toggle-pass" type="button" onclick="togglePasswordVisibility()">
-             <i class="fas fa-eye" id="toggle-icon"></i>
-          </button>
+          <button class="btn btn-outline-secondary" type="button" id="login-toggle-pass" aria-label="إظهار كلمة المرور"><i class="fas fa-eye"></i></button>
         </div>
       </div>
     </div>
-
-    <div class="form-check mb-4 custom-checkbox-wrapper">
-      {{ form.remember_me(class="custom-control-input", id="rememberCheck") }}
-      <label class="custom-control-label" for="rememberCheck">
-        {{ form.remember_me.label.text }}
-      </label>
+    <div class="form-check mb-4">
+      {{ form.remember_me(class="form-check-input", id="rememberCheck") }}
+      <label class="form-check-label" for="rememberCheck">{{ form.remember_me.label.text }}</label>
     </div>
-
-    {{ form.submit(class="btn btn-primary btn-block py-3 font-weight-bold btn-glow") }}
+    {{ form.submit(class="btn btn-primary btn-block py-2 font-weight-bold") }}
   </form>
 
-  <script>
-    function togglePasswordVisibility() {
-      const passwordInput = document.getElementById('login-password');
-      const icon = document.getElementById('toggle-icon');
-      if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-      } else {
-        passwordInput.type = 'password';
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
-      }
-    }
-  </script>
-
-  <div class="mt-4">
-    <div class="row">
-      <div class="col-6 mb-2">
-        <a href="{{ url_for('auth.customer_register') }}" class="btn btn-outline-primary btn-sm w-100">
-          <i class="fas fa-user-plus"></i> إنشاء حساب
-        </a>
-      </div>
-      <div class="col-6 mb-2">
-        <a href="{{ url_for('auth.customer_password_reset_request') }}" class="btn btn-outline-secondary btn-sm w-100">
-          <i class="fas fa-key"></i> نسيت كلمة المرور
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <hr class="hr-soft my-4">
-
-  <div class="auth-buttons">
-    <div class="row mb-3">
-      <div class="col-12">
-        <a href="{{ url_for('user_guide.index') }}" class="btn btn-info w-100 font-weight-bold py-2">
-          <i class="fas fa-star ml-2"></i> المميزات ({{ system_settings.marketing_modules or '40+' }} وحدة • {{ system_settings.marketing_apis or '133' }} API)
-        </a>
-      </div>
-    </div>
-    <div class="row mb-3">
-      <div class="col-6 mb-2">
-        <a href="{{ url_for('pricing.index') }}" class="btn btn-warning w-100">
-          <i class="fas fa-tags ml-1"></i> الأسعار<br>
-          <small>من ${{ system_settings.marketing_price_from_usd or '500' }}/سنة</small>
-        </a>
-      </div>
-      <div class="col-6 mb-2">
-        <a href="{{ url_for('other_systems.index') }}" class="btn btn-secondary w-100">
-          <i class="fas fa-cogs ml-1"></i> أنظمة أخرى<br>
-          <small>{{ system_settings.marketing_other_systems or '4' }} أنظمة</small>
-        </a>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col-12">
-        <a href="{{ url_for('shop.catalog') }}" class="btn btn-success shop-btn font-weight-bold w-100">
-          <i class="fas fa-store ml-2"></i> تصفح المتجر بدون تسجيل
-        </a>
-      </div>
-    </div>
-  </div>
-  
-  <div class="mt-4 text-center">
-    <div class="card border-0 shadow-sm card-hover" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
-      <div class="card-body text-white py-3">
-        <h6 class="font-weight-bold mb-2">
-          <i class="fas fa-rocket ml-2"></i>نظام احترافي متكامل
-        </h6>
-        <div class="row small">
-          <div class="col-4">
-            <strong>{{ system_settings.marketing_modules or '40+' }}</strong><br>وحدة
-          </div>
-          <div class="col-4">
-            <strong>{{ system_settings.marketing_apis or '133' }}</strong><br>API
-          </div>
-          <div class="col-4">
-            <strong>{{ system_settings.marketing_indexes or '89' }}</strong><br>فهرس
-          </div>
-        </div>
-      </div>
-    </div>
+  <div class="mt-3 row">
+    <div class="col-12 col-sm-6"><a href="{{ url_for('auth.customer_register') }}" class="btn btn-outline-primary btn-sm btn-block">إنشاء حساب</a></div>
+    <div class="col-12 col-sm-6"><a href="{{ url_for('auth.customer_password_reset_request') }}" class="btn btn-outline-secondary btn-sm btn-block">نسيت كلمة المرور</a></div>
   </div>
 {% endblock %}
 
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
-<script>
-(function() {
-  const toggleBtn = document.querySelector('.toggle-pass');
-  const passwordInput = document.getElementById('login-password');
-  
-  if (toggleBtn && passwordInput) {
-    toggleBtn.addEventListener('click', function() {
-      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-      passwordInput.setAttribute('type', type);
-      const icon = this.querySelector('i');
-      icon.classList.toggle('fa-eye');
-      icon.classList.toggle('fa-eye-slash');
-    });
-  }
-
-  const form = document.querySelector('.auth-form');
-  if (form) {
-    passwordInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        if (typeof form.requestSubmit === 'function') {
-          form.requestSubmit();
-        } else {
-          try { HTMLFormElement.prototype.submit.call(form); } catch (err) {}
-        }
-      }
-    });
-  }
-})();
-</script>
+{% block auth_scripts %}
+<script src="{{ static_url('js/auth.js') }}" defer></script>
 {% endblock %}

@@ -65,11 +65,11 @@
   <div class="row g-3">
     <div class="col-lg-6">
       <div class="card shadow-sm h-100">
-        <div class="card-header">{{ FIELD_LABELS['payments_summary'] }}</div>
+        <div class="card-header erp-card-header-row erp-theme-header--primary">{{ FIELD_LABELS['payments_summary'] }}</div>
         <div class="card-body">
           <div class="table-responsive">
             <table class="table table-striped align-middle">
-              <thead>
+              <thead class="table-header-primary text-white">
                 <tr>
                   <th style="width:60%">{{ FIELD_LABELS['payment_method'] }}</th>
                   <th class="text-start">{{ FIELD_LABELS['total'] }}</th>
@@ -102,7 +102,7 @@
 
     <div class="col-lg-6">
       <div class="card shadow-sm h-100">
-        <div class="card-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">رسم بياني</div>
+ <div class="card-header erp-card-header-row erp-theme-header--primary">رسم بياني</div>
         <div class="card-body">
           <div id="paymentsChartWrap" class="position-relative" style="height: 340px; width: 100%;">
             <canvas id="paymentsChart"></canvas>

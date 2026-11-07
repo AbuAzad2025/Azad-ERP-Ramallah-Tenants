@@ -14,16 +14,6 @@ from utils import permission_required, naive_utc_for_delta
 
 workflows_bp = Blueprint('workflows', __name__, url_prefix='/workflows')
 
-@workflows_bp.before_request
-@login_required
-def restrict_workflows_access():
-    # الحماية: فقط للمالك والمطور (Level 0)
-    from permissions_config.role_policy import is_platform_owner_role
-
-    if not is_platform_owner_role(current_user):
-        utils.flash_error('غير مصرح لك بالوصول لإدارة سير العمل', 'danger')
-        return redirect(url_for('main.dashboard'))
-
 
 @workflows_bp.route('/')
 @login_required
@@ -351,6 +341,7 @@ def cancel_instance(id):
 
 @workflows_bp.route('/my-pending')
 @login_required
+@permission_required(SystemPermissions.VIEW_WORKFLOWS)
 def my_pending():
     pending_instances = WorkflowEngine.get_pending_actions(current_user.id)
     

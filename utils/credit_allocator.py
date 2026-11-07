@@ -384,6 +384,12 @@ def apply_customer_credit_to_obligations(customer_id: int, *, created_by: int | 
         return []
     if not customer_id:
         return []
+    try:
+        from utils.payment_allocation_policy import payment_auto_allocate_enabled
+        if not payment_auto_allocate_enabled():
+            return []
+    except Exception:
+        pass
 
     touched_payment_ids: list[int] = []
 
@@ -580,6 +586,12 @@ def apply_customer_credit_to_obligations(customer_id: int, *, created_by: int | 
 def apply_supplier_out_payments_to_obligations(supplier_id: int) -> list[int]:
     if not supplier_id:
         return []
+    try:
+        from utils.payment_allocation_policy import payment_auto_allocate_enabled
+        if not payment_auto_allocate_enabled():
+            return []
+    except Exception:
+        pass
 
     touched_payment_ids: list[int] = []
 
@@ -814,6 +826,12 @@ def apply_supplier_out_payments_to_obligations(supplier_id: int) -> list[int]:
 def apply_partner_out_payments_to_obligations(partner_id: int) -> list[int]:
     if not partner_id:
         return []
+    try:
+        from utils.payment_allocation_policy import payment_auto_allocate_enabled
+        if not payment_auto_allocate_enabled():
+            return []
+    except Exception:
+        pass
 
     touched_payment_ids: list[int] = []
 

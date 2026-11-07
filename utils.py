@@ -165,6 +165,7 @@ def search_model(
     limit_default: int = 20,
     serializer: Optional[Callable[[Any], Dict[str, Any]]] = None,
     q_param: str = "q",
+    base_query=None,
     **kwargs,
 ):
     qtxt = (request.args.get(q_param) or "").strip()
@@ -177,7 +178,7 @@ def search_model(
     except Exception:
         page = 1
 
-    query = db.session.query(model)
+    query = base_query if base_query is not None else db.session.query(model)
     if extra_filters:
         query = query.filter(*extra_filters)
 
@@ -781,10 +782,21 @@ _PERMISSION_ALIASES = {
     "add_supplier": {"add_supplier", "manage_vendors"},
     "add_partner": {"add_partner", "manage_vendors"},
     "manage_shipments": {"manage_shipments", "manage_inventory", "manage_warehouses"},
-    "manage_payments": {"manage_payments", "manage_sales"},
-    "archive_sale": {"archive_sale", "manage_sales"},
-    "view_payments": {"view_payments", "manage_payments"},
-    "manage_checks": {"manage_checks", "manage_payments"},
+    "manage_payments": {"manage_payments", "view_payments", "manage_sales"},
+    "view_payments": {"view_payments", "manage_payments", "manage_sales"},
+    "manage_sales": {"manage_sales", "view_sales", "use_pos"},
+    "view_sales": {"view_sales", "manage_sales", "use_pos"},
+    "use_pos": {"use_pos", "manage_sales", "view_sales"},
+    "manage_ledger": {"manage_ledger", "view_ledger"},
+    "view_ledger": {"view_ledger", "manage_ledger"},
+    "manage_bank": {"manage_bank", "view_bank"},
+    "view_bank": {"view_bank", "manage_bank"},
+    "manage_payroll": {"manage_payroll", "view_payroll"},
+    "view_payroll": {"view_payroll", "manage_payroll"},
+    "manage_projects": {"manage_projects", "view_projects"},
+    "view_projects": {"view_projects", "manage_projects"},
+    "manage_workflows": {"manage_workflows", "view_workflows"},
+    "view_workflows": {"view_workflows", "manage_workflows"},
     "backup_database": {"backup_database", "backup", "backup_db", "download_backup", "db_backup"},
     "restore_database": {"restore_database", "restore", "restore_db", "upload_backup", "db_restore"},
     "view_shop": {"view_shop", "browse_products"},
@@ -1760,6 +1772,11 @@ def _install_accounting_listeners():
                         except Exception:
                             pass
                     paid += amt
+        try:
+            from utils.allocation_amounts import sum_allocations
+            paid += sum_allocations("SALE", int(sale.id), sess)
+        except Exception:
+            pass
         total_paid = float(paid.quantize(Q, rounding=ROUND_HALF_UP))
         balance_due = float((_q2_local(sale.total_amount) - paid).quantize(Q, rounding=ROUND_HALF_UP))
         set_committed_value(sale, "total_paid", total_paid)

@@ -1,0 +1,124 @@
+/**
+ * توحيد الموبايل/التابلت مع ثيم ERP — بدون تناقض مع erp-arabic-ui
+ */
+html[data-ui-mode="mobile"] body.security-body.erp-unified,
+html[data-ui-mode="tablet"] body.security-body.erp-unified {
+  padding-top: var(--main-navbar_height, 57px);
+}
+
+html[data-ui-mode="mobile"] body.security-body.erp-unified .security-main,
+html[data-ui-mode="tablet"] body.security-body.erp-unified .security-main {
+  margin-right: 0 !important;
+}
+
+html[data-ui-mode="mobile"] body.security-body.erp-unified .security-main__scroll .p-4,
+html[data-ui-mode="tablet"] body.security-body.erp-unified .security-main__scroll .p-4 {
+  padding: 1rem !important;
+}
+
+html[data-ui-mode="mobile"] body.security-body.erp-unified .security-header,
+html[data-ui-mode="tablet"] body.security-body.erp-unified .security-header {
+  padding: 0 0.75rem;
+  height: auto;
+  min-height: 52px;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+html[data-ui-mode="mobile"] .gm-quick-actions,
+html[data-ui-mode="tablet"] .gm-quick-actions {
+  padding: 0.75rem;
+}
+
+html[data-ui-mode="mobile"] .gm-quick-actions .row > [class*="col"],
+html[data-ui-mode="tablet"] .gm-quick-actions .row > [class*="col"] {
+  flex: 0 0 50%;
+  max-width: 50%;
+}
+
+html[data-ui-mode="mobile"] .erp-sec-actions-grid > [class*="col-"],
+html[data-ui-mode="tablet"] .erp-sec-actions-grid > [class*="col-"] {
+  flex: 0 0 100%;
+  max-width: 100%;
+}
+
+@media (max-width: 991.98px) {
+  .erp-sec-actions-grid > [class*="col-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
+/* إرشادات مختصرة */
+.erp-hint-banner {
+  padding: 0.65rem 0.85rem;
+  font-size: 0.875rem;
+  border-radius: var(--erp-radius-sm, 10px);
+}
+
+.erp-hint-banner .fa-2x {
+  font-size: 1.25rem !important;
+}
+
+.erp-hint-banner .alert-heading {
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+.erp-card-hint {
+  font-size: 0.8rem;
+  color: var(--erp-muted, #6b7280);
+  margin-bottom: 0.5rem;
+}
+
+html[data-ui-mode="mobile"] .erp-card-hint,
+html[data-ui-mode="tablet"] .erp-card-hint {
+  display: none;
+}
+
+html[data-ui-mode="mobile"] .erp-hint-details summary,
+html[data-ui-mode="tablet"] .erp-hint-details summary {
+  cursor: pointer;
+  color: var(--erp-blue, #0b68ff);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+html[data-ui-mode="mobile"] .form-text:not(.erp-keep-hint),
+html[data-ui-mode="tablet"] .form-text:not(.erp-keep-hint) {
+  font-size: 0.78rem;
+  margin-top: 0.2rem;
+}
+
+html[data-ui-mode="mobile"] .alert.alert-info:not(.alert-persist):not(.erp-hint-details),
+html[data-ui-mode="tablet"] .alert.alert-info:not(.alert-persist):not(.erp-hint-details) {
+  padding: 0.55rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+html[data-ui-mode="mobile"] .erp-branch-hint,
+html[data-ui-mode="tablet"] .erp-branch-hint {
+  padding: 0.4rem 0.65rem !important;
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 767.98px) {
+  .erp-page-toolbar {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .erp-page-toolbar .btn {
+    flex: 1 1 auto;
+  }
+
+  body.security-body.erp-unified .table {
+    font-size: 0.85rem;
+  }
+
+  body.security-body.erp-unified .logo-preview-box {
+    min-height: 110px !important;
+  }
+}

@@ -501,17 +501,24 @@ class LedgerQueryOptimizer:
 class CurrencyConverter:
     @staticmethod
     def convert_to_ils(amount: float, currency: str, date: datetime, fx_rate_used: Optional[float] = None) -> float:
-        if currency == 'ILS':
-            return amount
-        
-        if fx_rate_used and fx_rate_used > 0:
+        code = (currency or "ILS").upper()
+        if code == "ILS":
+            return float(amount or 0)
+
+        if fx_rate_used and float(fx_rate_used) > 0:
             return float(amount * float(fx_rate_used))
-        
-        rate = LedgerCache.get_fx_rate(currency, 'ILS', date)
-        if rate and rate > 0:
+
+        rate = LedgerCache.get_fx_rate(code, "ILS", date)
+        if rate and float(rate) > 0:
             return float(amount * float(rate))
-        
-        return amount
+
+        try:
+            from models import convert_amount
+            from decimal import Decimal
+
+            return float(convert_amount(Decimal(str(amount or 0)), code, "ILS", date))
+        except Exception:
+            return 0.0
 
 
 class LedgerStatisticsCalculator:

@@ -1,6 +1,6 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}analytics{% endblock %}
-{% block security_title %}Advanced Analytics{% endblock %}
+{% block security_title %}تحليلات متقدمة{% endblock %}
 {% block security_icon %}<i class="fas fa-chart-line"></i>{% endblock %}
 {% block security_description %}تحليلات متقدمة بالذكاء الاصطناعي{% endblock %}
 {% block security_breadcrumb %}<li class="breadcrumb-item active">Analytics</li>{% endblock %}
@@ -14,7 +14,7 @@
   <div class="row g-4 mb-4">
     <div class="col-md-6">
       <div class="card border-0 shadow-sm">
-        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div class="card-header erp-card-header-row erp-theme-header--primary">
           <h5 class="mb-0"><i class="fas fa-chart-line"></i> منحنى الإيرادات</h5>
         </div>
         <div class="card-body">
@@ -25,7 +25,7 @@
 
     <div class="col-md-6">
       <div class="card border-0 shadow-sm">
-        <div class="card-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+        <div class="card-header erp-card-header-row erp-theme-header--primary card-header-danger text-white erp-card-header-row">
           <h5 class="mb-0"><i class="fas fa-users"></i> أفضل الزبائن</h5>
         </div>
         <div class="card-body">
@@ -36,13 +36,13 @@
   </div>
 
   <div class="card border-0 shadow-sm">
-    <div class="card-header bg-gradient-primary text-white">
+    <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-primary text-white">
       <h5 class="mb-0"><i class="fas fa-trophy"></i> أفضل 10 زبائن</h5>
     </div>
     <div class="card-body">
       <div class="table-responsive">
         <table class="table table-hover">
-          <thead class="table-light">
+          <thead class="table-header-primary text-white table-light">
             <tr>
               <th>#</th>
               <th>الزبون</th>

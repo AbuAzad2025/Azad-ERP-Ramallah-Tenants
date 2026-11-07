@@ -36,6 +36,25 @@ _system_state = "LOCAL_ONLY"
 LOCAL_MODE_LOG_FILE = "ai_local_mode_log.json"
 MAX_MEMORY_MESSAGES = 50
 
+STAT_LABELS = {
+    "general_customers": "الزبائن",
+    "general_suppliers": "الموردون",
+    "general_products": "المنتجات",
+    "general_services": "طلبات الصيانة",
+    "general_users": "المستخدمون",
+    "general_warehouses": "المستودعات",
+    "general_sales": "المبيعات",
+    "general_expenses": "المصروفات",
+    "customers_count": "الزبائن",
+    "suppliers_count": "الموردون",
+    "products_count": "المنتجات",
+    "sales_count": "المبيعات",
+    "expenses_count": "المصروفات",
+    "inventory_products_count": "منتجات في المخزون",
+    "low_stock_count": "منخفض المخزون",
+    "warehouses_count": "المستودعات",
+}
+
 DEFAULT_COMPANY_PROFILE = {
     "company_name": "Azad company",
     "system_name": "نظام أزاد لإدارة الكراج والمحاسبة",
@@ -611,24 +630,78 @@ def log_local_mode_usage():
         pass
 
 
+def _normalize_ar_query(message: str) -> str:
+    text = str(message or "").lower().strip()
+    text = re.sub(r"[\u0617-\u061A\u064B-\u0652]", "", text)
+    return re.sub("[إأٱآا]", "ا", text).replace("ى", "ي").replace("ة", "ه")
+
+
+def _should_use_data_fallback(message: str, search_results: Dict[str, Any]) -> bool:
+    try:
+        from AI.engine.ai_conversation import get_small_talk_response
+        if get_small_talk_response(message):
+            return False
+    except Exception:
+        pass
+    text = _normalize_ar_query(message)
+    if any(w in text for w in ["ملخص", "احصاء", "إحصاء", "overview", "statistics", "وضع النظام", "حالة النظام", "how many", "count"]):
+        return True
+    if re.search(r"\b(كم|عدد)\b", text):
+        return True
+    intent = search_results.get("intent") if isinstance(search_results, dict) else {}
+    if isinstance(intent, dict):
+        if intent.get("type") in {"count", "analysis", "list", "balance"}:
+            return True
+        if intent.get("entities"):
+            return True
+    data_keys = [k for k, v in (search_results or {}).items() if k not in {"intent", "error"} and v not in (None, "", [], {})]
+    if not data_keys:
+        return False
+    if all(str(k).startswith("general_") for k in data_keys):
+        return False
+    return True
+
+
+def _format_search_results_human(search_results: Dict[str, Any]) -> List[str]:
+    lines: List[str] = []
+    for key, value in list((search_results or {}).items())[:14]:
+        if key in {"intent", "error"} or value in (None, "", [], {}):
+            continue
+        label = STAT_LABELS.get(str(key), str(key).replace("general_", "").replace("_", " "))
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, (int, float)):
+            formatted = f"{int(value):,}" if isinstance(value, int) else f"{value:,.2f}"
+            lines.append(f"• **{label}:** {formatted}")
+        elif isinstance(value, list):
+            lines.append(f"• **{label}:** {len(value)} عنصر")
+        elif isinstance(value, dict):
+            lines.append(f"• **{label}:** {len(value)} سجل")
+        elif isinstance(value, str) and len(value) < 120:
+            lines.append(f"• **{label}:** {value}")
+    return lines
+
+
 def get_local_fallback_response(message, search_results):
     try:
+        from AI.engine.ai_conversation import get_small_talk_response
+        casual = get_small_talk_response(message)
+        if casual:
+            return casual
         company = get_company_profile()
-        response = f"🤖 أعمل الآن بالوضع المحلي داخل {company['system_name']}.\n"
-        response += f"🏢 الشركة: {company['company_name']} | المطور: {company['owner_display_name']} | الهاتف: {company['phone']}\n\n"
-        if search_results and any(k for k in search_results if k not in {"intent", "error"} and search_results.get(k)):
-            response += "📊 البيانات المتوفرة من قاعدة البيانات:\n"
-            for key, value in list(search_results.items())[:12]:
-                if key in {"intent", "error"} or not value:
-                    continue
-                if isinstance(value, (int, float, str)):
-                    response += f"• {key}: {value}\n"
-                elif isinstance(value, list):
-                    response += f"• {key}: {len(value)} عنصر\n"
-                elif isinstance(value, dict):
-                    response += f"• {key}: متوفر\n"
-        else:
-            response += "لم أجد بيانات مباشرة للسؤال. أستطيع مساعدتك بالبحث في الزبائن، المبيعات، الصيانة، المخزون، النفقات، المدفوعات، والصفحات."
+        clean = search_results or {}
+        if not _should_use_data_fallback(message, clean):
+            return (
+                f"أنا هنا لمساعدتك في **{company['system_name']}**.\n"
+                "جرّب مثلاً:\n"
+                "• ملخص مبيعات اليوم\n"
+                "• ما المنتجات منخفضة المخزون؟\n"
+                "• أين صفحة طلبات الصيانة؟"
+            )
+        lines = _format_search_results_human(clean)
+        response = "📊 **ملخص من بيانات النظام**\n\n"
+        response += "\n".join(lines) if lines else "لا توجد بيانات محددة لهذا السؤال."
+        response += f"\n\n🏢 {company['company_name']}"
         log_local_mode_usage()
         return response
     except Exception as exc:
@@ -755,7 +828,7 @@ def enhanced_context_understanding(message):
     normalized = re.sub("[إأٱآا]", "ا", normalized).replace("ى", "ي").replace("ة", "ه")
     intent = analyze_question_intent(normalized)
     context_type = "question"
-    if any(g in normalized for g in ["صباح", "مساء", "مرحبا", "اهلا", "السلام", "hello", "hi"]):
+    if any(g in normalized for g in ["صباح", "مساء", "مرحبا", "اهلا", "السلام", "hello", "hi", "كيفك", "كيف حالك", "كيف الحال"]):
         context_type = "greeting"
     elif any(c in normalized for c in ["مشكله", "خطا", "خلل", "عطل", "problem", "error", "bug"]):
         context_type = "complaint"
@@ -774,16 +847,25 @@ def local_intelligent_response(message, session_id=None):
     q = message.lower()
     context = enhanced_context_understanding(message)
     try:
-        from AI.engine.ai_conversation import match_local_response
+        from AI.engine.ai_conversation import match_local_response, get_small_talk_response
         rich = match_local_response(message, session_id=session_id)
         if rich:
             return rich
+        casual = get_small_talk_response(message)
+        if casual:
+            return casual
     except Exception:
         pass
     company = get_company_profile()
-    if context.get("context_type") == "greeting" or any(w in q for w in ["من انت", "من أنت", "الشركة", "المطور", "رقم الهاتف", "تواصل"]):
-        stats = gather_system_context()
-        return f"👋 أهلاً. أنا المساعد الذكي داخل {company['system_name']}.\n🏢 الشركة: {company['company_name']}\n👤 المالك/المطور: {company['owner_display_name']} ({company['owner_name']})\n☎️ الهاتف: {company['phone']}\n\n📊 حالة مختصرة:\n{stats.get('current_stats', 'غير متوفر')}"
+    if context.get("context_type") == "greeting":
+        from AI.engine.ai_conversation import get_small_talk_response
+        return get_small_talk_response(message) or f"أهلاً! كيف أساعدك في **{company['system_name']}**؟"
+    if any(w in q for w in ["من انت", "من أنت", "الشركة", "المطور", "رقم الهاتف", "تواصل"]):
+        return (
+            f"👋 أنا المساعد الذكي داخل **{company['system_name']}**.\n"
+            f"🏢 **{company['company_name']}** · ☎️ {company['phone']}\n"
+            f"👤 {company['owner_display_name']}"
+        )
     if context.get("intent") == "navigation" or any(w in q for w in ["وين", "اين", "أين", "افتح", "رابط", "صفحة"]):
         return handle_navigation_request(message)
     for key, response in get_local_faq_responses().items():
@@ -810,7 +892,7 @@ def local_intelligent_response(message, session_id=None):
         return handle_error_question(message).get("formatted_response")
     search_results = search_database_for_query(message)
     validation = validate_search_results(message, search_results)
-    if validation.get("has_data"):
+    if validation.get("has_data") and _should_use_data_fallback(message, search_results):
         return get_local_fallback_response(message, search_results)
     return "لم أجد بيانات مباشرة كافية. اسألني عن الزبائن، الصيانة، المنتجات، النفقات، المدفوعات، المخزون، الصفحات، أو VAT."
 
@@ -820,6 +902,13 @@ def ai_chat_with_search(user_id: int = None, query: str = None, message: str = N
         query = message
     if not query:
         return {"response": "لم يتم تقديم سؤال", "confidence": 0}
+    try:
+        from AI.engine.ai_conversation import get_small_talk_response
+        casual = get_small_talk_response(query)
+        if casual:
+            return {"response": casual, "confidence": 0.95, "sources": ["small_talk"], "tips": []}
+    except Exception:
+        pass
     start = time.time()
     context = context or {}
     context["user_id"] = user_id
@@ -867,8 +956,11 @@ def _ai_chat_original(message, session_id="default"):
         search_results = search_database_for_query(message)
         validation = validate_search_results(message, search_results)
         confidence = calculate_confidence_score(search_results, validation)
-        response = ai_chat_response(message, search_results, session_id) if validation.get("has_data") else local_intelligent_response(message, session_id=session_id)
-        if confidence < 70 and "درجة الثقة" not in response:
+        if validation.get("has_data") and _should_use_data_fallback(message, search_results):
+            response = ai_chat_response(message, search_results, session_id)
+        else:
+            response = local_intelligent_response(message, session_id=session_id)
+        if confidence < 70 and "درجة الثقة" not in response and _should_use_data_fallback(message, search_results):
             response += f"\n\n⚠️ درجة الثقة التقريبية: {confidence}%"
     add_to_memory(session_id, "assistant", response)
     current = _now()

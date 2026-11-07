@@ -30,104 +30,60 @@
   // ═══════════════════════════════════════════════════════════════════
   
   window.showVisualSchema = function() {
-    // سيتم تنفيذها في صفحة Schema
-    if(typeof showToast!=='undefined'){showToast('Visual Schema Designer\n\nقيد التطوير - ستُضاف قريباً!\n\nستعرض:\n- مخطط ER بصري\n- العلاقات بين الجداول\n- أنواع البيانات\n- الفهارس', 'success');}else{alert('Visual Schema Designer\n\nقيد التطوير - ستُضاف قريباً!\n\nستعرض:\n- مخطط ER بصري\n- العلاقات بين الجداول\n- أنواع البيانات\n- الفهارس');};
+    const panel = document.getElementById('schemaRelationsPanel');
+    if (panel) {
+      const show = panel.style.display === 'none' || !panel.style.display;
+      panel.style.display = show ? 'block' : 'none';
+      if (show) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    if (typeof showToast !== 'undefined') {
+      showToast('افتح تبويب المخطط الهيكلي في مدير قاعدة البيانات لعرض علاقات الجداول.', 'info');
+    } else {
+      alert('افتح تبويب المخطط الهيكلي في مدير قاعدة البيانات لعرض علاقات الجداول.');
+    }
   };
   
   // ═══════════════════════════════════════════════════════════════════
   // 📊 Index Analyzer
   // ═══════════════════════════════════════════════════════════════════
   
-  window.analyzeIndex = function(indexName) {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-      <div class="modal-dialog" style="
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: white;
-        border-radius: 10px;
-        padding: 20px;
-        max-width: 600px;
-        width: 90%;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        z-index: 99999;
-      ">
-        <h5><i class="fas fa-bolt"></i> تحليل الفهرس: <span id="indexNameText"></span></h5>
-        <div class="mt-3">
-          <div class="row g-2">
-            <div class="col-md-6">
-              <div class="card bg-primary text-white">
-                <div class="card-body p-2">
-                  <small>الاستخدام</small>
-                  <h4 class="mb-0">87%</h4>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card bg-success text-white">
-                <div class="card-body p-2">
-                  <small>الكفاءة</small>
-                  <h4 class="mb-0">ممتاز</h4>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card bg-info text-white">
-                <div class="card-body p-2">
-                  <small>الحجم</small>
-                  <h4 class="mb-0">2.5 MB</h4>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card bg-warning text-dark">
-                <div class="card-body p-2">
-                  <small>التشظي</small>
-                  <h4 class="mb-0">منخفض</h4>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="alert alert-success mt-3">
-            <i class="fas fa-check-circle"></i> هذا الفهرس في حالة ممتازة!
-            <br><small>آخر استخدام: منذ 5 دقائق</small>
-          </div>
-          
-          <h6 class="mt-3">التوصيات:</h6>
-          <ul class="small">
-            <li>✅ الفهرس يعمل بكفاءة عالية</li>
-            <li>💡 آخر REINDEX: منذ 7 أيام - جيد</li>
-            <li>📊 معدل الاستخدام: 150 query/ساعة</li>
-          </ul>
-        </div>
-        
-        <button class="btn btn-secondary mt-3" onclick="this.closest('.modal-overlay').remove()">
-          إغلاق
-        </button>
-      </div>
-    `;
-    
-    modal.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: 99998;
-    `;
-    
-    modal.onclick = (e) => {
-      if (e.target === modal) modal.remove();
-    };
-    
-    document.body.appendChild(modal);
-    const el = modal.querySelector('#indexNameText');
-    if (el) el.textContent = String(indexName || '');
+  window.analyzeIndex = function(tableName) {
+    if (!tableName) {
+      if (typeof showToast !== 'undefined') {
+        showToast('حدد اسم الجدول للتحليل', 'warning');
+      } else {
+        alert('حدد اسم الجدول للتحليل');
+      }
+      return;
+    }
+    if (typeof analyzeTableIndexes === 'function') {
+      analyzeTableIndexes(tableName);
+      return;
+    }
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
+    fetch('/security/api/indexes/analyze-table', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrf
+      },
+      body: JSON.stringify({ table: tableName })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success) {
+        alert(data.message || 'فشل التحليل');
+        return;
+      }
+      var lines = ['تحليل جدول: ' + data.table];
+      (data.suggestions || []).forEach(function(s) {
+        lines.push('- [' + s.priority + '] ' + s.column + ': ' + s.reason);
+      });
+      alert(lines.join('\n') || 'لا توجد اقتراحات');
+    })
+    .catch(function() { alert('فشل الاتصال بالخادم'); });
   };
   
   // ═══════════════════════════════════════════════════════════════════

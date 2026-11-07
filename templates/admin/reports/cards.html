@@ -32,7 +32,7 @@
   <!-- إحصائيات سريعة -->
   <div class="row mb-3">
     <div class="col-md-3">
-      <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+      <div class="card shadow-sm border-0 summary-card summary-card--primary text-white card-hover">
         <div class="card-body text-white text-center">
           <h3 class="mb-1">{{ rows|length }}</h3>
           <p class="mb-0 small">إجمالي المعاملات</p>
@@ -40,7 +40,7 @@
       </div>
     </div>
     <div class="col-md-3">
-      <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);">
+      <div class="card shadow-sm border-0 summary-card summary-card--success text-white card-hover">
         <div class="card-body text-white text-center">
           <h3 class="mb-1">{{ rows|selectattr('status', 'equalto', 'SUCCESS')|list|length }}</h3>
           <p class="mb-0 small">معاملات ناجحة</p>
@@ -48,7 +48,7 @@
       </div>
     </div>
     <div class="col-md-3">
-      <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);">
+      <div class="card shadow-sm border-0 summary-card summary-card--warning text-white card-hover">
         <div class="card-body text-white text-center">
           <h3 class="mb-1">{{ rows|selectattr('status', 'equalto', 'PENDING')|list|length }}</h3>
           <p class="mb-0 small">قيد الانتظار</p>
@@ -56,7 +56,7 @@
       </div>
     </div>
     <div class="col-md-3">
-      <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);">
+      <div class="card shadow-sm border-0 summary-card summary-card--danger text-white card-hover">
         <div class="card-body text-white text-center">
           <h3 class="mb-1">{{ rows|selectattr('status', 'equalto', 'FAILED')|list|length }}</h3>
           <p class="mb-0 small">معاملات فاشلة</p>
@@ -101,7 +101,7 @@
     <div class="card-body">
       <div class="table-responsive">
         <table class="table table-hover align-middle">
-          <thead>
+          <thead class="table-header-primary text-white">
             <tr>
               <th>التاريخ</th>
               <th>مرجع الدفع</th>

@@ -1,9 +1,9 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}monitoring_dashboard{% endblock %}
-{% block security_title %}Monitoring Dashboard{% endblock %}
+{% block security_title %}لوحة المراقبة{% endblock %}
 {% block security_icon %}<i class="fas fa-tv"></i>{% endblock %}
-{% block security_description %}مراقبة شاملة للأداء والموارد في الوقت الفعلي - Grafana-like{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">Monitoring Dashboard</li>{% endblock %}
+{% block security_description %}مراقبة الأداء والموارد{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">لوحة المراقبة</li>{% endblock %}
 
 {% block head_extra %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
@@ -11,10 +11,10 @@
 
 {% block security_content %}
   
-  <div class="alert alert-success border-0 shadow-sm">
+  <div class="alert alert-light border shadow-sm mb-4">
     <i class="fas fa-chart-line"></i>
-    <strong>Grafana-like Dashboard:</strong> مراقبة شاملة للأداء والموارد والعمليات في الوقت الفعلي
-    <button class="btn btn-sm btn-outline-success float-end" onclick="refreshAllMetrics()">
+    <strong>لوحة المراقبة:</strong> مقاييس الموارد والعمليات من الخادم
+    <button class="btn btn-sm btn-glass float-end" onclick="refreshAllMetrics()">
       <i class="fas fa-sync-alt"></i> تحديث
     </button>
   </div>
@@ -25,7 +25,7 @@
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center">
             <div>
-              <h6 class="text-white-50 mb-1">CPU Usage</h6>
+              <h6 class="text-white opacity-75 mb-1">استخدام المعالج</h6>
               <h3 class="mb-0" id="cpu-value">{{ system_metrics.cpu if system_metrics else 0 }}%</h3>
             </div>
             <div class="fs-1 opacity-50">
@@ -44,7 +44,7 @@
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center">
             <div>
-              <h6 class="text-white-50 mb-1">Memory Usage</h6>
+              <h6 class="text-white opacity-75 mb-1">استخدام الذاكرة</h6>
               <h3 class="mb-0" id="memory-value">{{ system_metrics.memory if system_metrics else 0 }}%</h3>
             </div>
             <div class="fs-1 opacity-50">
@@ -59,11 +59,11 @@
     </div>
     
     <div class="col-lg-3 col-md-6">
-      <div class="card border-0 shadow-sm bg-info text-white">
+      <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--info text-white card-hover">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center">
             <div>
-              <h6 class="text-white-50 mb-1">Disk Usage</h6>
+              <h6 class="text-white opacity-75 mb-1">استخدام القرص</h6>
               <h3 class="mb-0" id="disk-value">{{ system_metrics.disk if system_metrics else 0 }}%</h3>
             </div>
             <div class="fs-1 opacity-50">
@@ -82,7 +82,7 @@
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center">
             <div>
-              <h6 class="text-dark-50 mb-1">Active Users</h6>
+              <h6 class="mb-1 opacity-75">المستخدمون النشطون</h6>
               <h3 class="mb-0" id="users-value">{{ dashboard_data.active_users if dashboard_data else 0 }}</h3>
             </div>
             <div class="fs-1 opacity-50">
@@ -157,7 +157,7 @@
     
     <div class="col-lg-8">
       <div class="card border-0 shadow-sm">
-        <div class="card-header bg-gradient-dark text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-dark text-white">
           <h5 class="mb-0"><i class="fas fa-chart-area"></i> استخدام الموارد (آخر 30 دقيقة)</h5>
         </div>
         <div class="card-body">
@@ -168,7 +168,7 @@
     
     <div class="col-lg-4">
       <div class="card border-0 shadow-sm">
-        <div class="card-header bg-gradient-secondary text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-secondary text-white">
           <h5 class="mb-0"><i class="fas fa-database"></i> معلومات قاعدة البيانات</h5>
         </div>
         <div class="card-body" id="db-info">
@@ -200,7 +200,7 @@
     
     <div class="col-lg-6">
       <div class="card border-0 shadow-sm">
-        <div class="card-header bg-gradient-info text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-info text-white">
           <h5 class="mb-0"><i class="fas fa-tachometer-alt"></i> معدل العمليات (Ops/min)</h5>
         </div>
         <div class="card-body">
@@ -211,7 +211,7 @@
     
     <div class="col-lg-6">
       <div class="card border-0 shadow-sm">
-        <div class="card-header bg-gradient-warning text-dark">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-warning text-dark">
           <h5 class="mb-0"><i class="fas fa-clock"></i> وقت الاستجابة (Response Time)</h5>
         </div>
         <div class="card-body">
@@ -222,7 +222,7 @@
     
     <div class="col-lg-12">
       <div class="card border-0 shadow-sm">
-        <div class="card-header bg-gradient-danger text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-danger text-white">
           <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> تنبيهات النظام</h5>
         </div>
         <div class="card-body">

@@ -78,7 +78,7 @@ def generate_qr_code(data: str, size: int = 200, border: int = 4) -> Optional[st
         return None
 
 def generate_barcode_image(code: str, width: int = 300, height: int = 100) -> Optional[str]:
-    """توليد صورة باركود"""
+    """توليد QR Code كصورة base64 (بديل الباركود — يتطلب python-barcode للباركود الحقيقي)"""
     if not QR_AVAILABLE:
         return None
     
@@ -104,7 +104,8 @@ def generate_barcode_image(code: str, width: int = 300, height: int = 100) -> Op
     except Exception:
         return None
 
-def create_printable_label(product_name: str, barcode: str, price: float = None, 
+
+def create_printable_label(product_name: str, barcode: str, price: Optional[float] = None, 
                           currency: str = "ILS") -> str:
     """إنشاء تسمية قابلة للطباعة"""
     qr_code = generate_qr_code(barcode)

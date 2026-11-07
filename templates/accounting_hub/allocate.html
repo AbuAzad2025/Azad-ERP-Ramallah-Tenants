@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}توزيع دفعة{% endblock %}
+{% block content %}
+<div class="container py-3" dir="rtl">
+  <h4>توزيع يدوي — دفعة #{{ payment.id }} ({{ payment.total_amount }})</h4>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <table class="table table-sm"><thead class="table-header-primary text-white"><tr><th>مستند</th><th>متبقي</th><th>توزيع</th></tr></thead>
+    <tbody>
+      {% for d in open_docs %}
+      <tr>
+        <td>{{ d.ref }} ({{ d.entity_type }})</td>
+        <td>{{ d.balance_due }}</td>
+        <td><input type="number" step="0.01" name="alloc_{{ d.entity_type }}_{{ d.entity_id }}" class="form-control form-control-sm" placeholder="0"></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+    <button class="btn btn-primary">حفظ التوزيع</button>
+  </form>
+  {% if existing %}<p class="mt-2 small text-muted">موزّع حالياً: {{ existing|length }} سطر — يُحدَّث <code>total_paid</code> على المستندات دون نقل الدفعة من حساب الزبون.</p>{% endif %}
+</div>
+{% endblock %}

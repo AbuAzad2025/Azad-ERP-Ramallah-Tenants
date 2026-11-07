@@ -90,8 +90,12 @@ def discover_all_templates() -> List[Dict[str, Any]]:
     return templates
 
 
+def _norm_path(value: str) -> str:
+    return str(value or "").replace("\\", "/").lstrip("/")
+
+
 def link_routes_to_templates(routes: List[Dict[str, Any]], templates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    template_names = {t.get("name") for t in templates}
+    template_names = {_norm_path(t.get("name")) for t in templates if t.get("name")}
     linked: List[Dict[str, Any]] = []
     for route in routes:
         item = dict(route)
@@ -106,8 +110,9 @@ def link_routes_to_templates(routes: List[Dict[str, Any]], templates: List[Dict[
                 if common in function:
                     guesses.append(f"{blueprint}/{common}.html")
             for guess in guesses:
-                if guess in template_names and guess not in candidates:
-                    candidates.append(guess)
+                norm_guess = _norm_path(guess)
+                if norm_guess in template_names and norm_guess not in candidates:
+                    candidates.append(norm_guess)
         item["linked_templates"] = candidates
         item["has_template"] = bool(candidates)
         linked.append(item)

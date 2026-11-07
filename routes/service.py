@@ -15,6 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm import joinedload
 
 from extensions import db, cache
+from utils.company_scope import filter_service_requests_query
 from stock_audit_system import (
     StockTransactionType, StockAuditLogger,
     log_service_part_add, log_service_part_remove,
@@ -418,6 +419,7 @@ def list_requests():
         joinedload(ServiceRequest.mechanic),
         joinedload(ServiceRequest.vehicle_type)
     )
+    query = filter_service_requests_query(query)
     
     # تطبيق الفلاتر
     sts = _status_list(status_filter)
@@ -652,11 +654,11 @@ def create_request():
     except Exception: pass
     if form.validate_on_submit():
         if not form.customer_id.data:
-            utils.flash_warning("يجب اختيار زبون قبل إنشاء طلب صيانة.")
+            flash("⚠️ يجب اختيار زبون قبل إنشاء طلب صيانة.","warning")
             return redirect(url_for("customers_bp.create_form", return_to=url_for("service.create_request")))
         customer=db.session.get(Customer,utils._get_id(form.customer_id.data))
         if not customer:
-            utils.flash_error("الزبون غير موجود. أضف الزبون أولاً.")
+            flash("⚠️ الزبون غير موجود. الرجاء إضافته.","danger")
             return redirect(url_for("customers_bp.create_form", return_to=url_for("service.create_request")))
         # Sanitize priority/status to avoid invalid enum values (e.g., 'NEW')
         _prio_code = (form.priority.data or 'MEDIUM').upper()
@@ -674,16 +676,6 @@ def create_request():
                 current_app.logger.warning('DB add failed silently')
             log_service_action(service,"CREATE")
             _refresh_service_related_balances(service)
-            try:
-                from utils.payment_allocation_policy import payment_auto_allocate_enabled
-                if payment_auto_allocate_enabled():
-                    from utils.credit_allocator import apply_customer_credit_to_obligations
-                    apply_customer_credit_to_obligations(int(service.customer_id), created_by=getattr(current_user, "id", None))
-            except Exception:
-                try:
-                    db.session.rollback()
-                except Exception:
-                    pass
             if customer.phone: utils.send_whatsapp_message(customer.phone, f"تم استلام طلب الصيانة رقم {service.service_number}.")
             utils.flash_success("تم إنشاء طلب الصيانة بنجاح")
             return redirect(url_for('service.view_request', rid=service.id))

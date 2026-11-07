@@ -2,25 +2,7 @@
 {% block title %}{{ 'تعديل' if definition else 'إضافة' }} Workflow{% endblock %}
 
 {% block extra_css %}
-<style>
-.workflow-step {
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    padding: 15px;
-    margin-bottom: 10px;
-    background: #f9f9f9;
-}
-.workflow-step:hover {
-    background: #f0f0f0;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-.step-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-</style>
+
 {% endblock %}
 
 {% block page_title %}<i class="fas fa-cogs"></i> {{ 'تعديل' if definition else 'إضافة' }} Workflow{% endblock %}
@@ -39,7 +21,7 @@
                 <form method="POST" id="workflowForm">
                     
                     <div class="card">
-                        <div class="card-header bg-primary">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary bg-primary">
                             <h3 class="card-title"><i class="fas fa-info-circle"></i> معلومات Workflow</h3>
                         </div>
                         <div class="card-body">
@@ -141,7 +123,7 @@
                     </div>
                     
                     <div class="card">
-                        <div class="card-header bg-info">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary bg-info">
                             <h3 class="card-title"><i class="fas fa-list-ol"></i> خطوات Workflow</h3>
                             <div class="card-tools">
                                 <button type="button" class="btn btn-sm btn-success" onclick="addStep()">
@@ -198,7 +180,7 @@
             
             <div class="col-md-4">
                 <div class="card bg-light">
-                    <div class="card-header">
+                    <div class="card-header erp-card-header-row erp-theme-header--primary">
                         <h3 class="card-title"><i class="fas fa-lightbulb"></i> نصائح</h3>
                     </div>
                     <div class="card-body">
@@ -217,7 +199,7 @@
                 </div>
                 
                 <div class="card bg-info">
-                    <div class="card-header">
+                    <div class="card-header erp-card-header-row erp-theme-header--primary">
                         <h3 class="card-title"><i class="fas fa-info-circle"></i> معاينة</h3>
                     </div>
                     <div class="card-body" id="workflowPreview">

@@ -118,7 +118,7 @@
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="card">
-                            <div class="card-header">
+                            <div class="card-header erp-card-header-row erp-theme-header--primary">
                                 <h5 class="mb-0">
                                     <i class="fas fa-heartbeat ml-2"></i>
                                     حالة النظام المحاسبي
@@ -231,7 +231,7 @@
                 <!-- Check Results -->
                 <div id="checkResults" class="mt-4" style="display: none;">
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary">
                             <h5 id="checkTitle">نتائج الفحص</h5>
                         </div>
                         <div class="card-body">
@@ -379,7 +379,7 @@
                         ${data.unbalanced_batches.length > 0 ? `
                             <div class="table-responsive" style="max-height: 300px;">
                                 <table class="table table-sm">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr><th>كود القيد</th><th>المصدر</th><th>الفرق</th></tr>
                                     </thead>
                                     <tbody>
@@ -465,7 +465,7 @@
                         <h6>نتائج التحقق</h6>
                         <div class="table-responsive" style="max-height: 300px;">
                             <table class="table table-sm">
-                                <thead>
+                                <thead class="table-header-primary text-white">
                                     <tr><th>الكيان</th><th>الاسم</th><th>GL</th><th>النموذج</th><th>الفرق</th><th>الحالة</th></tr>
                                 </thead>
                                 <tbody>
@@ -505,7 +505,7 @@
                     ${results.map(result => `
                         <div class="col-md-6 mb-3">
                             <div class="card">
-                                <div class="card-header">
+                                <div class="card-header erp-card-header-row erp-theme-header--primary">
                                     <h6 class="mb-0">
                                         <span class="badge bg-${result.status === 'PASS' ? 'success' : 'danger'} ml-2">
                                             ${result.status === 'PASS' ? 'نجح' : 'فشل'}
@@ -518,7 +518,7 @@
                                     ${result.details && result.details.length > 0 ? `
                                         <div class="table-responsive" style="max-height: 200px;">
                                             <table class="table table-sm">
-                                                <thead>
+                                                <thead class="table-header-primary text-white">
                                                     <tr><th>المعرف</th><th>الرقم</th><th>المبلغ</th><th>التاريخ</th></tr>
                                                 </thead>
                                                 <tbody>
@@ -551,7 +551,7 @@
                     ${results.map(result => `
                         <div class="col-md-6 mb-3">
                             <div class="card">
-                                <div class="card-header">
+                                <div class="card-header erp-card-header-row erp-theme-header--primary">
                                     <h6 class="mb-0">${result.category}</h6>
                                 </div>
                                 <div class="card-body">
@@ -597,7 +597,7 @@
                         ${data.fixed_batches.length > 0 ? `
                             <div class="table-responsive" style="max-height: 200px;">
                                 <table class="table table-sm">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr><th>كود القيد</th><th>الفرق</th><th>مبلغ التصحيح</th></tr>
                                     </thead>
                                     <tbody>

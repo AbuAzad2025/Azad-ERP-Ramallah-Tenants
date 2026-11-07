@@ -3,469 +3,7 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/statement-print.css') }}">
-<style>
-section.content {
-    padding: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-}
 
-body[data-sidebar-position="left"] section.content {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-}
-
-body[data-sidebar-position="right"] section.content {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-}
-
-.content-wrapper {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-}
-
-body[data-sidebar-position="left"] .content-wrapper,
-body[data-sidebar-position="right"] .content-wrapper,
-body .content-wrapper {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-}
-
-body[data-sidebar-position="left"] .content-wrapper section.content,
-body[data-sidebar-position="right"] .content-wrapper section.content,
-body .content-wrapper section.content {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-}
-
-body[data-sidebar-position="left"] .content-wrapper section.content .container-fluid,
-body .content-wrapper section.content .container-fluid {
-    padding-left: 0 !important;
-    padding-right: 15px !important;
-}
-
-body[data-sidebar-position="right"] .content-wrapper section.content .container-fluid {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    max-width: 100% !important;
-    width: 100% !important;
-    box-sizing: border-box;
-    overflow-x: hidden;
-}
-
-body[data-sidebar-position="right"] .content-wrapper section.content {
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box;
-    overflow-x: hidden;
-}
-
-body[data-sidebar-position="right"] .content-wrapper {
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box;
-    overflow-x: hidden;
-}
-
-body[data-sidebar-position="right"] section.content .container-fluid > * {
-    max-width: 100% !important;
-    box-sizing: border-box;
-}
-
-@media (max-width: 992px) {
-    body[data-sidebar-position="left"] .content-wrapper section.content .container-fluid,
-    body .content-wrapper section.content .container-fluid {
-        padding-right: 10px !important;
-    }
-    
-    body[data-sidebar-position="right"] .content-wrapper section.content .container-fluid {
-        padding-right: 0 !important;
-    }
-}
-
-section.content > .container-fluid > * {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-}
-
-section.content .container-fluid .card,
-section.content .container-fluid .alert,
-section.content .container-fluid h4,
-section.content .container-fluid .balance-summary,
-section.content .container-fluid .currency-note {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    width: 100% !important;
-}
-
-section.content .container-fluid .table-responsive,
-section.content .container-fluid table,
-section.content .container-fluid .table {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    width: 100% !important;
-}
-
-section.content .container-fluid .table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    max-width: 100%;
-}
-
-section.content .container-fluid table {
-    width: 100%;
-    max-width: 100%;
-    table-layout: auto;
-}
-
-@media (max-width: 992px) {
-    section.content .container-fluid .table-responsive {
-        margin-left: -10px;
-        margin-right: -10px;
-        padding-left: 10px;
-        padding-right: 10px;
-    }
-}
-
-section.content .container-fluid .card-header {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-}
-
-section.content .container-fluid {
-    max-width: 100% !important;
-    width: 100% !important;
-    padding-left: 0 !important;
-    padding-right: 15px !important;
-    box-sizing: border-box !important;
-    transition: padding 0.3s ease;
-}
-
-body[data-sidebar-position="left"] section.content .container-fluid {
-    padding-left: 0 !important;
-    padding-right: 15px !important;
-}
-
-body[data-sidebar-position="right"] section.content .container-fluid {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-}
-
-@media (max-width: 992px) {
-    section.content .container-fluid {
-        padding-left: 0 !important;
-        padding-right: 10px !important;
-    }
-    
-    body[data-sidebar-position="left"] section.content .container-fluid,
-    body[data-sidebar-position="right"] section.content .container-fluid {
-        padding-left: 0 !important;
-        padding-right: 10px !important;
-    }
-}
-
-.settlement-detail-card {
-    border-radius: 12px;
-    box-shadow: 0 3px 15px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    overflow: hidden;
-    width: 100% !important;
-}
-
-.settlement-detail-card .card-body {
-    padding-left: 15px !important;
-    padding-right: 15px !important;
-}
-
-@media (max-width: 768px) {
-    .settlement-detail-card .card-body {
-        padding-left: 10px !important;
-        padding-right: 10px !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .settlement-detail-card .card-body {
-        padding-left: 8px !important;
-        padding-right: 8px !important;
-    }
-    
-    .settlement-detail-card .card-header {
-        padding: 12px 10px !important;
-    }
-    
-    .settlement-detail-card .card-header h5 {
-        font-size: 0.9rem !important;
-    }
-}
-
-.settlement-detail-card .table-responsive {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    box-sizing: border-box;
-}
-
-.settlement-detail-card table {
-    width: 100% !important;
-    max-width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    min-width: 600px;
-    table-layout: auto;
-    box-sizing: border-box;
-}
-
-body[data-sidebar-position="right"] .settlement-detail-card {
-    max-width: 100% !important;
-    width: 100% !important;
-    box-sizing: border-box;
-    overflow: hidden;
-}
-
-body[data-sidebar-position="right"] .settlement-detail-card .card-body {
-    max-width: 100% !important;
-    width: 100% !important;
-    box-sizing: border-box;
-    overflow: hidden;
-}
-
-body[data-sidebar-position="right"] .settlement-detail-card .table-responsive {
-    max-width: 100% !important;
-    width: 100% !important;
-    box-sizing: border-box;
-}
-
-body[data-sidebar-position="right"] .settlement-detail-card table {
-    max-width: 100% !important;
-    box-sizing: border-box;
-}
-
-.settlement-detail-card table th,
-.settlement-detail-card table td {
-    white-space: nowrap;
-    padding: 8px 12px;
-    font-size: 0.9rem;
-}
-
-.settlement-detail-card table th {
-    font-weight: 600;
-    background-color: #f8f9fa;
-}
-
-@media (max-width: 1200px) {
-    .settlement-detail-card table {
-        min-width: 500px;
-    }
-    
-    .settlement-detail-card table th,
-    .settlement-detail-card table td {
-        padding: 6px 10px;
-        font-size: 0.85rem;
-    }
-}
-
-@media (max-width: 768px) {
-    .settlement-detail-card .card-body {
-        padding-left: 10px !important;
-        padding-right: 10px !important;
-    }
-    
-    .settlement-detail-card table {
-        min-width: 400px;
-        font-size: 0.8rem;
-    }
-    
-    .settlement-detail-card table th,
-    .settlement-detail-card table td {
-        padding: 5px 8px;
-        font-size: 0.8rem;
-    }
-    
-    .settlement-detail-card table .text-end {
-        text-align: left !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .settlement-detail-card table {
-        min-width: 350px;
-    }
-    
-    .settlement-detail-card table th,
-    .settlement-detail-card table td {
-        padding: 4px 6px;
-        font-size: 0.75rem;
-    }
-}
-
-section.content .container-fluid .row {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-}
-
-section.content .container-fluid .col-md-6,
-section.content .container-fluid .col-md-3,
-section.content .container-fluid .col-md-4,
-section.content .container-fluid .col-md-12 {
-    padding-left: 15px !important;
-    padding-right: 15px !important;
-}
-
-.settlement-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white !important;
-    padding: 25px;
-}
-
-.balance-summary {
-    background: #f8f9fa;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 20px;
-    margin-left: 0 !important;
-}
-
-.balance-box {
-    background: white;
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    text-align: center;
-}
-
-.balance-box.share {
-    border-left: 4px solid #28a745;
-}
-
-.balance-box.paid {
-    border-left: 4px solid #dc3545;
-}
-
-.balance-box.final {
-    border-left: 4px solid #007bff;
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-}
-
-.balance-label {
-    font-size: 0.9rem;
-    color: #6c757d;
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-.balance-amount {
-    font-size: 2rem;
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
-@media (max-width: 992px) {
-    .balance-summary {
-        padding: 15px !important;
-    }
-    
-    .balance-box {
-        padding: 12px !important;
-    }
-    
-    .balance-amount {
-        font-size: 1.5rem;
-    }
-    
-    .balance-label {
-        font-size: 0.85rem;
-    }
-}
-
-@media (max-width: 768px) {
-    .balance-summary {
-        padding: 12px !important;
-    }
-    
-    .balance-box {
-        padding: 10px !important;
-        margin-bottom: 10px;
-    }
-    
-    .balance-amount {
-        font-size: 1.3rem;
-    }
-    
-    .balance-label {
-        font-size: 0.8rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .balance-summary .row {
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-    }
-    
-    .balance-summary .col-md-3 {
-        padding-left: 8px !important;
-        padding-right: 8px !important;
-        margin-bottom: 10px;
-    }
-    
-    .balance-amount {
-        font-size: 1.1rem;
-    }
-    
-    .balance-label {
-        font-size: 0.75rem;
-    }
-}
-
-.detail-section {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 15px;
-}
-
-.currency-note {
-    background: #e3f2fd;
-    border-left: 4px solid #2196F3;
-    padding: 10px 15px;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    color: #0d47a1;
-    margin-left: 0 !important;
-}
-
-.summary-box {
-    background: #f8f9fa;
-    border-left: 4px solid #667eea;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 8px;
-}
-
-.summary-label {
-    font-size: 0.85rem;
-    color: #6c757d;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.summary-value {
-    font-size: 1.8rem;
-    font-weight: bold;
-    color: #343a40;
-}
-</style>
 {% endblock %}
 
 {% block content %}
@@ -662,7 +200,7 @@ section.content .container-fluid .col-md-12 {
             <!-- 1. المخزون الحالي -->
             {% if balance_data.rights.inventory.get('items', [])|length > 0 %}
             <div class="card settlement-detail-card">
-                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-boxes"></i> المخزون الحالي (نصيبه من التكلفة)
                         <span class="badge bg-light text-dark">{{ balance_data.rights.inventory.count }}</span>
@@ -674,7 +212,7 @@ section.content .container-fluid .col-md-12 {
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm table-hover" id="inventoryTable">
-                            <thead>
+                            <thead class="table-header-primary text-white">
                                 <tr>
                                     <th>القطعة</th>
                                     <th>SKU</th>
@@ -713,7 +251,7 @@ section.content .container-fluid .col-md-12 {
             <!-- 2. المبيعات -->
             {% if balance_data.rights.sales_share.get('items', [])|length > 0 %}
             <div class="card settlement-detail-card">
-                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-chart-line"></i> نصيبه من المبيعات (من سعر البيع)
                         <span class="badge bg-light text-dark">{{ balance_data.rights.sales_share.count }}</span>
@@ -725,7 +263,7 @@ section.content .container-fluid .col-md-12 {
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm table-hover" id="salesShareTable">
-                            <thead>
+                            <thead class="table-header-primary text-white">
                                 <tr>
                                     <th>النوع</th>
                                     <th>الرقم</th>
@@ -771,7 +309,7 @@ section.content .container-fluid .col-md-12 {
             <!-- 2.5 المرتجعات (تُخصم) -->
             {% if balance_data.rights.sales_returns and balance_data.rights.sales_returns.get('items', [])|length > 0 %}
             <div class="card settlement-detail-card">
-                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-dark d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-undo"></i> مرتجعات المبيعات (تُخصم من الحقوق)
                         <span class="badge bg-dark text-white">{{ balance_data.rights.sales_returns.count }}</span>
@@ -783,7 +321,7 @@ section.content .container-fluid .col-md-12 {
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm table-hover" id="salesReturnsTable">
-                            <thead>
+                            <thead class="table-header-primary text-white">
                                 <tr>
                                     <th>التاريخ</th>
                                     <th>رقم المرتجع</th>
@@ -826,7 +364,7 @@ section.content .container-fluid .col-md-12 {
             {# ✅ نصيب الحجوزات المسبقة #}
             {% if balance_data.rights.preorders_share and balance_data.rights.preorders_share.get('items', [])|length > 0 %}
             <div class="card settlement-detail-card">
-                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-shopping-bag"></i> نصيب الحجوزات المسبقة
                         <span class="badge bg-light text-dark">{{ balance_data.rights.preorders_share.count }}</span>
@@ -838,7 +376,7 @@ section.content .container-fluid .col-md-12 {
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm table-hover" id="preordersShareTable">
-                            <thead>
+                            <thead class="table-header-primary text-white">
                                 <tr>
                                     <th>رقم الحجز</th>
                                     <th>التاريخ</th>
@@ -885,7 +423,7 @@ section.content .container-fluid .col-md-12 {
             <!-- مبيعات للشريك (كزبون) -->
             {% if balance_data.obligations.sales_to_partner.get('items', [])|length > 0 %}
             <div class="card settlement-detail-card">
-                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-danger text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-shopping-cart"></i> مبيعات للشريك (كزبون)
                         <span class="badge bg-light text-dark">{{ balance_data.obligations.sales_to_partner.count }}</span>
@@ -897,7 +435,7 @@ section.content .container-fluid .col-md-12 {
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm table-hover" id="salesToPartnerTable">
-                            <thead>
+                            <thead class="table-header-primary text-white">
                                 <tr>
                                     <th>رقم الفاتورة</th>
                                     <th>التاريخ</th>
@@ -939,7 +477,7 @@ section.content .container-fluid .col-md-12 {
             <!-- دفعنا له (OUT) -->
             {% if balance_data.payments.paid_to_partner.get('items', [])|length > 0 %}
             <div class="card settlement-detail-card">
-                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-dark d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-money-check-alt"></i> دفعنا له (OUT) - تُحسب له
                         <span class="badge bg-light text-dark">{{ balance_data.payments.paid_to_partner.count }}</span>
@@ -951,7 +489,7 @@ section.content .container-fluid .col-md-12 {
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm table-hover" id="paymentOutTable">
-                            <thead>
+                            <thead class="table-header-primary text-white">
                                 <tr>
                                     <th>رقم السند</th>
                                     <th>التاريخ</th>
@@ -993,7 +531,7 @@ section.content .container-fluid .col-md-12 {
             <!-- دفع لنا (IN) -->
             {% if balance_data.payments.received_from_partner.get('items', [])|length > 0 %}
             <div class="card settlement-detail-card">
-                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-dark d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-hand-holding-usd"></i> دفع لنا (IN) - تُحسب له
                         <span class="badge bg-light text-dark">{{ balance_data.payments.received_from_partner.count }}</span>
@@ -1005,7 +543,7 @@ section.content .container-fluid .col-md-12 {
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm table-hover" id="paymentInTable">
-                            <thead>
+                            <thead class="table-header-primary text-white">
                                 <tr>
                                     <th>رقم السند</th>
                                     <th>التاريخ</th>
@@ -1047,7 +585,7 @@ section.content .container-fluid .col-md-12 {
             <!-- رسوم صيانة -->
             {% if balance_data.obligations.service_fees.get('items', [])|length > 0 %}
             <div class="card settlement-detail-card">
-                <div class="card-header bg-danger text-white">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-danger text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-wrench"></i> رسوم صيانة على الشريك
                         <span class="badge bg-light text-dark">{{ balance_data.obligations.service_fees.count }}</span>
@@ -1056,7 +594,7 @@ section.content .container-fluid .col-md-12 {
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm table-hover">
-                            <thead>
+                            <thead class="table-header-primary text-white">
                                 <tr>
                                     <th>رقم الصيانة</th>
                                     <th>التاريخ</th>
@@ -1093,7 +631,7 @@ section.content .container-fluid .col-md-12 {
             <!-- قطع تالفة -->
             {% if balance_data.obligations.damaged_items.get('items', [])|length > 0 %}
             <div class="card settlement-detail-card">
-                <div class="card-header bg-danger text-white">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-danger text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-trash-alt"></i> قطع تالفة (نصيبه من الخسارة)
                         <span class="badge bg-light text-dark">{{ balance_data.obligations.damaged_items.count }}</span>
@@ -1102,7 +640,7 @@ section.content .container-fluid .col-md-12 {
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm table-hover">
-                            <thead>
+                            <thead class="table-header-primary text-white">
                                 <tr>
                                     <th>التاريخ</th>
                                     <th>القطعة</th>
@@ -1147,7 +685,7 @@ section.content .container-fluid .col-md-12 {
             {% if balance_data.expenses and balance_data.expenses.get('items', [])|length > 0 %}
             <div class="col-md-6">
                 <div class="card settlement-detail-card">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
                             <i class="fas fa-file-invoice-dollar"></i> توريد خدمة (مصروفات)
                             <span class="badge bg-light text-dark">{{ balance_data.expenses.get('count', 0) }}</span>
@@ -1159,7 +697,7 @@ section.content .container-fluid .col-md-12 {
                     <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-sm table-hover" id="expensesTable">
-                                <thead>
+                                <thead class="table-header-primary text-white">
                                     <tr>
                                         <th>المرجع</th>
                                         <th>التاريخ</th>
@@ -1215,7 +753,7 @@ section.content .container-fluid .col-md-12 {
             <!-- التسويات السابقة -->
             {% if balance_data.previous_settlements|length > 0 %}
             <div class="card settlement-detail-card">
-                <div class="card-header bg-secondary text-white">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-secondary text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-history"></i> التسويات السابقة
                     </h5>
@@ -1223,7 +761,7 @@ section.content .container-fluid .col-md-12 {
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead>
+                            <thead class="table-header-primary text-white">
                                 <tr>
                                     <th>الرمز</th>
                                     <th>الفترة</th>
@@ -1354,17 +892,7 @@ section.content .container-fluid .col-md-12 {
     
     const printWindow = window.open('', '', 'height=600,width=800');
     printWindow.document.write('<html><head><title>' + title + '</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('body { font-family: Arial, sans-serif; direction: rtl; }');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin: 20px 0; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('.text-end { text-align: left; }');
-    printWindow.document.write('h2 { text-align: center; color: #333; margin-bottom: 20px; }');
-    printWindow.document.write('.print-header { text-align: center; margin-bottom: 20px; }');
-    printWindow.document.write('.print-footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }');
-    printWindow.document.write('@media print { .no-print { display: none; } }');
-    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('</head><body>');
     printWindow.document.write('<div class="print-header">');
     printWindow.document.write('<h2>' + title + '</h2>');
     printWindow.document.write('<p>{{ partner.name|default('—') }} | {{ date_from.strftime("%Y-%m-%d") }} - {{ date_to.strftime("%Y-%m-%d") }}</p>');

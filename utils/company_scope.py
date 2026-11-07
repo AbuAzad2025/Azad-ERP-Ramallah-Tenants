@@ -1,14 +1,15 @@
-"""نطاق الشركة/الفرع داخل تينانت SaaS — عزل تطبيقي على مستوى schema الحالي."""
+"""نطاق الشركة/الفرع للمستخدم والتقارير — قاعدة واحدة، عزل تطبيقي."""
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from flask import abort
 from flask_login import current_user
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, exists, or_, select
 
 
 def can_view_all_branches() -> bool:
+    """رؤية كل الفروع — سوبر/نظام أو صلاحية صريحة فقط."""
     try:
         import utils
 
@@ -18,9 +19,20 @@ def can_view_all_branches() -> bool:
         pass
     try:
         u = current_user
-        if not u or not getattr(u, "is_authenticated", False):
+        if not u:
+            return False
+        try:
+            if not u.is_authenticated:
+                return False
+        except Exception:
             return False
         if getattr(u, "is_system_account", False):
+            return True
+        role_l = (
+            getattr(u, "role_name_l", None)
+            or (getattr(getattr(u, "role", None), "name", None) or "")
+        ).strip().lower()
+        if role_l in {"owner", "developer", "super_admin", "super admin"}:
             return True
         fn = getattr(u, "has_permission", None)
         if callable(fn) and fn("view_all_branches"):
@@ -31,6 +43,7 @@ def can_view_all_branches() -> bool:
 
 
 def get_accessible_branch_ids() -> Optional[List[int]]:
+    """None = كل الفروع، [] = لا شيء، list = فروع محددة."""
     if can_view_all_branches():
         return None
     try:
@@ -44,10 +57,22 @@ def get_accessible_branch_ids() -> Optional[List[int]]:
         return []
 
 
-def get_report_branch_ids(company_id: Optional[int] = None) -> Optional[List[int]]:
-    if company_id:
-        return branch_ids_for_company(company_id)
-    return get_accessible_branch_ids()
+def get_scoped_branch_ids() -> Optional[List[int]]:
+    """
+    فروع العرض الحالي — يُطبَّق الفرع النشط بعد التحويل.
+    None = كل الفروع (لمن يرى الكل ولم يُحدَّد فرع نشط).
+    """
+    from utils.tenant_ui import get_active_branch_id
+
+    allowed = get_accessible_branch_ids()
+    active = get_active_branch_id()
+    if active is not None:
+        aid = int(active)
+        if allowed is None:
+            return [aid]
+        if aid in allowed:
+            return [aid]
+    return allowed
 
 
 def get_accessible_company_ids() -> Optional[List[int]]:
@@ -68,11 +93,24 @@ def get_accessible_company_ids() -> Optional[List[int]]:
     return list({int(r[0]) for r in rows if r[0]})
 
 
+def get_report_branch_ids(company_id: Optional[int] = None) -> Optional[List[int]]:
+    """فلتر التقارير — يحترم الفرع النشط والشركة المختارة."""
+    scoped = get_scoped_branch_ids()
+    if company_id:
+        co_branches = branch_ids_for_company(company_id)
+        if scoped is None:
+            return co_branches
+        if co_branches is None:
+            return scoped
+        return [b for b in co_branches if b in scoped]
+    return scoped
+
+
 def branch_ids_for_company(company_id: Optional[int]) -> Optional[List[int]]:
     from models import Branch
 
     if not company_id:
-        return get_accessible_branch_ids()
+        return get_scoped_branch_ids()
     q = Branch.query.filter_by(company_id=int(company_id), is_active=True)
     allowed = get_accessible_branch_ids()
     if allowed is not None:
@@ -81,7 +119,7 @@ def branch_ids_for_company(company_id: Optional[int]) -> Optional[List[int]]:
 
 
 def filter_by_branches(query, branch_column):
-    ids = get_accessible_branch_ids()
+    ids = get_scoped_branch_ids()
     if ids is None:
         return query
     if not ids:
@@ -114,12 +152,18 @@ def filter_companies_query(query):
 def filter_warehouses_query(query):
     from models import Warehouse
 
-    ids = get_accessible_branch_ids()
+    ids = get_scoped_branch_ids()
     if ids is None:
         return query
     if not ids:
         return query.filter(Warehouse.id == -1)
     return query.filter(Warehouse.branch_id.in_(ids))
+
+
+def _warehouse_ids_subquery(branch_ids: List[int]):
+    from models import Warehouse
+
+    return select(Warehouse.id).where(Warehouse.branch_id.in_(branch_ids))
 
 
 def _sale_ids_in_branches(branch_ids: List[int]):
@@ -135,7 +179,7 @@ def _sale_ids_in_branches(branch_ids: List[int]):
 
 
 def filter_sales_query(query):
-    ids = get_accessible_branch_ids()
+    ids = get_scoped_branch_ids()
     if ids is None:
         return query
     if not ids:
@@ -177,7 +221,7 @@ def payment_ids_in_branches(branch_ids: List[int]):
 
 
 def filter_payments_query(query):
-    ids = get_accessible_branch_ids()
+    ids = get_scoped_branch_ids()
     if ids is None:
         return query
     if not ids:
@@ -196,10 +240,11 @@ def filter_expenses_query(query):
 
 
 def assert_expense_access(expense_id: int):
+    from flask import abort
     from models import Expense
 
     exp = Expense.query.get_or_404(expense_id)
-    ids = get_accessible_branch_ids()
+    ids = get_scoped_branch_ids()
     if ids is None:
         return exp
     bid = getattr(exp, "branch_id", None)
@@ -209,16 +254,16 @@ def assert_expense_access(expense_id: int):
 
 
 def filter_shipments_query(query):
-    ids = get_accessible_branch_ids()
+    ids = get_scoped_branch_ids()
     if ids is None:
         return query
     if not ids:
         from models import Shipment
 
         return query.filter(Shipment.id == -1)
-    from models import Shipment, Warehouse
+    from models import Shipment
 
-    wh_ids = select(Warehouse.id).where(Warehouse.branch_id.in_(ids))
+    wh_ids = _warehouse_ids_subquery(ids)
     return query.filter(Shipment.destination_id.in_(wh_ids))
 
 
@@ -226,7 +271,7 @@ def filter_service_requests_query(query):
     from extensions import db
     from models import ServiceRequest, ServicePart, Warehouse
 
-    ids = get_accessible_branch_ids()
+    ids = get_scoped_branch_ids()
     if ids is None:
         return query
     if not ids:
@@ -243,7 +288,7 @@ def filter_service_requests_query(query):
 def filter_sale_returns_query(query):
     from models import SaleReturn
 
-    ids = get_accessible_branch_ids()
+    ids = get_scoped_branch_ids()
     if ids is None:
         return query
     if not ids:
@@ -253,7 +298,7 @@ def filter_sale_returns_query(query):
 
 
 def filter_customers_query(query, branch_ids: Optional[List[int]] = None):
-    ids = branch_ids if branch_ids is not None else get_accessible_branch_ids()
+    ids = branch_ids if branch_ids is not None else get_scoped_branch_ids()
     if ids is None:
         return query
     if not ids:
@@ -282,78 +327,30 @@ def filter_customers_query(query, branch_ids: Optional[List[int]] = None):
 
 
 def filter_suppliers_query(query, branch_ids: Optional[List[int]] = None):
-    ids = branch_ids if branch_ids is not None else get_accessible_branch_ids()
+    ids = branch_ids if branch_ids is not None else get_scoped_branch_ids()
     if ids is None:
         return query
     if not ids:
         from models import Supplier
 
         return query.filter(Supplier.id == -1)
-    from models import Supplier, Expense
+    from models import Supplier, PurchaseOrder, Expense
 
+    po_supplier_ids = (
+        select(PurchaseOrder.supplier_id)
+        .where(PurchaseOrder.branch_id.in_(ids), PurchaseOrder.supplier_id.isnot(None))
+        .distinct()
+    )
     exp_supplier_ids = (
         select(Expense.supplier_id)
         .where(Expense.branch_id.in_(ids), Expense.supplier_id.isnot(None))
         .distinct()
     )
-    return query.filter(Supplier.id.in_(exp_supplier_ids))
-
-
-def payment_id_in_accessible_branches(payment_id: int) -> bool:
-    from extensions import db
-    from models import Payment
-
-    ids = get_accessible_branch_ids()
-    if ids is None:
-        return True
-    if not ids:
-        return False
-    return bool(
-        db.session.query(
-            payment_ids_in_branches(ids).where(Payment.id == int(payment_id)).exists()
-        ).scalar()
-    )
-
-
-def assert_supplier_access(supplier_id: int) -> None:
-    from models import Supplier
-
-    if filter_suppliers_query(Supplier.query.filter_by(id=int(supplier_id))).first() is None:
-        abort(404)
-
-
-def assert_partner_access(partner_id: int) -> None:
-    from models import Partner
-
-    if filter_partners_query(Partner.query.filter_by(id=int(partner_id))).first() is None:
-        abort(404)
-
-
-def filter_checks_query(query):
-    """شيكات مرتبطة بدفعات/زبائن/موردين/شركاء ضمن نطاق الفروع."""
-    from models import Check, Customer, Partner, Supplier
-
-    ids = get_accessible_branch_ids()
-    if ids is None:
-        return query
-    if not ids:
-        return query.filter(Check.id == -1)
-    pay_ids = payment_ids_in_branches(ids)
-    cust_ids = filter_customers_query(Customer.query.with_entities(Customer.id))
-    sup_ids = filter_suppliers_query(Supplier.query.with_entities(Supplier.id))
-    part_ids = filter_partners_query(Partner.query.with_entities(Partner.id))
-    return query.filter(
-        or_(
-            Check.payment_id.in_(pay_ids),
-            Check.customer_id.in_(cust_ids),
-            Check.supplier_id.in_(sup_ids),
-            Check.partner_id.in_(part_ids),
-        )
-    )
+    return query.filter(or_(Supplier.id.in_(po_supplier_ids), Supplier.id.in_(exp_supplier_ids)))
 
 
 def filter_partners_query(query, branch_ids: Optional[List[int]] = None):
-    ids = branch_ids if branch_ids is not None else get_accessible_branch_ids()
+    ids = branch_ids if branch_ids is not None else get_scoped_branch_ids()
     if ids is None:
         return query
     if not ids:
@@ -370,8 +367,21 @@ def filter_partners_query(query, branch_ids: Optional[List[int]] = None):
     return query.filter(Partner.id.in_(partner_ids))
 
 
+def filter_projects_query(query):
+    from models import Project
+
+    return filter_by_branches(query, Project.branch_id)
+
+
+def assert_project_access(project_id: int) -> None:
+    from models import Project
+
+    if not filter_projects_query(Project.query.filter_by(id=int(project_id))).first():
+        abort(404)
+
+
 def sale_id_in_accessible_branches(sale_id: int) -> bool:
-    ids = get_accessible_branch_ids()
+    ids = get_scoped_branch_ids()
     if ids is None:
         return True
     if not ids:
@@ -388,6 +398,117 @@ def assert_sale_access(sale_id: int) -> None:
         abort(404)
 
 
+def payment_id_in_accessible_branches(payment_id: int) -> bool:
+    ids = get_scoped_branch_ids()
+    if ids is None:
+        return True
+    if not ids:
+        return False
+    from extensions import db
+    from models import Payment
+
+    return (
+        db.session.query(Payment.id)
+        .filter(Payment.id == int(payment_id), Payment.id.in_(payment_ids_in_branches(ids)))
+        .first()
+        is not None
+    )
+
+
+def assert_payment_access(payment_id: int) -> None:
+    from extensions import db
+    from models import Payment
+
+    ids = get_scoped_branch_ids()
+    if ids is None:
+        return
+    if not ids:
+        abort(404)
+    ok = db.session.query(
+        payment_ids_in_branches(ids).where(Payment.id == int(payment_id)).exists()
+    ).scalar()
+    if not ok:
+        abort(404)
+
+
+def warehouse_id_in_accessible_branches(warehouse_id: int) -> bool:
+    ids = get_scoped_branch_ids()
+    if ids is None:
+        return True
+    if not ids:
+        return False
+    from models import Warehouse
+
+    wh = Warehouse.query.filter_by(id=int(warehouse_id)).first()
+    return bool(wh and wh.branch_id in ids)
+
+
+def assert_warehouse_access(warehouse_id: int) -> None:
+    if not warehouse_id_in_accessible_branches(int(warehouse_id)):
+        abort(404)
+
+
+def assert_company_access(company_id: int) -> None:
+    allowed = get_accessible_company_ids()
+    if allowed is None:
+        return
+    if int(company_id) not in allowed:
+        abort(404)
+
+
+def customer_id_in_accessible_branches(customer_id: int) -> bool:
+    ids = get_scoped_branch_ids()
+    if ids is None:
+        return True
+    if not ids:
+        return False
+    from models import Customer
+
+    return filter_customers_query(Customer.query.filter_by(id=int(customer_id))).first() is not None
+
+
+def assert_customer_access(customer_id: int) -> None:
+    if not customer_id_in_accessible_branches(int(customer_id)):
+        abort(404)
+
+
+def filter_invoices_query(query):
+    ids = get_scoped_branch_ids()
+    if ids is None:
+        return query
+    if not ids:
+        from models import Invoice
+
+        return query.filter(Invoice.id == -1)
+    from extensions import db
+    from models import Customer, Invoice, Sale
+
+    sale_ids_sub = db.session.query(Sale.id).filter(Sale.id.in_(_sale_ids_in_branches(ids)))
+    customer_ids_sub = filter_customers_query(Customer.query).with_entities(Customer.id)
+    return query.filter(
+        or_(
+            Invoice.sale_id.in_(sale_ids_sub),
+            Invoice.customer_id.in_(customer_ids_sub),
+        )
+    )
+
+
+def assert_invoice_access(invoice_id: int) -> None:
+    from models import Invoice
+
+    inv = Invoice.query.filter_by(id=int(invoice_id)).first()
+    if not inv:
+        abort(404)
+    if inv.sale_id:
+        assert_sale_access(int(inv.sale_id))
+        return
+    if inv.customer_id:
+        assert_customer_access(int(inv.customer_id))
+        return
+    if not filter_invoices_query(Invoice.query.filter_by(id=int(invoice_id))).first():
+        abort(404)
+
+
 def assert_sale_return_access(return_id: int) -> None:
     from models import SaleReturn
 
@@ -401,57 +522,16 @@ def assert_sale_return_access(return_id: int) -> None:
         abort(404)
 
 
-def assert_payment_access(payment_id: int) -> None:
-    from extensions import db
-    from models import Payment
-
-    ids = get_accessible_branch_ids()
-    if ids is None:
-        return
-    if not ids:
-        abort(404)
-    ok = db.session.query(
-        payment_ids_in_branches(ids).where(Payment.id == int(payment_id)).exists()
-    ).scalar()
-    if not ok:
-        abort(404)
-
-
-def assert_warehouse_access(warehouse_id: int) -> None:
-    ids = get_accessible_branch_ids()
-    if ids is None:
-        return
-    if not ids:
-        abort(404)
-    from models import Warehouse
-
-    wh = Warehouse.query.filter_by(id=int(warehouse_id)).first()
-    if not wh or not wh.branch_id or int(wh.branch_id) not in ids:
-        abort(404)
-
-
-def assert_company_access(company_id: int) -> None:
-    allowed = get_accessible_company_ids()
-    if allowed is None:
-        return
-    if int(company_id) not in allowed:
-        abort(404)
-
-
-def assert_customer_access(customer_id: int) -> None:
-    from models import Customer
-
-    if filter_customers_query(Customer.query.filter_by(id=int(customer_id))).first() is None:
-        abort(404)
-
-
 def assert_payment_entity_scope(entity_type: str, entity_id: Optional[int]) -> None:
+    """التحقق أن كيان الدفعة ضمن فروع المستخدم."""
     et = (entity_type or "").upper()
     eid = entity_id
     if not eid:
         return
-    if et in ("SALE", "INVOICE"):
+    if et == "SALE":
         assert_sale_access(int(eid))
+    elif et == "INVOICE":
+        assert_invoice_access(int(eid))
     elif et == "EXPENSE":
         assert_expense_access(int(eid))
     elif et == "CUSTOMER":
@@ -459,7 +539,7 @@ def assert_payment_entity_scope(entity_type: str, entity_id: Optional[int]) -> N
     elif et == "SHIPMENT":
         from models import Shipment, Warehouse
 
-        ids = get_accessible_branch_ids()
+        ids = get_scoped_branch_ids()
         if ids is None:
             return
         shp = Shipment.query.filter_by(id=int(eid)).first()
@@ -482,86 +562,3 @@ def default_company():
             return None
         q = q.filter(Company.id.in_(co_ids))
     return q.first()
-
-
-def scoped_payment_query(session=None):
-    """استعلام Payment مع نطاق الفرع (للتسويات والدوال الداخلية)."""
-    from extensions import db
-    from models import Payment
-
-    s = session if session is not None else db.session
-    return filter_payments_query(s.query(Payment))
-
-
-def scoped_check_query(session=None):
-    from extensions import db
-    from models import Check
-
-    s = session if session is not None else db.session
-    return filter_checks_query(s.query(Check))
-
-
-def scoped_expense_query(session=None):
-    from extensions import db
-    from models import Expense
-
-    s = session if session is not None else db.session
-    return filter_expenses_query(s.query(Expense))
-
-
-def scoped_sale_query(session=None):
-    from extensions import db
-    from models import Sale
-
-    s = session if session is not None else db.session
-    return filter_sales_query(s.query(Sale))
-
-
-def scoped_service_request_query(session=None):
-    from extensions import db
-    from models import ServiceRequest
-
-    s = session if session is not None else db.session
-    return filter_service_requests_query(s.query(ServiceRequest))
-
-
-def scoped_shipment_query(session=None):
-    from extensions import db
-    from models import Shipment
-
-    s = session if session is not None else db.session
-    return filter_shipments_query(s.query(Shipment))
-
-
-def assert_branch_access(branch_id: int) -> None:
-    from models import Branch
-
-    if filter_branches_query(Branch.query.filter_by(id=int(branch_id))).first() is None:
-        abort(404)
-
-
-def branch_expenses_query(branch_id: Optional[int] = None):
-    """مصاريف ضمن فروع المستخدم؛ يُقيَّد بفرع واحد عند تمرير branch_id."""
-    from models import Expense
-
-    q = filter_expenses_query(Expense.query)
-    if branch_id is not None:
-        assert_branch_access(int(branch_id))
-        q = q.filter(Expense.branch_id == int(branch_id))
-    return q
-
-
-def branch_warehouses_query(branch_id: Optional[int] = None):
-    from models import Warehouse
-
-    q = filter_warehouses_query(Warehouse.query)
-    if branch_id is not None:
-        assert_branch_access(int(branch_id))
-        q = q.filter(Warehouse.branch_id == int(branch_id))
-    return q
-
-
-def branch_scoped_query(model, branch_id: int, branch_column):
-    """استعلام عام لنموذج له branch_id بعد التحقق من صلاحية الفرع."""
-    assert_branch_access(int(branch_id))
-    return filter_by_branches(model.query.filter(branch_column == int(branch_id)), branch_column)

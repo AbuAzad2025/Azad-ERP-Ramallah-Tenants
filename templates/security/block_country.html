@@ -1,12 +1,12 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}block_country{% endblock %}
-{% block security_title %}Block Country{% endblock %}
+{% block security_title %}حظر دولة{% endblock %}
 {% block security_icon %}<i class="fas fa-flag"></i>{% endblock %}
 {% block security_description %}حظر دولة كاملة من الوصول للنظام{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">Block Country</li>{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">حظر دولة</li>{% endblock %}
 {% block security_content %}
   
-  <div class="card"><div class="card-header bg-warning"><h5 class="mb-0">حظر دولة</h5></div>
+  <div class="card"><div class="card-header erp-card-header-row erp-theme-header--primary bg-warning"><h5 class="mb-0">حظر دولة</h5></div>
     <div class="card-body">
       <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

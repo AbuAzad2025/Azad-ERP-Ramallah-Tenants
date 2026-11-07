@@ -179,3 +179,38 @@
   padding: .75rem 1.25rem;
 }
 .accordion-body { padding: 1rem 1.25rem; }
+
+/* ── BS5 badge syntax on BS4 stack (global fallback; erp-theme overrides on .erp-app) ── */
+.badge.bg-primary,
+.badge.bg-primary.rounded-pill { background-color: #007bff !important; color: #fff !important; }
+.badge.bg-secondary,
+.badge.bg-secondary.rounded-pill { background-color: #6c757d !important; color: #fff !important; }
+.badge.bg-success,
+.badge.bg-success.rounded-pill { background-color: #28a745 !important; color: #fff !important; }
+.badge.bg-danger,
+.badge.bg-danger.rounded-pill { background-color: #dc3545 !important; color: #fff !important; }
+.badge.bg-warning,
+.badge.bg-warning.rounded-pill { background-color: #ffc107 !important; color: #212529 !important; }
+.badge.bg-info,
+.badge.bg-info.rounded-pill { background-color: #17a2b8 !important; color: #fff !important; }
+.badge.bg-light,
+.badge.bg-light.rounded-pill { background-color: #f8f9fa !important; color: #212529 !important; border: 1px solid #dee2e6; }
+.badge.bg-dark,
+.badge.bg-dark.rounded-pill { background-color: #343a40 !important; color: #fff !important; }
+
+.badge.bg-light.text-dark { color: #212529 !important; }
+
+/* btn-close fallback for BS4 alerts (when not using .close) */
+.alert .btn-close {
+  float: left;
+  padding: 0.75rem 1rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.5;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.alert .btn-close:hover { opacity: 0.85; }

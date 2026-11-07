@@ -120,6 +120,11 @@ class SystemPermissions(str, Enum):
     # Engineering
     MANAGE_ENGINEERING = 'manage_engineering'
 
+    MANAGE_PAYROLL = 'manage_payroll'
+    VIEW_PAYROLL = 'view_payroll'
+    USE_POS = 'use_pos'
+    MANAGE_TAX_COMPLIANCE = 'manage_tax_compliance'
+
     # Cost Centers
     MANAGE_COST_CENTERS = 'manage_cost_centers'
 

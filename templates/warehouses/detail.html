@@ -4,75 +4,7 @@
 
 {% block head_extra %}
 {{ super() }}
-<style>
-  .stat-card {
-    border: none;
-    border-radius: 10px;
-    transition: transform 0.2s;
-  }
-  
-  .stat-card:hover {
-    transform: translateY(-5px);
-  }
-  
-  .stat-icon {
-    font-size: 2.5rem;
-    opacity: 0.8;
-  }
-  
-  .info-card-item {
-    padding: 12px;
-    border-bottom: 1px solid #e9ecef;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .info-card-item:last-child {
-    border-bottom: none;
-  }
-  
-  .info-icon {
-    font-size: 1.2rem;
-    margin-left: 8px;
-    color: #6c757d;
-  }
-  
-  .quick-action-btn {
-    margin: 4px;
-  }
-  
-  .nav-tabs .nav-link {
-    color: #6c757d;
-    font-weight: 500;
-  }
-  
-  .nav-tabs .nav-link.active {
-    color: #495057;
-    font-weight: 600;
-  }
-  
-  .tab-content {
-    padding: 20px;
-    border: 1px solid #dee2e6;
-    border-top: none;
-    border-radius: 0 0 0.25rem 0.25rem;
-  }
-  
-  .border-danger {
-    border-color: #dc3545 !important;
-    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
-  }
-  
-  .border-warning {
-    border-color: #ffc107 !important;
-    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25) !important;
-  }
-  
-  .alert-primary h4 {
-    color: inherit;
-  }
-</style>
+
 {% endblock %}
 
 {% block content %}
@@ -123,7 +55,7 @@
     
     <div class="row mb-4">
       <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card stat-card shadow-sm bg-primary text-white card-hover" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+        <div class="card stat-card shadow-sm erp-kpi-tile erp-kpi-tile--primary text-white card-hover">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center">
               <div>
@@ -140,7 +72,7 @@
       </div>
       
       <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card stat-card shadow-sm bg-success text-white card-hover" style="background: linear-gradient(135deg, #198754 0%, #157347 100%);">
+        <div class="card stat-card shadow-sm erp-kpi-tile erp-kpi-tile--success text-white card-hover">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center">
               <div>
@@ -157,7 +89,7 @@
       </div>
       
       <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card stat-card shadow-sm bg-warning text-white" style="background: linear-gradient(135deg, #ffc107 0%, #ffca2c 100%);">
+        <div class="card stat-card shadow-sm erp-kpi-tile erp-kpi-tile--warning text-white card-hover">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center">
               <div>
@@ -174,7 +106,7 @@
       </div>
       
       <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card stat-card shadow-sm bg-info text-white" style="background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);">
+        <div class="card stat-card shadow-sm erp-kpi-tile erp-kpi-tile--info text-white card-hover">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center">
               <div>
@@ -195,7 +127,7 @@
       <!-- العمود الجانبي -->
       <div class="col-lg-4">
         <div class="card h-100 shadow-lg rounded-4 border-0 card-hover">
-          <div class="card-header gradient-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+ <div class="card-header erp-card-header-row erp-theme-header--primary">
             <h5 class="mb-0">
               <i class="fas fa-info-circle ml-2"></i>
               معلومات المستودع
@@ -285,7 +217,7 @@
 
         <!-- Tabs للنماذج -->
         <div class="card shadow-lg rounded-4 border-0 mb-4 card-hover">
-          <div class="card-header gradient-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          <div class="card-header erp-card-header-row erp-theme-header--primary">
             <h5 class="mb-0">
               <i class="fas fa-tasks ml-2"></i>
               العمليات المتاحة

@@ -6,6 +6,13 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from extensions import db
 from forms import UserForm
+from services.user_branch_service import (
+    sync_user_branches,
+    get_branch_ids_for_user,
+    get_primary_branch_id,
+    apply_user_branch_assignment,
+    load_users_branch_display,
+)
 from models import Permission, Role, User, AuditLog, Customer
 import utils
 from utils import _get_or_404
@@ -108,6 +115,17 @@ def _is_super_admin_user(user: User) -> bool:
     except Exception:
         return False
 
+
+def _actor_can_edit_extra_permissions() -> bool:
+    """من يمكنه تعديل الصلاحيات الإضافية في نموذج المستخدم."""
+    if _actor_level() <= 1:
+        return True
+    try:
+        caps = PermissionsRegistry.ROLES.get(_actor_role_name(), {}).get("capabilities") or {}
+        return bool(caps.get("can_manage_any_user_permissions"))
+    except Exception:
+        return False
+
 @users_bp.route("/profile", methods=["GET"], endpoint="profile")
 @login_required
 def profile():
@@ -200,19 +218,49 @@ def change_password():
         if not current_user.check_password(form.current_password.data):
             utils.flash_error("كلمة المرور الحالية غير صحيحة")
         else:
-            # تحديث كلمة المرور
-            current_user.set_password(form.new_password.data)
-            try:
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-                current_app.logger.exception('commit error')
-                utils.flash_error(utils.MSG_SAVE_FAILED)
-                return render_template("users/change_password.html", form=form)
-            utils.flash_success("تم تغيير كلمة المرور بنجاح")
-            return redirect(url_for("users_bp.profile"))
+            from utils.password_policy import validate_password
+
+            ok, msg = validate_password(form.new_password.data)
+            if not ok:
+                flash(msg, "danger")
+            else:
+                current_user.set_password(form.new_password.data)
+                try:
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                    current_app.logger.exception('commit error')
+                    flash('حدث خطأ أثناء الحفظ', 'danger')
+                    return render_template("users/change_password.html", form=form)
+                flash("✅ تم تغيير كلمة المرور بنجاح", "success")
+                return redirect(url_for("users_bp.profile"))
     
     return render_template("users/change_password.html", form=form)
+
+@users_bp.route("/repair-branch-links", methods=["POST"], endpoint="repair_branch_links")
+@login_required
+@utils.permission_required(SystemPermissions.MANAGE_USERS)
+def repair_branch_links():
+    """ربط المستخدمين التشغيليين بفرع افتراضي (MAIN) دون المساس بالمربوطين."""
+    from services.user_branch_service import repair_missing_user_branch_links
+
+    try:
+        report = repair_missing_user_branch_links()
+        db.session.commit()
+        fixed = report.get("fixed") or []
+        errors = report.get("errors") or []
+        if fixed:
+            flash(f"تم ربط {len(fixed)} مستخدم(ين) بالفروع.", "success")
+        if errors:
+            flash("؛ ".join(errors[:3]), "warning")
+        if not fixed and not errors:
+            flash("لا يوجد مستخدمون يحتاجون ربطاً جديداً.", "info")
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("repair_branch_links failed")
+        flash("فشل ربط المستخدمين بالفروع.", "danger")
+    return redirect(url_for("users_bp.list_users"))
+
 
 @users_bp.route("/", methods=["GET"], endpoint="list_users")
 @login_required
@@ -252,6 +300,8 @@ def list_users():
     per_page = request.args.get("per_page", 20, type=int)
     pagination = q.order_by(User.username).paginate(page=page, per_page=per_page, error_out=False)
     users = pagination.items
+    users_by_id = {u.id: u for u in users}
+    user_branch_display = load_users_branch_display([u.id for u in users], users_by_id)
     visible_extra_permissions_by_user: dict[int, list[Permission]] = {}
     for u in users:
         try:
@@ -274,6 +324,8 @@ def list_users():
                     "last_seen": (u.last_seen.isoformat() if getattr(u, "last_seen", None) else None),
                     "last_login_ip": getattr(u, "last_login_ip", None),
                     "login_count": getattr(u, "login_count", None),
+                    "companies": user_branch_display.get(u.id, {}).get("companies", []),
+                    "branch_scope": user_branch_display.get(u.id, {}).get("label", "—"),
                     "extra_permissions": [p.name for p in (visible_extra_permissions_by_user.get(u.id) or [])]
                 }
                 for u in users
@@ -289,13 +341,20 @@ def list_users():
         })
     args = request.args.to_dict(flat=True)
     args.pop("page", None)
+    try:
+        repair_branch_url = url_for("users_bp.repair_branch_links")
+    except Exception:
+        repair_branch_url = "/users/repair-branch-links"
     return render_template(
         "users/list.html",
         users=users,
         pagination=pagination,
         search=term,
         args=args,
+        user_branch_display=user_branch_display,
         visible_extra_permissions_by_user=visible_extra_permissions_by_user,
+        can_edit_extra_permissions=_actor_can_edit_extra_permissions(),
+        repair_branch_url=repair_branch_url,
     )
 
 
@@ -358,10 +417,13 @@ def user_detail(user_id):
     except Exception:
         perms = []
     visible_extra_permissions = _filter_permissions_assignable_by_actor(perms)
+    user_branch_display = load_users_branch_display([user.id], {user.id: user})
+    scope = user_branch_display.get(user.id, {})
     return render_template(
         "users/detail.html",
         user=user,
         visible_extra_permissions=visible_extra_permissions,
+        user_scope=scope,
     )
 
 @users_bp.route("/api", methods=["GET"], endpoint="api_users")
@@ -432,12 +494,18 @@ def create_user():
             db.session.add(user)
             db.session.flush()
 
-            from utils.branch_context import sync_user_branches
-
             branch_ids = [int(x) for x in (form.branch_ids.data or []) if x]
             primary = int(form.primary_branch_id.data or 0) or None
-            if branch_ids:
-                sync_user_branches(user.id, branch_ids, primary_branch_id=primary)
+            err = apply_user_branch_assignment(
+                user.id,
+                branch_ids,
+                primary_branch_id=primary,
+                role_id=form.role_id.data,
+            )
+            if err:
+                db.session.rollback()
+                flash(err, "danger")
+                return redirect(request.url)
 
             if selected_perm_ids:
                 user.extra_permissions = Permission.query.filter(
@@ -480,6 +548,7 @@ def create_user():
         user_id=None,
         all_permissions=all_permissions,
         selected_perm_ids=selected_perm_ids,
+        can_edit_extra_permissions=_actor_can_edit_extra_permissions(),
     )
 
 
@@ -564,14 +633,18 @@ def edit_user(user_id):
                 Permission.id.in_(selected_perm_ids)
             ).all() if selected_perm_ids else []
 
-            from utils.branch_context import sync_user_branches
-
             branch_ids = [int(x) for x in (form.branch_ids.data or []) if x]
             primary = int(form.primary_branch_id.data or 0) or None
-            if branch_ids:
-                sync_user_branches(user.id, branch_ids, primary_branch_id=primary)
-            else:
-                sync_user_branches(user.id, [])
+            err = apply_user_branch_assignment(
+                user.id,
+                branch_ids,
+                primary_branch_id=primary,
+                role_id=form.role_id.data,
+            )
+            if err:
+                db.session.rollback()
+                flash(err, "danger")
+                return redirect(request.url)
 
             db.session.add(AuditLog(
                 model_name="User",
@@ -606,6 +679,7 @@ def edit_user(user_id):
         user_id=user_id,
         all_permissions=all_permissions,
         selected_perm_ids=selected_perm_ids,
+        can_edit_extra_permissions=_actor_can_edit_extra_permissions(),
     )
 
 @users_bp.route("/<int:user_id>/delete", methods=["POST"], endpoint="delete_user")

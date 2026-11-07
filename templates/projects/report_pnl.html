@@ -62,12 +62,12 @@
 
   {% if pnl_data %}
   <div class="card">
-    <div class="card-header bg-gradient-success">
+    <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-success">
       <h3 class="card-title">تقرير الأرباح والخسائر - المشاريع</h3>
     </div>
     <div class="card-body p-0">
       <table class="table table-bordered table-striped">
-        <thead>
+        <thead class="table-header-primary text-white">
           <tr class="bg-light">
             <th>المشروع</th>
             <th class="text-center">الإيرادات</th>
@@ -93,7 +93,7 @@
           </tr>
           {% endfor %}
         </tbody>
-        <tfoot class="table-dark">
+        <tfoot class=" ">
           <tr>
             <th>الإجمالي</th>
             <th class="text-end">{{ "{:,.2f}".format(grand_totals.total_revenue) }} ₪</th>

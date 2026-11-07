@@ -8,222 +8,7 @@
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/warehouses.css') }}">
-  <style>
-    .inline-input{width:100%;min-width:90px;max-width:140px}
-    .w-qty{min-width:90px;max-width:110px}
-    .w-price{min-width:100px;max-width:130px}
-    #notification-container{position:fixed;top:20px;right:20px;z-index:2000}
-    
-    .sticky-column {
-      position: sticky;
-      left: 0;
-      background: #f8f9fa;
-      z-index: 10;
-      border-right: 2px solid #dee2e6;
-    }
-    
-    .table th { white-space: nowrap; font-weight: 600; font-size: 0.9rem; }
-    .table td { vertical-align: middle; font-size: 0.9rem; }
-    
-    .column-hidden { display: none !important; }
-    
-    .stat-card {
-      transition: all 0.3s ease;
-      border: none;
-      border-radius: 15px;
-      overflow: hidden;
-    }
-    .stat-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
-    }
-    
-    .table-rounded {
-        border-radius: 10px;
-        overflow: hidden;
-    }
-    .table-rounded thead th {
-        border-top: none;
-    }
-
-    .bg-gradient-primary { background: linear-gradient(135deg, #0d6efd, #0a58ca); }
-    .bg-gradient-success { background: linear-gradient(135deg, #198754, #157347); }
-    .bg-gradient-warning { background: linear-gradient(135deg, #ffc107, #ffca2c); }
-    .bg-gradient-danger { background: linear-gradient(135deg, #dc3545, #b02a37); }
-    
-    @media (max-width: 768px) {
-      .btn-group { flex-wrap: wrap; gap: 0.25rem; }
-      .btn-group .btn { font-size: 0.8rem; padding: 0.25rem 0.5rem; }
-      .inline-input { min-width: 60px; max-width: 100px; }
-    }
-    
-    /* Save button styling */
-    .save-btn {
-      transition: all 0.3s ease;
-    }
-    
-    .save-btn:hover {
-      transform: scale(1.1);
-    }
-    
-    .save-btn.saving {
-      background-color: #ffc107 !important;
-      border-color: #ffc107 !important;
-    }
-    
-    .save-btn.saved {
-      background-color: #28a745 !important;
-      border-color: #28a745 !important;
-    }
-    
-    .save-btn.error {
-      background-color: #dc3545 !important;
-      border-color: #dc3545 !important;
-    }
-    
-    /* Mark changed inputs */
-    .inline-input.changed {
-      border-color: #ffc107 !important;
-      border-width: 2px !important;
-      background-color: #fff3cd !important;
-    }
-    
-    /* Print Styles */
-    @media print {
-      /* Hide unnecessary elements */
-      .sidebar, .navbar, .breadcrumb, .btn-group, .card-header .d-flex .btn-group,
-      button, .btn, input[type="button"], input[type="submit"], 
-      footer, .footer, #notification-container, .no-print {
-        display: none !important;
-      }
-      
-      /* Reset page margins */
-      @page {
-        size: A4 landscape;
-        margin: 1cm;
-      }
-      
-      body {
-        margin: 0;
-        padding: 10px;
-        font-size: 11pt;
-      }
-      
-      /* Make table full width */
-      .card, .card-body, .table-responsive {
-        box-shadow: none !important;
-        border: none !important;
-        margin: 0 !important;
-        padding: 0 !important;
-      }
-      
-      /* Print header */
-      .card-header {
-        background: white !important;
-        border-bottom: 2px solid #000 !important;
-        padding: 10px 0 !important;
-        margin-bottom: 10px;
-      }
-      
-      .card-header h6 {
-        font-size: 14pt;
-        color: #000 !important;
-      }
-      
-      /* Table styling */
-      table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-        page-break-inside: auto;
-      }
-      
-      thead {
-        display: table-header-group;
-        background: #f0f0f0 !important;
-      }
-      
-      tr {
-        page-break-inside: avoid;
-        page-break-after: auto;
-      }
-      
-      th, td {
-        border: 1px solid #000 !important;
-        padding: 6px !important;
-        font-size: 10pt !important;
-        text-align: right !important;
-      }
-      
-      th {
-        background: #e0e0e0 !important;
-        font-weight: bold !important;
-        color: #000 !important;
-      }
-      
-      /* Hide inputs, show values */
-      input, select {
-        border: none !important;
-        background: none !important;
-        padding: 0 !important;
-        font-size: 10pt !important;
-      }
-      
-      /* Hide filter form */
-      #filter-form {
-        display: none !important;
-      }
-      
-      /* Hide statistics cards */
-      .stat-card, .row.mb-4:has(.stat-card) {
-        display: none !important;
-      }
-      
-      /* Show print header */
-      .print-header {
-        display: block !important;
-      }
-      
-      /* Sticky column fix for print */
-      .sticky-column {
-        position: static !important;
-        background: white !important;
-      }
-      
-      /* Hide hidden columns in print too */
-      .column-hidden {
-        display: none !important;
-      }
-      
-      /* Add print header */
-      .print-header {
-        text-align: center;
-        margin-bottom: 15px;
-        border-bottom: 2px solid #000;
-        padding-bottom: 10px;
-      }
-      
-      .print-header h2 {
-        margin: 0;
-        font-size: 18pt;
-      }
-      
-      .print-date {
-        font-size: 10pt;
-        color: #666;
-      }
-      
-      /* Page numbers */
-      .page-footer {
-        position: fixed;
-        bottom: 0;
-        width: 100%;
-        text-align: center;
-        font-size: 9pt;
-        border-top: 1px solid #000;
-        padding-top: 5px;
-      }
-    }
-  </style>
+  
 {% endblock %}
 
 {% block content %}
@@ -249,7 +34,7 @@
             <div class="text-uppercase text-primary fw-bold small mb-1">إجمالي المنتجات</div>
             <div class="h5 mb-0 fw-bold text-dark" id="stat-total-products">{{ (pagination.total if pagination else (rows|length)) }}</div>
           </div>
-          <div class="rounded-circle p-3 bg-primary text-white" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+          <div class="rounded-circle p-3 erp-kpi-tile erp-kpi-tile--primary text-white">
             <i class="fas fa-boxes fa-2x"></i>
           </div>
         </div>
@@ -267,7 +52,7 @@
               {{ page_total_quantity|default(0) }}
             </div>
           </div>
-          <div class="rounded-circle p-3 bg-success text-white" style="background: linear-gradient(135deg, #198754 0%, #157347 100%);">
+          <div class="rounded-circle p-3 erp-kpi-tile erp-kpi-tile--success text-white">
             <i class="fas fa-cubes fa-2x"></i>
           </div>
         </div>
@@ -285,7 +70,7 @@
               {{ "%.2f"|format(page_total_value|default(0)) }}
             </div>
           </div>
-          <div class="rounded-circle p-3 bg-warning text-dark" style="background: linear-gradient(135deg, #ffc107 0%, #ffca2c 100%);">
+          <div class="rounded-circle p-3 erp-kpi-tile erp-kpi-tile--warning text-dark">
             <i class="fas fa-dollar-sign fa-2x"></i>
           </div>
         </div>
@@ -303,7 +88,7 @@
               {{ page_out_of_stock|default(0) }}
             </div>
           </div>
-          <div class="rounded-circle p-3 bg-danger text-white" style="background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);">
+          <div class="rounded-circle p-3 erp-kpi-tile erp-kpi-tile--danger text-white">
             <i class="fas fa-exclamation-triangle fa-2x"></i>
           </div>
         </div>
@@ -355,7 +140,7 @@
 
 <!-- Products Table -->
 <div class="card shadow-sm card-hover">
-  <div class="card-header gradient-header text-white">
+  <div class="card-header erp-card-header-row erp-theme-header--primary">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
       <h6 class="mb-0">
         <i class="fas fa-boxes ml-2"></i>قائمة المنتجات
@@ -386,7 +171,7 @@
   <div class="card-body p-0 table-rounded">
     <div class="table-responsive">
       <table class="table table-striped table-hover mb-0" id="products-table">
-        <thead class="table-light">
+        <thead class="table-header-primary text-white table-light">
           <tr>
             <th class="sticky-column"><i class="fas fa-box ml-1"></i>القطعة</th>
             <th class="column-sku column-hidden"><i class="fas fa-tag ml-1"></i>SKU</th>

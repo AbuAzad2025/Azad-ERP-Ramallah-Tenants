@@ -53,6 +53,10 @@
     if (typeof window.showNotification !== 'function') {
         window.showNotification = function(message, type = 'info') {
             const normalizedType = (type || 'info').toLowerCase();
+            if (window.AzadUX && typeof window.AzadUX.notify === 'function') {
+                window.AzadUX.notify(normalizedType, message);
+                return;
+            }
             if (window.toastr && typeof window.toastr[normalizedType === 'danger' ? 'error' : normalizedType] === 'function') {
                 const toastType = normalizedType === 'danger' ? 'error' : normalizedType;
                 window.toastr[toastType](message);
@@ -186,7 +190,7 @@
                 // فقط عرض الرسالة مرة واحدة وليس لكل محاولة
                 if (!checksLoadErrorShown && xhr.status !== 0) {
                     checksLoadErrorShown = true;
-                    showNotification('فشل جلب الشيكات', 'danger');
+                    showNotification('تعذّر تحميل الشيكات. حدّث الصفحة أو تحقق من الاتصال.', 'danger');
                 }
             }
         });
@@ -202,7 +206,7 @@
         }
 
         if (checks.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center"><div class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد شيكات</p></div></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" class="text-center"><div class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد شيكات</p></div></td></tr>';
             return;
         }
         
@@ -670,6 +674,11 @@
     window.markAsReturned = function(checkToken) {
         updateCheckStatus(checkToken, 'RETURNED', 'تم إرجاع الشيك من البنك', { return_reason: 'BANK' });
     };
+
+    // شيك مرفوض من البنك
+    window.markAsBounced = function(checkToken) {
+        updateCheckStatus(checkToken, 'BOUNCED', 'تم رفض الشيك من البنك', { return_reason: 'BANK' });
+    };
     
     // تحديث حالة الشيك إلى ملغي
     window.markAsCancelled = function(checkToken) {
@@ -683,7 +692,7 @@
     
     // أرشفة الشيك
     window.archiveCheck = function(checkToken) {
-        updateCheckStatus(checkToken, 'CANCELLED', 'تم إلغاء الشيك (أرشفة)');
+        updateCheckStatus(checkToken, 'ARCHIVED', 'تم أرشفة الشيك');
     };
 
     window.restoreCheck = function(checkToken) {

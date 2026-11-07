@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}تحصيل سريع{% endblock %}
+{% block content %}
+<div class="container py-3" dir="rtl">
+  <h4>تحصيل سريع</h4>
+  <form method="get" class="mb-3">
+    <div class="input-group">
+      <input type="number" name="customer_id" class="form-control" placeholder="رقم الزبون" value="{{ customer.id if customer else '' }}">
+      <div class="input-group-append"><button class="btn btn-primary">عرض</button></div>
+    </div>
+  </form>
+  {% if customer and balance_view and balance_view.success %}
+  <div class="alert alert-info">
+    <strong>{{ customer.name }}</strong> — الرصيد: {{ balance_view.balance.net }} ({{ balance_view.balance.direction }})
+  </div>
+  <a href="{{ url_for('payments.create_payment') }}?customer_id={{ customer.id }}&direction=IN" class="btn btn-success">تسجيل دفعة واردة</a>
+  <a href="{{ url_for('customers_bp.account_statement', customer_id=customer.id) }}" class="btn btn-outline-primary">كشف حساب</a>
+  {% endif %}
+  <a href="{{ url_for('accounting_hub_bp.index') }}" class="btn btn-link mt-2">رجوع للمركز</a>
+</div>
+{% endblock %}

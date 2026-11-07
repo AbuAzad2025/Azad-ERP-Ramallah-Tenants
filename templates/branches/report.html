@@ -70,7 +70,7 @@
 
   <!-- إجمالي النفقات -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-danger text-white">
+    <div class="card-header erp-card-header-row erp-theme-header--primary bg-danger text-white">
       <i class="fas fa-money-bill-wave ml-1"></i> إجمالي النفقات
     </div>
     <div class="card-body text-center">
@@ -80,13 +80,13 @@
 
   <!-- أعلى 5 نفقات -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-warning text-white">
+    <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-white">
       <i class="fas fa-trophy ml-1"></i> أعلى 5 نفقات
     </div>
     <div class="card-body p-0">
       {% if top_expenses %}
       <table class="table table-sm mb-0">
-        <thead>
+        <thead class="table-header-primary text-white">
           <tr>
             <th>التاريخ</th>
             <th>النوع</th>
@@ -113,13 +113,13 @@
 
   <!-- النفقات حسب النوع -->
   <div class="card shadow-sm">
-    <div class="card-header bg-info text-white">
+    <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
       <i class="fas fa-chart-pie ml-1"></i> النفقات حسب النوع
     </div>
     <div class="card-body p-0">
       {% if expense_by_type %}
       <table class="table table-sm mb-0">
-        <thead>
+        <thead class="table-header-primary text-white">
           <tr>
             <th>نوع المصروف</th>
             <th class="text-center">العدد</th>

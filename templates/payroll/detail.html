@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}مسير {{ run.period_key }}{% endblock %}
+{% block content %}
+<div class="container py-3" dir="rtl">
+  <h4>مسير {{ run.period_key }} — {{ run.status }}</h4>
+  <p>إجمالي: {{ run.total_gross }} | خصومات: {{ run.total_deductions }} | صافي: <strong>{{ run.total_net }}</strong></p>
+  <table class="table table-sm table-bordered"><thead class="table-header-primary text-white"><tr><th>موظف</th><th>أساسي</th><th>خصومات</th><th>صافي</th></tr></thead>
+  <tbody>{% for ln in lines %}<tr><td>{{ ln.employee_name }}</td><td>{{ ln.base_salary }}</td><td>{{ ln.deductions }}</td><td>{{ ln.net_pay }}</td></tr>{% endfor %}</tbody>
+  </table>
+  {% if run.status != 'POSTED' %}
+  <form method="post" action="{{ url_for('payroll_bp.post_gl', id=run.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-success">ترحيل إلى GL</button></form>
+  {% endif %}
+  <a href="{{ url_for('payroll_bp.index') }}" class="btn btn-secondary mt-2">رجوع</a>
+</div>
+{% endblock %}

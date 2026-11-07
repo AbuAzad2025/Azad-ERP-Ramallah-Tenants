@@ -210,10 +210,92 @@ img{
   color:rgba(15,23,42,.62)!important;
 }
 
+.company-logo-link{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  max-width:min(42vw, 320px);
+  text-decoration:none;
+  min-width:0;
+}
+
+.company-logo-link img,
+.company-logo-image{
+  flex:0 0 auto;
+  height:32px;
+  max-width:120px;
+  object-fit:contain;
+}
+
 .company-logo-text{
   font-weight:900;
   letter-spacing:.2px;
   color:rgba(255,255,255,.96);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  min-width:0;
+}
+
+.main-header .navbar-brand{
+  flex-shrink:1;
+  min-width:0;
+  overflow:hidden;
+}
+
+.garage-brand-area{
+  position:relative;
+  text-align:center;
+  padding:10px 12px;
+  border-bottom:1px solid #4b545c;
+}
+
+.garage-brand-link{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  gap:6px;
+  min-width:0;
+  text-decoration:none;
+}
+
+.garage-brand-image{
+  height:52px;
+  max-width:150px;
+  object-fit:contain;
+}
+
+.garage-brand-image--emblem{
+  display:none;
+  height:40px;
+  max-width:52px;
+}
+
+.garage-brand-text{
+  font-size:1.05rem;
+  font-weight:700;
+  color:#fff;
+  max-width:100%;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+body.sidebar-collapse .garage-brand-image--full,
+body.sidebar-mini.sidebar-collapse .garage-brand-image--full{
+  display:none;
+}
+
+body.sidebar-collapse .garage-brand-text,
+body.sidebar-mini.sidebar-collapse .garage-brand-text{
+  display:none;
+}
+
+body.sidebar-collapse .garage-brand-image--emblem,
+body.sidebar-mini.sidebar-collapse .garage-brand-image--emblem{
+  display:block;
 }
 
 .content-wrapper{
@@ -274,8 +356,8 @@ body.sidebar-hidden .sidebar-overlay{
   display:none!important;
 }
 
-/* Select2 Customization - Kept as it enhances UI */
-.select2-container .select2-selection--single{
+/* Select2 — legacy dark (معطّل على erp-app) */
+body:not(.erp-app) .select2-container .select2-selection--single{
   height:calc(2.25rem + 2px);
   border:1px solid rgba(255,255,255,0.1);
   border-radius:12px;
@@ -283,18 +365,18 @@ body.sidebar-hidden .sidebar-overlay{
   background-color: var(--bg-dark-card, #1f2937);
 }
 
-.select2-container--default .select2-selection--single .select2-selection__rendered{
+body:not(.erp-app) .select2-container--default .select2-selection--single .select2-selection__rendered{
   line-height:2.25rem;
   color:var(--text-main, #fff);
   font-weight:600;
 }
 
-.select2-container--default .select2-selection--single .select2-selection__arrow{
+body:not(.erp-app) .select2-container--default .select2-selection--single .select2-selection__arrow{
   height:100%;
   top:0;
 }
 
-.select2-container--default .select2-selection--single:focus{
+body:not(.erp-app) .select2-container--default .select2-selection--single:focus{
   border-color:var(--primary-cyan, #06b6d4);
   box-shadow:0 0 0 .2rem rgba(6, 182, 212, 0.20);
 }

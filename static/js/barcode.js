@@ -10,7 +10,9 @@
   input.setAttribute('inputmode', 'numeric');
   input.setAttribute('autocomplete', 'off');
 
-  const endpoint = input.getAttribute('data-validate-url') || '/api/barcode/validate';
+  const endpoint = input.getAttribute('data-validate-url')
+    || input.getAttribute('data-barcode-url')
+    || '/api/barcode/validate';
 
   const getCSRFToken = window.getCSRFToken || (() =>
     document.querySelector('meta[name="csrf-token"]')?.content ||

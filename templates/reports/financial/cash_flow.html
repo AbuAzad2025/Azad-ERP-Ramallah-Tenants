@@ -1,13 +1,14 @@
 {% extends 'base.html' %}
-{% from 'macros/gm_mobile_ui.html' import financial_scroll_shell %}
+{% from 'macros/gm_mobile_ui.html' import scroll_table_start, scroll_table_end %}
 
 {% block title %}قائمة التدفقات النقدية{% endblock %}
+{% block page_title %}قائمة التدفقات النقدية{% endblock %}
 {% block body_class %}gm-financial-report{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="card shadow-sm card-hover">
-        <div class="card-header gradient-header text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary">
             <h3 class="mb-0">
                 <i class="fas fa-money-bill-wave"></i>
                 قائمة التدفقات النقدية (Cash Flow Statement)
@@ -18,28 +19,40 @@
         <div class="card-body">
             
 
-            <div class="row mb-4">
-                <div class="col-md-4">
+            <div class="row mb-4 gm-filter-row">
+                <div class="col-md-3">
+                    <label for="company_id">الشركة</label>
+                    <select id="company_id" class="form-control form-control-modern">
+                        <option value="">الكل (مجموعة)</option>
+                        {% for co in companies|default([]) %}
+                        <option value="{{ co.id }}" {% if company_id == co.id %}selected{% endif %}>{{ co.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
                     <label>من تاريخ:</label>
                     <input type="date" id="from_date" class="form-control form-control-modern" value="{{ from_date.strftime('%Y-%m-%d') }}">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label>إلى تاريخ:</label>
                     <input type="date" id="to_date" class="form-control form-control-modern" value="{{ to_date.strftime('%Y-%m-%d') }}">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label>&nbsp;</label>
                     <button class="btn btn-primary d-block w-100 btn-modern" onclick="updateReport()">
                         <i class="fas fa-sync"></i> تحديث
                     </button>
                 </div>
             </div>
+            {% if company_filter_active %}
+            <div class="alert alert-info py-2 small erp-branch-hint">فروع الشركة المحددة فقط.</div>
+            {% endif %}
             
-            {% call financial_scroll_shell('التدفقات النقدية') %}
-            <table class="table table-bordered table-rounded table-hover no-mobile-cards mb-0">
+            {{ scroll_table_start() }}
+            <table class="table table-bordered table-rounded table-hover no-mobile-cards">
                 
 
-                <thead class="table-success">
+                <thead class="table-header-primary text-white table-success">
                     <tr>
                         <th colspan="2"><h5 class="mb-0">💼 التدفقات التشغيلية</h5></th>
                     </tr>
@@ -65,7 +78,7 @@
                 
                 
 
-                <thead class="table-info mt-3">
+                <thead class="table-header-primary text-white table-info mt-3">
                     <tr>
                         <th colspan="2"><h5 class="mb-0">🏭 التدفقات الاستثمارية</h5></th>
                     </tr>
@@ -91,7 +104,7 @@
                 
                 
 
-                <thead class="table-warning mt-3">
+                <thead class="table-header-primary text-white table-warning mt-3">
                     <tr>
                         <th colspan="2"><h5 class="mb-0">🏦 التدفقات التمويلية</h5></th>
                     </tr>
@@ -117,7 +130,7 @@
                 
                 
 
-                <tfoot class="table-dark fw-bold fs-5">
+                <tfoot class=" fw-bold fs-5">
                     <tr>
                         <td>صافي التغير في النقدية</td>
                         <td class="text-end {% if total_net_cash_flow >= 0 %}text-success{% else %}text-danger{% endif %}">
@@ -126,7 +139,9 @@
                     </tr>
                 </tfoot>
             </table>
-            {% endcall %}
+            {{ scroll_table_end() }}
+            
+            
 
             <div class="row mt-3">
                 <div class="col-md-6">
@@ -145,7 +160,10 @@
 function updateReport() {
     const fromDate = document.getElementById('from_date').value;
     const toDate = document.getElementById('to_date').value;
-    window.location.href = (window.gmPath||window.gmU||function(p){return p;})(`/reports/financial/cash-flow?start_date=${fromDate}&end_date=${toDate}`);
+    const cid = document.getElementById('company_id').value;
+    let url = `/reports/financial/cash-flow?start_date=${fromDate}&end_date=${toDate}`;
+    if (cid) url += `&company_id=${cid}`;
+    window.location.href = url;
 }
 
 function exportToExcel() {

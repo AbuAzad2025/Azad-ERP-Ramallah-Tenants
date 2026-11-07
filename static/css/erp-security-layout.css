@@ -1,0 +1,252 @@
+/**
+ * هيكل وحدة الأمان — بدون ألوان (الألوان في erp-security.css)
+ */
+:root {
+  --sidebar-width: 260px;
+  --header-height: 64px;
+  --main-navbar_height: 57px;
+  --font-main: 'Tajawal', sans-serif;
+  --font-mono: 'Fira Code', monospace;
+}
+
+body.security-body {
+  font-family: var(--font-main);
+  overflow-x: hidden;
+  padding-top: 0;
+  min-height: 100vh;
+}
+
+.security-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  z-index: 1040;
+  transition: transform 0.3s ease-in-out;
+  overflow: hidden;
+}
+
+.security-sidebar.collapsed {
+  transform: translateX(100%);
+}
+
+.security-brand {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+}
+
+.security-brand h5 {
+  font-family: var(--font-main);
+  font-weight: 800;
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.security-brand .brand-badge {
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-right: 10px;
+  font-weight: 700;
+}
+
+.security-nav {
+  padding: 1rem 0.75rem;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.sec-nav-section {
+  margin-bottom: 0.75rem;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.sec-nav-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  border: 0;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: start;
+}
+
+.sec-nav-section-toggle:focus {
+  outline: none;
+}
+
+.sec-nav-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.sec-nav-caret {
+  transition: transform 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.sec-nav-section-toggle[aria-expanded="true"] .sec-nav-caret {
+  transform: rotate(180deg);
+}
+
+.security-sidebar .nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 4px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.security-sidebar .nav-link i {
+  width: 24px;
+  text-align: center;
+  margin-left: 12px;
+  font-size: 1.1rem;
+}
+
+.security-main {
+  margin-right: var(--sidebar-width);
+  min-height: 100vh;
+  height: 100vh;
+  min-width: 0;
+  max-width: 100%;
+  transition: margin-right 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.security-main__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.security-main__scroll > .p-4 {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.security-main.expanded {
+  margin-right: 0;
+}
+
+.security-header {
+  height: var(--header-height);
+  min-height: var(--header-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  gap: 0.75rem;
+  flex-wrap: nowrap;
+}
+
+.security-header > div:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.security-header > div:last-child {
+  flex: 0 0 auto;
+  max-width: 100%;
+}
+
+.security-header__actions {
+  flex-wrap: nowrap;
+}
+
+.security-wrapper {
+  min-height: 100%;
+  height: 100%;
+}
+
+.dropdown-menu-end {
+  right: 0;
+  left: auto;
+}
+
+@media (max-width: 991.98px) {
+  .security-sidebar {
+    transform: translateX(100%);
+  }
+
+  .security-sidebar.show {
+    transform: translateX(0);
+  }
+
+  .security-main {
+    margin-right: 0 !important;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .security-header {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--header-height);
+    padding: 0.5rem 0.75rem;
+  }
+
+  .security-header__actions {
+    flex-wrap: wrap;
+    justify-content: flex-start !important;
+  }
+}
+
+.ms-1 { margin-inline-start: 0.25rem !important; }
+.ms-2 { margin-inline-start: 0.5rem !important; }
+.ms-3 { margin-inline-start: 1rem !important; }
+.me-1 { margin-inline-end: 0.25rem !important; }
+.me-2 { margin-inline-end: 0.5rem !important; }
+.me-3 { margin-inline-end: 1rem !important; }
+.gap-2 { gap: 0.5rem !important; }
+.gap-3 { gap: 1rem !important; }
+
+.form-switch .form-check-input {
+  width: 2.5rem;
+  height: 1.25rem;
+  border-radius: 2rem;
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  direction: ltr;
+}
+
+.form-switch .form-check-input::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0.15rem;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 999px;
+  background: #fff;
+  transform: translateY(-50%);
+  transition: transform 0.15s ease-in-out;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(1.2rem, -50%);
+}

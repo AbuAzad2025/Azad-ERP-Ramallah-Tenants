@@ -1,9 +1,9 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}ledger_control{% endblock %}
-{% block security_title %}Ledger Control{% endblock %}
+{% block security_title %}مراقبة الدفاتر{% endblock %}
 {% block security_icon %}<i class="fas fa-book"></i>{% endblock %}
-{% block security_description %}إدارة متقدمة لدفتر الأستاذ والحسابات والقيود{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">Ledger Control</li>{% endblock %}
+{% block security_description %}دفتر الأستاذ والقيود{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">مراقبة الدفاتر</li>{% endblock %}
 {% block head_extra %}{% endblock %}
 {% block security_content %}
 <script>
@@ -62,7 +62,7 @@ const LEDGER_BASE = {{ ledger_api_base|tojson }}.replace(/\/$/, '');
                             </div>
                             <div style="height: 600px; overflow-y: auto; border: 2px solid #dee2e6; border-radius: 5px; padding: 10px; background: white;">
                                 <table class="table table-striped table-hover table-bordered" id="accountsTable">
-                                    <thead class="table-dark sticky-top">
+                                    <thead class="table-header-primary text-white sticky-top">
                                         <tr>
                                             <th style="width: 12%;">الكود</th>
                                             <th style="width: 30%;">الاسم</th>
@@ -81,7 +81,7 @@ const LEDGER_BASE = {{ ledger_api_base|tojson }}.replace(/\/$/, '');
                             <h5 class="mb-3">القيود المحاسبية <span class="badge bg-success" id="entriesCount">0</span></h5>
                             <div style="height: 600px; overflow-y: auto; border: 2px solid #dee2e6; border-radius: 5px; padding: 10px; background: white;">
                                 <table class="table table-striped table-hover table-bordered" id="entriesTable">
-                                    <thead class="table-dark sticky-top">
+                                    <thead class="table-header-primary text-white sticky-top">
                                         <tr>
                                             <th>التاريخ</th>
                                             <th>الكود</th>
@@ -101,7 +101,7 @@ const LEDGER_BASE = {{ ledger_api_base|tojson }}.replace(/\/$/, '');
                             <h5 class="mb-3">تحرير القيود <span class="badge bg-warning" id="batchesCount">0</span></h5>
                             <div style="height: 600px; overflow-y: auto; border: 2px solid #dee2e6; border-radius: 5px; padding: 10px; background: white;">
                                 <table class="table table-striped table-hover table-bordered" id="batchesTable">
-                                    <thead class="table-dark sticky-top">
+                                    <thead class="table-header-primary text-white sticky-top">
                                         <tr>
                                             <th>الكود</th>
                                             <th>التاريخ</th>
@@ -147,6 +147,11 @@ const LEDGER_BASE = {{ ledger_api_base|tojson }}.replace(/\/$/, '');
                             <div class="tab-content">
                                 <!-- الفترات المحاسبية -->
                                 <div class="tab-pane fade show active" id="ops-periods" role="tabpanel" aria-labelledby="ops-periods-tab">
+                                    <p class="mb-2">
+                                        <a href="{{ url_for('fiscal_periods_bp.index') }}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-external-link-alt"></i> إدارة الإقفال والترحيل (سنوي / نصف / ربع / شهري)
+                                        </a>
+                                    </p>
                                     <div id="fiscal-periods-list">
                                         <div class="text-center py-5">
                                             <div class="spinner-border text-primary"></div>
@@ -221,7 +226,7 @@ const LEDGER_BASE = {{ ledger_api_base|tojson }}.replace(/\/$/, '');
                                 <div class="col-md-4">
                                     <!-- قائمة القيود -->
                                     <div class="card">
-                                        <div class="card-header bg-primary text-white">
+                                        <div class="card-header erp-card-header-row erp-theme-header--primary">
                                             <h6 class="mb-0">اختر قيداً للتحرير</h6>
                                         </div>
                                         <div class="card-body p-2" style="max-height: 600px; overflow-y: auto;">
@@ -240,7 +245,7 @@ const LEDGER_BASE = {{ ledger_api_base|tojson }}.replace(/\/$/, '');
                                     <!-- نموذج التحرير -->
                                     <div id="editor-form" style="display:none;">
                                         <div class="card">
-                                            <div class="card-header bg-success text-white">
+                                            <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white">
                                                 <h6 class="mb-0">تحرير القيد: <span id="edit-batch-code"></span></h6>
                                             </div>
                                             <div class="card-body">
@@ -263,7 +268,7 @@ const LEDGER_BASE = {{ ledger_api_base|tojson }}.replace(/\/$/, '');
                                                 
                                                 <!-- ربط الجهة -->
                                                 <div class="card mb-3 border-warning">
-                                                    <div class="card-header bg-warning">
+                                                    <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning">
                                                         <h6 class="mb-0">🔗 ربط القيد بجهة</h6>
                                                     </div>
                                                     <div class="card-body">
@@ -301,7 +306,7 @@ const LEDGER_BASE = {{ ledger_api_base|tojson }}.replace(/\/$/, '');
                                                 <h6>السطور المحاسبية:</h6>
                                                 <div class="table-responsive">
                                                     <table class="table table-sm table-bordered">
-                                                        <thead class="table-dark">
+                                                        <thead class="table-header-primary text-white ">
                                                             <tr>
                                                                 <th>الحساب</th>
                                                                 <th>مدين</th>
@@ -360,7 +365,7 @@ const LEDGER_BASE = {{ ledger_api_base|tojson }}.replace(/\/$/, '');
                                 <!-- أدوات النسخ والفحص -->
                                 <div class="col-md-6 mb-3">
                                     <div class="card">
-                                        <div class="card-header bg-primary text-white">
+                                        <div class="card-header erp-card-header-row erp-theme-header--primary">
                                             <h6 class="mb-0"><i class="fas fa-cogs ml-2"></i>أدوات أساسية</h6>
                                         </div>
                                         <div class="card-body">
@@ -383,7 +388,7 @@ const LEDGER_BASE = {{ ledger_api_base|tojson }}.replace(/\/$/, '');
                                 <!-- وظائف متقدمة -->
                                 <div class="col-md-6 mb-3">
                                     <div class="card">
-                                        <div class="card-header bg-success text-white">
+                                        <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white">
                                             <h6 class="mb-0"><i class="fas fa-rocket ml-2"></i>وظائف متقدمة</h6>
                                         </div>
                                         <div class="card-body">
@@ -409,7 +414,7 @@ const LEDGER_BASE = {{ ledger_api_base|tojson }}.replace(/\/$/, '');
                                 <!-- الإحصائيات -->
                                 <div class="col-12">
                                     <div class="card">
-                                        <div class="card-header bg-info text-white">
+                                        <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
                                             <h6 class="mb-0"><i class="fas fa-chart-line ml-2"></i>إحصائيات النظام</h6>
                                         </div>
                                         <div class="card-body" id="statsContainer">
@@ -1037,7 +1042,7 @@ async function generateClosingEntries() {
                             <div class="mb-3">
                                 <strong>${entry.description}</strong>
                                 <table class="table table-sm">
-                                    <thead>
+                                    <thead class="table-header-primary text-white">
                                         <tr>
                                             <th>الحساب</th>
                                             <th class="text-end">مدين</th>
@@ -1580,6 +1585,12 @@ document.addEventListener('DOMContentLoaded', function() {
           loadFiscalPeriods();
         }
       });
+    }
+
+    var hash = window.location.hash;
+    if (hash) {
+      var hashLink = document.querySelector('#controlTabs a[href="' + hash + '"]');
+      if (hashLink) { hashLink.click(); }
     }
 });
 

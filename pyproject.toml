@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "tests/*",
+    "scripts/*",
+    "instance/*",
+    "migrations/*",
+    ".venv/*",
+    "env/*",
+    "venv/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.flake8]
+max-line-length = 120
+extend-ignore = [
+    "E203",  # whitespace before ':' (black compat)
+    "E501",  # line too long (handled by max-line-length)
+    "W503",  # line break before binary operator (black compat)
+    "W504",  # line break after binary operator
+]
+exclude = [
+    "migrations",
+    ".venv",
+    "env",
+    "venv",
+    "instance",
+    "AI",
+    "node_modules",
+]

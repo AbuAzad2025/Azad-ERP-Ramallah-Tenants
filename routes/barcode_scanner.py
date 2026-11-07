@@ -659,61 +659,6 @@ def get_warehouse_fields():
         return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
 
 
-@barcode_scanner_bp.route("/check-product", methods=["GET"], endpoint="check_product_exists")
-@login_required
-def check_product_exists():
-    """فحص وجود المنتج بالباركود وإرجاع بياناته"""
-    try:
-        barcode = request.args.get("barcode", "").strip()
-        
-        if not barcode:
-            return jsonify({"error": "باركود مطلوب"}), 400
-        
-        # البحث عن المنتج
-        product = Product.query.filter_by(barcode=barcode).first()
-        
-        if not product:
-            return jsonify({
-                "exists": False,
-                "message": "المنتج غير موجود"
-            })
-        
-        # الحصول على المخزون الحالي
-        warehouse_id = request.args.get("warehouse_id", type=int) or get_default_warehouse_id()
-        stock = None
-        if warehouse_id:
-            stock = StockLevel.query.filter_by(
-                product_id=product.id,
-                warehouse_id=warehouse_id,
-            ).first()
-        
-        current_quantity = stock.quantity if stock else 0
-        
-        return jsonify({
-            "exists": True,
-            "product": {
-                "id": product.id,
-                "name": product.name,
-                "barcode": product.barcode,
-                "part_number": product.part_number,
-                "brand": product.brand,
-                "commercial_name": product.commercial_name,
-                "origin_country": product.origin_country,
-                "unit": product.unit,
-                "warranty_period": product.warranty_period,
-                "price": float(product.price) if product.price else 0,
-                "purchase_price": float(product.purchase_price) if product.purchase_price else 0,
-                "selling_price": float(product.selling_price) if product.selling_price else 0,
-                "condition": product.condition,
-                "current_quantity": current_quantity
-            }
-        })
-        
-    except Exception as e:
-        current_app.logger.exception('API error')
-        return jsonify({"error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
-
-
 @barcode_scanner_bp.route("/search", methods=["GET"], endpoint="search_products")
 @login_required
 def search_products():
@@ -1087,22 +1032,21 @@ def bulk_scan_page():
 @barcode_scanner_bp.route("/check-product", methods=["GET"], endpoint="check_product")
 @login_required
 def check_product():
-    """فحص وجود المنتج والمخزون في مستودع معين"""
+    """فحص وجود المنتج (وبالمخزون عند تمرير warehouse_id)."""
     import logging
     
     try:
         barcode = request.args.get("barcode", "").strip()
         warehouse_id = request.args.get("warehouse_id", type=int)
         
-        if not barcode or not warehouse_id:
-            return jsonify({"success": False, "error": "الباركود ومعرف المستودع مطلوبان"}), 400
+        if not barcode:
+            return jsonify({"success": False, "exists": False, "error": "باركود مطلوب"}), 400
         
-        # البحث عن المنتج
         product = Product.query.filter(
             or_(
                 Product.barcode == barcode,
                 Product.sku == barcode,
-                Product.part_number == barcode
+                Product.part_number == barcode,
             )
         ).first()
         
@@ -1110,30 +1054,47 @@ def check_product():
             return jsonify({
                 "success": False,
                 "exists": False,
-                "error": "المنتج غير موجود"
+                "message": "المنتج غير موجود",
+                "error": "المنتج غير موجود",
             }), 404
         
-        # البحث عن المخزون
-        stock_level = StockLevel.query.filter_by(
-            product_id=product.id,
-            warehouse_id=warehouse_id
-        ).first()
+        current_quantity = None
+        if warehouse_id:
+            stock_level = StockLevel.query.filter_by(
+                product_id=product.id,
+                warehouse_id=warehouse_id,
+            ).first()
+            current_quantity = stock_level.quantity if stock_level else 0
+        elif request.args.get("warehouse_id", default=None) is not None:
+            wh = request.args.get("warehouse_id", 1, type=int)
+            stock_level = StockLevel.query.filter_by(
+                product_id=product.id, warehouse_id=wh
+            ).first()
+            current_quantity = stock_level.quantity if stock_level else 0
         
-        current_quantity = stock_level.quantity if stock_level else 0
+        payload = {
+            "id": product.id,
+            "name": product.name,
+            "sku": product.sku,
+            "barcode": product.barcode,
+            "part_number": product.part_number,
+            "brand": product.brand,
+            "commercial_name": getattr(product, "commercial_name", None),
+            "origin_country": getattr(product, "origin_country", None),
+            "unit": getattr(product, "unit", None),
+            "warranty_period": getattr(product, "warranty_period", None),
+            "price": float(product.price) if product.price else 0,
+            "purchase_price": float(product.purchase_price) if getattr(product, "purchase_price", None) else 0,
+            "selling_price": float(product.selling_price) if getattr(product, "selling_price", None) else 0,
+            "condition": getattr(product, "condition", None),
+        }
+        if current_quantity is not None:
+            payload["current_quantity"] = current_quantity
         
         return jsonify({
             "success": True,
             "exists": True,
-            "product": {
-                "id": product.id,
-                "name": product.name,
-                "sku": product.sku,
-                "barcode": product.barcode,
-                "part_number": product.part_number,
-                "brand": product.brand,
-                "price": float(product.price) if product.price else 0,
-                "current_quantity": current_quantity
-            }
+            "product": payload,
         })
         
     except Exception as e:

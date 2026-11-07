@@ -1,7 +1,7 @@
 {% extends 'warehouses/base.html' %}
 {% block page_title %}تحويلات مستودع {{ warehouse.name }}{% endblock %}
 
-{% block w_content %}
+{% block content %}
 
 <!-- إحصائيات سريعة -->
 <div class="row mb-4">
@@ -10,7 +10,7 @@
   {% set unique_products = totals.unique_products if totals else (transfers|map(attribute='product_id')|unique|list|length if transfers else 0) %}
   
   <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card border-0 shadow rounded-4 bg-primary text-white h-100 card-hover" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+    <div class="card border-0 shadow rounded-4 erp-kpi-tile erp-kpi-tile--primary text-white h-100 card-hover">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
           <div>
@@ -26,7 +26,7 @@
   </div>
   
   <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card border-0 shadow rounded-4 bg-success text-white h-100 card-hover" style="background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);">
+    <div class="card border-0 shadow rounded-4 erp-kpi-tile erp-kpi-tile--success text-white h-100 card-hover">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
           <div>
@@ -43,7 +43,7 @@
   </div>
   
   <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card border-0 shadow rounded-4 bg-info text-white h-100 card-hover" style="background: linear-gradient(135deg, #36b9cc 0%, #258391 100%);">
+    <div class="card border-0 shadow rounded-4 erp-kpi-tile erp-kpi-tile--info text-white h-100 card-hover">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
           <div>
@@ -60,7 +60,7 @@
   </div>
   
   <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card border-0 shadow rounded-4 bg-warning text-white h-100 card-hover" style="background: linear-gradient(135deg, #f6c23e 0%, #dda20a 100%);">
+    <div class="card border-0 shadow rounded-4 erp-kpi-tile erp-kpi-tile--warning text-white h-100 card-hover">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
           <div>
@@ -119,7 +119,7 @@
 </div>
 
 <div class="card shadow-lg rounded-4 border-0 card-hover">
-  <div class="card-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+ <div class="card-header erp-card-header-row erp-theme-header--primary">
     <div class="d-flex justify-content-between align-items-center">
       <div class="d-flex align-items-center">
           <h5 class="mb-0">
@@ -153,7 +153,7 @@
     {% if transfers and transfers|length > 0 %}
     <div class="table-responsive">
       <table id="transfersTable" class="table table-striped table-hover table-rounded align-middle mb-0" style="width:100%">
-        <thead class="text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+        <thead class="table-header-primary text-white">
           <tr>
             <th style="width:60px">#</th>
             <th style="width:150px">التاريخ والوقت</th>

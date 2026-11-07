@@ -1,0 +1,26 @@
+{# رسائل Flash موحّدة — استخدم get_unique_flashes في base #}
+{% with messages = get_unique_flashes(with_categories=true) %}
+  {% if messages %}
+    <div class="ux-flash-stack" aria-live="polite" aria-atomic="false">
+      {% for category, message in messages %}
+        {% set flash = prepare_flash(category, message) %}
+        <div
+          class="ux-flash ux-flash--{{ flash.category }} alert-dismissible fade show"
+          role="alert"
+          data-category="{{ flash.category }}"
+        >
+          <div class="ux-flash__icon" aria-hidden="true">
+            <i class="fas {{ flash.icon }}"></i>
+          </div>
+          <div class="ux-flash__body">
+            <strong class="ux-flash__title">{{ flash.title }}</strong>
+            <p class="ux-flash__text mb-0">{{ flash.message }}</p>
+          </div>
+          <button type="button" class="ux-flash__close close" data-dismiss="alert" aria-label="إغلاق">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}

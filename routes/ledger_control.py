@@ -65,14 +65,10 @@ def index():
     completed_payments = filter_payments_query(Payment.query.filter_by(status='COMPLETED')).count()
     failed_payments = filter_payments_query(Payment.query.filter_by(status='FAILED')).count()
     
-    # أرصدة الزبائن والموردين والشركاء (ضمن نطاق الفروع)
-
-    cust_q = filter_customers_query(Customer.query)
-    supp_q = filter_suppliers_query(Supplier.query)
-    part_q = filter_partners_query(Partner.query)
-    customers_count = cust_q.count()
-    suppliers_count = supp_q.count()
-    partners_count = part_q.count()
+    # أرصدة الزبائن والموردين والشركاء
+    customers_count = Customer.query.count()
+    suppliers_count = Supplier.query.count()
+    partners_count = Partner.query.count()
     
     from extensions import cache
     cache_key_cust = "ledger_total_customer_balance"
@@ -1510,35 +1506,22 @@ def get_advanced_statistics():
 @ledger_control_bp.route('/operations/fiscal-periods/api', methods=['GET'])
 @permission_required(SystemPermissions.MANAGE_LEDGER)
 def get_fiscal_periods():
-    """API: جلب الفترات المحاسبية (شهر / ربع / نصف / سنة) من جدول fiscal_periods."""
+    """API: الفترات المحاسبية من جدول fiscal_periods."""
     try:
         from models import FiscalPeriod
         from utils.period_close_service import period_to_dict, sync_fiscal_periods
 
         if FiscalPeriod.query.count() == 0:
             sync_fiscal_periods()
-
-        ptype = (request.args.get("period_type") or "").strip().upper()
         fy = request.args.get("fiscal_year", type=int)
+        ptype = request.args.get("period_type", "").strip().upper()
         q = FiscalPeriod.query.order_by(FiscalPeriod.start_date.desc())
-        if ptype:
-            q = q.filter(FiscalPeriod.period_type == ptype)
         if fy:
             q = q.filter(FiscalPeriod.fiscal_year == fy)
-
-        periods = [period_to_dict(p) for p in q.limit(200).all()]
-        if not periods:
-            return jsonify({
-                "success": True,
-                "periods": [],
-                "message": "لا توجد فترات — نفّذ مزامنة من /security/fiscal-periods/",
-            })
-
-        return jsonify({
-            'success': True,
-            'periods': list(reversed(periods))  # الأحدث أولاً
-        })
-        
+        if ptype:
+            q = q.filter(FiscalPeriod.period_type == ptype)
+        periods = [period_to_dict(p) for p in q.limit(120).all()]
+        return jsonify({"success": True, "periods": periods})
     except Exception as e:
         current_app.logger.error(f"خطأ في جلب الفترات المحاسبية: {str(e)}")
         current_app.logger.exception('API error')
@@ -1548,89 +1531,28 @@ def get_fiscal_periods():
 @ledger_control_bp.route('/operations/closing-entries/generate', methods=['POST'])
 @permission_required(SystemPermissions.MANAGE_LEDGER)
 def generate_closing_entries():
-    """إنشاء قيود الإقفال التلقائية"""
+    """إنشاء قيود الإقفال — مرتبط بفترة محاسبية (نطاق التاريخ)."""
     try:
-        from decimal import Decimal
-        from sqlalchemy import func
-        
-        data = request.get_json()
-        period_end = datetime.fromisoformat(data['period_end'])
-        
-        # 1. إقفال حسابات الإيرادات (4xxx)
-        revenues = db.session.query(
-            GLEntry.account,
-            func.sum(GLEntry.credit - GLEntry.debit).label('balance')
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at <= period_end,
-            GLEntry.account.like('4%')
-        ).group_by(GLEntry.account).all()
-        
-        # 2. إقفال حسابات المصروفات (5xxx)
-        expenses = db.session.query(
-            GLEntry.account,
-            func.sum(GLEntry.debit - GLEntry.credit).label('balance')
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at <= period_end,
-            GLEntry.account.like('5%')
-        ).group_by(GLEntry.account).all()
-        
-        # حساب صافي الدخل
-        total_revenue = sum(float(r.balance) for r in revenues)
-        total_expenses = sum(float(e.balance) for e in expenses)
-        net_income = total_revenue - total_expenses
-        
-        closing_entries = []
-        
-        # قيد إقفال الإيرادات
-        if revenues:
-            closing_entries.append({
-                'type': 'close_revenue',
-                'description': 'إقفال حسابات الإيرادات',
-                'entries': [
-                    {'account': r.account, 'debit': float(r.balance), 'credit': 0} 
-                    for r in revenues
-                ] + [
-                    {'account': '3200_CURRENT_EARNINGS', 'debit': 0, 'credit': total_revenue}
-                ],
-                'total': total_revenue
-            })
-        
-        # قيد إقفال المصروفات
-        if expenses:
-            closing_entries.append({
-                'type': 'close_expenses',
-                'description': 'إقفال حسابات المصروفات',
-                'entries': [
-                    {'account': e.account, 'debit': 0, 'credit': float(e.balance)} 
-                    for e in expenses
-                ] + [
-                    {'account': '3200_CURRENT_EARNINGS', 'debit': total_expenses, 'credit': 0}
-                ],
-                'total': total_expenses
-            })
-        
-        # قيد نقل صافي الدخل للأرباح المحتجزة
-        closing_entries.append({
-            'type': 'transfer_net_income',
-            'description': 'نقل صافي الدخل للأرباح المحتجزة',
-            'entries': [
-                {'account': '3200_CURRENT_EARNINGS', 'debit': net_income if net_income > 0 else 0, 'credit': -net_income if net_income < 0 else 0},
-                {'account': '3100_RETAINED_EARNINGS', 'debit': -net_income if net_income < 0 else 0, 'credit': net_income if net_income > 0 else 0}
-            ],
-            'total': abs(net_income)
-        })
-        
-        return jsonify({
-            'success': True,
-            'period_end': period_end.isoformat(),
-            'net_income': net_income,
-            'closing_entries': closing_entries,
-            'total_revenue': total_revenue,
-            'total_expenses': total_expenses
-        })
-        
+        from utils.period_close_service import generate_closing_entries_for_period, get_period_by_key
+
+        data = request.get_json() or {}
+        period_id = data.get("period_id")
+        if not period_id and data.get("period_key"):
+            p = get_period_by_key(data["period_key"])
+            period_id = p.id if p else None
+        if not period_id and data.get("period_end"):
+            from models import FiscalPeriod
+            pe = datetime.fromisoformat(data["period_end"]).date()
+            p = FiscalPeriod.query.filter(
+                FiscalPeriod.start_date <= pe, FiscalPeriod.end_date >= pe
+            ).first()
+            period_id = p.id if p else None
+        if not period_id:
+            return jsonify({"success": False, "error": "حدد period_id أو period_key"}), 400
+        result = generate_closing_entries_for_period(int(period_id))
+        return jsonify({"success": True, **result})
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
     except Exception as e:
         current_app.logger.error(f"خطأ في إنشاء قيود الإقفال: {str(e)}")
         current_app.logger.exception('API error')

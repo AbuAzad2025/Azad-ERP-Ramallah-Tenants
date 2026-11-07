@@ -13,10 +13,9 @@ try:
 except ImportError:
     limiter = None
 from models import (
-    Payment, PaymentSplit, Expense, PaymentMethod, PaymentStatus, PaymentDirection, 
+    Payment, PaymentSplit, Expense, PaymentMethod, PaymentStatus, PaymentDirection,
     Check, CheckStatus, Customer, Supplier, Partner, GLBatch, GLEntry, Account,
-    Currency, SystemSettings,
-    _ALLOWED_TRANSITIONS,
+    Currency, _ALLOWED_TRANSITIONS,
 )
 from permissions_config.enums import SystemPermissions
 import utils
@@ -1051,8 +1050,11 @@ def ensure_check_accounts(connection=None):
         current_app.logger.error(f"❌ خطأ في إنشاء حسابات دفتر الأستاذ: {str(e)}")
 
 
-def _create_gl_batch(connection, batch_code, check_type, check_id, currency, entity_name, notes, entity_type, entity_id, check_type_label):
+def _create_gl_batch(connection, batch_code, check_type, check_id, currency, entity_name, notes, entity_type, entity_id, check_type_label, posted_at=None):
     from sqlalchemy import text as sa_text
+    from datetime import datetime as _dt, timezone as _tz
+    if posted_at is None:
+        posted_at = _dt.now(_tz.utc)
     batch_data = {
         "code": batch_code,
         "source_type": f'check_{check_type}',
@@ -1062,13 +1064,14 @@ def _create_gl_batch(connection, batch_code, check_type, check_id, currency, ent
         "memo": f"قيد {check_type_label}: {entity_name} - {notes}",
         "entity_type": entity_type,
         "entity_id": entity_id,
+        "posted_at": posted_at,
         "created_at": _utcnow(),
         "updated_at": _utcnow()
     }
     result = connection.execute(
         sa_text("""
-            INSERT INTO gl_batches (code, source_type, source_id, currency, status, memo, entity_type, entity_id, created_at, updated_at)
-            VALUES (:code, :source_type, :source_id, :currency, :status, :memo, :entity_type, :entity_id, :created_at, :updated_at)
+            INSERT INTO gl_batches (code, source_type, source_id, currency, status, memo, entity_type, entity_id, posted_at, created_at, updated_at)
+            VALUES (:code, :source_type, :source_id, :currency, :status, :memo, :entity_type, :entity_id, :posted_at, :created_at, :updated_at)
             RETURNING id
         """),
         batch_data
@@ -1628,13 +1631,13 @@ GL_ACCOUNTS_CHECKS = {
 
 CHECK_LIFECYCLE = {
     'PENDING': ['CASHED', 'RETURNED', 'BOUNCED', 'CANCELLED', 'ARCHIVED'],
-    'RETURNED': ['RESUBMITTED', 'CANCELLED', 'PENDING', 'ARCHIVED'],
+    'RETURNED': ['RESUBMITTED', 'CANCELLED', 'PENDING'],
     'BOUNCED': ['RESUBMITTED', 'CANCELLED', 'ARCHIVED'],
     'RESUBMITTED': ['CASHED', 'RETURNED', 'BOUNCED', 'CANCELLED', 'ARCHIVED'],
     'OVERDUE': ['CASHED', 'RETURNED', 'BOUNCED', 'CANCELLED', 'ARCHIVED'],
     'CASHED': ['ARCHIVED'],
     'CANCELLED': ['RETURNED', 'PENDING', 'RESUBMITTED', 'ARCHIVED'],
-    'ARCHIVED': [],
+    'ARCHIVED': ['PENDING'],
 }
 
 def _current_user_is_owner() -> bool:
@@ -3033,7 +3036,9 @@ def get_checks():
 
         def _status_snapshot(manual_status: str | None, status_value: str | None, due_days: int | None):
             manual = (manual_status or '').upper()
-            if manual in {'RETURNED', 'BOUNCED'}:
+            if manual == 'BOUNCED':
+                return 'BOUNCED', 'مرفوض', 'danger'
+            if manual == 'RETURNED':
                 return 'RETURNED', 'مرتجع', 'warning'
             if manual == 'CANCELLED':
                 return 'CANCELLED', 'ملغي', 'secondary'
@@ -3850,9 +3855,16 @@ def get_statistics():
                 rate_num = float(rate) if rate is not None else None
             except Exception:
                 rate_num = None
-            if rate_num:
+            if rate_num and rate_num > 0:
                 return amount * rate_num
-            return 0.0
+            try:
+                from models import get_fx_rate_with_fallback
+                info = get_fx_rate_with_fallback(currency, "ILS")
+                if info.get("success") and float(info.get("rate") or 0) > 0:
+                    return amount * float(info["rate"])
+            except Exception:
+                current_app.logger.warning("check stats FX fallback failed", exc_info=True)
+            return amount if currency == "ILS" else 0.0
 
         def _sum_amount(items):
             total = 0.0
@@ -4829,7 +4841,7 @@ def add_check():
             if amount <= 0:
                 flash("مبلغ الشيك يجب أن يكون أكبر من صفر", "danger")
                 return redirect(url_for("checks.add_check"))
-            
+
             check_date = datetime.strptime(check_date_str, "%Y-%m-%d") if check_date_str else datetime.now(timezone.utc)
             check_due_date = datetime.strptime(check_due_date_str, "%Y-%m-%d") if check_due_date_str else datetime.now(timezone.utc)
             if check_due_date.date() < check_date.date():
@@ -4882,24 +4894,13 @@ def add_check():
             utils.flash_error()
             return redirect(url_for("checks.add_check"))
     
-    from utils.company_scope import (
-        filter_customers_query,
-        filter_partners_query,
-        filter_suppliers_query,
-    )
-
-    customers = (
-        filter_customers_query(Customer.query.filter_by(is_active=True, is_archived=False))
-        .order_by(Customer.name)
-        .limit(1000)
-        .all()
-    )
-    suppliers = filter_suppliers_query(Supplier.query).order_by(Supplier.name).limit(1000).all()
-    partners = filter_partners_query(Partner.query).order_by(Partner.name).limit(1000).all()
-    
+    customers = Customer.query.filter_by(is_active=True, is_archived=False).order_by(Customer.name).limit(1000).all()
+    suppliers = Supplier.query.order_by(Supplier.name).limit(1000).all()
+    partners = Partner.query.order_by(Partner.name).limit(1000).all()
     active_currencies = [
         c.code for c in Currency.query.filter_by(is_active=True).order_by(Currency.code).all()
     ] or ["ILS", "USD", "EUR", "JOD"]
+
     return render_template(
         "checks/form.html",
         customers=customers,
@@ -5007,10 +5008,11 @@ def check_detail(check_id):
 
 @checks_bp.route("/<int:check_id>/print")
 @login_required
-@utils.permission_required(SystemPermissions.MANAGE_PAYMENTS)
 def print_check(check_id):
     """طباعة شيك بأبعاد قياسية (mm) لورق الشيكات."""
-    check = scoped_check_query().filter_by(id=check_id).first_or_404()
+    from models import SystemSettings
+
+    check = db.get_or_404(Check, check_id)
     layout = {
         "payee_top_mm": 32,
         "amount_words_top_mm": 38,

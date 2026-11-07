@@ -1,0 +1,53 @@
+.customer-form-page .card {
+  border-radius: 0.5rem;
+}
+
+.customer-form-page .section-title {
+  font-weight: 700;
+  color: var(--text-dark, #334155);
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.customer-form-page .section-title i {
+  opacity: 0.85;
+}
+
+.customer-form-page .customer-form-switches {
+  gap: 1.25rem;
+}
+
+.customer-form-page .customer-form-switches .custom-control-label {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.customer-form-page .form-group label {
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.customer-form-page .form-group label i {
+  opacity: 0.75;
+  margin-left: 0.25rem;
+}
+
+.customer-form-page .form-actions {
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 767.98px) {
+  .customer-form-page .card-body {
+    padding: 1rem !important;
+  }
+
+  .customer-form-page .customer-form-switches {
+    justify-content: flex-start !important;
+  }
+}

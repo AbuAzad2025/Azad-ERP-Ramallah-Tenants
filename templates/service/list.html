@@ -6,193 +6,7 @@
 {% block head_extra %}
   {{ super() }}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/service.css') }}">
-  <style>
-    /* تقليل حجم الخط للجدول */
-    .service-table {
-      font-size: 0.85rem;
-    }
-    
-    /* تقليل padding للخلايا */
-    .service-table thead th {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-      color: white !important;
-      font-weight: 600;
-      border: none;
-      white-space: nowrap;
-      padding: 0.6rem 0.4rem;
-      font-size: 0.8rem;
-    }
-    
-    .service-table tbody td {
-      padding: 0.5rem 0.4rem;
-      vertical-align: middle;
-      border-bottom: 1px solid #e9ecef;
-    }
-    
-    .service-table tbody tr:hover {
-      background-color: #f8f9fa;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    /* تحسين الـ Badges */
-    .badge-priority, .badge-status {
-      font-weight: 600;
-      padding: 0.35em 0.6em;
-      font-size: 0.75rem;
-    }
-    
-    /* ألوان محسنة للأولوية */
-    .priority-urgent { background: #dc3545; color: white; }
-    .priority-high { background: #fd7e14; color: white; }
-    .priority-medium { background: #ffc107; color: #212529; }
-    .priority-low { background: #6c757d; color: white; }
-    
-    /* ألوان محسنة للحالة */
-    .status-pending { background: #6c757d; color: white; }
-    .status-diagnosis { background: #17a2b8; color: white; }
-    .status-in-progress { background: #007bff; color: white; }
-    .status-completed { background: #28a745; color: white; }
-    .status-cancelled { background: #dc3545; color: white; }
-    .status-on-hold { background: #ffc107; color: #212529; }
-    
-    /* تحسين التواريخ */
-    .date-cell {
-      font-family: 'Segoe UI', Tahoma, monospace;
-      font-size: 0.8rem;
-      white-space: nowrap;
-    }
-    
-    .date-received {
-      color: #495057;
-      font-weight: 500;
-    }
-    
-    .date-completed {
-      color: #28a745;
-      font-weight: 600;
-    }
-    
-    /* تحسين الأرقام المالية */
-    .amount-cell {
-      font-family: 'Segoe UI', Tahoma, monospace;
-      font-weight: 600;
-      font-size: 0.85rem;
-      white-space: nowrap;
-    }
-    
-    /* تحسين الأزرار */
-    .action-buttons .btn {
-      padding: 0.25rem 0.4rem;
-      font-size: 0.75rem;
-    }
-    
-    /* تحسين الفلاتر */
-    .filter-card {
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-      border: 1px solid #dee2e6;
-    }
-    
-    .filter-label {
-      font-weight: 600;
-      color: #495057;
-      font-size: 0.8rem;
-    }
-    
-    /* CSS للطباعة */
-    @media print {
-      .no-print, .no-print * {
-        display: none !important;
-      }
-      
-      .print-only {
-        display: block !important;
-      }
-      
-      .service-table {
-        font-size: 10pt;
-        width: 100%;
-      }
-      
-      .service-table thead th {
-        background: #333 !important;
-        color: white !important;
-        padding: 0.4rem 0.3rem;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      
-      .service-table tbody td {
-        padding: 0.3rem;
-      }
-      
-      .badge-priority, .badge-status {
-        border: 1px solid #333;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      
-      .card {
-        border: none;
-        box-shadow: none;
-      }
-      
-      .card-header {
-        background: #f8f9fa !important;
-        border-bottom: 2px solid #333;
-      }
-      
-      body {
-        font-size: 10pt;
-      }
-      
-      a {
-        text-decoration: none;
-        color: #000;
-      }
-      
-      .text-primary {
-        color: #000 !important;
-      }
-    }
-    
-    /* إخفاء/إظهار عناصر الطباعة */
-    .print-only {
-      display: none;
-    }
-    
-    @media print {
-      .print-only {
-        display: block;
-      }
-    }
-    
-    /* تحسين الإحصائيات */
-    .stat-card {
-      transition: transform 0.2s;
-      border: none;
-    }
-    
-    .stat-card:hover {
-      transform: translateY(-3px);
-    }
-    
-    /* تصغير حجم الزبون والمركبة */
-    .customer-name {
-      font-size: 0.85rem;
-      font-weight: 500;
-    }
-    
-    .vehicle-badge {
-      font-size: 0.75rem;
-      padding: 0.2em 0.5em;
-    }
-    
-    /* رقم الطلب */
-    .service-number {
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-  </style>
+  
 {% endblock %}
 
 {% block breadcrumb %}
@@ -224,8 +38,8 @@
     'COMPLETED':'مكتمل','CANCELLED':'ملغي','ON_HOLD':'مؤجّل'
   } %}
 
-  {% if has_perm('manage_service') %}
-  <div class="card border-0 shadow-lg mb-4 no-print" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+  {% if current_user.has_permission('manage_service') %}
+  <div class="card border-0 shadow-lg mb-4 no-print erp-kpi-tile erp-kpi-tile--primary text-white">
     <div class="card-body text-white">
       <div class="d-flex flex-wrap gap-3 align-items-center">
         <div class="d-flex gap-2">
@@ -253,7 +67,7 @@
   <!-- إحصائيات سريعة -->
   <div class="row g-3 mb-4 no-print">
     <div class="col-lg-3 col-md-6">
-      <div class="card stat-card text-white" style="background: linear-gradient(135deg, #f09819 0%, #edde5d 100%);">
+      <div class="card stat-card erp-kpi-tile erp-kpi-tile--warning text-white">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center">
             <div>
@@ -269,7 +83,7 @@
     </div>
     
     <div class="col-lg-3 col-md-6">
-      <div class="card stat-card text-white" style="background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);">
+      <div class="card stat-card erp-kpi-tile erp-kpi-tile--danger text-white">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center">
             <div>
@@ -285,7 +99,7 @@
     </div>
     
     <div class="col-lg-3 col-md-6">
-      <div class="card stat-card text-white" style="background: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%);">
+      <div class="card stat-card erp-kpi-tile erp-kpi-tile--info text-white">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center">
             <div>
@@ -301,7 +115,7 @@
     </div>
     
     <div class="col-lg-3 col-md-6">
-      <div class="card stat-card text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+      <div class="card stat-card erp-kpi-tile erp-kpi-tile--success text-white">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center">
             <div>
@@ -455,7 +269,7 @@
     <div class="card-body p-0">
       <div class="table-responsive">
         <table id="servicesTable" class="table service-table table-hover align-middle mb-0">
-          <thead>
+          <thead class="table-header-primary text-white">
             <tr>
               <th class="py-3 ps-3">رقم الطلب</th>
               <th class="py-3">الزبون</th>

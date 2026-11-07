@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% from 'macros/gm_mobile_ui.html' import scroll_table_start, scroll_table_end %}
+
+{% block title %}مخزون معلق{% endblock %}
+{% block page_title %}مخزون معلق{% endblock %}
+{% block body_class %}gm-financial-report{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" dir="rtl">
+  <h4>مخزون معلق (محجوز)</h4>
+  <p>إجمالي وحدات محجوزة: <strong>{{ total_pending }}</strong></p>
+  {{ scroll_table_start() }}
+  <table class="table table-sm table-bordered">
+    <thead class="table-header-primary text-white"><tr><th>منتج</th><th>SKU</th><th>مستودع</th><th>كمية</th><th>محجوز</th><th>متاح</th></tr></thead>
+    <tbody>
+      {% for i in items %}
+      <tr><td>{{ i.name }}</td><td>{{ i.sku }}</td><td>{{ i.warehouse }}</td><td>{{ i.quantity }}</td><td>{{ i.reserved }}</td><td>{{ i.available }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {{ scroll_table_end() }}
+</div>
+{% endblock %}

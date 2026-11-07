@@ -2,12 +2,33 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from extensions import db
 from models import Budget, BudgetCommitment, Account, Branch, Site, SystemSettings, Expense, ExpenseType
-from utils.branch_context import accessible_branches_query, resolve_branch_id
 from utils.company_scope import filter_by_branches
+from utils.tenant_ui import accessible_branches_query, resolve_branch_id
 from sqlalchemy import func, extract
 from datetime import datetime, date
 from decimal import Decimal
 import utils
+from utils.fiscal_calendar import (
+    fiscal_year_bounds,
+    generate_annual_period,
+    generate_half_year_periods,
+    generate_quarterly_periods,
+)
+
+
+def _budget_period_dates(fiscal_year: int, period_type: str, period_number: int):
+    pt = (period_type or "ANNUAL").upper()
+    n = int(period_number or 1)
+    if pt == "QUARTER":
+        specs = generate_quarterly_periods(fiscal_year)
+        spec = specs[n - 1] if 0 < n <= len(specs) else specs[0]
+        return spec.start_date, spec.end_date
+    if pt == "HALF":
+        specs = generate_half_year_periods(fiscal_year)
+        spec = specs[n - 1] if 0 < n <= len(specs) else specs[0]
+        return spec.start_date, spec.end_date
+    spec = generate_annual_period(fiscal_year)
+    return spec.start_date, spec.end_date
 
 budgets_bp = Blueprint('budgets', __name__, url_prefix='/budgets')
 
@@ -27,6 +48,7 @@ def index():
     
     fiscal_year = request.args.get('year', datetime.now().year, type=int)
     branch_id = request.args.get('branch', None, type=int)
+    period_type = request.args.get('period_type', '').upper()
     
     query = filter_by_branches(
         Budget.query.filter_by(fiscal_year=fiscal_year, is_active=True),
@@ -35,6 +57,8 @@ def index():
     if branch_id:
         resolve_branch_id(branch_id, required=False)
         query = query.filter_by(branch_id=branch_id)
+    if period_type:
+        query = query.filter(Budget.period_type == period_type)
     
     budgets = query.all()
     
@@ -85,9 +109,16 @@ def add():
                 flash('مبلغ الميزانية لا يمكن أن يكون سالباً', 'danger')
                 return redirect(request.url)
             notes = request.form.get('notes', '')
+            period_type = (request.form.get('period_type') or 'ANNUAL').upper()
+            period_number = request.form.get('period_number', 1, type=int) or 1
+            p_start, p_end = _budget_period_dates(fiscal_year, period_type, period_number)
             
             budget = Budget(
                 fiscal_year=fiscal_year,
+                period_type=period_type,
+                period_number=period_number,
+                period_start=p_start,
+                period_end=p_end,
                 account_code=account_code,
                 branch_id=branch_id,
                 site_id=site_id,
@@ -108,7 +139,7 @@ def add():
             utils.flash_error()
     
     accounts = Account.query.filter_by(type='EXPENSE', is_active=True).all()
-    branches = Branch.query.filter_by(is_active=True).all()
+    branches = accessible_branches_query().all()
     sites = Site.query.filter_by(is_active=True).all()
     
     return render_template('budgets/form.html',
@@ -149,7 +180,7 @@ def edit(id):
             utils.flash_error()
     
     accounts = Account.query.filter_by(type='EXPENSE', is_active=True).all()
-    branches = Branch.query.filter_by(is_active=True).all()
+    branches = accessible_branches_query().all()
     sites = Site.query.filter_by(is_active=True).all()
     
     return render_template('budgets/form.html',
@@ -204,7 +235,7 @@ def budget_vs_actual():
             'status': status
         })
     
-    branches = Branch.query.filter_by(is_active=True).all()
+    branches = accessible_branches_query().all()
     
     return render_template('budgets/report_vs_actual.html',
                          data=report_data,

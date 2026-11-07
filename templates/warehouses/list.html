@@ -2,18 +2,12 @@
 
 {% block page_title %}المستودعات{% endblock %}
 
-{% block head_extra %}
-  {{ super() }}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/warehouses.css') }}">
-{% endblock %}
-
-{% from 'macros/permissions.html' import readonly_banner with context %}
 {% block content %}
 {{ readonly_banner('view_warehouses', 'manage_warehouses', 'المستودعات') }}
 <!-- إحصائيات سريعة -->
 <div class="row mb-4">
   <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card border-0 shadow-sm bg-primary text-white card-hover" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+    <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--primary text-white card-hover">
       <div class="card-body">
         <div class="d-flex justify-content-between">
           <div>
@@ -29,7 +23,7 @@
   </div>
   
   <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card border-0 shadow-sm bg-success text-white card-hover" style="background: linear-gradient(135deg, #198754 0%, #157347 100%);">
+    <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--success text-white card-hover">
       <div class="card-body">
         <div class="d-flex justify-content-between">
           <div>
@@ -45,7 +39,7 @@
   </div>
   
   <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card border-0 shadow-sm bg-info text-white card-hover" style="background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);">
+    <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--info text-white card-hover">
       <div class="card-body">
         <div class="d-flex justify-content-between">
           <div>
@@ -61,7 +55,7 @@
   </div>
   
   <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card border-0 shadow-sm bg-warning text-white card-hover" style="background: linear-gradient(135deg, #ffc107 0%, #ffca2c 100%);">
+    <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--warning text-white card-hover">
       <div class="card-body">
         <div class="d-flex justify-content-between">
           <div>
@@ -78,7 +72,7 @@
 </div>
 
 <div class="card shadow-lg rounded-4 border-0 card-hover">
-  <div class="card-header gradient-header text-white">
+  <div class="card-header erp-card-header-row erp-theme-header--primary">
     <div class="d-flex justify-content-between align-items-center">
       <h5 class="mb-0 fw-bold"><i class="fas fa-warehouse ml-2"></i>قائمة المستودعات</h5>
       <div class="no-print d-flex gap-2">
@@ -137,7 +131,7 @@
     {% if warehouses and warehouses|length %}
       <div class="table-responsive">
         <table class="table table-striped table-hover align-middle table-rounded" id="warehouses-table" style="width:100%">
-          <thead class="text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+          <thead class="table-header-primary text-white">
             <tr>
               <th class="text-center" style="width:90px">رقم</th>
               <th>الاسم</th>

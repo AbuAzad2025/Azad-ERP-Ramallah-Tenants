@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}بوابة الموظف{% endblock %}
+{% block content %}
+<div class="container py-3" dir="rtl">
+  <h4>مرحباً {{ employee.name }}</h4>
+  <p>{{ employee.position }} — {{ employee.branch.name if employee.branch else '' }}</p>
+  <table class="table table-sm table-bordered">
+    <thead class="table-header-primary text-white"><tr><th>فترة</th><th>إجمالي</th><th>خصومات</th><th>صافي</th><th></th></tr></thead>
+    <tbody>
+      {% for ln in lines %}
+      <tr>
+        <td>{{ ln.payroll_run.period_key if ln.payroll_run else '' }}</td>
+        <td>{{ (ln.base_salary or 0) + (ln.allowances or 0) }}</td>
+        <td>{{ ln.deductions }}</td>
+        <td>{{ ln.net_pay }}</td>
+        <td><a href="{{ url_for('hr_portal_bp.payslip', line_id=ln.id) }}">كشف راتب</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -3,6 +3,9 @@
 {% block content %}
 <div class="container py-3" dir="rtl" style="max-width:720px">
   <h4>{{ company and 'تعديل' or 'إضافة' }} شركة</h4>
+  {% if not company %}
+  <p class="text-muted small erp-hint-banner mb-2">يُنشأ مجلد الشعارات تلقائياً — ضع <code>logos/primary.png</code> أو استخدم مدير الشعارات.</p>
+  {% endif %}
   <form method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-group"><label>الرمز *</label><input name="code" class="form-control" value="{{ company.code if company else '' }}" {% if company %}readonly{% endif %} required></div>

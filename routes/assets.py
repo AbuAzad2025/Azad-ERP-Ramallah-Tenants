@@ -2,6 +2,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from extensions import db
 from models import FixedAsset, FixedAssetCategory, AssetDepreciation, AssetMaintenance, Branch, Site, Partner, SystemSettings, Account
+from utils.company_scope import filter_by_branches
+from utils.tenant_ui import accessible_branches_query, resolve_branch_id
 from sqlalchemy import func
 from datetime import datetime, date
 from decimal import Decimal
@@ -27,12 +29,13 @@ def index():
     category_id = request.args.get('category', None, type=int)
     branch_id = request.args.get('branch', None, type=int)
     
-    query = FixedAsset.query
+    query = filter_by_branches(FixedAsset.query, FixedAsset.branch_id)
     if status_filter:
         query = query.filter_by(status=status_filter)
     if category_id:
         query = query.filter_by(category_id=category_id)
     if branch_id:
+        resolve_branch_id(branch_id, required=False)
         query = query.filter_by(branch_id=branch_id)
     
     assets = query.order_by(FixedAsset.purchase_date.desc()).all()
@@ -49,7 +52,7 @@ def index():
         })
     
     categories = FixedAssetCategory.query.filter_by(is_active=True).all()
-    branches = Branch.query.filter_by(is_active=True).all()
+    branches = accessible_branches_query().all()
     
     return render_template('assets/index.html',
                          assets=assets_data,
@@ -81,7 +84,7 @@ def add():
             except Exception:
                 flash('قيمة سعر الشراء غير صالحة', 'danger')
                 return redirect(request.url)
-            branch_id = request.form.get('branch_id', type=int)
+            branch_id = resolve_branch_id(request.form.get('branch_id'), required=True)
             site_id = request.form.get('site_id', type=int)
             supplier_id = request.form.get('supplier_id', type=int)
             serial_number = request.form.get('serial_number', '')
@@ -124,7 +127,7 @@ def add():
     from utils.company_scope import filter_partners_query
 
     categories = FixedAssetCategory.query.filter_by(is_active=True).all()
-    branches = accessible_branches_query().filter_by(is_active=True).all()
+    branches = accessible_branches_query().all()
     sites = Site.query.filter_by(is_active=True).all()
     suppliers = filter_partners_query(
         Partner.query.filter(Partner.is_archived.is_(False))
@@ -218,7 +221,7 @@ def asset_register():
         })
     
     categories = FixedAssetCategory.query.filter_by(is_active=True).all()
-    branches = Branch.query.filter_by(is_active=True).all()
+    branches = accessible_branches_query().all()
     
     return render_template('assets/report_register.html',
                          data=register_data,

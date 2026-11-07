@@ -345,9 +345,10 @@ def api_warehouse_info():
         wid = request.args.get("id", type=int)
         if not wid:
             return jsonify({"error": "id_required"}), 400
-        from utils.company_scope import filter_warehouses_query
+        from utils.company_scope import assert_warehouse_access
 
-        w = filter_warehouses_query(Warehouse.query).filter_by(id=wid).first()
+        assert_warehouse_access(wid)
+        w = Warehouse.query.filter_by(id=wid).first()
         if not w:
             return jsonify({"error": "not_found"}), 404
         if hasattr(w.warehouse_type, 'value'):
@@ -821,23 +822,17 @@ def create_warehouse():
 
     form = WarehouseForm()
     try:
-        from models import Branch
-        form.branch_id.choices = [(0, '-- تلقائي: الفرع الرئيسي --')] + [
-            (b.id, f"{b.code} - {b.name}") for b in Branch.query.filter_by(is_active=True).order_by(Branch.name).all()
-        ]
+        from utils.tenant_ui import assign_branch_field, resolve_branch_id
+
+        assign_branch_field(form.branch_id, default=True)
+        if len(form.branch_id.choices) > 1:
+            form.branch_id.choices = [(0, "-- تلقائي: الفرع النشط --")] + list(form.branch_id.choices)
     except Exception:
-        form.branch_id.choices = [(0, '-- تلقائي: الفرع الرئيسي --')]
+        form.branch_id.choices = [(0, "-- تلقائي: الفرع النشط --")]
     if form.validate_on_submit():
         wh_type = (form.warehouse_type.data or "").strip().upper()
-        # حدد فرع المستودع: إذا لم يُحدد، نعين الفرع الرئيسي MAIN
-        def _get_main_branch_id():
-            from utils.tenant_org_structure import get_main_branch
-
-            main = get_main_branch(db.session)
-            return main.id if main else None
-
-        selected_branch_id = form.branch_id.data if form.branch_id.data not in (None, 0, '0') else None
-        resolved_branch_id = selected_branch_id or _get_main_branch_id()
+        selected_branch_id = form.branch_id.data if form.branch_id.data not in (None, 0, "0") else None
+        resolved_branch_id = resolve_branch_id(selected_branch_id, required=True)
 
         w = Warehouse(
             name=(form.name.data or "").strip(),
@@ -885,24 +880,16 @@ def edit_warehouse(warehouse_id):
             return None
 
     w = _get_or_404(Warehouse, warehouse_id)
+    from utils.company_scope import assert_warehouse_access
+
+    assert_warehouse_access(warehouse_id)
     form = WarehouseForm(obj=w)
-    # تعبئة الفروع للاختيار في شاشة التعديل
     try:
-        form.branch_id.choices = [(0, '-- بدون تغيير --')] + [
-            (b.id, f"{b.code} - {b.name}") for b in Branch.query.filter_by(is_active=True).order_by(Branch.name).all()
-        ]
-        if w.branch_id and (w.branch_id, ) not in form.branch_id.choices:
-            # تأكد أن الاختيار الحالي موجود ضمن القائمة
-            cur = db.session.get(Branch, w.branch_id)
-            if cur:
-                form.branch_id.choices.append((cur.id, f"{cur.code} - {cur.name}"))
+        from utils.tenant_ui import branch_choices_with_prefix, resolve_branch_id
+
+        form.branch_id.choices = branch_choices_with_prefix("-- بدون تغيير --")
     except Exception:
-        form.branch_id.choices = [(0, '-- بدون تغيير --')]
-    try:
-        from models import Branch
-        form.branch_id.choices = [(0, '-- بدون فرع --')] + [(b.id, f"{b.code} - {b.name}") for b in Branch.query.filter_by(is_active=True).order_by(Branch.name).all()]
-    except Exception:
-        form.branch_id.choices = [(0, '-- بدون فرع --')]
+        form.branch_id.choices = [(0, "-- بدون تغيير --")]
 
     if form.validate_on_submit():
         w.name = (form.name.data or "").strip()
@@ -919,6 +906,8 @@ def edit_warehouse(warehouse_id):
             w.online_slug = (form.online_slug.data or "").strip() or None
         if hasattr(w, "online_is_default"):
             w.online_is_default = bool(form.online_is_default.data)
+        if form.branch_id.data not in (None, 0, "0"):
+            w.branch_id = resolve_branch_id(form.branch_id.data, required=True)
         try:
             db.session.commit()
             flash("تم تحديث بيانات المستودع", "success")
@@ -3301,6 +3290,16 @@ def preorders_list():
             q = q.filter(PreOrder.created_at <= datetime.fromisoformat(dt))
     except ValueError:
         current_app.logger.debug('date parsing failed in warehouses.py', exc_info=True)
+    stats_q = q
+    prepaid_total = (
+        stats_q.with_entities(func.coalesce(func.sum(PreOrder.prepaid_amount), 0)).scalar() or 0
+    )
+    preorder_stats = {
+        "total": stats_q.count(),
+        "pending": stats_q.filter(PreOrder.status == "PENDING").count(),
+        "fulfilled": stats_q.filter(PreOrder.status == "FULFILLED").count(),
+        "prepaid_total": float(prepaid_total),
+    }
     q = q.order_by(PreOrder.created_at.desc())
     page = max(1, request.args.get("page", 1, type=int))
     per_page = min(100, max(1, request.args.get("per_page", 25, type=int)))
@@ -3335,7 +3334,13 @@ def preorders_list():
                 }
             )
         return jsonify({"data": data, "meta": {"page": pagination.page, "per_page": pagination.per_page, "total": pagination.total, "pages": pagination.pages}})
-    return render_template("parts/preorders_list.html", preorders=preorders, pagination=pagination, filters={"status": status or None, "code": code or None, "date_from": df or None, "date_to": dt or None})
+    return render_template(
+        "parts/preorders_list.html",
+        preorders=preorders,
+        pagination=pagination,
+        preorder_stats=preorder_stats,
+        filters={"status": status or None, "code": code or None, "date_from": df or None, "date_to": dt or None},
+    )
 
 
 @warehouse_bp.route("/preorders/create", methods=["GET", "POST"], endpoint="preorder_create")
@@ -3569,34 +3574,27 @@ def preorder_convert_to_sale(preorder_id):
         db.session.add(sale_line)
         db.session.flush()  # لحساب total_amount من SaleLine
         
-        # ربط Payment المرتبط بـ PreOrder بالـ Sale أيضاً
-        from utils.company_scope import filter_payments_query
-
-        prepaid_payment = filter_payments_query(Payment.query).filter(
+        prepaid_payment = Payment.query.filter(
             Payment.preorder_id == preorder.id,
             Payment.direction == PaymentDirection.IN.value,
             Payment.status == PaymentStatus.COMPLETED.value
         ).first()
         
-        if prepaid_payment:
-            prepaid_payment.preorder_id = None
-            prepaid_payment.sale_id = sale.id
-            prepaid_payment.customer_id = None
+        if prepaid_payment and preorder.customer_id:
+            prepaid_payment.customer_id = int(preorder.customer_id)
+            prepaid_payment.entity_type = "CUSTOMER"
+            prepaid_payment.sale_id = None
             prepaid_payment.supplier_id = None
             prepaid_payment.partner_id = None
-            prepaid_payment.entity_type = "SALE"
             db.session.add(prepaid_payment)
         
         db.session.flush()
         db.session.refresh(sale)
         
-        sale.total_paid = Decimal(str(prepaid))
-        db.session.add(sale)
-        db.session.flush()
-        
-        db.session.refresh(sale)
+        sale.total_paid = Decimal("0")
         sale.balance_due = Decimal(str(sale.total_amount or 0))
         db.session.add(sale)
+        db.session.flush()
         
         preorder._skip_reservation_flow = True
         sl = StockLevel.query.filter_by(product_id=preorder.product_id, warehouse_id=preorder.warehouse_id).with_for_update(nowait=False).first()

@@ -7,12 +7,47 @@ import json
 
 from models import (
     db, Account, GLBatch, GLEntry, Customer, Supplier, Partner,
-    Sale, Payment, Expense, Invoice, ServiceRequest,
+    Sale, Payment, Expense, Invoice, ServiceRequest, Product, StockLevel, Warehouse,
     GL_ACCOUNTS, _gl_upsert_batch_and_entries, _ensure_account_exists,
 )
 from utils import permission_required, get_income_tax_rate, classify_entity_balance
 from utils.gl_company_scope import apply_gl_branch_filter
 from permissions_config.enums import SystemPermissions
+
+
+def _companies_for_reports():
+    from models import Company
+    from utils.company_scope import get_accessible_company_ids
+
+    cq = Company.query.filter_by(is_active=True).order_by(Company.name)
+    allowed = get_accessible_company_ids()
+    if allowed is not None:
+        return cq.filter(Company.id.in_(allowed)).all() if allowed else []
+    return cq.all()
+
+
+def _apply_gl_branch(query, branch_filter_ids):
+    from utils.gl_company_scope import gl_batch_branch_clause
+
+    if branch_filter_ids is None:
+        return query
+    if not branch_filter_ids:
+        return query.filter(GLEntry.id == -1)
+    return query.filter(gl_batch_branch_clause(branch_filter_ids))
+
+
+def _report_scope():
+    from utils.gl_company_scope import resolve_branch_filter
+
+    company_id = request.args.get('company_id', type=int)
+    branch_filter_ids = resolve_branch_filter(company_id)
+    return {
+        'company_id': company_id,
+        'branch_filter_ids': branch_filter_ids,
+        'companies': _companies_for_reports(),
+        'company_filter_active': company_id is not None,
+    }
+
 
 # إنشاء Blueprint
 financial_reports_bp = Blueprint('financial_reports', __name__, url_prefix='/reports/financial')
@@ -20,7 +55,7 @@ financial_reports_bp = Blueprint('financial_reports', __name__, url_prefix='/rep
 @financial_reports_bp.route('/')
 @permission_required(SystemPermissions.VIEW_REPORTS)
 def index():
-    return render_template('reports/financial/index.html')
+    return render_template('reports/financial/index.html', companies=_companies_for_reports())
 
 
 @financial_reports_bp.route('/accrue-income-tax', methods=['POST'])
@@ -133,6 +168,11 @@ def accrue_income_tax():
 @permission_required(SystemPermissions.VIEW_REPORTS)
 def income_statement():
     try:
+        from utils.gl_company_scope import gl_entries_base, resolve_branch_filter
+
+        company_id = request.args.get('company_id', type=int)
+        branch_filter_ids = resolve_branch_filter(company_id)
+
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
         
@@ -146,61 +186,59 @@ def income_statement():
         if isinstance(end_date, str):
             end_date = datetime.fromisoformat(end_date).date()
 
-        start_dt = datetime.combine(start_date, datetime.min.time())
-        end_dt = datetime.combine(end_date, datetime.max.time())
-        
         start_date_dt = datetime.combine(start_date, datetime.min.time())
         end_date_dt = datetime.combine(end_date, datetime.max.time())
-        
-        revenue_query = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.credit - GLEntry.debit).label('total_revenue')
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at >= start_date_dt,
-            GLBatch.posted_at <= end_date_dt,
-            Account.type == 'REVENUE'
-        ).join(Account, Account.code == GLEntry.account)).scalar() or 0
 
-        # تكلفة البضاعة المباعة (COGS)
-        # عادة ما تكون حسابات المصاريف التي تبدأ بـ 51
-        cogs_query = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.debit - GLEntry.credit).label('total_cogs')
-        ).join(GLBatch).join(Account, Account.code == GLEntry.account).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at >= start_date_dt,
-            GLBatch.posted_at <= end_date_dt,
-            Account.type == 'EXPENSE',
-            or_(
-                GLEntry.account.like('51%'),
-                GLEntry.account == '5105_COGS_EXCHANGE'
+        def _sum_revenue():
+            return (
+                gl_entries_base(branch_filter_ids, start_date_dt, end_date_dt)
+                .filter(Account.type == "REVENUE")
+                .with_entities(func.coalesce(func.sum(GLEntry.credit - GLEntry.debit), 0))
+                .scalar()
+                or 0
             )
-        )).scalar() or 0
 
-        # المصاريف التشغيلية (كل المصاريف ما عدا COGS والضرائب)
-        expenses_query = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.debit - GLEntry.credit).label('total_expenses')
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at >= start_date_dt,
-            GLBatch.posted_at <= end_date_dt,
-            Account.type == 'EXPENSE',
-            ~GLEntry.account.like('51%'),
-            GLEntry.account != '5105_COGS_EXCHANGE'
-        ).join(Account, Account.code == GLEntry.account)).scalar() or 0
-
-
-        taxes_query = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.debit - GLEntry.credit).label('total_taxes')
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at >= start_date_dt,
-            GLBatch.posted_at <= end_date_dt,
-            Account.type == 'EXPENSE',
-            or_(
-                Account.name.ilike('%tax%'),
-                Account.name.ilike('%ضريبة%')
+        def _sum_cogs():
+            return (
+                gl_entries_base(branch_filter_ids, start_date_dt, end_date_dt)
+                .filter(
+                    Account.type == "EXPENSE",
+                    or_(GLEntry.account.like("51%"), GLEntry.account == "5105_COGS_EXCHANGE"),
+                )
+                .with_entities(func.coalesce(func.sum(GLEntry.debit - GLEntry.credit), 0))
+                .scalar()
+                or 0
             )
-        ).join(Account, Account.code == GLEntry.account)).scalar() or 0
+
+        def _sum_operating_expenses():
+            return (
+                gl_entries_base(branch_filter_ids, start_date_dt, end_date_dt)
+                .filter(
+                    Account.type == "EXPENSE",
+                    ~GLEntry.account.like("51%"),
+                    GLEntry.account != "5105_COGS_EXCHANGE",
+                )
+                .with_entities(func.coalesce(func.sum(GLEntry.debit - GLEntry.credit), 0))
+                .scalar()
+                or 0
+            )
+
+        def _sum_taxes():
+            return (
+                gl_entries_base(branch_filter_ids, start_date_dt, end_date_dt)
+                .filter(
+                    Account.type == "EXPENSE",
+                    or_(Account.name.ilike("%tax%"), Account.name.ilike("%ضريبة%")),
+                )
+                .with_entities(func.coalesce(func.sum(GLEntry.debit - GLEntry.credit), 0))
+                .scalar()
+                or 0
+            )
+
+        revenue_query = _sum_revenue()
+        cogs_query = _sum_cogs()
+        expenses_query = _sum_operating_expenses()
+        taxes_query = _sum_taxes()
         
         total_revenue = float(revenue_query)
         total_cogs = float(cogs_query)
@@ -213,48 +251,55 @@ def income_statement():
         total_taxes = float(taxes_query)
         net_profit = operating_profit - total_taxes
         
-        revenue_details = apply_gl_branch_filter(db.session.query(
-            GLEntry.account,
-            Account.name,
-            func.sum(GLEntry.credit - GLEntry.debit).label('amount')
-        ).join(Account, Account.code == GLEntry.account).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at >= start_date_dt,
-            GLBatch.posted_at <= end_date_dt,
-            Account.type == 'REVENUE'
-        ).group_by(GLEntry.account, Account.name).having(func.sum(GLEntry.credit - GLEntry.debit) != 0).order_by(func.sum(GLEntry.credit).desc())).all()
-
-        expense_details = apply_gl_branch_filter(db.session.query(
-            GLEntry.account,
-            Account.name,
-            func.sum(GLEntry.debit - GLEntry.credit).label('amount')
-        ).join(Account, Account.code == GLEntry.account).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at >= start_date_dt,
-            GLBatch.posted_at <= end_date_dt,
-            Account.type == 'EXPENSE',
-            ~GLEntry.account.like('51%'),
-            GLEntry.account != '5105_COGS_EXCHANGE',
-            ~or_(
-                Account.name.ilike('%tax%'),
-                Account.name.ilike('%ضريبة%')
+        revenue_details = (
+            gl_entries_base(branch_filter_ids, start_date_dt, end_date_dt)
+            .filter(Account.type == "REVENUE")
+            .with_entities(
+                GLEntry.account,
+                Account.name,
+                func.sum(GLEntry.credit - GLEntry.debit).label("amount"),
             )
-        ).group_by(GLEntry.account, Account.name).having(func.sum(GLEntry.debit - GLEntry.credit) != 0).order_by(func.sum(GLEntry.debit).desc())).all()
+            .group_by(GLEntry.account, Account.name)
+            .having(func.sum(GLEntry.credit - GLEntry.debit) != 0)
+            .order_by(func.sum(GLEntry.credit).desc())
+            .all()
+        )
 
-        cogs_details = apply_gl_branch_filter(db.session.query(
-            GLEntry.account,
-            Account.name,
-            func.sum(GLEntry.debit - GLEntry.credit).label('amount')
-        ).join(Account, Account.code == GLEntry.account).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at >= start_date_dt,
-            GLBatch.posted_at <= end_date_dt,
-            Account.type == 'EXPENSE',
-            or_(
-                GLEntry.account.like('51%'),
-                GLEntry.account == '5105_COGS_EXCHANGE'
+        expense_details = (
+            gl_entries_base(branch_filter_ids, start_date_dt, end_date_dt)
+            .filter(
+                Account.type == "EXPENSE",
+                ~GLEntry.account.like("51%"),
+                GLEntry.account != "5105_COGS_EXCHANGE",
+                ~or_(Account.name.ilike("%tax%"), Account.name.ilike("%ضريبة%")),
             )
-        ).group_by(GLEntry.account, Account.name).having(func.sum(GLEntry.debit - GLEntry.credit) != 0).order_by(func.sum(GLEntry.debit).desc())).all()
+            .with_entities(
+                GLEntry.account,
+                Account.name,
+                func.sum(GLEntry.debit - GLEntry.credit).label("amount"),
+            )
+            .group_by(GLEntry.account, Account.name)
+            .having(func.sum(GLEntry.debit - GLEntry.credit) != 0)
+            .order_by(func.sum(GLEntry.debit).desc())
+            .all()
+        )
+
+        cogs_details = (
+            gl_entries_base(branch_filter_ids, start_date_dt, end_date_dt)
+            .filter(
+                Account.type == "EXPENSE",
+                or_(GLEntry.account.like("51%"), GLEntry.account == "5105_COGS_EXCHANGE"),
+            )
+            .with_entities(
+                GLEntry.account,
+                Account.name,
+                func.sum(GLEntry.debit - GLEntry.credit).label("amount"),
+            )
+            .group_by(GLEntry.account, Account.name)
+            .having(func.sum(GLEntry.debit - GLEntry.credit) != 0)
+            .order_by(func.sum(GLEntry.debit).desc())
+            .all()
+        )
         
         data = {
             'start_date': start_date,
@@ -278,13 +323,18 @@ def income_statement():
             'expenses': expense_details,
             'cogs_details': cogs_details,
             'revenue_details': revenue_details,
-            'expense_details': expense_details
+            'expense_details': expense_details,
+            'company_id': company_id,
+            'branch_filter_ids': branch_filter_ids,
+            'companies': _companies_for_reports(),
+            'company_filter_active': branch_filter_ids is not None,
         }
         
         if request.args.get('format') == 'json' or request.headers.get('Accept') == 'application/json':
             return jsonify({
                 'success': True,
                 'report_type': 'income_statement',
+                'company_id': company_id,
                 'period': {
                     'start_date': start_date.isoformat(),
                     'end_date': end_date.isoformat()
@@ -322,6 +372,9 @@ def income_statement():
 def balance_sheet():
     """الميزانية العمومية (Balance Sheet) - يدعم HTML وJSON"""
     try:
+        scope = _report_scope()
+        branch_filter_ids = scope['branch_filter_ids']
+
         # تاريخ الميزانية
         balance_date = request.args.get('date')
         if not balance_date:
@@ -333,88 +386,112 @@ def balance_sheet():
         
         # الأصول المتداولة
         # استخدام Account.type بدلاً من الكود
-        current_assets = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.debit - GLEntry.credit).label('total')
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at <= balance_dt,
-            Account.type == 'ASSET',
-            GLEntry.account.like('1%'),
-            ~GLEntry.account.like('15%') # استبعاد الأصول الثابتة افتراضاً بناءً على الكود
-        ).join(Account, Account.code == GLEntry.account)).scalar() or 0
-
+        current_assets = _apply_gl_branch(
+            db.session.query(
+                func.sum(GLEntry.debit - GLEntry.credit).label('total')
+            ).join(GLBatch).filter(
+                GLBatch.status == 'POSTED',
+                GLBatch.posted_at <= balance_dt,
+                Account.type == 'ASSET',
+                GLEntry.account.like('1%'),
+                ~GLEntry.account.like('15%') # استبعاد الأصول الثابتة افتراضاً بناءً على الكود
+            ).join(Account, Account.code == GLEntry.account),
+            branch_filter_ids,
+        ).scalar() or 0
+        
         # الأصول الثابتة
-        fixed_assets = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.debit - GLEntry.credit).label('total')
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at <= balance_dt,
-            Account.type == 'ASSET',
-            GLEntry.account.like('15%')
-        ).join(Account, Account.code == GLEntry.account)).scalar() or 0
-
+        fixed_assets = _apply_gl_branch(
+            db.session.query(
+                func.sum(GLEntry.debit - GLEntry.credit).label('total')
+            ).join(GLBatch).filter(
+                GLBatch.status == 'POSTED',
+                GLBatch.posted_at <= balance_dt,
+                Account.type == 'ASSET',
+                GLEntry.account.like('15%')
+            ).join(Account, Account.code == GLEntry.account),
+            branch_filter_ids,
+        ).scalar() or 0
+        
         # الخصوم المتداولة
-        current_liabilities = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.credit - GLEntry.debit).label('total')
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at <= balance_dt,
-            Account.type == 'LIABILITY'
-        ).join(Account, Account.code == GLEntry.account)).scalar() or 0
-
+        current_liabilities = _apply_gl_branch(
+            db.session.query(
+                func.sum(GLEntry.credit - GLEntry.debit).label('total')
+            ).join(GLBatch).filter(
+                GLBatch.status == 'POSTED',
+                GLBatch.posted_at <= balance_dt,
+                Account.type == 'LIABILITY'
+            ).join(Account, Account.code == GLEntry.account),
+            branch_filter_ids,
+        ).scalar() or 0
+        
         # حقوق الملكية (رأس المال والاحتياطيات)
-        equity = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.credit - GLEntry.debit).label('total')
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at <= balance_dt,
-            Account.type == 'EQUITY'
-        ).join(Account, Account.code == GLEntry.account)).scalar() or 0
-
+        equity = _apply_gl_branch(
+            db.session.query(
+                func.sum(GLEntry.credit - GLEntry.debit).label('total')
+            ).join(GLBatch).filter(
+                GLBatch.status == 'POSTED',
+                GLBatch.posted_at <= balance_dt,
+                Account.type == 'EQUITY'
+            ).join(Account, Account.code == GLEntry.account),
+            branch_filter_ids,
+        ).scalar() or 0
+        
         # --- حساب الأرباح المحتجزة (Retained Earnings) ---
         # هي مجموع الإيرادات - مجموع المصاريف لكل الفترات السابقة حتى تاريخ الميزانية
-        total_revenue_accumulated = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.credit - GLEntry.debit)
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at <= balance_dt,
-            Account.type == 'REVENUE'
-        ).join(Account, Account.code == GLEntry.account)).scalar() or 0
-
-        total_expenses_accumulated = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.debit - GLEntry.credit)
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at <= balance_dt,
-            Account.type == 'EXPENSE'
-        ).join(Account, Account.code == GLEntry.account)).scalar() or 0
-
+        total_revenue_accumulated = _apply_gl_branch(
+            db.session.query(
+                func.sum(GLEntry.credit - GLEntry.debit)
+            ).join(GLBatch).filter(
+                GLBatch.status == 'POSTED',
+                GLBatch.posted_at <= balance_dt,
+                Account.type == 'REVENUE'
+            ).join(Account, Account.code == GLEntry.account),
+            branch_filter_ids,
+        ).scalar() or 0
+        
+        total_expenses_accumulated = _apply_gl_branch(
+            db.session.query(
+                func.sum(GLEntry.debit - GLEntry.credit)
+            ).join(GLBatch).filter(
+                GLBatch.status == 'POSTED',
+                GLBatch.posted_at <= balance_dt,
+                Account.type == 'EXPENSE'
+            ).join(Account, Account.code == GLEntry.account),
+            branch_filter_ids,
+        ).scalar() or 0
+        
         retained_earnings = float(total_revenue_accumulated) - float(total_expenses_accumulated)
 
         # إضافة الأرباح المحتجزة إلى حقوق الملكية
         equity = float(equity) + retained_earnings
 
         # تفاصيل الأصول مع أسماء
-        assets_details = apply_gl_branch_filter(db.session.query(
-            GLEntry.account,
-            Account.name,
-            func.sum(GLEntry.debit - GLEntry.credit).label('balance')
-        ).join(Account, Account.code == GLEntry.account).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at <= balance_dt,
-            Account.type == 'ASSET'
-        ).group_by(GLEntry.account, Account.name).having(func.sum(GLEntry.debit - GLEntry.credit) != 0)).all()
-
+        assets_details = _apply_gl_branch(
+            db.session.query(
+                GLEntry.account,
+                Account.name,
+                func.sum(GLEntry.debit - GLEntry.credit).label('balance')
+            ).join(Account, Account.code == GLEntry.account).join(GLBatch).filter(
+                GLBatch.status == 'POSTED',
+                GLBatch.posted_at <= balance_dt,
+                Account.type == 'ASSET'
+            ),
+            branch_filter_ids,
+        ).group_by(GLEntry.account, Account.name).having(func.sum(GLEntry.debit - GLEntry.credit) != 0).all()
+        
         # تفاصيل الخصوم وحقوق الملكية مع أسماء
-        liabilities_equity_details = apply_gl_branch_filter(db.session.query(
-            GLEntry.account,
-            Account.name,
-            func.sum(GLEntry.credit - GLEntry.debit).label('balance')
-        ).join(Account, Account.code == GLEntry.account).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at <= balance_dt,
-            or_(Account.type == 'LIABILITY', Account.type == 'EQUITY')
-        ).group_by(GLEntry.account, Account.name).having(func.sum(GLEntry.credit - GLEntry.debit) != 0)).all()
+        liabilities_equity_details = _apply_gl_branch(
+            db.session.query(
+                GLEntry.account,
+                Account.name,
+                func.sum(GLEntry.credit - GLEntry.debit).label('balance')
+            ).join(Account, Account.code == GLEntry.account).join(GLBatch).filter(
+                GLBatch.status == 'POSTED',
+                GLBatch.posted_at <= balance_dt,
+                or_(Account.type == 'LIABILITY', Account.type == 'EQUITY')
+            ),
+            branch_filter_ids,
+        ).group_by(GLEntry.account, Account.name).having(func.sum(GLEntry.credit - GLEntry.debit) != 0).all()
         
         # إضافة سطر الأرباح المحتجزة إلى تفاصيل الخصوم وحقوق الملكية
         from types import SimpleNamespace
@@ -431,6 +508,7 @@ def balance_sheet():
         is_balanced = abs(total_assets - total_liabilities_equity) < 0.01
         
         data = {
+            **scope,
             'balance_date': balance_date,
             'current_assets': float(current_assets),
             'fixed_assets': float(fixed_assets),
@@ -481,6 +559,9 @@ def balance_sheet():
 def cash_flow():
     """قائمة التدفق النقدي (Cash Flow Statement)"""
     try:
+        scope = _report_scope()
+        branch_filter_ids = scope['branch_filter_ids']
+
         # معاملات التاريخ
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
@@ -500,92 +581,32 @@ def cash_flow():
         start_dt = datetime.combine(start_date, datetime.min.time())
         end_dt = datetime.combine(end_date, datetime.max.time())
         
-        # التدفق النقدي من العمليات
-        operating_cash_in = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.debit).label('total')
-        ).join(GLBatch).filter(
+        cash_accounts = or_(
+            GLEntry.account.like('1000%'),
+            GLEntry.account.like('1010%'),
+            GLEntry.account.like('1020%'),
+        )
+        posted_period = and_(
             GLBatch.status == 'POSTED',
             GLBatch.posted_at >= start_dt,
             GLBatch.posted_at <= end_dt,
-            or_(
-                GLEntry.account.like('1000%'),  # النقدية
-                GLEntry.account.like('1010%'),  # البنك
-                GLEntry.account.like('1020%')   # البطاقات
-            ),
-            GLBatch.source_type.in_(['PAYMENT', 'SALE'])
-        )).scalar() or 0
-        
-        operating_cash_out = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.credit).label('total')
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at >= start_dt,
-            GLBatch.posted_at <= end_dt,
-            or_(
-                GLEntry.account.like('1000%'),  # النقدية
-                GLEntry.account.like('1010%'),  # البنك
-                GLEntry.account.like('1020%')   # البطاقات
-            ),
-            GLBatch.source_type.in_(['EXPENSE', 'PAYMENT'])
-        )).scalar() or 0
-        
-        # التدفق النقدي من الاستثمارات
-        investing_cash_in = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.debit).label('total')
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at >= start_dt,
-            GLBatch.posted_at <= end_dt,
-            or_(
-                GLEntry.account.like('1000%'),
-                GLEntry.account.like('1010%'),
-                GLEntry.account.like('1020%')
-            ),
-            GLBatch.source_type.in_(['ASSET_SALE', 'INVESTMENT'])
-        )).scalar() or 0
-        
-        investing_cash_out = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.credit).label('total')
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at >= start_dt,
-            GLBatch.posted_at <= end_dt,
-            or_(
-                GLEntry.account.like('1000%'),
-                GLEntry.account.like('1010%'),
-                GLEntry.account.like('1020%')
-            ),
-            GLBatch.source_type.in_(['ASSET_PURCHASE', 'INVESTMENT'])
-        )).scalar() or 0
-        
-        # التدفق النقدي من التمويل
-        financing_cash_in = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.debit).label('total')
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at >= start_dt,
-            GLBatch.posted_at <= end_dt,
-            or_(
-                GLEntry.account.like('1000%'),
-                GLEntry.account.like('1010%'),
-                GLEntry.account.like('1020%')
-            ),
-            GLBatch.source_type.in_(['LOAN', 'CAPITAL'])
-        )).scalar() or 0
-        
-        financing_cash_out = apply_gl_branch_filter(db.session.query(
-            func.sum(GLEntry.credit).label('total')
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at >= start_dt,
-            GLBatch.posted_at <= end_dt,
-            or_(
-                GLEntry.account.like('1000%'),
-                GLEntry.account.like('1010%'),
-                GLEntry.account.like('1020%')
-            ),
-            GLBatch.source_type.in_(['LOAN_PAYMENT', 'DIVIDEND'])
-        )).scalar() or 0
+        )
+
+        def _cash_sum(debit_side, source_types):
+            col = func.sum(GLEntry.debit if debit_side else GLEntry.credit)
+            return _apply_gl_branch(
+                db.session.query(col.label('total'))
+                .join(GLBatch)
+                .filter(posted_period, cash_accounts, GLBatch.source_type.in_(source_types)),
+                branch_filter_ids,
+            ).scalar() or 0
+
+        operating_cash_in = _cash_sum(True, ['PAYMENT', 'SALE'])
+        operating_cash_out = _cash_sum(False, ['EXPENSE', 'PAYMENT'])
+        investing_cash_in = _cash_sum(True, ['ASSET_SALE', 'INVESTMENT'])
+        investing_cash_out = _cash_sum(False, ['ASSET_PURCHASE', 'INVESTMENT'])
+        financing_cash_in = _cash_sum(True, ['LOAN', 'CAPITAL'])
+        financing_cash_out = _cash_sum(False, ['LOAN_PAYMENT', 'DIVIDEND'])
         
         # الحسابات
         net_operating_cash = float(operating_cash_in) - float(operating_cash_out)
@@ -594,6 +615,7 @@ def cash_flow():
         net_cash_flow = net_operating_cash + net_investing_cash + net_financing_cash
         
         data = {
+            **scope,
             'start_date': start_date,
             'end_date': end_date,
             'from_date': start_date,
@@ -650,14 +672,20 @@ def cash_flow():
 def balances_summary():
     """تقرير الأرصدة المجمعة"""
     try:
+        from utils.gl_company_scope import resolve_branch_filter
         from utils.company_scope import (
             filter_customers_query,
-            filter_partners_query,
             filter_suppliers_query,
+            filter_partners_query,
         )
 
-        # أرصدة الزبائن
-        customers = filter_customers_query(Customer.query).all()
+        company_id = request.args.get('company_id', type=int)
+        branch_filter_ids = resolve_branch_filter(company_id)
+
+        customers = filter_customers_query(
+            Customer.query.filter(Customer.is_archived == False),
+            branch_filter_ids,
+        ).all()
         customer_balances = []
         total_customer_balance = 0
         cust_by_currency: dict = {}
@@ -674,10 +702,10 @@ def balances_summary():
             cust_by_currency[cur_code] = cust_by_currency.get(cur_code, 0.0) + balance
 
         # أرصدة الموردين
-        suppliers = filter_suppliers_query(Supplier.query).all()
+        suppliers = filter_suppliers_query(Supplier.query, branch_filter_ids).all()
         supplier_balances = []
         total_supplier_balance = 0
-        supp_by_currency: dict = {}
+
         for supplier in suppliers:
             balance = float(supplier.current_balance or 0)
             cur_code = (supplier.currency or 'ILS').upper()
@@ -687,11 +715,10 @@ def balances_summary():
                 'balance': balance,
                 'currency': cur_code
             })
-            total_supplier_balance += balance
-            supp_by_currency[cur_code] = supp_by_currency.get(cur_code, 0.0) + balance
+            total_supplier_balance += float(balance)
 
         # أرصدة الشركاء
-        partners = filter_partners_query(Partner.query).all()
+        partners = filter_partners_query(Partner.query, branch_filter_ids).all()
         partner_balances = []
         total_partner_balance = 0
         part_by_currency: dict = {}
@@ -710,6 +737,7 @@ def balances_summary():
         return jsonify({
             'success': True,
             'report_type': 'balances_summary',
+            'company_id': company_id,
             'summary': {
                 'total_customer_balance': total_customer_balance,
                 'total_supplier_balance': total_supplier_balance,
@@ -811,6 +839,9 @@ def validation_report():
 @permission_required(SystemPermissions.VIEW_REPORTS)
 def trial_balance():
     try:
+        scope = _report_scope()
+        branch_filter_ids = scope['branch_filter_ids']
+
         as_of_date = request.args.get('date')
         if not as_of_date:
             as_of_date = date.today()
@@ -819,16 +850,19 @@ def trial_balance():
         
         as_of_dt = datetime.combine(as_of_date, datetime.max.time())
         
-        accounts_balance = apply_gl_branch_filter(db.session.query(
-            GLEntry.account,
-            Account.name,
-            Account.type,
-            func.sum(GLEntry.debit).label('total_debit'),
-            func.sum(GLEntry.credit).label('total_credit')
-        ).join(Account, Account.code == GLEntry.account).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.posted_at <= as_of_dt
-        ).group_by(GLEntry.account, Account.name, Account.type)).all()
+        accounts_balance = _apply_gl_branch(
+            db.session.query(
+                GLEntry.account,
+                Account.name,
+                Account.type,
+                func.sum(GLEntry.debit).label('total_debit'),
+                func.sum(GLEntry.credit).label('total_credit')
+            ).join(Account, Account.code == GLEntry.account).join(GLBatch).filter(
+                GLBatch.status == 'POSTED',
+                GLBatch.posted_at <= as_of_dt
+            ),
+            branch_filter_ids,
+        ).group_by(GLEntry.account, Account.name, Account.type).all()
         
         trial_balance_data = []
         total_debits = 0
@@ -906,8 +940,15 @@ def trial_balance():
                 ap_gl_net = row['credit'] - row['debit']
                 ap_gl_balance = ap_gl_net
         
-        customers_total = db.session.query(
-            func.coalesce(func.sum(Customer.current_balance), 0)
+        from utils.company_scope import (
+            filter_customers_query,
+            filter_suppliers_query,
+            filter_partners_query,
+        )
+
+        customers_total = filter_customers_query(
+            db.session.query(func.coalesce(func.sum(Customer.current_balance), 0)),
+            branch_filter_ids,
         ).scalar() or 0
         # الرصيد في المودل موجب يعني أن الزبون مدين لنا (أصل)
         # ولكن في قاعدة البيانات (customers table) الرصيد الموجب يعني أن الزبون له رصيد عندنا (التزام)
@@ -916,35 +957,43 @@ def trial_balance():
         # لذلك يجب عكس إشارة رصيد المودل ليتطابق مع GL
         ar_model_balance = -float(customers_total)
         
-        suppliers_total = db.session.query(
-            func.coalesce(func.sum(Supplier.current_balance), 0)
+        suppliers_total = filter_suppliers_query(
+            db.session.query(func.coalesce(func.sum(Supplier.current_balance), 0)),
+            branch_filter_ids,
         ).scalar() or 0
         
-        partners_total = db.session.query(
-            func.coalesce(func.sum(Partner.current_balance), 0)
+        partners_total = filter_partners_query(
+            db.session.query(func.coalesce(func.sum(Partner.current_balance), 0)),
+            branch_filter_ids,
         ).scalar() or 0
         
         ap_model_balance = float(suppliers_total) + float(partners_total)
         
         # حساب التسويات اليدوية (Manual Adjustments) لحسابات الذمم
         # هذا ضروري لأن القيود اليدوية لا تحدث أرصدة الزبائن/الموردين في المودل
-        manual_ar_adjustments = apply_gl_branch_filter(db.session.query(
-            func.coalesce(func.sum(GLEntry.debit - GLEntry.credit), 0)
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.source_type == 'MANUAL',
-            GLEntry.account == '1100_AR',
-            GLBatch.posted_at <= as_of_dt
-        )).scalar() or 0
+        manual_ar_adjustments = _apply_gl_branch(
+            db.session.query(
+                func.coalesce(func.sum(GLEntry.debit - GLEntry.credit), 0)
+            ).join(GLBatch).filter(
+                GLBatch.status == 'POSTED',
+                GLBatch.source_type == 'MANUAL',
+                GLEntry.account == '1100_AR',
+                GLBatch.posted_at <= as_of_dt
+            ),
+            branch_filter_ids,
+        ).scalar() or 0
 
-        manual_ap_adjustments = apply_gl_branch_filter(db.session.query(
-            func.coalesce(func.sum(GLEntry.credit - GLEntry.debit), 0)
-        ).join(GLBatch).filter(
-            GLBatch.status == 'POSTED',
-            GLBatch.source_type == 'MANUAL',
-            GLEntry.account == '2000_AP',
-            GLBatch.posted_at <= as_of_dt
-        )).scalar() or 0
+        manual_ap_adjustments = _apply_gl_branch(
+            db.session.query(
+                func.coalesce(func.sum(GLEntry.credit - GLEntry.debit), 0)
+            ).join(GLBatch).filter(
+                GLBatch.status == 'POSTED',
+                GLBatch.source_type == 'MANUAL',
+                GLEntry.account == '2000_AP',
+                GLBatch.posted_at <= as_of_dt
+            ),
+            branch_filter_ids,
+        ).scalar() or 0
         
         reconciliation = {
             'ar': {
@@ -1006,10 +1055,12 @@ def trial_balance():
 @permission_required(SystemPermissions.VIEW_REPORTS)
 def aging_report():
     try:
+        scope = _report_scope()
+        branch_filter_ids = scope['branch_filter_ids']
         from utils.company_scope import (
             filter_customers_query,
-            filter_partners_query,
             filter_suppliers_query,
+            filter_partners_query,
         )
 
         report_type = request.args.get('type', 'ar')
@@ -1022,7 +1073,7 @@ def aging_report():
         aging_data = []
         
         if report_type == 'ar':
-            customers = filter_customers_query(Customer.query).all()
+            customers = filter_customers_query(Customer.query, branch_filter_ids).all()
             for customer in customers:
                 db.session.refresh(customer)
                 balance = float(customer.current_balance or 0)
@@ -1086,7 +1137,7 @@ def aging_report():
                         'currency': customer.currency or 'ILS'
                     })
         else:
-            suppliers = filter_suppliers_query(Supplier.query).all()
+            suppliers = filter_suppliers_query(Supplier.query, branch_filter_ids).all()
             for supplier in suppliers:
                 db.session.refresh(supplier)
                 balance = float(supplier.current_balance or 0)
@@ -1132,7 +1183,7 @@ def aging_report():
             
             include_partners = request.args.get('include_partners', 'false').lower() == 'true'
             if include_partners or report_type == 'partners':
-                partners = filter_partners_query(Partner.query).all()
+                partners = filter_partners_query(Partner.query, branch_filter_ids).all()
                 for partner in partners:
                     db.session.refresh(partner)
                     balance = float(partner.current_balance or 0)
@@ -1201,6 +1252,7 @@ def aging_report():
         return jsonify({
             'success': True,
             'report_type': 'aging_report',
+            'company_id': scope.get('company_id'),
             'aging_type': report_type,
             'as_of_date': today.isoformat(),
             'summary': {k: float(v) for k, v in aging_summary.items()},
@@ -1344,10 +1396,12 @@ def expense_breakdown():
 @permission_required(SystemPermissions.VIEW_REPORTS)
 def receivables_payables():
     try:
+        scope = _report_scope()
+        branch_filter_ids = scope['branch_filter_ids']
         from utils.company_scope import (
             filter_customers_query,
-            filter_partners_query,
             filter_suppliers_query,
+            filter_partners_query,
         )
 
         report_type = request.args.get('type', 'receivables')
@@ -1364,19 +1418,22 @@ def receivables_payables():
         as_of_dt = datetime.combine(as_of_date, datetime.max.time())
         
         if report_type == 'receivables':
-            customers = filter_customers_query(Customer.query).all()
+            customers = filter_customers_query(Customer.query, branch_filter_ids).all()
             for customer in customers:
                 db.session.refresh(customer)
                 balance = float(customer.current_balance or 0)
                 if abs(balance) > 0.01:
-                    gl_balance = db.session.query(
-                        func.coalesce(func.sum(GLEntry.debit - GLEntry.credit), 0)
-                    ).join(GLBatch).join(Account).filter(
-                        GLBatch.status == 'POSTED',
-                        GLBatch.posted_at <= as_of_dt,
-                        GLBatch.entity_type == 'CUSTOMER',
-                        GLBatch.entity_id == customer.id,
-                        Account.code == '1100_AR'
+                    gl_balance = _apply_gl_branch(
+                        db.session.query(
+                            func.coalesce(func.sum(GLEntry.debit - GLEntry.credit), 0)
+                        ).join(GLBatch).join(Account).filter(
+                            GLBatch.status == 'POSTED',
+                            GLBatch.posted_at <= as_of_dt,
+                            GLBatch.entity_type == 'CUSTOMER',
+                            GLBatch.entity_id == customer.id,
+                            Account.code == '1100_AR'
+                        ),
+                        branch_filter_ids,
                     ).scalar() or 0
                     
                     balance_view = classify_entity_balance(balance)
@@ -1397,19 +1454,22 @@ def receivables_payables():
                     })
                     total_balance += balance
         else:
-            suppliers = filter_suppliers_query(Supplier.query).all()
+            suppliers = filter_suppliers_query(Supplier.query, branch_filter_ids).all()
             for supplier in suppliers:
                 db.session.refresh(supplier)
                 balance = float(supplier.current_balance or 0)
                 if abs(balance) > 0.01:
-                    gl_balance = db.session.query(
-                        func.coalesce(func.sum(GLEntry.credit - GLEntry.debit), 0)
-                    ).join(GLBatch).join(Account).filter(
-                        GLBatch.status == 'POSTED',
-                        GLBatch.posted_at <= as_of_dt,
-                        GLBatch.entity_type == 'SUPPLIER',
-                        GLBatch.entity_id == supplier.id,
-                        Account.code == '2000_AP'
+                    gl_balance = _apply_gl_branch(
+                        db.session.query(
+                            func.coalesce(func.sum(GLEntry.credit - GLEntry.debit), 0)
+                        ).join(GLBatch).join(Account).filter(
+                            GLBatch.status == 'POSTED',
+                            GLBatch.posted_at <= as_of_dt,
+                            GLBatch.entity_type == 'SUPPLIER',
+                            GLBatch.entity_id == supplier.id,
+                            Account.code == '2000_AP'
+                        ),
+                        branch_filter_ids,
                     ).scalar() or 0
                     
                     balance_view = classify_entity_balance(balance)
@@ -1431,30 +1491,36 @@ def receivables_payables():
                     total_balance += balance
             
             if include_partners or report_type == 'partners':
-                partners = filter_partners_query(Partner.query).all()
+                partners = filter_partners_query(Partner.query, branch_filter_ids).all()
                 for partner in partners:
                     db.session.refresh(partner)
                     balance = float(partner.current_balance or 0)
                     if abs(balance) > 0.01:
-                        gl_balance = db.session.query(
-                            func.coalesce(func.sum(GLEntry.credit - GLEntry.debit), 0)
-                        ).join(GLBatch).join(Account).filter(
-                            GLBatch.status == 'POSTED',
-                            GLBatch.posted_at <= as_of_dt,
-                            GLBatch.entity_type == 'PARTNER',
-                            GLBatch.entity_id == partner.id,
-                            Account.code == '2000_AP'
-                        ).scalar() or 0
-                        ar_balance = 0
-                        if partner.customer_id:
-                            ar_balance = db.session.query(
-                                func.coalesce(func.sum(GLEntry.debit - GLEntry.credit), 0)
+                        gl_balance = _apply_gl_branch(
+                            db.session.query(
+                                func.coalesce(func.sum(GLEntry.credit - GLEntry.debit), 0)
                             ).join(GLBatch).join(Account).filter(
                                 GLBatch.status == 'POSTED',
                                 GLBatch.posted_at <= as_of_dt,
-                                GLBatch.entity_type == 'CUSTOMER',
-                                GLBatch.entity_id == partner.customer_id,
-                                Account.code == '1100_AR'
+                                GLBatch.entity_type == 'PARTNER',
+                                GLBatch.entity_id == partner.id,
+                                Account.code == '2000_AP'
+                            ),
+                            branch_filter_ids,
+                        ).scalar() or 0
+                        ar_balance = 0
+                        if partner.customer_id:
+                            ar_balance = _apply_gl_branch(
+                                db.session.query(
+                                    func.coalesce(func.sum(GLEntry.debit - GLEntry.credit), 0)
+                                ).join(GLBatch).join(Account).filter(
+                                    GLBatch.status == 'POSTED',
+                                    GLBatch.posted_at <= as_of_dt,
+                                    GLBatch.entity_type == 'CUSTOMER',
+                                    GLBatch.entity_id == partner.customer_id,
+                                    Account.code == '1100_AR'
+                                ),
+                                branch_filter_ids,
                             ).scalar() or 0
                         gl_balance = float(gl_balance) - float(ar_balance)
                         
@@ -1482,6 +1548,7 @@ def receivables_payables():
         return jsonify({
             'success': True,
             'report_type': 'receivables_payables',
+            'company_id': scope.get('company_id'),
             'detail_type': report_type,
             'as_of_date': as_of_date.isoformat(),
             'total_balance': float(total_balance),
@@ -1574,4 +1641,233 @@ def revenue_by_source():
     except Exception as e:
         current_app.logger.error(f"خطأ في تحليل مصادر الإيرادات: {str(e)}")
         current_app.logger.exception('API error')
-        return jsonify({"success": False, "error": "تعذر تنفيذ العملية. حاول مرة أخرى."}), 500
+        return jsonify({"success": False, "error": "حدث خطأ داخلي"}), 500
+
+
+@financial_reports_bp.route('/drill-down')
+@permission_required(SystemPermissions.VIEW_REPORTS)
+def drill_down():
+    """تفاصيل قيد GL أو المستند المصدر."""
+    batch_id = request.args.get('batch_id', type=int)
+    if not batch_id:
+        return jsonify({"success": False, "error": "batch_id مطلوب"}), 400
+    batch = db.session.get(GLBatch, batch_id)
+    if not batch:
+        return jsonify({"success": False, "error": "القيد غير موجود"}), 404
+    entries = [
+        {
+            "account": e.account,
+            "debit": float(e.debit or 0),
+            "credit": float(e.credit or 0),
+            "ref": e.ref,
+        }
+        for e in batch.entries
+    ]
+    source_link = None
+    st = (batch.source_type or "").upper()
+    sid = batch.source_id
+    if st == "SALE" and sid:
+        source_link = f"/sales/{sid}"
+    elif st == "PAYMENT" and sid:
+        source_link = f"/payments/{sid}"
+    elif st == "PURCHASE_ORDER" and sid:
+        source_link = f"/purchases/{sid}"
+    elif st == "SUPPLIER_INVOICE" and sid:
+        source_link = f"/purchases"
+    elif st == "SHIPMENT" and sid:
+        source_link = f"/shipments/{sid}"
+    return jsonify({
+        "success": True,
+        "batch": {
+            "id": batch.id,
+            "code": batch.code,
+            "source_type": batch.source_type,
+            "source_id": batch.source_id,
+            "branch_id": batch.branch_id,
+            "posted_at": batch.posted_at.isoformat() if batch.posted_at else None,
+            "memo": batch.memo,
+            "status": batch.status,
+        },
+        "entries": entries,
+        "source_link": source_link,
+    })
+
+
+@financial_reports_bp.route('/inventory-valuation')
+@permission_required(SystemPermissions.VIEW_REPORTS)
+def inventory_valuation():
+    """تقييم مخزون نهاية الفترة (تكلفة × كمية)."""
+    from utils.company_scope import branch_ids_for_company
+
+    company_id = request.args.get('company_id', type=int)
+    branch_ids = branch_ids_for_company(company_id) if company_id else None
+    q = (
+        db.session.query(
+            Product.id,
+            Product.name,
+            Product.sku,
+            Warehouse.name.label("warehouse_name"),
+            StockLevel.quantity,
+            Product.purchase_price,
+        )
+        .join(StockLevel, StockLevel.product_id == Product.id)
+        .join(Warehouse, Warehouse.id == StockLevel.warehouse_id)
+        .filter(StockLevel.quantity > 0)
+    )
+    if branch_ids is not None:
+        if not branch_ids:
+            q = q.filter(Product.id == -1)
+        else:
+            q = q.filter(Warehouse.branch_id.in_(branch_ids))
+    rows = q.limit(5000).all()
+    items = []
+    total = 0.0
+    for r in rows:
+        qty = float(r.quantity or 0)
+        cost = float(r.purchase_price or 0)
+        val = qty * cost
+        total += val
+        items.append({
+            "product_id": r.id,
+            "name": r.name,
+            "sku": r.sku,
+            "warehouse": r.warehouse_name,
+            "quantity": qty,
+            "unit_cost": cost,
+            "value": round(val, 2),
+        })
+    if request.args.get("format") == "json":
+        return jsonify({"success": True, "total_value": round(total, 2), "items": items, "count": len(items)})
+    return render_template(
+        "reports/financial/inventory_valuation.html",
+        items=items,
+        total_value=total,
+        company_id=company_id,
+        companies=_companies_for_reports(),
+    )
+
+
+@financial_reports_bp.route('/comparative')
+@login_required
+@permission_required(SystemPermissions.VIEW_REPORTS)
+def comparative():
+    from utils.comparative_financial import comparative_pl
+
+    year_b = request.args.get('year_b', type=int) or date.today().year
+    year_a = request.args.get('year_a', type=int) or (year_b - 1)
+    company_id = request.args.get('company_id', type=int)
+    data = comparative_pl(year_a, year_b, company_id=company_id)
+    if request.args.get('format') == 'json':
+        return jsonify({'success': True, **data})
+    return render_template(
+        'reports/financial/comparative.html',
+        data=data,
+        year_a=year_a,
+        year_b=year_b,
+        company_id=company_id,
+        companies=_companies_for_reports(),
+    )
+
+
+@financial_reports_bp.route('/prepaid-accrual', methods=['GET', 'POST'])
+@login_required
+@permission_required(SystemPermissions.MANAGE_LEDGER)
+def prepaid_accrual():
+    from models import CostCenter, Branch
+    from utils.prepaid_accrual_gl import post_prepaid_expense, post_accrual_expense
+
+    from utils.tenant_ui import accessible_branches_query
+
+    branches = accessible_branches_query().all()
+    cost_centers = CostCenter.query.filter_by(is_active=True).limit(200).all()
+    if request.method == 'POST':
+        try:
+            kind = request.form.get('entry_type')
+            amount = float(request.form.get('amount') or 0)
+            account = request.form.get('expense_account') or '5000_EXPENSES'
+            memo = request.form.get('memo') or ''
+            branch_id = request.form.get('branch_id', type=int)
+            cc_id = request.form.get('cost_center_id', type=int)
+            if kind == 'prepaid':
+                post_prepaid_expense(
+                    amount=amount,
+                    expense_account=account,
+                    memo=memo,
+                    branch_id=branch_id,
+                    cost_center_id=cc_id,
+                )
+            else:
+                post_accrual_expense(
+                    amount=amount,
+                    expense_account=account,
+                    memo=memo,
+                    branch_id=branch_id,
+                    cost_center_id=cc_id,
+                )
+            return jsonify({'success': True, 'message': 'تم ترحيل القيد'})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+    return render_template(
+        'reports/financial/prepaid_accrual.html',
+        branches=branches,
+        cost_centers=cost_centers,
+    )
+
+
+@financial_reports_bp.route('/drill-down-view')
+@login_required
+@permission_required(SystemPermissions.VIEW_REPORTS)
+def drill_down_view():
+    batch_id = request.args.get('batch_id', type=int)
+    return render_template('reports/financial/drill_down.html', batch_id=batch_id)
+
+
+@financial_reports_bp.route('/pending-inventory')
+@login_required
+@permission_required(SystemPermissions.VIEW_INVENTORY)
+def pending_inventory():
+    from utils.company_scope import branch_ids_for_company
+
+    company_id = request.args.get('company_id', type=int)
+    branch_ids = branch_ids_for_company(company_id) if company_id else None
+    q = (
+        db.session.query(
+            Product.name,
+            Product.sku,
+            Warehouse.name.label('warehouse_name'),
+            StockLevel.quantity,
+            StockLevel.reserved_quantity,
+        )
+        .join(StockLevel, StockLevel.product_id == Product.id)
+        .join(Warehouse, Warehouse.id == StockLevel.warehouse_id)
+        .filter(StockLevel.reserved_quantity > 0)
+    )
+    if branch_ids is not None:
+        if not branch_ids:
+            q = q.filter(Product.id == -1)
+        else:
+            q = q.filter(Warehouse.branch_id.in_(branch_ids))
+    rows = q.limit(3000).all()
+    items = []
+    for r in rows:
+        qty = int(r.quantity or 0)
+        res = int(r.reserved_quantity or 0)
+        items.append({
+            'name': r.name,
+            'sku': r.sku,
+            'warehouse': r.warehouse_name,
+            'quantity': qty,
+            'reserved': res,
+            'available': max(0, qty - res),
+            'pending': res,
+        })
+    total_pending = sum(i['pending'] for i in items)
+    if request.args.get('format') == 'json':
+        return jsonify({'success': True, 'items': items, 'total_pending_units': total_pending})
+    return render_template(
+        'reports/financial/pending_inventory.html',
+        items=items,
+        total_pending=total_pending,
+        company_id=company_id,
+        companies=_companies_for_reports(),
+    )

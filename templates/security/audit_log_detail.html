@@ -1,117 +1,22 @@
-{% extends "base.html" %}
+{% extends "security/base_security.html" %}
 
-{% block title %}تفاصيل سجل التدقيق{% endblock %}
-
-{% block head %}
-<style>
-  .detail-card {
-    border: 1px solid #e3e6f0;
-    border-radius: 10px;
-    transition: all 0.3s;
-  }
-  
-  .detail-label {
-    font-weight: 600;
-    color: #5a5c69;
-    font-size: 0.9rem;
-  }
-  
-  .detail-value {
-    color: #2e3138;
-    font-size: 1rem;
-  }
-  
-  .model-tag {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-weight: 600;
-    display: inline-block;
-  }
-  
-  .action-badge {
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-weight: 600;
-    display: inline-block;
-  }
-  
-  .action-insert { background: #d4edda; color: #155724; }
-  .action-update { background: #fff3cd; color: #856404; }
-  .action-delete { background: #f8d7da; color: #721c24; }
-  .action-default { background: #e2e3e5; color: #383d41; }
-  
-  .changes-table {
-    border-collapse: separate;
-    border-spacing: 0;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  }
-  
-  .changes-table thead th {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    font-weight: 600;
-    padding: 12px;
-  }
-  
-  .changes-table tbody td {
-    padding: 12px;
-    border-bottom: 1px solid #e3e6f0;
-  }
-  
-  .changes-table tbody tr:last-child td {
-    border-bottom: none;
-  }
-  
-  .old-value {
-    background: #f8d7da;
-    padding: 8px;
-    border-radius: 4px;
-    color: #721c24;
-  }
-  
-  .new-value {
-    background: #d4edda;
-    padding: 8px;
-    border-radius: 4px;
-    color: #155724;
-  }
-  
-  .back-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    color: white;
-    padding: 10px 24px;
-    border-radius: 6px;
-    transition: all 0.3s;
-  }
-  
-  .back-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    color: white;
-  }
-</style>
+{% block security_title %}تفاصيل سجل التدقيق{% endblock %}
+{% block security_breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('security.audit_log_viewer') }}">سجل التدقيق</a></li>
+<li class="breadcrumb-item active">تفاصيل</li>
 {% endblock %}
 
-{% block content %}
-<div class="container-fluid">
-  <div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">
-      <i class="fas fa-info-circle text-info"></i> تفاصيل سجل التدقيق
-    </h1>
-    <a href="{{ url_for('security.audit_log_viewer') }}" class="btn back-btn">
-      <i class="fas fa-arrow-right"></i> رجوع للسجلات
+{% block security_content %}
+<div class="d-flex justify-content-end mb-3">
+    <a href="{{ url_for('security.audit_log_viewer') }}" class="btn btn-glass btn-sm">
+      <i class="fas fa-arrow-right"></i> رجوع
     </a>
-  </div>
+</div>
 
   <div class="row">
     <div class="col-lg-6 mb-4">
       <div class="card detail-card shadow">
-        <div class="card-header bg-gradient-primary text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-primary text-white">
           <h6 class="m-0 font-weight-bold"><i class="fas fa-file-alt"></i> معلومات السجل</h6>
         </div>
         <div class="card-body">
@@ -169,7 +74,7 @@
 
     <div class="col-lg-6 mb-4">
       <div class="card detail-card shadow">
-        <div class="card-header bg-gradient-warning text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-warning text-white">
           <h6 class="m-0 font-weight-bold"><i class="fas fa-exchange-alt"></i> ملخص التغييرات</h6>
         </div>
         <div class="card-body">
@@ -218,7 +123,7 @@
   <div class="row">
     <div class="col-12">
       <div class="card detail-card shadow">
-        <div class="card-header bg-gradient-success text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-success text-white">
           <h6 class="m-0 font-weight-bold">
             <i class="fas fa-list-ul"></i> جدول التغييرات الكامل ({{ changes|length }} تغيير)
           </h6>
@@ -226,7 +131,7 @@
         <div class="card-body p-0">
           <div class="table-responsive">
             <table class="table changes-table mb-0">
-              <thead>
+              <thead class="table-header-primary text-white">
                 <tr>
                   <th style="width: 25%;">الحقل</th>
                   <th style="width: 37.5%;">القيمة القديمة</th>
@@ -259,14 +164,5 @@
     </div>
   </div>
   {% endif %}
-
-  <div class="row mt-4">
-    <div class="col-12 text-center">
-      <a href="{{ url_for('security.audit_log_viewer') }}" class="btn back-btn btn-lg">
-        <i class="fas fa-arrow-right"></i> رجوع لقائمة السجلات
-      </a>
-    </div>
-  </div>
-</div>
 {% endblock %}
 

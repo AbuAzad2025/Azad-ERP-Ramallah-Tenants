@@ -1,4 +1,5 @@
-﻿{% extends 'base_print.html' if print_mode else 'base.html' %}
+{% extends 'base_print.html' if print_mode else 'base.html' %}
+{% if not print_mode %}{% from 'macros/gm_mobile_ui.html' import scroll_table_start, scroll_table_end, filter_panel_start, filter_panel_end %}{% endif %}
 {% block title %}سندات الدفع{% if supplier %} — {{ supplier.name }}{% endif %}{% endblock %}
 
 {% block page_title %}
@@ -17,64 +18,9 @@
 
 {% block head_extra %}
   {% if print_mode %}
-  <style>
-  @page { size: A4 portrait; margin: 4mm 4mm 6mm 4mm; }
-  html, body { background:#fff; direction:rtl; font-family:"Segoe UI","Tahoma",sans-serif; font-size:11px; margin:0; padding:0; width:100%; }
-  .print-sheet { width:100%; margin:0; padding:4mm 2mm; box-sizing:border-box; }
-  .print-header { text-align:center; margin:0 0 6mm 0; }
-  .print-header h1 { margin:0; font-size:18pt; font-weight:700; }
-  .print-subtitle { margin:4px 0 0 0; font-size:11px; }
-  .print-meta { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6mm; font-size:11px; }
-  .print-meta-item { border:1px solid #b5b5b5; padding:4px 8px; min-width:55mm; }
-  .print-meta-label { display:block; font-weight:600; margin-bottom:2px; }
-  .print-meta-value { direction:ltr; unicode-bidi:embed; }
-  .print-controls { text-align:left; margin-bottom:6mm; }
-  .print-table-wrapper { width:100%; overflow:visible; direction:rtl; }
-  .print-table { width:100%; margin:0; border-collapse:collapse; table-layout:auto; }
-  .print-table thead { background:#f3f3f3; }
-  .print-table th, .print-table td { border:1px solid #c4c4c4; padding:4px 5px; text-align:center; font-size:11px; line-height:1.35; word-break:break-word; }
-  .print-table td:nth-child(3) { text-align:right; }
-  .print-table td:nth-child(6) { text-align:right; font-weight:600; }
-  .print-table tfoot td { font-weight:600; text-align:right; }
-  .print-summary { margin-top:12px; display:flex; gap:12px; flex-wrap:wrap; font-size:11px; }
-  .print-summary-item { min-width:45mm; }
-  .print-summary-item .label { font-weight:600; display:inline-block; margin-left:4px; }
-  .print-summary-item .value { direction:ltr; unicode-bidi:embed; }
-  .print-trigger { padding:4px 10px; border:1px solid #555; background:#f2f2f2; cursor:pointer; font-size:11px; }
-  .print-trigger:hover { background:#e0e0e0; }
-  @media print { .print-controls { display:none; } }
-  </style>
+  
   {% else %}
-  <style>
-  .table thead th { background-color:#343a40!important; color:white!important; font-weight:600!important; border-color:#454d55!important; }
-  .table tbody td { color:#343a40!important; font-weight:500!important; vertical-align:middle!important; }
-  .badge { padding:6px 12px!important; font-weight:600!important; font-size:0.85rem!important; }
-  .btn-group-sm .btn { font-weight:600!important; }
-  .print-controls { display:flex; gap:.5rem; }
-  .screen-only { display:block; }
-  .print-only { display:none!important; }
-  .summary-cards .card { border:1px solid #e2e6ea; border-radius:0.85rem; background:#ffffff; height:100%; }
-  .summary-card-body { padding:1.25rem; display:flex; flex-direction:column; gap:0.6rem; }
-  .summary-card-label { font-size:0.95rem; font-weight:600; color:#6c757d; }
-  .summary-card-value { font-size:1.9rem; font-weight:700; color:#212529; letter-spacing:-0.02em; }
-  .summary-card-value small { display:block; font-size:0.9rem; font-weight:600; color:#6c757d; margin-top:0.35rem; }
-  .sort-buttons { display: inline-flex; flex-direction: column; margin-left: 4px; }
-  .btn-sort { padding: 0; border: none; background: transparent; color: rgba(255,255,255,0.6); font-size: 0.7rem; line-height: 0.8; cursor: pointer; }
-  .btn-sort:hover { color: rgba(255,255,255,0.9); }
-  .btn-sort.active { color: #ffc107; }
-  #paymentsTable th, #paymentsTable td { font-size: 0.82rem; vertical-align: middle; }
-  #paymentsTable td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
-  #paymentsTable td:nth-child(11), #paymentsTable td:nth-child(12), #paymentsTable td:nth-child(13) { white-space: normal; }
-  @media (max-width: 1400px) {
-    #paymentsTable th, #paymentsTable td { font-size: 0.78rem; padding: 0.35rem 0.45rem; }
-  }
-  .btn-group-xs > .btn, .btn-xs { padding: 0.2rem 0.4rem; font-size: 0.75rem; line-height: 1.2; border-radius: 0.2rem; }
-  .action-btns .btn { border: none; transition: transform 0.12s ease, box-shadow 0.12s ease; }
-  .action-btns .btn:hover { transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.18); }
-  .action-btns .btn:active { transform: translateY(0); }
-  .action-btns .rounded-start-pill { border-top-left-radius: 50rem!important; border-bottom-left-radius: 50rem!important; }
-  .action-btns .rounded-end-pill { border-top-right-radius: 50rem!important; border-bottom-right-radius: 50rem!important; }
-  </style>
+  
   {% endif %}
 {% endblock %}
 
@@ -135,7 +81,7 @@
           <col style="width:10%">
           <col style="width:10%">
         </colgroup>
-        <thead>
+        <thead class="table-header-primary text-white">
           <tr>
             <th>#</th>
             <th>التاريخ</th>
@@ -209,85 +155,86 @@
     </div>
   </div>
   {% else %}
-  <div class="content-header">
-      <div class="container-fluid">
-          <div class="row mb-2">
-              <div class="col-sm-6">
-                  <h1 class="m-0">
-                      <i class="fas fa-money-check-alt"></i>
-                      {% if supplier %}
-                          سندات دفع المورد: <span class="text-primary">{{ supplier.name }}</span>
-                      {% else %}
-                          جميع سندات الدفع
-                      {% endif %}
-                  </h1>
-              </div>
-              <div class="col-sm-6 d-flex justify-content-end align-items-center gap-2">
-                  <ol class="breadcrumb float-sm-right mb-0">
-                      <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">الرئيسية</a></li>
-                      <li class="breadcrumb-item active">الدفعات</li>
-                  </ol>
-                  <button type="button" class="btn btn-light ml-2" data-toggle="modal" data-target="#printPaymentsModal"><i class="fas fa-print mr-1"></i> طباعة</button>
-              </div>
+  <div class="erp-page-toolbar no-print">
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="modal" data-target="#printPaymentsModal">
+      <i class="fas fa-print ml-1"></i> طباعة
+    </button>
+    <a id="btnAddPaymentTop" href="{{ url_for('payments.create_payment') }}" class="btn btn-primary btn-sm">
+      <i class="fas fa-plus ml-1"></i> إضافة دفعة
+    </a>
+  </div>
+
+  {% if total_incoming is defined and total_outgoing is defined %}
+  <div id="payments-summary-wrapper" class="row erp-kpi-row mb-4 no-print">
+    <div class="col-lg-3 col-md-6 col-6 mb-3">
+      <div class="card erp-kpi-card erp-kpi-card--primary h-100 shadow-sm border-0">
+        <div class="card-body d-flex justify-content-between align-items-start">
+          <div>
+            <div class="erp-kpi-label text-success">دفعات واردة</div>
+            <div class="erp-kpi-value text-success"><span id="payments-total-incoming">{{ "{:,.2f}".format(total_incoming) }}</span> ₪</div>
           </div>
-          {% if total_incoming is defined and total_outgoing is defined %}
-          <div id="payments-summary-wrapper" class="row g-3 mb-3 summary-cards">
-              <div class="col-md-3 col-6">
-                  <div class="card shadow-sm">
-                      <div class="summary-card-body">
-                          <div class="summary-card-label text-success">دفعات واردة</div>
-                          <div class="summary-card-value text-success"><span id="payments-total-incoming">{{ "{:,.2f}".format(total_incoming) }}</span> ₪</div>
-                      </div>
-                  </div>
-              </div>
-              <div class="col-md-3 col-6">
-                  <div class="card shadow-sm">
-                      <div class="summary-card-body">
-                          <div class="summary-card-label text-danger">دفعات صادرة</div>
-                          <div class="summary-card-value text-danger"><span id="payments-total-outgoing">{{ "{:,.2f}".format(total_outgoing) }}</span> ₪</div>
-                      </div>
-                  </div>
-              </div>
-              <div class="col-md-3 col-6">
-                  <div class="card shadow-sm">
-                      <div class="summary-card-body">
-                          <div class="summary-card-label {% if net_total >= 0 %}text-primary{% else %}text-warning{% endif %}">صافي التدفق</div>
-                          <div class="summary-card-value {% if net_total >= 0 %}text-primary{% else %}text-warning{% endif %}"><span id="payments-net-total">{{ "{:,.2f}".format(net_total) }}</span> ₪</div>
-                          <small class="text-muted">الوارد − الصادر</small>
-                      </div>
-                  </div>
-              </div>
-              <div class="col-md-3 col-6">
-                  <div class="card shadow-sm">
-                      <div class="summary-card-body">
-                          <div class="summary-card-label text-info">إجمالي الدفعات</div>
-                          <div class="summary-card-value text-info"><span id="payments-grand-total">{{ "{:,.2f}".format(grand_total) }}</span> ₪<small><span id="payments-total-count">{{ payments|length if payments else 0 }}</span> سند</small></div>
-                      </div>
-                  </div>
-              </div>
+          <i class="fas fa-arrow-down erp-kpi-icon text-success"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-6 mb-3">
+      <div class="card erp-kpi-card erp-kpi-card--primary h-100 shadow-sm border-0">
+        <div class="card-body d-flex justify-content-between align-items-start">
+          <div>
+            <div class="erp-kpi-label text-danger">دفعات صادرة</div>
+            <div class="erp-kpi-value text-danger"><span id="payments-total-outgoing">{{ "{:,.2f}".format(total_outgoing) }}</span> ₪</div>
           </div>
-          {% endif %}
-          <div class="d-flex justify-content-end align-items-center gap-2 mb-3">
-            <button type="button" class="btn btn-light" data-toggle="modal" data-target="#printPaymentsModal"><i class="fas fa-print mr-1"></i> طباعة</button>
+          <i class="fas fa-arrow-up erp-kpi-icon text-danger"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-6 mb-3">
+      <div class="card erp-kpi-card erp-kpi-card--primary h-100 shadow-sm border-0">
+        <div class="card-body d-flex justify-content-between align-items-start">
+          <div>
+            <div class="erp-kpi-label {% if net_total >= 0 %}text-primary{% else %}text-warning{% endif %}">صافي التدفق</div>
+            <div class="erp-kpi-value {% if net_total >= 0 %}text-primary{% else %}text-warning{% endif %}"><span id="payments-net-total">{{ "{:,.2f}".format(net_total) }}</span> ₪</div>
+            <span class="erp-kpi-sub">الوارد − الصادر</span>
           </div>
-          <div class="card border-0 shadow-sm mb-3">
-            <div class="card-body py-3">
-              <div class="row align-items-center">
-                <div class="col-lg-6 col-md-7">
-                  <div class="input-group">
-                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    <input type="text" id="payments-search" class="form-control" placeholder="بحث عام في سندات الدفع" value="{{ request.args.get('q','') }}">
-                  </div>
-                </div>
-                <div class="col-lg-6 col-md-5 text-md-left text-sm-right mt-3 mt-md-0">
-                  <span class="text-muted d-inline-block" id="payments-search-summary">إجمالي النتائج: {{ total_filtered }}</span>
-                </div>
-              </div>
+          <i class="fas fa-balance-scale erp-kpi-icon {% if net_total >= 0 %}text-primary{% else %}text-warning{% endif %}"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-6 mb-3">
+      <div class="card erp-kpi-card erp-kpi-card--primary h-100 shadow-sm border-0">
+        <div class="card-body d-flex justify-content-between align-items-start">
+          <div>
+            <div class="erp-kpi-label text-info">إجمالي الدفعات</div>
+            <div class="erp-kpi-value text-info"><span id="payments-grand-total">{{ "{:,.2f}".format(grand_total) }}</span> ₪</div>
+            <span class="erp-kpi-sub"><span id="payments-total-count">{{ payments|length if payments else 0 }}</span> سند</span>
+          </div>
+          <i class="fas fa-file-invoice-dollar erp-kpi-icon text-info"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card shadow-sm mb-3 no-print">
+    <div class="card-body py-3">
+      <div class="row align-items-center">
+        <div class="col-lg-6 col-md-7">
+          <div class="input-group">
+            <div class="input-group-prepend">
+              <span class="input-group-text"><i class="fas fa-search"></i></span>
             </div>
+            <input type="text" id="payments-search" class="form-control" placeholder="بحث عام في سندات الدفع" value="{{ request.args.get('q','') }}">
           </div>
-          <div class="card mb-4 screen-only">
-            <div class="card-body">
-              <div class="row mb-4 g-2 align-items-end">
+        </div>
+        <div class="col-lg-6 col-md-5 text-md-left text-sm-right mt-3 mt-md-0">
+          <span class="text-muted d-inline-block font-weight-bold" id="payments-search-summary">إجمالي النتائج: {{ total_filtered }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{ filter_panel_start('فلاتر الدفعات', 'fa-filter', true, 'screen-only mb-4') }}
+              <div class="row align-items-end">
                 <div class="col-md-2 col-sm-4">
                   <label for="filterEntity" class="form-label">الجهة</label>
                   <select id="filterEntity" class="form-control">
@@ -319,9 +266,9 @@
                   <label for="filterMethod" class="form-label">الطريقة</label>
                   <select id="filterMethod" class="form-control">
                     <option value="">الكل</option>
-                    {% for m in PaymentMethod %}
+                    {% for m in PaymentMethod %}{% if m.value == m.value|lower %}
                     <option value="{{ m.value }}">{{ m.label }}</option>
-                    {% endfor %}
+                    {% endif %}{% endfor %}
                   </select>
                 </div>
                 <div class="col-md-2 col-sm-4">
@@ -330,11 +277,11 @@
                 </div>
                 <div class="col-md-2 col-sm-4">
                   <label for="startDate" class="form-label">من تاريخ</label>
-                  <input type="date" id="startDate" class="form-control" value="{{ request.args.get('start_date') or request.args.get('start','') }}">
+                  <input type="date" id="startDate" class="form-control" value="{{ request.args.get('start_date', '') or request.args.get('start', '') }}">
                 </div>
                 <div class="col-md-2 col-sm-4">
                   <label for="endDate" class="form-label">إلى تاريخ</label>
-                  <input type="date" id="endDate" class="form-control" value="{{ request.args.get('end_date') or request.args.get('end','') }}">
+                  <input type="date" id="endDate" class="form-control" value="{{ request.args.get('end_date', '') or request.args.get('end', '') }}">
                 </div>
                 <div class="col-md-2 col-sm-4">
                   <label class="form-label d-block">&nbsp;</label>
@@ -355,23 +302,18 @@
                 </div>
                 {% endif %}
               </div>
-            </div>
-          </div>
-      </div>
-  </div>
+  {{ filter_panel_end() }}
 
-  <div class="alert alert-info shadow-sm screen-only">
-    <div class="fw-bold mb-1">توضيح محاسبي حول "إرجاع" و"إعادة" الدفعة:</div>
-    <ul class="mb-0 small">
-      <li>إرجاع الدفعة/الجزء: إنشاء سند عكسي بنفس المبلغ وبالاتجاه المعاكس، وتحديث دفتر الأستاذ، ووضع الأصل كمُرجع.</li>
-      <li>إعادة الدفعة/الجزء: إعادة تطبيق عملية مُرجعة بإنشاء سند جديد، وإزالة علامة الإرجاع، وتحديث دفتر الأستاذ.</li>
-      <li>قيود المنطق المحاسبي: لا يُسمح بإرجاع إلا الدفعات المكتملة، ولا تُسمح إعادة إلا للدفعات المُرجعة. بالنسبة للأجزاء، لا يمكن إرجاع جزء مُرجع ولا إعادة جزء غير مُرجع.</li>
+  <details class="alert alert-info shadow-sm screen-only erp-hint-details mb-3">
+    <summary>إرجاع وإعادة الدفعة (محاسبي)</summary>
+    <ul class="mb-0 small mt-2">
+      <li><strong>إرجاع:</strong> سند عكسي + تحديث الأستاذ.</li>
+      <li><strong>إعادة:</strong> سند جديد للدفعة المُرجعة.</li>
+      <li>الإرجاع للمكتملة فقط؛ الإعادة للمُرجعة فقط.</li>
     </ul>
-  </div>
+  </details>
 
-  <section class="content">
-      <div class="container-fluid">
-          {% if selected_partner %}
+  {% if selected_partner %}
   <div class="alert {% if selected_partner.balance >= 0 %}alert-success{% else %}alert-danger{% endif %} shadow-sm d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
     <div>
       <strong>الشريك:</strong> {{ selected_partner.name }} (ID: {{ selected_partner.id }})
@@ -396,40 +338,48 @@
         <h5 class="mb-0">كشف حساب الشريك</h5>
       </div>
       <div class="px-3 pt-3 pb-2 border-bottom bg-white">
-        <div class="row g-3">
-          <div class="col-md-3 col-6">
-            <div class="border rounded-3 p-3 h-100">
-              <div class="text-muted small fw-semibold">إجمالي الحقوق (له)</div>
-              <div class="fs-5 fw-bold text-success">{{ '%.2f'|format(ledger_rights_total) }} ₪</div>
-              <small class="text-muted">نصيب الشريك + الدفعات الواردة</small>
+        <div class="row erp-kpi-row">
+          <div class="col-lg-3 col-md-6 col-6 mb-3">
+            <div class="card erp-kpi-card erp-kpi-card--primary h-100 shadow-sm border-0">
+              <div class="card-body py-3">
+                <div class="erp-kpi-label">إجمالي الحقوق (له)</div>
+                <div class="erp-kpi-value text-success">{{ '%.2f'|format(ledger_rights_total) }} ₪</div>
+                <span class="erp-kpi-sub">نصيب الشريك + الدفعات الواردة</span>
+              </div>
             </div>
           </div>
-          <div class="col-md-3 col-6">
-            <div class="border rounded-3 p-3 h-100">
-              <div class="text-muted small fw-semibold">إجمالي الالتزامات (عليه)</div>
-              <div class="fs-5 fw-bold text-danger">{{ '%.2f'|format(ledger_obligations_total) }} ₪</div>
-              <small class="text-muted">مبيعات/مصروفات/دفعات صادرة</small>
+          <div class="col-lg-3 col-md-6 col-6 mb-3">
+            <div class="card erp-kpi-card erp-kpi-card--primary h-100 shadow-sm border-0">
+              <div class="card-body py-3">
+                <div class="erp-kpi-label">إجمالي الالتزامات (عليه)</div>
+                <div class="erp-kpi-value text-danger">{{ '%.2f'|format(ledger_obligations_total) }} ₪</div>
+                <span class="erp-kpi-sub">مبيعات/مصروفات/دفعات صادرة</span>
+              </div>
             </div>
           </div>
-          <div class="col-md-3 col-6">
-            <div class="border rounded-3 p-3 h-100">
-              <div class="text-muted small fw-semibold">صافي الحركة</div>
-              <div class="fs-5 fw-bold {{ ledger_net_class }}">{{ '%.2f'|format(ledger_net_total) }} ₪</div>
-              <small class="text-muted">الحقوق − الالتزامات</small>
+          <div class="col-lg-3 col-md-6 col-6 mb-3">
+            <div class="card erp-kpi-card erp-kpi-card--primary h-100 shadow-sm border-0">
+              <div class="card-body py-3">
+                <div class="erp-kpi-label">صافي الحركة</div>
+                <div class="erp-kpi-value {{ ledger_net_class }}">{{ '%.2f'|format(ledger_net_total) }} ₪</div>
+                <span class="erp-kpi-sub">الحقوق − الالتزامات</span>
+              </div>
             </div>
           </div>
-          <div class="col-md-3 col-6">
-            <div class="border rounded-3 p-3 h-100">
-              <div class="text-muted small fw-semibold">الرصيد الحالي</div>
-              <div class="fs-5 fw-bold {{ ledger_closing_class }}">{{ '%.2f'|format(ledger_closing) }} ₪</div>
-              <small class="{{ ledger_closing_class }}">{{ ledger_closing_text }}</small>
+          <div class="col-lg-3 col-md-6 col-6 mb-3">
+            <div class="card erp-kpi-card erp-kpi-card--primary h-100 shadow-sm border-0">
+              <div class="card-body py-3">
+                <div class="erp-kpi-label">الرصيد الحالي</div>
+                <div class="erp-kpi-value {{ ledger_closing_class }}">{{ '%.2f'|format(ledger_closing) }} ₪</div>
+                <span class="erp-kpi-sub {{ ledger_closing_class }}">{{ ledger_closing_text }}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      <div class="table-responsive">
+      {{ scroll_table_start('اسحب أفقياً لعرض كشف الشريك') }}
         <table class="table table-striped mb-0 table-sm printable-table" id="partnerLedgerTable">
-          <thead class="table-light">
+          <thead class="table-header-primary text-white table-light">
             <tr>
               <th style="width:140px">التاريخ</th>
               <th>البيان</th>
@@ -477,34 +427,34 @@
             </tr>
           </tfoot>
         </table>
-      </div>
+      {{ scroll_table_end() }}
     </div>
   </div>
   {% endif %}
   {% endif %}
 
-      <div class="card shadow-sm rounded-4" id="paymentsCard" {% if not payments %}style="display:none"{% endif %}>
+      <div class="card shadow-sm rounded-4{% if not payments %} d-none{% endif %}" id="paymentsCard">
     <div class="card-body p-0">
       <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom bg-light no-print">
         <h5 class="mb-0">سندات الدفع</h5>
       </div>
-      <div class="table-responsive">
+      {{ scroll_table_start('اسحب أفقياً لعرض كل أعمدة الدفعات') }}
       <table id="paymentsTable" class="table table-hover table-bordered align-middle mb-0 table-sm printable-table">
-        <thead class="table-dark">
+        <thead class="table-header-primary text-white ">
           <tr>
             <th style="width:50px" class="text-center">#</th>
             <th style="width:95px" class="text-center">
               التاريخ
               <div class="sort-buttons d-inline-flex flex-column ml-1">
-                <button class="btn-sort btn btn-sm p-0" data-sort="date" data-order="asc" title="تصاعدي"><i class="fas fa-sort-up"></i></button>
-                <button class="btn-sort btn btn-sm p-0" data-sort="date" data-order="desc" title="تنازلي"><i class="fas fa-sort-down"></i></button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="date" data-order="asc" title="تصاعدي" aria-label="ترتيب التاريخ تصاعدياً"><i class="fas fa-sort-up"></i></button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="date" data-order="desc" title="تنازلي" aria-label="ترتيب التاريخ تنازلياً"><i class="fas fa-sort-down"></i></button>
               </div>
             </th>
             <th style="width:100px" class="text-center">
               المبلغ
               <div class="sort-buttons d-inline-flex flex-column ml-1">
-                <button class="btn-sort btn btn-sm p-0" data-sort="amount" data-order="asc" title="تصاعدي"><i class="fas fa-sort-up"></i></button>
-                <button class="btn-sort btn btn-sm p-0" data-sort="amount" data-order="desc" title="تنازلي"><i class="fas fa-sort-down"></i></button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="amount" data-order="asc" title="تصاعدي" aria-label="ترتيب المبلغ تصاعدياً"><i class="fas fa-sort-up"></i></button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="amount" data-order="desc" title="تنازلي" aria-label="ترتيب المبلغ تنازلياً"><i class="fas fa-sort-down"></i></button>
               </div>
             </th>
             <th style="width:55px" class="text-center">العملة</th>
@@ -513,15 +463,15 @@
             <th style="width:100px" class="text-center">
               الطريقة
               <div class="sort-buttons d-inline-flex flex-column ml-1">
-                <button class="btn-sort btn btn-sm p-0" data-sort="method" data-order="asc" title="تصاعدي"><i class="fas fa-sort-up"></i></button>
-                <button class="btn-sort btn btn-sm p-0" data-sort="method" data-order="desc" title="تنازلي"><i class="fas fa-sort-down"></i></button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="method" data-order="asc" title="تصاعدي" aria-label="ترتيب الطريقة تصاعدياً"><i class="fas fa-sort-up"></i></button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="method" data-order="desc" title="تنازلي" aria-label="ترتيب الطريقة تنازلياً"><i class="fas fa-sort-down"></i></button>
               </div>
             </th>
             <th style="width:70px" class="text-center">
               الاتجاه
               <div class="sort-buttons d-inline-flex flex-column ml-1">
-                <button class="btn-sort btn btn-sm p-0" data-sort="direction" data-order="asc" title="تصاعدي"><i class="fas fa-sort-up"></i></button>
-                <button class="btn-sort btn btn-sm p-0" data-sort="direction" data-order="desc" title="تنازلي"><i class="fas fa-sort-down"></i></button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="direction" data-order="asc" title="تصاعدي" aria-label="ترتيب الاتجاه تصاعدياً"><i class="fas fa-sort-up"></i></button>
+                <button class="btn-sort btn btn-sm p-0" data-sort="direction" data-order="desc" title="تنازلي" aria-label="ترتيب الاتجاه تنازلياً"><i class="fas fa-sort-down"></i></button>
               </div>
             </th>
             <th style="width:75px" class="text-center">الحالة</th>
@@ -575,16 +525,12 @@
           {% endfor %}
         </tbody>
       </table>
-      </div>
+      {{ scroll_table_end() }}
     </div>
     <div class="card-footer">
       <nav><ul id="pagination" class="pagination justify-content-center mb-0"></ul></nav>
     </div>
   </div>
-
-      </div>
-  </section>
-</div>
 
 <div class="modal fade" id="printPaymentsModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog">
@@ -620,16 +566,16 @@
           <div class="form-row" id="print-payments-range-fields">
             <div class="form-group col">
               <label>من رقم</label>
-              <input type="number" class="form-control" name="range_start" min="1" max="{{ total_filtered if total_filtered else 1 }}" value="{{ range_start }}" {% if print_scope != 'range' %}disabled{% endif %}>
+              <input type="number" class="form-control" name="range_start" min="1" max="{{ total_filtered if total_filtered else 1 }}" value="{{ range_start if range_start is not none else '' }}" {% if print_scope != 'range' %}disabled{% endif %}>
             </div>
             <div class="form-group col">
               <label>إلى رقم</label>
-              <input type="number" class="form-control" name="range_end" min="1" max="{{ total_filtered if total_filtered else 1 }}" value="{{ range_end }}" {% if print_scope != 'range' %}disabled{% endif %}>
+              <input type="number" class="form-control" name="range_end" min="1" max="{{ total_filtered if total_filtered else 1 }}" value="{{ range_end if range_end is not none else '' }}" {% if print_scope != 'range' %}disabled{% endif %}>
             </div>
           </div>
           <div class="form-group" id="print-payments-page-fields">
             <label>رقم الصفحة (1 - {{ total_pages if total_pages else 1 }})</label>
-            <input type="number" class="form-control" name="page_number" min="1" max="{{ total_pages if total_pages else 1 }}" value="{{ target_page }}" {% if print_scope != 'page' %}disabled{% endif %}>
+            <input type="number" class="form-control" name="page_number" min="1" max="{{ total_pages if total_pages else 1 }}" value="{{ target_page if target_page is not none else '' }}" {% if print_scope != 'page' %}disabled{% endif %}>
           </div>
         </div>
         <div class="modal-footer">
@@ -656,7 +602,6 @@
     </script>
     {% endif %}
   {% else %}
-  <script src="{{ url_for('static', filename='js/fx_utils.js') }}"></script>
   <script src="{{ url_for('static', filename='js/payments.js') }}"></script>
   <script src="{{ url_for('static', filename='js/vendors.js') }}"></script>
   <script>

@@ -221,7 +221,6 @@ function restoreService(serviceId) {
 }
 
 function archiveCustomer(customerId) {
-    if (!_gmArchiveGuard('manage_customers')) return;
     const reason = prompt('أدخل سبب أرشفة هذا الزبون:');
     if (!reason) return;
     
@@ -246,7 +245,6 @@ function archiveCustomer(customerId) {
 }
 
 function restoreCustomer(customerId) {
-    if (!_gmArchiveGuard('manage_customers')) return;
     if (confirm('هل أنت متأكد من استعادة هذا الزبون؟')) {
         const form = document.createElement('form');
         form.method = 'POST';

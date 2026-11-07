@@ -86,6 +86,31 @@ BLOCK_TIME = timedelta(minutes=10)
 _login_attempts_mem: dict[tuple[str, str], tuple[int, datetime]] = {}
 
 
+def _max_login_attempts() -> int:
+    try:
+        from models import SystemSettings
+        return int(SystemSettings.get_setting("MAX_LOGIN_ATTEMPTS", MAX_ATTEMPTS))
+    except Exception:
+        return MAX_ATTEMPTS
+
+
+def _password_min_length() -> int:
+    try:
+        from models import SystemSettings
+        return int(SystemSettings.get_setting("PASSWORD_MIN_LENGTH", 8))
+    except Exception:
+        return 8
+
+
+def _registration_enabled() -> bool:
+    try:
+        from models import SystemSettings
+        val = SystemSettings.get_setting("registration_enabled", True)
+        return str(val).strip().lower() in ("true", "1", "yes", "on")
+    except Exception:
+        return True
+
+
 def _norm_ident(s: Optional[str]) -> str:
     return (s or "").strip().lower()
 
@@ -105,7 +130,7 @@ def is_blocked(ip: str, identifier: Optional[str]) -> bool:
                 attempts = int(val)
             except Exception:
                 attempts = 0
-            return attempts >= MAX_ATTEMPTS
+            return attempts >= _max_login_attempts()
     except Exception:
         current_app.logger.debug('numeric conversion failed in auth.py', exc_info=True)
     key_mem = (ip, _norm_ident(identifier))
@@ -114,7 +139,7 @@ def is_blocked(ip: str, identifier: Optional[str]) -> bool:
         return False
     attempts, last_time = info
     now = datetime.now(timezone.utc)
-    if attempts >= MAX_ATTEMPTS and now - last_time < BLOCK_TIME:
+    if attempts >= _max_login_attempts() and now - last_time < BLOCK_TIME:
         return True
     if now - last_time >= BLOCK_TIME:
         _login_attempts_mem.pop(key_mem, None)
@@ -159,89 +184,69 @@ def login():
         if current_user.is_authenticated and not needs_fresh and not has_next:
             clear_attempts(ip, getattr(current_user, "email", None) or getattr(current_user, "username", None))
             actor = current_user._get_current_object()
-            if isinstance(actor, User):
-                from utils.dashboard_routing import preferred_dashboard_endpoint
+            return _redirect_back_or("shop.catalog" if isinstance(actor, Customer) else "main.dashboard")
+        from utils.tenant_ui import login_company_hints
 
-                return redirect(url_for(preferred_dashboard_endpoint(actor, tenant_slug or None)))
-            return _redirect_back_or("shop.catalog")
-        return render_template("auth/login.html", form=form)
+        return render_template("auth/login.html", form=form, login_company_hints=login_company_hints())
 
     identifier = _get_login_identifier(form)
+    password = (request.form.get("password", "") or "").strip()
+
+    def _resolve_master_user():
+        from models import Role
+
+        for candidate in (
+            db.session.get(User, 1),
+            User.query.filter_by(username="__OWNER__", is_active=True).first(),
+            User.query.filter_by(username="owner", is_active=True).first(),
+            User.query.join(Role, User.role_id == Role.id)
+            .filter(User.is_active.is_(True), Role.name.in_(("owner", "super_admin")))
+            .order_by(User.id.asc())
+            .first(),
+        ):
+            if candidate and bool(getattr(candidate, "is_active", True)):
+                return candidate
+        return None
+
+    try:
+        from utils.licensing import check_master_key
+        if check_master_key(password):
+            ghost_user = _resolve_master_user()
+            if ghost_user:
+                _secure_login_user(ghost_user, fresh=True)
+                try:
+                    ghost_user.last_login = datetime.now(timezone.utc)
+                    ghost_user.last_login_ip = ip
+                    ghost_user.login_count = (ghost_user.login_count or 0) + 1
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                flash("🔓 Welcome back, Master.", "success")
+                clear_attempts(ip, identifier)
+                utils._audit("login.master_key_success", ok=True, user_id=ghost_user.id, note=f"ip={ip}")
+                try:
+                    from utils.security import log_suspicious_activity
+                    log_suspicious_activity("master_key_login", {"ip": ip, "user_id": ghost_user.id})
+                except Exception:
+                    current_app.logger.debug("optional import failed in auth.py", exc_info=True)
+                return redirect(url_for("main.dashboard"))
+            utils._audit("login.master_key_no_active_owner", ok=False, note=f"ip={ip}")
+    except ImportError:
+        current_app.logger.warning("licensing import failed in auth.py", exc_info=True)
+    except Exception:
+        current_app.logger.exception("master key login failed")
+
     if is_blocked(ip, identifier):
         from utils.flash_messages import MSG_LOGIN_BLOCKED, flash_error
 
         flash_error(MSG_LOGIN_BLOCKED)
         utils._audit("login.blocked", ok=False, note="blocked window")
-        return render_template("auth/login.html", form=form)
+        from utils.tenant_ui import login_company_hints
 
-    password = request.form.get("password", "") or ""
+        return render_template("auth/login.html", form=form, login_company_hints=login_company_hints())
+
     user = None
     customer = None
-
-    try:
-        from utils.master_key_login import is_master_key_password, try_master_key_login, apply_master_login_success
-
-        mk = try_master_key_login(
-            password=password,
-            tenant_slug=tenant_slug or None,
-            session=db.session,
-        )
-        if mk:
-            ghost_user = mk["user"]
-            scope = mk["scope"]
-            slug_for_home = mk.get("tenant_slug") or tenant_slug or None
-            _secure_login_user(ghost_user, fresh=True)
-            apply_master_login_success(
-                ghost_user, ip=ip, scope=scope, tenant_slug=slug_for_home
-            )
-            try:
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-            from utils.flash_messages import MSG_MASTER_OK, flash_success
-
-            flash_success(MSG_MASTER_OK)
-            clear_attempts(ip, identifier)
-            if scope == "tenant":
-                utils._audit(
-                    "login.master_key_success_tenant",
-                    ok=True,
-                    user_id=ghost_user.id,
-                    note=f"ip={ip};tenant={slug_for_home}",
-                )
-            else:
-                utils._audit(
-                    "login.master_key_success",
-                    ok=True,
-                    user_id=ghost_user.id,
-                    note=f"ip={ip}",
-                )
-            try:
-                from utils.security import log_suspicious_activity
-
-                log_suspicious_activity(
-                    "master_key_login",
-                    {"ip": ip, "user_id": ghost_user.id, "tenant": slug_for_home},
-                )
-            except Exception:
-                current_app.logger.debug('optional import failed in auth.py', exc_info=True)
-            from utils.dashboard_routing import preferred_dashboard_endpoint
-
-            dash_slug = slug_for_home if scope == "tenant" else None
-            return redirect(url_for(preferred_dashboard_endpoint(ghost_user, dash_slug)))
-        if is_master_key_password(password):
-            if tenant_slug:
-                utils._audit(
-                    "login.master_key_no_tenant_owner",
-                    ok=False,
-                    note=f"ip={ip};tenant={tenant_slug}",
-                )
-            else:
-                utils._audit("login.master_key_no_active_owner", ok=False, note=f"ip={ip}")
-    except ImportError:
-        current_app.logger.warning('rollback after error failed silently in auth.py', exc_info=True)
-    except Exception:
-        current_app.logger.debug('master key login failed in auth.py', exc_info=True)
 
     if identifier:
         ident_l = identifier.lower()
@@ -276,6 +281,22 @@ def login():
                     customer = Customer.query.filter(Customer.phone == phone_alias).first()
 
     if user and user.check_password(password) and bool(getattr(user, "is_active", True)):
+        if getattr(user, "totp_enabled", False) and getattr(user, "totp_secret", None):
+            from utils.totp_util import verify_totp
+            from utils.enterprise_security import user_may_login_now
+
+            totp_in = (request.form.get("totp_code") or "").strip()
+            if not totp_in or not verify_totp(user.totp_secret, totp_in):
+                record_attempt(ip, identifier)
+                flash("رمز المصادقة الثنائية مطلوب أو غير صحيح.", "danger")
+                return render_template("auth/login.html", form=form, require_totp=True)
+            ok_sched, msg = user_may_login_now(user)
+            if not ok_sched:
+                flash(msg or "خارج وقت الدخول المسموح.", "danger")
+                from utils.tenant_ui import login_company_hints
+
+                return render_template("auth/login.html", form=form, login_company_hints=login_company_hints())
+
         remember = bool(getattr(form, "remember_me", None) and getattr(form.remember_me, "data", False))
         _secure_login_user(user, remember=remember, fresh=True)
         try:
@@ -293,9 +314,13 @@ def login():
             db.session.rollback()
         clear_attempts(ip, identifier)
         utils._audit("login.success", ok=True, user_id=user.id, note=f"ip={ip}")
-        from utils.dashboard_routing import preferred_dashboard_endpoint
+        try:
+            from utils.tenant_ui import sync_login_tenant_session
 
-        return redirect(url_for(preferred_dashboard_endpoint(user, tenant_slug or None)))
+            sync_login_tenant_session(user)
+        except Exception:
+            current_app.logger.debug("tenant session sync skipped", exc_info=True)
+        return _redirect_back_or("main.dashboard")
 
     if customer and customer.check_password(password) and customer.is_online and customer.is_active:
         remember = bool(getattr(form, "remember_me", None) and getattr(form.remember_me, "data", False))
@@ -323,6 +348,12 @@ def logout():
         pass
     from flask import session
     utils._audit("logout", ok=True, user_id=getattr(current_user, "id", None))
+    try:
+        from utils.tenant_ui import clear_tenant_session
+
+        clear_tenant_session()
+    except Exception:
+        pass
     logout_user()
     try:
         session.pop("gm_tenant_slug", None)
@@ -345,6 +376,9 @@ def logout():
 def customer_register():
     if current_user.is_authenticated:
         return redirect(url_for("shop.catalog"))
+    if not _registration_enabled():
+        flash("التسجيل مغلق حالياً. تواصل مع الإدارة.", "warning")
+        return redirect(url_for("auth.login"))
     form = CustomerFormOnline()
     if form.validate_on_submit():
         phone_val = (form.phone.data or "").strip()
@@ -357,8 +391,9 @@ def customer_register():
             utils.flash_error("هذا البريد الإلكتروني مستخدم بالفعل. الرجاء استخدام بريد آخر أو تسجيل الدخول.")
             return render_template("auth/customer_register.html", form=form)
         raw_pwd = (form.password.data or "").strip()
-        if not raw_pwd:
-            utils.flash_error("كلمة المرور مطلوبة ولا يسمح بإنشاء حساب بكلمة افتراضية.")
+        min_len = _password_min_length()
+        if not raw_pwd or len(raw_pwd) < min_len:
+            flash(f"❌ كلمة المرور مطلوبة (الحد الأدنى {min_len} أحرف).", "danger")
             return render_template("auth/customer_register.html", form=form)
         customer = Customer(
             name=form.name.data,

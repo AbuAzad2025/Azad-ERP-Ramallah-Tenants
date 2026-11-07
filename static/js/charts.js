@@ -169,19 +169,20 @@
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     const uiMode = (document.documentElement.getAttribute('data-ui-mode') || '').toLowerCase();
     const isCompact = uiMode === 'mobile' || (uiMode !== 'desktop' && window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+    const isDashboard = document.body.classList.contains('dashboard-page');
     const fallbackPalette = ['#0d6efd','#198754','#dc3545','#fd7e14','#20c997','#6f42c1','#0dcaf0','#6610f2','#6c757d','#198754'];
     const varColor = (name, fallback) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
     const palette = [
-      varColor('--bs-primary', fallbackPalette[0]),
-      varColor('--bs-success', fallbackPalette[1]),
-      varColor('--bs-danger', fallbackPalette[2]),
-      varColor('--bs-warning', fallbackPalette[3]),
-      varColor('--bs-teal', fallbackPalette[4]),
-      varColor('--bs-purple', fallbackPalette[5]),
-      varColor('--bs-info', fallbackPalette[6]),
-      varColor('--bs-indigo', fallbackPalette[7]),
-      varColor('--bs-secondary', fallbackPalette[8]),
-      varColor('--bs-green', fallbackPalette[9])
+      varColor('--erp-primary', varColor('--bs-primary', fallbackPalette[0])),
+      varColor('--erp-success', varColor('--bs-success', fallbackPalette[1])),
+      varColor('--erp-danger', varColor('--bs-danger', fallbackPalette[2])),
+      varColor('--erp-warning', varColor('--bs-warning', fallbackPalette[3])),
+      varColor('--erp-secondary', varColor('--bs-teal', fallbackPalette[4])),
+      varColor('--erp-accent', varColor('--bs-purple', fallbackPalette[5])),
+      varColor('--erp-info', varColor('--bs-info', fallbackPalette[6])),
+      varColor('--erp-gold', varColor('--bs-indigo', fallbackPalette[7])),
+      varColor('--erp-primary-dark', varColor('--bs-secondary', fallbackPalette[8])),
+      varColor('--erp-success', varColor('--bs-green', fallbackPalette[9]))
     ];
     const getColor = (i, custom) => (custom && custom[i]) || palette[i % palette.length];
 
@@ -384,24 +385,28 @@
     }
 
     function buildOptions(el) {
+      const chartType = (el.getAttribute('data-chart-type') || el.getAttribute('data-type') || 'line').toLowerCase();
+      const isCircular = chartType === 'doughnut' || chartType === 'pie';
       const currency = el.getAttribute('data-currency');
       const unit = el.getAttribute('data-unit');
       const digits = parseInt(el.getAttribute('data-digits') || '2', 10);
       const stacked = el.getAttribute('data-stacked') === '1';
-      const tickFontSize = isCompact ? 10 : 11;
-      const legendFontSize = isCompact ? 10 : 12;
+      const tickFontSize = isCompact ? 10 : (isDashboard ? 10 : 11);
+      const legendFontSize = isCompact ? 10 : (isDashboard ? 11 : 12);
+      const legendOnBottom = isCompact || isDashboard || isCircular;
       const tickFormat = {
         callback: val => formatValue(val, { currency, unit, digits }),
-        maxTicksLimit: isCompact ? 5 : 8
+        maxTicksLimit: isCompact ? 5 : (isDashboard ? 6 : 8)
       };
       const plugins = {
         legend: {
           display: true,
           rtl: isRTL,
-          position: isCompact ? 'bottom' : 'top',
+          position: legendOnBottom ? 'bottom' : 'top',
           labels: {
             usePointStyle: true,
-            padding: isCompact ? 12 : 20,
+            padding: isDashboard ? 10 : (isCompact ? 12 : 20),
+            boxWidth: isDashboard ? 10 : 12,
             font: { family: 'Cairo, sans-serif', size: legendFontSize }
           }
         },
@@ -410,36 +415,60 @@
           rtl: isRTL,
           callbacks: {
             label: ctx => {
-              const v = ctx.parsed.y ?? ctx.parsed;
+              const v = ctx.parsed.y ?? ctx.parsed ?? ctx.raw;
               const title = ctx.dataset.label ? `${ctx.dataset.label}: ` : '';
               return title + formatValue(v, { currency, unit, digits });
             }
           }
         }
       };
-      if (typeof window.ChartDataLabels !== 'undefined') {
+      if (typeof window.ChartDataLabels !== 'undefined' && !isDashboard) {
         plugins.datalabels = {
           anchor: 'end',
           align: 'top',
           color: '#444',
-          font: { weight: 'bold' },
+          font: { weight: 'bold', size: 10 },
           formatter: val => formatValue(val, { currency, unit, digits })
         };
+      } else if (typeof window.ChartDataLabels !== 'undefined') {
+        plugins.datalabels = { display: false };
       }
-      return {
+      const options = {
         responsive: true,
         maintainAspectRatio: false,
         devicePixelRatio: dpr,
         interaction: { mode: 'index', intersect: false },
+        layout: {
+          padding: isDashboard
+            ? { top: 4, right: 8, bottom: 4, left: 8 }
+            : { top: 8, right: 12, bottom: 8, left: 12 }
+        },
         animations: {
           tension: { duration: 1200, easing: 'easeInOutQuad', from: 0.2, to: 0.5, loop: false }
         },
-        plugins,
-        scales: {
-          x: { stacked, grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, font: { family: 'Cairo, sans-serif', size: tickFontSize } } },
-          y: { stacked, beginAtZero: true, ticks: { ...tickFormat, font: { family: 'Cairo, sans-serif', size: tickFontSize } } }
-        }
+        plugins
       };
+      if (!isCircular) {
+        options.scales = {
+          x: {
+            stacked,
+            grid: { display: false },
+            ticks: {
+              maxRotation: isDashboard ? 0 : 0,
+              autoSkip: true,
+              maxTicksLimit: isDashboard ? 7 : undefined,
+              font: { family: 'Cairo, sans-serif', size: tickFontSize }
+            }
+          },
+          y: {
+            stacked,
+            beginAtZero: true,
+            grace: '5%',
+            ticks: { ...tickFormat, font: { family: 'Cairo, sans-serif', size: tickFontSize } }
+          }
+        };
+      }
+      return options;
     }
 
     function buildConfig(el, ctx) {
@@ -468,9 +497,20 @@
       if (loader) loader.remove();
     }
 
+    function ensureChartHost(el) {
+      const parent = el.parentElement;
+      if (!parent || parent.classList.contains('erp-chart-host')) return;
+      if (!parent.classList.contains('card-body') && parent.tagName !== 'DIV') return;
+      const host = document.createElement('div');
+      host.className = isCompact ? 'erp-chart-host erp-chart-host--sm' : 'erp-chart-host erp-chart-host--lg';
+      parent.insertBefore(host, el);
+      host.appendChild(el);
+    }
+
     function initCanvas(el) {
       const ctx = el.getContext('2d');
       if (!ctx) return;
+      ensureChartHost(el);
       if (isCompact) {
         const parent = el.parentElement;
         if (parent) {
@@ -587,6 +627,21 @@
       });
     });
   }
+
+  window.addEventListener('erp-theme-change', function () {
+    chartsInitialized = false;
+    document.querySelectorAll('canvas.chartjs-chart').forEach(function (el) {
+      if (el._chartjsInstance) {
+        try {
+          el._chartjsInstance.destroy();
+        } catch (_) {}
+        el._chartjsInstance = null;
+      }
+    });
+    if (typeof window.Chart !== 'undefined' && hasChartElements()) {
+      startCharts();
+    }
+  });
 
   onReady(() => {
     if (hasChartElements()) {

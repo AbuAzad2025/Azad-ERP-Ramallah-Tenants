@@ -1,0 +1,28 @@
+{% extends 'security/base_security.html' %}
+{% block security_title %}ضوابط الإدخال{% endblock %}
+{% block security_description %}قفل الترحيل المحاسبي وسياسات الأمان{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">ضوابط الإدخال</li>{% endblock %}
+
+{% block security_content %}
+<div class="sec-card">
+  <div class="sec-card-body">
+    <p class="text-muted">لا يُسمح بترحيل قيود بتاريخ أقدم من التاريخ المحدّد.</p>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label>آخر تاريخ مسموح للإدخال</label>
+        <input type="date" name="posting_locked_before" class="form-control" value="{{ posting_locked_before }}">
+      </div>
+      <div class="custom-control custom-checkbox mb-2">
+        <input type="checkbox" class="custom-control-input" id="pwdPol" name="password_policy_enabled" {% if password_policy_enabled %}checked{% endif %}>
+        <label class="custom-control-label" for="pwdPol">سياسة كلمة مرور قوية</label>
+      </div>
+      <div class="custom-control custom-checkbox mb-3">
+        <input type="checkbox" class="custom-control-input" id="blkPrint" name="block_document_print" {% if block_document_print %}checked{% endif %}>
+        <label class="custom-control-label" for="blkPrint">منع طباعة مستندات حساسة بدون EXPORT_DATA</label>
+      </div>
+      <button class="btn btn-primary">حفظ</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

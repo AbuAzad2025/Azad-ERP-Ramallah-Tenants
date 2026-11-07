@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}أوامر الشراء{% endblock %}
+{% block content %}
+<div class="container-fluid py-3" dir="rtl">
+  <div class="d-flex justify-content-between mb-3">
+    <h4><i class="fas fa-file-invoice"></i> أوامر الشراء</h4>
+    <a href="{{ url_for('purchases_bp.add') }}" class="btn btn-primary btn-sm">أمر شراء جديد</a>
+  </div>
+  <table class="table table-sm table-bordered">
+    <thead class="table-header-primary text-white table-light"><tr><th>الرقم</th><th>المورد</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th></th></tr></thead>
+    <tbody>
+      {% for o in orders %}
+      <tr>
+        <td>{{ o.number }}</td>
+        <td>{{ o.supplier.name if o.supplier else o.supplier_id }}</td>
+        <td>{{ o.order_date }}</td>
+        <td>{{ '%.2f'|format(o.total_amount or 0) }}</td>
+        <td>{{ o.status }}</td>
+        <td><a href="{{ url_for('purchases_bp.detail', id=o.id) }}">عرض</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-center text-muted">لا أوامر</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

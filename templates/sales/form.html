@@ -3,110 +3,132 @@
 
 {% block head_extra %}
   {{ super() }}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/sales.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/sales.css', v=3) }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='adminlte/plugins/select2/css/select2.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='adminlte/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-3 sales-form">
-  <div class="row">
-    <div class="col-12">
-      <div class="card shadow-lg rounded border-0">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-          <h3 class="mb-0"><i class="fas fa-file-invoice me-2"></i> {{ title }}</h3>
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2 align-items-center">
+      <div class="col-sm-6">
+        <h1 class="m-0">
+          <i class="fas fa-file-invoice ml-2"></i>{{ title }}
+        </h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-left mb-0">
+          <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">الرئيسية</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('sales_bp.list_sales') }}">المبيعات</a></li>
+          <li class="breadcrumb-item active">{{ sale is defined and sale and 'تعديل' or 'إنشاء' }}</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid sales-form">
+    <div class="card shadow-sm border-0">
+      <div class="card-header erp-card-header-row erp-theme-header--primary">
+        <div class="erp-card-header-actions w-100 justify-content-between">
           {% if sale is defined and sale %}
             <span class="badge badge-light text-dark">{{ sale.status }}</span>
           {% else %}
-            <span class="badge badge-light text-dark">جديدة</span>
+            <span class="badge badge-light text-dark">فاتورة جديدة</span>
           {% endif %}
+          <a href="{{ url_for('sales_bp.list_sales') }}" class="btn btn-light btn-sm">
+            <i class="fas fa-arrow-right ml-1"></i> رجوع للقائمة
+          </a>
         </div>
+      </div>
 
-        <div class="card-body bg-light">
-          <form method="post" id="saleForm" class="needs-validation" novalidate>
-            {{ form.hidden_tag() }}
+      <div class="card-body p-4">
+        <form method="post" id="saleForm" class="needs-validation" novalidate>
+          {{ form.hidden_tag() }}
 
-            <div class="section-title mb-2"><i class="far fa-clipboard"></i> تفاصيل الوثيقة</div>
-            {% set show_advanced = (form.tax_rate.data and (form.tax_rate.data|float) != 0) or (form.shipping_cost.data and (form.shipping_cost.data|float) != 0) or (form.discount_total.data and (form.discount_total.data|float) != 0) or (form.receiver_name.data) or (form.notes.data) %}
-            <div class="head-grid mb-3">
-              <div class="form-group col-span-3">
-                <label for="sale_date"><i class="far fa-calendar-alt me-1"></i> تاريخ البيع <span class="text-danger">*</span></label>
-                {{ form.sale_date(class="form-control", id="sale_date", type="datetime-local",
-                  value=(form.sale_date.data.strftime('%Y-%m-%dT%H:%M') if form.sale_date.data else "")) }}
-              </div>
+          <div class="section-title mb-3"><i class="far fa-clipboard"></i> تفاصيل الوثيقة</div>
+          {% set show_advanced = (form.tax_rate.data and (form.tax_rate.data|float) != 0) or (form.shipping_cost.data and (form.shipping_cost.data|float) != 0) or (form.discount_total.data and (form.discount_total.data|float) != 0) or (form.receiver_name.data) or (form.notes.data) %}
 
-              <div class="form-group col-span-5">
-                <label for="customer_id"><i class="fas fa-user me-1"></i> الزبون <span class="text-muted">(اختياري)</span></label>
-                {{ form.customer_id(class="form-control header-select", id="customer_id",
-                  **{'data-endpoint': url_for('api.customers'),'data-placeholder': 'اختر الزبون','data-allow-clear': 1}) }}
-              </div>
-
-              <div class="form-group col-span-4">
-                <label for="seller_employee_id"><i class="fas fa-user-tie me-1"></i> البائع (موظف)</label>
-                {{ form.seller_employee_id(class="form-control header-select", id="seller_employee_id",
-                  **{'data-endpoint': url_for('api.search_employees'),'data-placeholder': 'اختر الموظف المسؤول','data-allow-clear': 1}) }}
-              </div>
-
-              <div class="form-group col-span-3">
-                <label for="currency"><i class="fas fa-dollar-sign me-1"></i> العملة <span class="text-danger">*</span></label>
-                {{ form.currency(class="form-control", id="currency") }}
-                <div class="section-subtitle">
-                  <i class="fas fa-exclamation-triangle"></i> التحويل يتم تلقائياً حسب سعر الصرف
-                </div>
-              </div>
-
-              <div class="form-group col-span-9 advanced-toggle">
-                <div class="section-subtitle">إعدادات إضافية</div>
-                <button type="button" class="btn btn-outline-secondary" data-toggle="collapse" data-target="#saleAdvancedCollapse" aria-expanded="{{ 'true' if show_advanced else 'false' }}" aria-controls="saleAdvancedCollapse">
-                  <i class="fas fa-sliders-h me-1"></i> خيارات إضافية
-                </button>
-              </div>
+          <div class="row mb-3 sale-head-fields">
+            <div class="col-xl-2 col-lg-3 col-md-6 form-group">
+              <label for="sale_date"><i class="far fa-calendar-alt ml-1"></i> تاريخ البيع <span class="text-danger">*</span></label>
+              {{ form.sale_date(class="form-control", id="sale_date", type="datetime-local",
+                value=(form.sale_date.data.strftime('%Y-%m-%dT%H:%M') if form.sale_date.data else "")) }}
             </div>
 
-            <div id="saleAdvancedCollapse" class="collapse {% if show_advanced %}show{% endif %}">
-              <div class="card mb-4 border-0 shadow-sm">
-                <div class="card-body bg-white">
-                  <div class="head-grid">
-                    <div class="form-group col-span-4">
-                      <label for="taxRate"><i class="fas fa-percent me-1"></i> نسبة الضريبة (%) <span class="text-muted">(اختياري)</span></label>
-                      {{ form.tax_rate(class="form-control", id="taxRate") }}
-                    </div>
+            <div class="col-xl-4 col-lg-5 col-md-6 form-group">
+              <label for="customer_id"><i class="fas fa-user ml-1"></i> الزبون <span class="text-muted">(اختياري)</span></label>
+              {{ form.customer_id(class="form-control header-select", id="customer_id",
+                **{'data-endpoint': url_for('api.customers'),'data-placeholder': 'اختر الزبون','data-allow-clear': 1}) }}
+            </div>
 
-                    <div class="form-group col-span-4">
-                      <label for="shippingCost"><i class="fas fa-truck me-1"></i> تكلفة الشحن <span class="text-muted">(اختياري)</span></label>
-                      {{ form.shipping_cost(class="form-control", id="shippingCost") }}
-                    </div>
+            <div class="col-xl-3 col-lg-4 col-md-6 form-group">
+              <label for="seller_employee_id"><i class="fas fa-user-tie ml-1"></i> البائع (موظف)</label>
+              {{ form.seller_employee_id(class="form-control header-select", id="seller_employee_id",
+                **{'data-endpoint': url_for('api.search_employees'),'data-placeholder': 'اختر الموظف المسؤول','data-allow-clear': 1}) }}
+            </div>
 
-                    <div class="form-group col-span-4">
-                      <label for="discountTotal"><i class="fas fa-tags me-1"></i> الخصم الإجمالي <span class="text-muted">(اختياري)</span></label>
-                      {{ form.discount_total(class="form-control", id="discountTotal") }}
-                    </div>
+            <div class="col-xl-2 col-lg-3 col-md-6 form-group">
+              <label for="currency"><i class="fas fa-dollar-sign ml-1"></i> العملة <span class="text-danger">*</span></label>
+              {{ form.currency(class="form-control", id="currency") }}
+              <small class="text-muted d-block mt-1">
+                <i class="fas fa-info-circle"></i> التحويل تلقائي حسب سعر الصرف
+              </small>
+            </div>
 
-                    <div class="form-group col-span-6">
-                      <label for="receiver_name"><i class="fas fa-user-check me-1"></i> مستلم البضاعة <span class="text-muted">(اختياري)</span></label>
-                      {{ form.receiver_name(class="form-control", id="receiver_name", placeholder="اسم الشخص المستلم") }}
-                    </div>
+            <div class="col-xl-1 col-lg-12 col-md-12 form-group d-flex align-items-end">
+              <button type="button" class="btn btn-outline-secondary btn-sm advanced-toggle-btn w-100" data-toggle="collapse" data-target="#saleAdvancedCollapse" aria-expanded="{{ 'true' if show_advanced else 'false' }}" aria-controls="saleAdvancedCollapse">
+                <i class="fas fa-sliders-h ml-1"></i> خيارات
+              </button>
+            </div>
+          </div>
 
-                    <div class="form-group col-span-6">
-                      <label for="{{ form.notes.id }}"><i class="fas fa-sticky-note me-1"></i> ملاحظات <span class="text-muted">(اختياري)</span></label>
-                      {{ form.notes(class="form-control", rows="2", placeholder="ملاحظات داخلية على الفاتورة") }}
-                    </div>
+          <div id="saleAdvancedCollapse" class="collapse {% if show_advanced %}show{% endif %}">
+            <div class="card mb-4 border shadow-sm">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-lg-4 col-md-6 form-group">
+                    <label for="taxRate"><i class="fas fa-percent ml-1"></i> نسبة الضريبة (%) <span class="text-muted">(اختياري)</span></label>
+                    {{ form.tax_rate(class="form-control", id="taxRate") }}
+                  </div>
+
+                  <div class="col-lg-4 col-md-6 form-group">
+                    <label for="shippingCost"><i class="fas fa-truck ml-1"></i> تكلفة الشحن <span class="text-muted">(اختياري)</span></label>
+                    {{ form.shipping_cost(class="form-control", id="shippingCost") }}
+                  </div>
+
+                  <div class="col-lg-4 col-md-6 form-group">
+                    <label for="discountTotal"><i class="fas fa-tags ml-1"></i> الخصم الإجمالي <span class="text-muted">(اختياري)</span></label>
+                    {{ form.discount_total(class="form-control", id="discountTotal") }}
+                  </div>
+
+                  <div class="col-lg-6 form-group">
+                    <label for="receiver_name"><i class="fas fa-user-check ml-1"></i> مستلم البضاعة <span class="text-muted">(اختياري)</span></label>
+                    {{ form.receiver_name(class="form-control", id="receiver_name", placeholder="اسم الشخص المستلم") }}
+                  </div>
+
+                  <div class="col-lg-6 form-group">
+                    <label for="{{ form.notes.id }}"><i class="fas fa-sticky-note ml-1"></i> ملاحظات <span class="text-muted">(اختياري)</span></label>
+                    {{ form.notes(class="form-control", rows="2", placeholder="ملاحظات داخلية على الفاتورة") }}
                   </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div class="card mb-4">
-              <div class="card-header bg-white lines-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-list me-2"></i> بنود الفاتورة</h5>
-                <button type="button" id="addLine" class="btn btn-sm btn-outline-primary">
-                  <i class="fas fa-plus me-1"></i> إضافة بند
-                </button>
-              </div>
+          <div class="card mb-4 border shadow-sm">
+            <div class="card-header bg-white lines-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <h5 class="mb-0"><i class="fas fa-list ml-2"></i> بنود الفاتورة</h5>
+              <button type="button" id="addLine" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus ml-1"></i> إضافة بند
+              </button>
+            </div>
 
-              <div class="card-body lines-wrap">
-                <!-- ترويسة الجدول (تظهر فقط في الشاشات الكبيرة) -->
-                <div class="sale-lines-header">
+            <div class="card-body p-0 lines-wrap">
+              <div class="sale-lines-scroll">
+                <div class="sale-lines-header px-3">
                   <div>المستودع <span class="text-danger">*</span></div>
                   <div>الصنف <span class="text-danger">*</span></div>
                   <div>الكمية <span class="text-danger">*</span></div>
@@ -114,173 +136,173 @@
                   <div>الخصم %</div>
                   <div>المستلم</div>
                   <div>ملاحظات</div>
-                  <div></div> <!-- Actions -->
+                  <div class="text-center">إجراءات</div>
                 </div>
 
-                <div id="saleLines">
-                  {% for line in form.lines %}
-                  <div class="sale-line mb-3 p-3 border rounded bg-white" data-index="{{ loop.index0 }}">
-                    <div class="form-group mb-0">
-                      <label for="{{ line.warehouse_id.id }}">
-                        <i class="fas fa-warehouse me-1"></i>المستودع <span class="required">*</span>
-                      </label>
-                      <select name="{{ line.warehouse_id.name }}" id="{{ line.warehouse_id.id }}" 
-                              class="form-control select2 ajax-select warehouse-select" 
-                              required
-                              data-endpoint="{{ url_for('api.warehouses') }}"
-                              data-placeholder="اختر المستودع"
-                              data-allow-clear="1">
-                        {% if line.warehouse_id.data %}
-                          {% set wh_val = line.warehouse_id.data %}
-                          {% set wh_text = '#' ~ wh_val %}
-                          {% if sale is defined and sale.lines[loop.index0] is defined and sale.lines[loop.index0].warehouse_id == wh_val %}
-                             {% set wh_text = '#' ~ sale.lines[loop.index0].warehouse_id %}
-                          {% endif %}
-                          <option value="{{ wh_val }}" selected>{{ wh_text }}</option>
+                <div id="saleLines" class="px-3 pb-3">
+                {% for line in form.lines %}
+                <div class="sale-line" data-index="{{ loop.index0 }}">
+                  <div class="form-group mb-0">
+                    <label for="{{ line.warehouse_id.id }}">
+                      <i class="fas fa-warehouse ml-1"></i>المستودع <span class="required">*</span>
+                    </label>
+                    <select name="{{ line.warehouse_id.name }}" id="{{ line.warehouse_id.id }}"
+                            class="form-control select2 ajax-select warehouse-select"
+                            required
+                            data-endpoint="{{ url_for('api.warehouses') }}"
+                            data-placeholder="اختر المستودع"
+                            data-allow-clear="1">
+                      {% if line.warehouse_id.data %}
+                        {% set wh_val = line.warehouse_id.data %}
+                        {% set wh_text = '#' ~ wh_val %}
+                        {% if sale is defined and sale.lines[loop.index0] is defined and sale.lines[loop.index0].warehouse_id == wh_val %}
+                           {% set wh_text = '#' ~ sale.lines[loop.index0].warehouse_id %}
                         {% endif %}
-                      </select>
-                    </div>
-                    <div class="form-group mb-0">
-                      <label for="{{ line.product_id.id }}">
-                        <i class="fas fa-box me-1"></i>الصنف <span class="required">*</span>
-                      </label>
-                      <select name="{{ line.product_id.name }}" id="{{ line.product_id.id }}"
-                              class="form-control product-select" 
-                              required
-                              data-endpoint="{{ url_for('api.products') }}"
-                              data-placeholder="اختر الصنف"
-                              data-allow-clear="1">
-                        {% if line.product_id.data %}
-                          {% set p_val = line.product_id.data %}
-                          {% set p_text = 'Product #' ~ p_val %}
-                          {% if sale is defined and sale.lines[loop.index0] is defined and sale.lines[loop.index0].product_id == p_val %}
-                             {% set p_text = sale.lines[loop.index0].product.name %}
-                          {% endif %}
-                          <option value="{{ p_val }}" selected>{{ p_text }}</option>
-                        {% endif %}
-                      </select>
-                    </div>
-                    <div class="form-group mb-0">
-                      <label for="{{ line.quantity.id }}">
-                        <i class="fas fa-cubes me-1"></i>الكمية <span class="required">*</span>
-                      </label>
-                      {{ line.quantity(class="form-control quantity-input", min="1", step="1", required=True, placeholder="0") }}
-                    </div>
-                    <div class="form-group mb-0">
-                      <label for="{{ line.unit_price.id }}">
-                        <i class="fas fa-tag me-1"></i>السعر <span class="required">*</span>
-                      </label>
-                      {{ line.unit_price(class="form-control price-input", min="0", step="0.01", required=True, placeholder="0.00") }}
-                    </div>
-                    <div class="form-group mb-0">
-                      <label for="{{ line.discount_rate.id }}">
-                        <i class="fas fa-percentage me-1"></i>الخصم %
-                      </label>
-                      {{ line.discount_rate(class="form-control discount-input", min="0", max="100", step="0.01", placeholder="0") }}
-                    </div>
-                    <div class="form-group mb-0">
-                      <label for="{{ line.line_receiver.id }}">
-                        <i class="fas fa-user-check me-1"></i>المستلم
-                      </label>
-                      {{ line.line_receiver(class="form-control", placeholder="اسم المستلم") }}
-                    </div>
-                    <div class="form-group mb-0">
-                      <label for="{{ line.note.id }}">
-                        <i class="fas fa-comment me-1"></i>ملاحظات
-                      </label>
-                      {{ line.note(class="form-control", placeholder="ملاحظات إضافية") }}
-                    </div>
-                    <div class="form-group mb-0">
-                      <label class="invisible d-block">إجراءات</label>
-                      <div class="d-flex align-items-center justify-content-end">
-                        <span class="badge badge-info text-white stock-badge me-1" title="المتوفر"></span>
-                        <button type="button" class="btn btn-sm btn-outline-danger ms-1 remove-line" title="حذف البند">
-                          <i class="fas fa-trash"></i>
-                        </button>
-                        <span class="btn btn-sm btn-outline-secondary ms-1 drag-handle" title="ترتيب">
-                          <i class="fas fa-grip-vertical"></i>
-                        </span>
-                      </div>
-                    </div>
+                        <option value="{{ wh_val }}" selected>{{ wh_text }}</option>
+                      {% endif %}
+                    </select>
                   </div>
-                  {% endfor %}
-                </div>
-              </div>
-            </div>
-
-            <div class="section-title mb-2"><i class="fas fa-calculator"></i> الملخص</div>
-            {% set show_totals_details = show_advanced or ((form.currency.data or 'ILS') != 'ILS') %}
-            <div class="row justify-content-start mb-3">
-              <div class="col-md-6">
-                <div class="totals-hero mb-2">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div class="label">الإجمالي النهائي</div>
-                      <div id="totalAmount" class="value">0.00 {{ form.currency.data }}</div>
-                      <div class="meta">يشمل الضريبة والشحن والخصومات</div>
-                    </div>
-                    <div>
-                      <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="collapse" data-target="#saleTotalsDetails" aria-expanded="{{ 'true' if show_totals_details else 'false' }}" aria-controls="saleTotalsDetails">
-                        <i class="fas fa-list me-1"></i> التفاصيل
+                  <div class="form-group mb-0">
+                    <label for="{{ line.product_id.id }}">
+                      <i class="fas fa-box ml-1"></i>الصنف <span class="required">*</span>
+                    </label>
+                    <select name="{{ line.product_id.name }}" id="{{ line.product_id.id }}"
+                            class="form-control product-select"
+                            required
+                            data-endpoint="{{ url_for('api.products') }}"
+                            data-placeholder="اختر الصنف"
+                            data-allow-clear="1">
+                      {% if line.product_id.data %}
+                        {% set p_val = line.product_id.data %}
+                        {% set p_text = 'Product #' ~ p_val %}
+                        {% if sale is defined and sale.lines[loop.index0] is defined and sale.lines[loop.index0].product_id == p_val %}
+                           {% set p_text = sale.lines[loop.index0].product.name %}
+                        {% endif %}
+                        <option value="{{ p_val }}" selected>{{ p_text }}</option>
+                      {% endif %}
+                    </select>
+                  </div>
+                  <div class="form-group mb-0">
+                    <label for="{{ line.quantity.id }}">
+                      <i class="fas fa-cubes ml-1"></i>الكمية <span class="required">*</span>
+                    </label>
+                    {{ line.quantity(class="form-control quantity-input", min="1", step="1", required=True, placeholder="0") }}
+                  </div>
+                  <div class="form-group mb-0">
+                    <label for="{{ line.unit_price.id }}">
+                      <i class="fas fa-tag ml-1"></i>السعر <span class="required">*</span>
+                    </label>
+                    {{ line.unit_price(class="form-control price-input", min="0", step="0.01", required=True, placeholder="0.00") }}
+                  </div>
+                  <div class="form-group mb-0">
+                    <label for="{{ line.discount_rate.id }}">
+                      <i class="fas fa-percentage ml-1"></i>الخصم %
+                    </label>
+                    {{ line.discount_rate(class="form-control discount-input", min="0", max="100", step="0.01", placeholder="0") }}
+                  </div>
+                  <div class="form-group mb-0">
+                    <label for="{{ line.line_receiver.id }}">
+                      <i class="fas fa-user-check ml-1"></i>المستلم
+                    </label>
+                    {{ line.line_receiver(class="form-control", placeholder="اسم المستلم") }}
+                  </div>
+                  <div class="form-group mb-0">
+                    <label for="{{ line.note.id }}">
+                      <i class="fas fa-comment ml-1"></i>ملاحظات
+                    </label>
+                    {{ line.note(class="form-control", placeholder="ملاحظات إضافية") }}
+                  </div>
+                  <div class="form-group mb-0 line-actions-cell">
+                    <label class="invisible d-block">إجراءات</label>
+                    <div class="line-actions">
+                      <span class="badge badge-info text-white stock-badge" title="المتوفر"></span>
+                      <button type="button" class="btn btn-sm btn-outline-danger remove-line" title="حذف البند">
+                        <i class="fas fa-trash"></i>
                       </button>
+                      <span class="btn btn-sm btn-outline-secondary drag-handle" title="ترتيب">
+                        <i class="fas fa-grip-vertical"></i>
+                      </span>
                     </div>
                   </div>
                 </div>
-
-                <div id="saleTotalsDetails" class="collapse {% if show_totals_details %}show{% endif %}">
-                  <table class="table table-bordered mb-0 totals-table">
-                    <tr>
-                      <th class="text-end">مجموع البنود بعد الخصم:</th>
-                      <td id="subtotal" class="text-end">0.00 {{ form.currency.data }}</td>
-                    </tr>
-                    <tr>
-                      <th class="text-end">خصم البنود:</th>
-                      <td id="totalDiscount" class="text-end">0.00 {{ form.currency.data }}</td>
-                    </tr>
-                    <tr>
-                      <th class="text-end">تكلفة الشحن:</th>
-                      <td id="shippingCostDisplay" class="text-end">{{ "%.2f"|format(form.shipping_cost.data or 0) }} {{ form.currency.data }}</td>
-                    </tr>
-                    <tr>
-                      <th class="text-end">الخصم الإجمالي:</th>
-                      <td id="discountTotalDisplay" class="text-end">{{ "%.2f"|format(form.discount_total.data or 0) }} {{ form.currency.data }}</td>
-                    </tr>
-                    <tr>
-                      <th class="text-end">المجموع الإجمالي (قبل الضريبة):</th>
-                      <td id="baseForTax" class="text-end">0.00 {{ form.currency.data }}</td>
-                    </tr>
-                    <tr>
-                      <th class="text-end">الضريبة ({{ form.tax_rate.data or 0 }}%):</th>
-                      <td id="taxAmount" class="text-end">0.00 {{ form.currency.data }}</td>
-                    </tr>
-                    <tr id="fxRateRow" style="display:none;" class="table-info">
-                      <th class="text-end">سعر الصرف المستخدم:</th>
-                      <td id="fxRateInfo" class="text-end small"></td>
-                    </tr>
-                  </table>
+                {% endfor %}
                 </div>
               </div>
             </div>
+          </div>
 
-            <div class="d-flex justify-content-between mt-4">
-              <button type="submit" class="btn btn-success px-4">
-                <i class="fas fa-save me-2"></i> حفظ
-              </button>
-              <a href="{{ url_for('sales_bp.list_sales') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-times me-2"></i> إلغاء
-              </a>
+          <div class="section-title mb-2"><i class="fas fa-calculator"></i> الملخص</div>
+          {% set show_totals_details = show_advanced or ((form.currency.data or 'ILS') != 'ILS') %}
+          <div class="row mb-3">
+            <div class="col-lg-6">
+              <div class="totals-hero mb-2">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                  <div class="mb-2 mb-md-0">
+                    <div class="label">الإجمالي النهائي</div>
+                    <div id="totalAmount" class="value">0.00 {{ form.currency.data }}</div>
+                    <div class="meta">يشمل الضريبة والشحن والخصومات</div>
+                  </div>
+                  <div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="collapse" data-target="#saleTotalsDetails" aria-expanded="{{ 'true' if show_totals_details else 'false' }}" aria-controls="saleTotalsDetails">
+                      <i class="fas fa-list ml-1"></i> التفاصيل
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="saleTotalsDetails" class="collapse {% if show_totals_details %}show{% endif %}">
+                <table class="table table-bordered mb-0 totals-table">
+                  <tr>
+                    <th class="text-left">مجموع البنود بعد الخصم:</th>
+                    <td id="subtotal" class="text-left">0.00 {{ form.currency.data }}</td>
+                  </tr>
+                  <tr>
+                    <th class="text-left">خصم البنود:</th>
+                    <td id="totalDiscount" class="text-left">0.00 {{ form.currency.data }}</td>
+                  </tr>
+                  <tr>
+                    <th class="text-left">تكلفة الشحن:</th>
+                    <td id="shippingCostDisplay" class="text-left">{{ "%.2f"|format(form.shipping_cost.data or 0) }} {{ form.currency.data }}</td>
+                  </tr>
+                  <tr>
+                    <th class="text-left">الخصم الإجمالي:</th>
+                    <td id="discountTotalDisplay" class="text-left">{{ "%.2f"|format(form.discount_total.data or 0) }} {{ form.currency.data }}</td>
+                  </tr>
+                  <tr>
+                    <th class="text-left">المجموع الإجمالي (قبل الضريبة):</th>
+                    <td id="baseForTax" class="text-left">0.00 {{ form.currency.data }}</td>
+                  </tr>
+                  <tr>
+                    <th class="text-left">الضريبة ({{ form.tax_rate.data or 0 }}%):</th>
+                    <td id="taxAmount" class="text-left">0.00 {{ form.currency.data }}</td>
+                  </tr>
+                  <tr id="fxRateRow" style="display:none;" class="table-info">
+                    <th class="text-left">سعر الصرف المستخدم:</th>
+                    <td id="fxRateInfo" class="text-left small"></td>
+                  </tr>
+                </table>
+              </div>
             </div>
+          </div>
 
-          </form>
-        </div>
+          <div class="d-flex flex-wrap justify-content-between align-items-center mt-4 pt-3 border-top form-actions">
+            <button type="submit" class="btn btn-success px-4 mb-2 mb-md-0">
+              <i class="fas fa-save ml-2"></i> حفظ
+            </button>
+            <a href="{{ url_for('sales_bp.list_sales') }}" class="btn btn-outline-secondary mb-2 mb-md-0">
+              <i class="fas fa-times ml-2"></i> إلغاء
+            </a>
+          </div>
+
+        </form>
       </div>
     </div>
   </div>
-</div>
+</section>
 {% endblock %}
 
 {% block scripts %}
   {{ super() }}
   <script src="{{ url_for('static', filename='adminlte/plugins/select2/js/select2.full.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/sales.js', v=6) }}"></script>
+  <script src="{{ url_for('static', filename='js/sales.js', v=7) }}"></script>
 {% endblock %}

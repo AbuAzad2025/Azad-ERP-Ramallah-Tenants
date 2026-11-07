@@ -3,17 +3,12 @@
 {% block content %}
 <div class="container-fluid py-3" dir="rtl">
   <div class="card shadow-sm mb-3">
-    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center flex-wrap">
+    <div class="card-header erp-card-header-row erp-theme-header--primary bg-dark text-white d-flex justify-content-between align-items-center flex-wrap">
       <h4 class="mb-0"><i class="fas fa-calendar-check ml-2"></i> الفترات المحاسبية والإقفال</h4>
       <div class="btn-group">
-        <a href="{{ hub_url }}" class="btn btn-sm btn-outline-light">{{ hub_label }}</a>
-        {% if not tenant_slug %}
+        <a href="{{ url_for('ledger_control.index') }}" class="btn btn-sm btn-outline-light">دفتر الأستاذ</a>
         <a href="{{ url_for('budgets.index') }}" class="btn btn-sm btn-outline-light">الموازنات</a>
-        {% endif %}
       </div>
-      {% if tenant_slug %}
-      <p class="mb-0 mt-1 small text-white-50">تينانت: <strong>{{ tenant_slug }}</strong> — فترات وإقفال منفصلة عن المنصة</p>
-      {% endif %}
     </div>
     <div class="card-body">
       <div class="row g-2 align-items-end mb-3">
@@ -49,7 +44,7 @@
       <div id="msg" class="mb-2"></div>
       <div class="table-responsive">
         <table class="table table-sm table-hover table-bordered">
-          <thead class="table-light">
+          <thead class="table-header-primary text-white table-light">
             <tr>
               <th>الفترة</th>
               <th>النوع</th>
@@ -68,10 +63,9 @@
   </div>
 </div>
 <script>
-const API_LIST = "{{ api_list }}";
-const API_SYNC = "{{ api_sync }}";
-const API_SETTINGS = "{{ api_settings }}";
-const API_BASE = "{{ api_base }}";
+const API_LIST = "{{ url_for('fiscal_periods_bp.api_list') }}";
+const API_SYNC = "{{ url_for('fiscal_periods_bp.api_sync') }}";
+const API_SETTINGS = "{{ url_for('fiscal_periods_bp.api_settings') }}";
 
 function showMsg(text, kind='info') {
   const el = document.getElementById('msg');
@@ -143,7 +137,7 @@ async function syncPeriods() {
 }
 
 async function previewClose(id) {
-  const r = await fetch(`${API_BASE}/api/${id}/preview-close`, { method: 'POST' });
+  const r = await fetch(`/security/fiscal-periods/api/${id}/preview-close`, { method: 'POST' });
   const j = await r.json();
   if (!j.success) { showMsg(j.error || 'فشل', 'danger'); return; }
   alert(`معاينة إقفال ${j.period_key}\nصافي الدخل: ${j.net_income}\nإيرادات: ${j.total_revenue}\nمصروفات: ${j.total_expenses}\nعدد قيود الإقفال: ${j.closing_entries.length}`);
@@ -152,7 +146,7 @@ async function previewClose(id) {
 async function doClose(id, ptype) {
   const carry = ptype === 'YEAR';
   if (!confirm('تأكيد إقفال الفترة؟ سيتم قفل الترحيل في GL لهذه الفترة.')) return;
-  const r = await fetch(`${API_BASE}/api/${id}/close`, {
+  const r = await fetch(`/security/fiscal-periods/api/${id}/close`, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({ close_scope: 'FULL', post_gl: true, carry_forward: carry, lock_period: true })
@@ -164,14 +158,14 @@ async function doClose(id, ptype) {
 
 async function doReopen(id) {
   if (!confirm('إعادة فتح الفترة؟')) return;
-  const r = await fetch(`${API_BASE}/api/${id}/reopen`, { method: 'POST' });
+  const r = await fetch(`/security/fiscal-periods/api/${id}/reopen`, { method: 'POST' });
   const j = await r.json();
   showMsg(j.success ? 'تمت إعادة الفتح' : (j.error || 'فشل'), j.success ? 'success' : 'danger');
   loadPeriods();
 }
 
 async function viewSnapshots(id) {
-  const r = await fetch(`${API_BASE}/api/${id}/snapshots?limit=20`);
+  const r = await fetch(`/security/fiscal-periods/api/${id}/snapshots?limit=20`);
   const j = await r.json();
   if (!j.success) return;
   const lines = j.snapshots.map(s => `${s.entity_type} #${s.entity_id}: ${s.closing_balance}`).join('\n');

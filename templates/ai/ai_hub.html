@@ -3,198 +3,7 @@
 {% block page_title %}🤖 AI Control Center{% endblock %}
 
 {% block extra_css %}
-<style>
-:root {
-  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --gradient-success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  --gradient-danger: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
-  --gradient-info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  --gradient-warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  --gradient-dark: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-}
 
-.ai-card {
-  border: none;
-  border-radius: 15px;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.ai-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 15px rgba(0,0,0,0.2);
-}
-
-.stat-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 100px;
-  height: 100px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 50%;
-  transform: translate(30%, -30%);
-}
-
-.gradient-text {
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.nav-tabs .nav-link {
-  border: none;
-  color: #6c757d;
-  font-weight: 600;
-  padding: 15px 25px;
-  transition: all 0.3s ease;
-}
-
-.nav-tabs .nav-link:hover {
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
-}
-
-.nav-tabs .nav-link.active {
-  color: #667eea;
-  background: white;
-  border-bottom: 3px solid #667eea;
-}
-
-.api-key-input {
-  font-family: 'Courier New', monospace;
-  letter-spacing: 1px;
-}
-
-.training-progress {
-  height: 8px;
-  border-radius: 10px;
-  background: #e9ecef;
-  overflow: hidden;
-}
-
-.training-progress-bar {
-  height: 100%;
-  background: var(--gradient-success);
-  transition: width 0.5s ease;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.notification-badge {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  min-width: 20px;
-  height: 20px;
-  border-radius: 10px;
-  background: var(--gradient-danger);
-  color: white;
-  font-size: 11px;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: bounce 1s infinite;
-}
-
-@keyframes bounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-}
-
-.model-card {
-  border-left: 4px solid transparent;
-  transition: all 0.3s ease;
-}
-
-.model-card.trained {
-  border-left-color: #38ef7d;
-}
-
-.model-card.training {
-  border-left-color: #f5576c;
-}
-
-.model-card.pending {
-  border-left-color: #6c757d;
-}
-
-.btn-gradient {
-  background: var(--gradient-primary);
-  border: none;
-  color: white;
-  transition: all 0.3s ease;
-}
-
-.btn-gradient:hover {
-  transform: scale(1.05);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-  color: white;
-}
-
-.chat-bubble {
-  max-width: 80%;
-  padding: 12px 18px;
-  border-radius: 18px;
-  margin-bottom: 10px;
-  animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.quick-action-btn {
-  border: 2px dashed #dee2e6;
-  padding: 20px;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.quick-action-btn:hover {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
-  transform: translateY(-2px);
-}
-
-.ai-tab-pane {
-  display: none;
-}
-
-.ai-tab-pane.show {
-  display: block;
-}
-
-.ai-tab-pane.active {
-  display: block;
-}
-
-.ai-tab-link {
-  cursor: pointer;
-  user-select: none;
-}
-</style>
 {% endblock %}
 
 {% block breadcrumb %}
@@ -205,6 +14,15 @@
 {% endblock %}
 
 {% block content %}
+{% set training_stats = training_stats|default({'total_jobs': 0, 'completed': 0, 'running': 0, 'failed': 0}) %}
+{% set training_models = training_models|default([]) %}
+{% set training_jobs = training_jobs|default([]) %}
+{% set can_train_ai = can_train_ai|default(false) %}
+{% set hub_predictions = hub_predictions|default([]) %}
+{% set analytics_charts = analytics_charts|default({'success_pie': {'labels': ['ناجح', 'فاشل'], 'values': [0, 0]}, 'query_types': {'labels': [], 'values': []}, 'daily_line': {'labels': [], 'values': []}}) %}
+{% set analytics_metrics = analytics_metrics|default([]) %}
+{% set api_providers = api_providers|default([]) %}
+{% set system_map_summary = system_map_summary|default({'exists': false, 'total_routes': 0, 'total_templates': 0, 'linked_routes': 0, 'blueprints_count': 0}) %}
 <div class="container-fluid">
   
   {# تم حذف include 'security/_navigation.html' لأسباب أمنية - لا يجب إظهار روابط اللوحة السرية في المساعد #}
@@ -226,7 +44,7 @@
 
   <!-- Main Card -->
   <div class="card ai-card shadow-lg">
-    <div class="card-header text-white" style="background: var(--gradient-primary);">
+    <div class="card-header erp-card-header-row erp-theme-header--primary text-white" style="background: var(--gradient-primary);">
       <div class="d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="fas fa-robot"></i> AI Control Panel</h5>
         <div>
@@ -328,7 +146,7 @@
                   <div class="d-flex justify-content-between align-items-center">
                     <div>
                       <h6 class="text-white-50 mb-1">معدل النجاح</h6>
-                      <h2 class="mb-0 fw-bold">{{ ai_stats.success_rate|default(95) }}%</h2>
+                      <h2 class="mb-0 fw-bold">{% if ai_stats.success_rate is not none %}{{ ai_stats.success_rate }}%{% else %}—{% endif %}</h2>
                     </div>
                     <i class="fas fa-check-circle fa-3x opacity-50"></i>
                   </div>
@@ -342,7 +160,7 @@
                   <div class="d-flex justify-content-between align-items-center">
                     <div>
                       <h6 class="text-white-50 mb-1">متوسط الوقت</h6>
-                      <h2 class="mb-0 fw-bold">{{ ai_stats.avg_response_time|default(0.8) }}s</h2>
+                      <h2 class="mb-0 fw-bold">{% if ai_stats.avg_response_time is not none %}{{ ai_stats.avg_response_time }}s{% else %}—{% endif %}</h2>
                     </div>
                     <i class="fas fa-clock fa-3x opacity-50"></i>
                   </div>
@@ -356,7 +174,7 @@
                   <div class="d-flex justify-content-between align-items-center">
                     <div>
                       <h6 class="text-white-50 mb-1">اليوم</h6>
-                      <h2 class="mb-0 fw-bold">{{ ai_stats.today|default(12) }}</h2>
+                      <h2 class="mb-0 fw-bold">{{ ai_stats.today|default(0) }}</h2>
                     </div>
                     <i class="fas fa-calendar-day fa-3x opacity-50"></i>
                   </div>
@@ -437,6 +255,15 @@
                   <i class="fas fa-lightbulb"></i> أسئلة سريعة تقترحها المنصة
                 </div>
                 <div class="card-body">
+                  {% if ai_suggestions %}
+                  <div class="mb-3">
+                    {% for tip in ai_suggestions %}
+                    <div class="alert alert-{{ 'warning' if tip.type == 'warning' else 'info' }} py-2 mb-2">
+                      <strong>{{ tip.title }}</strong> — {{ tip.action }}
+                    </div>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
                   <div class="row g-2">
                     <div class="col-md-6">
                       <div class="border rounded p-2 h-100">
@@ -489,14 +316,16 @@
                   <i class="fas fa-user-circle fa-2x text-muted ml-3"></i>
                   <div class="flex-grow-1">
                     <div class="d-flex justify-content-between">
-                      <strong>{{ (q.question or '')[:50] }}...</strong>
-                      <small class="text-muted">{{ q.timestamp }}</small>
+                      <strong>{% if (q.question or '')|length > 50 %}{{ (q.question or '')[:50] }}...{% else %}{{ q.question or '—' }}{% endif %}</strong>
+                      <small class="text-muted">{{ format_timestamp(q.timestamp) if q.timestamp else '—' }}</small>
                     </div>
-                    <small class="text-muted">{{ (q.answer or '')[:80] }}...</small>
+                    <small class="text-muted">{% if (q.answer or '')|length > 80 %}{{ (q.answer or '')[:80] }}...{% else %}{{ q.answer or '—' }}{% endif %}</small>
                     <div class="mt-1">
+                      {% if q.confidence %}
                       <span class="badge bg-{{ 'success' if q.confidence > 80 else 'warning' }}">
                         ثقة: {{ q.confidence }}%
                       </span>
+                      {% endif %}
                     </div>
                   </div>
                 </div>
@@ -548,7 +377,7 @@
             <div class="card-body">
               <div class="table-responsive">
                 <table class="table table-hover">
-                  <thead>
+                  <thead class="table-header-primary text-white">
                     <tr>
                       <th>المقياس</th>
                       <th>القيمة</th>
@@ -557,24 +386,18 @@
                     </tr>
                   </thead>
                   <tbody>
+                    {% for row in analytics_metrics %}
                     <tr>
-                      <td><i class="fas fa-question-circle text-primary"></i> إجمالي الاستعلامات</td>
-                      <td><strong>{{ ai_stats.total_queries|default(0) }}</strong></td>
-                      <td><span class="text-success"><i class="fas fa-arrow-up"></i> +12%</span></td>
-                      <td><span class="badge bg-success">نشط</span></td>
+                      <td>{{ row.label }}</td>
+                      <td><strong>{{ row.value }}</strong></td>
+                      <td>{{ row.change }}</td>
+                      <td><span class="badge bg-{{ row.badge }}">{{ row.status }}</span></td>
                     </tr>
+                    {% else %}
                     <tr>
-                      <td><i class="fas fa-check-circle text-success"></i> معدل النجاح</td>
-                      <td><strong>{{ ai_stats.success_rate|default(95) }}%</strong></td>
-                      <td><span class="text-success"><i class="fas fa-arrow-up"></i> +3%</span></td>
-                      <td><span class="badge bg-success">ممتاز</span></td>
+                      <td colspan="4" class="text-center text-muted">لا توجد بيانات تحليلية بعد — ابدأ باستخدام المساعد.</td>
                     </tr>
-                    <tr>
-                      <td><i class="fas fa-clock text-info"></i> متوسط وقت الاستجابة</td>
-                      <td><strong>{{ ai_stats.avg_response_time|default(0.8) }}s</strong></td>
-                      <td><span class="text-danger"><i class="fas fa-arrow-down"></i> -0.2s</span></td>
-                      <td><span class="badge bg-info">جيد</span></td>
-                    </tr>
+                    {% endfor %}
                   </tbody>
                 </table>
               </div>
@@ -589,26 +412,14 @@
              role="tabpanel">
         <div class="container-fluid">
           <div class="row g-3 mb-4">
-            {% set default_predictions = [
-              {'type': 'مبيعات', 'period': 'الشهر القادم', 'value': '+15%', 'confidence': 87},
-              {'type': 'مخزون', 'period': 'الأسبوع القادم', 'value': 'نقص متوقع', 'confidence': 92},
-              {'type': 'إيرادات', 'period': 'الربع القادم', 'value': '₪125,000', 'confidence': 89}
-            ] %}
-            {% set pred_list = predictions if predictions and predictions is iterable and predictions|length > 0 else default_predictions %}
-            {% for pred in pred_list %}
+            {% if hub_predictions %}
+            {% for pred in hub_predictions %}
             <div class="col-md-4">
-              {% if pred is mapping %}
-                {% set pred_type = pred.get('type', 'تنبؤ') %}
-                {% set pred_period = pred.get('period', '') %}
-                {% set pred_value = pred.get('value', pred.get('message', 'غير متوفر')) %}
-                {% set pred_confidence = pred.get('confidence', 85) %}
-              {% else %}
-                {% set pred_type = 'تنبؤ' %}
-                {% set pred_period = '' %}
-                {% set pred_value = 'غير متوفر' %}
-                {% set pred_confidence = 85 %}
-              {% endif %}
-              <div class="card ai-card h-100 border-{{ 'success' if pred_confidence > 90 else 'warning' if pred_confidence > 80 else 'danger' }}">
+              {% set pred_type = pred.get('type', 'تنبؤ') %}
+              {% set pred_period = pred.get('period', '') %}
+              {% set pred_value = pred.get('value', pred.get('message', 'غير متوفر')) %}
+              {% set pred_confidence = pred.get('confidence') %}
+              <div class="card ai-card h-100 border-{{ 'success' if pred_confidence and pred_confidence > 90 else 'warning' if pred_confidence and pred_confidence > 80 else 'primary' }}">
                 <div class="card-body">
                   <h5 class="card-title gradient-text">
                     <i class="fas fa-chart-line"></i> {{ pred_type }}
@@ -619,16 +430,25 @@
                     {% endif %}
                     <strong>التوقع:</strong> <span class="text-primary fw-bold fs-4">{{ pred_value }}</span>
                   </p>
-                  {% if pred_confidence %}
+                  {% if pred_confidence is not none %}
                   <div class="training-progress mb-2">
                     <div class="training-progress-bar" style="width: {{ pred_confidence }}%"></div>
                   </div>
                   <small class="text-muted">ثقة: {{ pred_confidence }}%</small>
+                  {% else %}
+                  <small class="text-muted">مصدر: {{ pred.get('source', 'بيانات النظام') }}</small>
                   {% endif %}
                 </div>
               </div>
             </div>
             {% endfor %}
+            {% else %}
+            <div class="col-12">
+              <div class="alert alert-secondary text-center mb-0">
+                لا توجد تنبؤات كافية من البيانات الحالية. استخدم المساعد أو أضف مبيعات/مخزون لرؤية توقعات.
+              </div>
+            </div>
+            {% endif %}
           </div>
           
           <div class="text-center">
@@ -646,84 +466,114 @@
         <div class="container-fluid">
           <div class="alert alert-info ai-card mb-4">
             <i class="fas fa-info-circle"></i>
-            <strong>نظام التدريب المتقدم:</strong> يمكنك تدريب النماذج على بياناتك بضغطة زر. النظام يدعم التدريب التلقائي والتدريب المخصص.
+            <strong>تدريب حقيقي:</strong> المهام تُشغّل <code>AITrainingEngine</code> و<code>SystemDeepTrainer</code> وتُسجَّل في
+            <code>training_jobs.json</code> — الدقة تظهر فقط إذا أرجع التدريب metric فعلي.
+          </div>
+
+          {% if not can_train_ai %}
+          <div class="alert alert-warning ai-card mb-4">
+            <i class="fas fa-lock"></i> لديك صلاحية العرض فقط. بدء التدريب يتطلب صلاحية <strong>train_ai</strong>.
+          </div>
+          {% endif %}
+
+          <!-- KPIs -->
+          <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+              <div class="card ai-card text-center h-100">
+                <div class="card-body py-3">
+                  <div class="text-muted small">مهام التدريب</div>
+                  <div class="h4 mb-0">{{ training_stats.get('total_jobs', 0) }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-lg-3">
+              <div class="card ai-card text-center h-100 border-success">
+                <div class="card-body py-3">
+                  <div class="text-muted small">مكتملة</div>
+                  <div class="h4 mb-0 text-success">{{ training_stats.get('completed', 0) }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-lg-3">
+              <div class="card ai-card text-center h-100 border-primary">
+                <div class="card-body py-3">
+                  <div class="text-muted small">قيد التشغيل</div>
+                  <div class="h4 mb-0 text-primary">{{ training_stats.get('running', 0) }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-lg-3">
+              <div class="card ai-card text-center h-100 border-danger">
+                <div class="card-body py-3">
+                  <div class="text-muted small">فاشلة</div>
+                  <div class="h4 mb-0 text-danger">{{ training_stats.get('failed', 0) }}</div>
+                </div>
+              </div>
+            </div>
           </div>
           
           <!-- Training Models -->
           <div class="row g-3 mb-4">
-            {% set default_models = [
-              {'name': 'نموذج التنبؤ بالمبيعات', 'icon': 'fa-chart-line'},
-              {'name': 'نموذج إدارة المخزون', 'icon': 'fa-boxes'},
-              {'name': 'نموذج تحليل الزبائن', 'icon': 'fa-users'}
-            ] %}
-            {% for default_model in default_models %}
-            {% set model_name = default_model.name %}
-            {% set model_data = model_statuses.get(model_name, {}) if model_statuses else {} %}
-            {% set model_status = model_data.get('status', 'pending') %}
-            {% set _acc = model_data.get('accuracy') or 0 %}
-            {% set model_accuracy = _acc if _acc > 0 else 85 %}
-            {% set last_trained = model_data.get('last_trained') %}
-            
-            {% if model_status == 'training' %}
-              {% set last_update_text = 'قيد التدريب الآن' %}
-            {% elif model_status == 'trained' or model_status == 'completed' %}
-              {% set last_update_text = 'تم التدريب بنجاح' %}
-            {% elif last_trained %}
-              {% set last_update_text = 'تم التدريب مؤخراً' %}
-            {% else %}
-              {% set last_update_text = 'لم يتم التدريب' %}
-            {% endif %}
-            
-            {% set model = {
-              'name': model_name,
-              'icon': default_model.icon,
-              'accuracy': model_accuracy,
-              'status': model_status,
-              'last_update': last_update_text
-            } %}
+            {% for model in training_models %}
+            {% set st = model.status or 'pending' %}
+            {% set progress = model.progress|default(0) %}
             <div class="col-lg-4">
-              <div class="card ai-card model-card {{ model.status }}">
+              <div class="card ai-card model-card {{ st }}">
                 <div class="card-body">
                   <div class="d-flex justify-content-between align-items-start mb-3">
                     <div>
                       <i class="fas {{ model.icon }} fa-2x text-primary mb-2"></i>
                       <h6 class="fw-bold">{{ model.name }}</h6>
+                      <p class="small text-muted mb-0">{{ model.description }}</p>
                     </div>
-                    {% if model.status == 'trained' or model.status == 'completed' %}
+                    {% if st in ['trained', 'completed'] %}
                     <span class="badge bg-success">مُدرب</span>
-                    {% elif model.status == 'training' %}
-                    <span class="badge bg-warning">قيد التدريب</span>
-                    {% elif model.status == 'pending' %}
-                    <span class="badge bg-secondary">غير مُدرب</span>
+                    {% elif st in ['training', 'running'] %}
+                    <span class="badge bg-warning text-dark">قيد التدريب</span>
+                    {% elif st == 'failed' %}
+                    <span class="badge bg-danger">فشل</span>
                     {% else %}
                     <span class="badge bg-secondary">غير مُدرب</span>
                     {% endif %}
                   </div>
                   
-                  {% if model.status == 'trained' or model.status == 'completed' %}
+                  {% if model.accuracy is not none %}
                   <div class="mb-2">
-                    <small class="text-muted">دقة النموذج</small>
+                    <small class="text-muted">دقة مسجّلة ({{ model.metric_source or 'training' }})</small>
                     <div class="training-progress">
-                      <div class="training-progress-bar" style="width: {{ model.accuracy if model.accuracy and model.accuracy > 0 else 85 }}%"></div>
+                      <div class="training-progress-bar" style="width: {{ model.accuracy }}%"></div>
                     </div>
-                    <small class="text-success">{{ model.accuracy if model.accuracy and model.accuracy > 0 else 85 }}%</small>
+                    <small class="text-success">{{ model.accuracy }}%</small>
                   </div>
-                  {% elif model.status == 'training' %}
+                  {% elif st in ['training', 'running'] %}
                   <div class="mb-2">
                     <small class="text-muted">التقدم</small>
                     <div class="training-progress">
-                      <div class="training-progress-bar" style="width: 65%"></div>
+                      <div class="training-progress-bar" style="width: {{ progress }}%"></div>
                     </div>
-                    <small class="text-warning">65% - جارٍ التدريب...</small>
+                    <small class="text-warning">{{ progress }}%{% if model.current_step %} — {{ model.current_step }}{% endif %}</small>
+                  </div>
+                  {% else %}
+                  <div class="mb-2">
+                    <small class="text-muted">الدقة: غير متاحة بعد — لم يُسجَّل metric من تدريب سابق</small>
                   </div>
                   {% endif %}
                   
-                  <small class="text-muted d-block mb-3">{{ model.last_update }}</small>
+                  <small class="text-muted d-block mb-3">
+                    {% if model.last_trained %}
+                      آخر تدريب: {{ format_timestamp(model.last_trained) }}
+                    {% elif st in ['training', 'running'] %}
+                      جارٍ التدريب الآن
+                    {% else %}
+                      لم يُدرَّب بعد
+                    {% endif %}
+                  </small>
                   
-                  <button class="btn btn-{{ 'primary' if model.status == 'pending' else 'outline-primary' }} btn-sm w-100" 
-                          onclick="trainModel('{{ model.name }}')">
-                    <i class="fas fa-{{ 'play' if model.status == 'pending' else 'sync-alt' }}"></i>
-                    {{ 'بدء التدريب' if model.status == 'pending' else 'إعادة التدريب' }}
+                  <button class="btn btn-{{ 'primary' if st in ['pending', 'failed'] else 'outline-primary' }} btn-sm w-100"
+                          onclick="trainModel('{{ model.name }}')"
+                          {% if not can_train_ai %}disabled title="يتطلب صلاحية train_ai"{% endif %}>
+                    <i class="fas fa-{{ 'play' if st in ['pending', 'failed'] else 'sync-alt' }}"></i>
+                    {% if st in ['pending', 'failed'] %}بدء التدريب{% else %}إعادة التدريب{% endif %}
                   </button>
                 </div>
               </div>
@@ -741,13 +591,13 @@
                 <div class="col-md-6">
                   <label class="form-label fw-bold">نوع التدريب</label>
                   <select class="form-select" id="training-type">
-                    <option value="quick">تدريب سريع (Quick Training)</option>
-                    <option value="deep">تدريب عميق (Deep Training)</option>
-                    <option value="custom">تدريب مخصص (Custom Training)</option>
+                    <option value="quick">تدريب سريع — محرك التدريب فقط</option>
+                    <option value="deep">تدريب عميق — Deep Trainer + محرك التدريب</option>
+                    <option value="custom">تدريب مخصص — force كامل</option>
                   </select>
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label fw-bold">حجم البيانات</label>
+                  <label class="form-label fw-bold">نطاق البيانات (يُمرَّر للمهمة)</label>
                   <select class="form-select" id="data-range">
                     <option value="all">كل البيانات</option>
                     <option value="30days">آخر 30 يوم</option>
@@ -756,41 +606,98 @@
                   </select>
                 </div>
                 <div class="col-12">
-                  <button class="btn btn-gradient btn-lg" onclick="startBulkTraining()">
+                  <button class="btn btn-gradient btn-lg" onclick="startBulkTraining()"
+                          {% if not can_train_ai %}disabled{% endif %}>
                     <i class="fas fa-graduation-cap"></i> بدء التدريب الشامل
                   </button>
                 </div>
               </div>
             </div>
           </div>
+
+          <!-- Recent jobs -->
+          <div class="card ai-card mt-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <span><i class="fas fa-list"></i> سجل مهام التدريب</span>
+              <span class="badge bg-secondary">{{ training_jobs|length }} أحدث مهمة</span>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>النموذج</th>
+                      <th>النوع</th>
+                      <th>الحالة</th>
+                      <th>التقدم</th>
+                      <th>بدء</th>
+                      <th>انتهاء</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% if training_jobs %}
+                      {% for job in training_jobs %}
+                      <tr>
+                        <td class="fw-semibold">{{ job.model_name or '—' }}</td>
+                        <td><code class="small">{{ job.training_type or '—' }}</code></td>
+                        <td>
+                          {% if job.status == 'completed' %}
+                          <span class="badge bg-success">مكتمل</span>
+                          {% elif job.status == 'running' %}
+                          <span class="badge bg-primary">جارٍ</span>
+                          {% elif job.status == 'failed' %}
+                          <span class="badge bg-danger" title="{{ job.error or '' }}">فشل</span>
+                          {% else %}
+                          <span class="badge bg-secondary">{{ job.status }}</span>
+                          {% endif %}
+                        </td>
+                        <td>{{ job.progress|default(0) }}%</td>
+                        <td class="small text-muted">{{ format_timestamp(job.started_at) if job.started_at else '—' }}</td>
+                        <td class="small text-muted">{{ format_timestamp(job.completed_at) if job.completed_at else '—' }}</td>
+                      </tr>
+                      {% endfor %}
+                    {% else %}
+                      <tr>
+                        <td colspan="6" class="text-center text-muted py-4">لا توجد مهام تدريب مسجّلة بعد</td>
+                      </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
           
           <!-- Training Progress -->
-          <div class="card ai-card mt-4" id="training-progress-card" style="display: none;">
-            <div class="card-header bg-primary text-white">
-              <i class="fas fa-spinner fa-spin"></i> حالة التدريب
+          <div class="card ai-card mt-4" id="training-progress-card" style="display: {% if active_training_job %}block{% else %}none{% endif %};">
+            <div class="card-header erp-card-header-row erp-theme-header--primary">
+              <i class="fas fa-spinner fa-spin"></i> حالة التدريب الحية
             </div>
             <div class="card-body">
               <div class="mb-3">
                 <div class="d-flex justify-content-between mb-2">
-                  <span class="fw-bold" id="training-step">جاري التهيئة...</span>
+                  <span class="fw-bold" id="training-step">{{ active_training_job.current_step if active_training_job else 'جاري التهيئة...' }}</span>
                   <span class="badge bg-primary" id="training-status-badge">قيد التنفيذ</span>
                 </div>
                 <div class="progress" style="height: 25px;">
                   <div class="progress-bar progress-bar-striped progress-bar-animated" 
                        role="progressbar" 
                        id="training-progress-bar"
-                       style="width: 0%"
-                       aria-valuenow="0" 
+                       style="width: {{ active_training_job.progress if active_training_job else 0 }}%"
+                       aria-valuenow="{{ active_training_job.progress if active_training_job else 0 }}" 
                        aria-valuemin="0" 
                        aria-valuemax="100">
-                    <span id="training-progress-text">0%</span>
+                    <span id="training-progress-text">{{ active_training_job.progress if active_training_job else 0 }}%</span>
                   </div>
                 </div>
               </div>
               <div class="mt-3">
                 <small class="text-muted">سجلات التدريب:</small>
                 <div id="training-logs" class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85rem;">
+                  {% if active_training_job %}
+                  <div class="mb-1"><span class="text-muted">{{ format_timestamp(active_training_job.started_at) }}</span> — {{ active_training_job.current_step or active_training_job.status }}</div>
+                  {% else %}
                   <div class="text-muted">في انتظار بدء التدريب...</div>
+                  {% endif %}
                 </div>
               </div>
             </div>
@@ -814,7 +721,7 @@
               <div class="card ai-card text-center">
                 <div class="card-body">
                   <i class="fas fa-route fa-3x text-primary mb-3"></i>
-                  <h3 class="mb-0">{{ system_stats.total_routes|default(362) }}</h3>
+                  <h3 class="mb-0">{{ system_map_summary.total_routes|default(0) }}</h3>
                   <p class="text-muted mb-0">مسار</p>
                 </div>
               </div>
@@ -823,7 +730,7 @@
               <div class="card ai-card text-center">
                 <div class="card-body">
                   <i class="fas fa-file-code fa-3x text-success mb-3"></i>
-                  <h3 class="mb-0">{{ system_stats.total_templates|default(150) }}</h3>
+                  <h3 class="mb-0">{{ system_map_summary.total_templates|default(0) }}</h3>
                   <p class="text-muted mb-0">قالب</p>
                 </div>
               </div>
@@ -831,22 +738,27 @@
             <div class="col-lg-3 col-md-6">
               <div class="card ai-card text-center">
                 <div class="card-body">
-                  <i class="fas fa-database fa-3x text-info mb-3"></i>
-                  <h3 class="mb-0">{{ system_stats.total_models|default(45) }}</h3>
-                  <p class="text-muted mb-0">موديل</p>
+                  <i class="fas fa-link fa-3x text-warning mb-3"></i>
+                  <h3 class="mb-0">{{ system_map_summary.linked_routes|default(0) }}</h3>
+                  <p class="text-muted mb-0">مسار مرتبط بقالب</p>
                 </div>
               </div>
             </div>
             <div class="col-lg-3 col-md-6">
               <div class="card ai-card text-center">
                 <div class="card-body">
-                  <i class="fas fa-link fa-3x text-warning mb-3"></i>
-                  <h3 class="mb-0">{{ system_stats.total_relationships|default(120) }}</h3>
-                  <p class="text-muted mb-0">علاقة</p>
+                  <i class="fas fa-project-diagram fa-3x text-info mb-3"></i>
+                  <h3 class="mb-0">{{ system_map_summary.blueprints_count|default(0) }}</h3>
+                  <p class="text-muted mb-0">Blueprint</p>
                 </div>
               </div>
             </div>
           </div>
+          {% if system_map_summary.generated_at %}
+          <p class="text-center text-muted small mb-0">آخر بناء للخريطة: {{ format_timestamp(system_map_summary.generated_at) }}</p>
+          {% elif not system_map_summary.exists %}
+          <p class="text-center text-muted small mb-0">لم تُبنَ خريطة النظام بعد — <a href="{{ url_for('ai.system_map') }}">افتح الخريطة</a> واضغط إعادة البناء.</p>
+          {% endif %}
         </div>
         </div>
         
@@ -862,14 +774,10 @@
           
           <!-- API Keys -->
           <div class="row g-3">
-            {% for api in [
-              {'name': 'Groq API', 'icon': 'fa-bolt', 'color': 'primary', 'model': 'Llama 3.3 70B', 'status': 'active'},
-              {'name': 'OpenAI API', 'icon': 'fa-brain', 'color': 'success', 'model': 'GPT-4', 'status': 'inactive'},
-              {'name': 'Anthropic API', 'icon': 'fa-robot', 'color': 'info', 'model': 'Claude 3', 'status': 'inactive'}
-            ] %}
+            {% for api in api_providers %}
             <div class="col-lg-4">
               <div class="card ai-card">
-                <div class="card-header bg-{{ api.color }} text-white">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-{{ api.color }} text-white">
                   <i class="fas {{ api.icon }}"></i> {{ api.name }}
                 </div>
                 <div class="card-body">
@@ -877,24 +785,24 @@
                     <label class="form-label fw-bold">مفتاح API</label>
                     <input type="password" class="form-control api-key-input" 
                            placeholder="sk-..." 
-                           id="{{ api.name|replace(' ', '_') }}_key">
+                           id="{{ api.slug }}_key">
                     <small class="text-muted">النموذج: {{ api.model }}</small>
                   </div>
                   <div class="d-flex gap-2">
                     <button class="btn btn-{{ api.color }} btn-sm flex-grow-1" 
-                            onclick="saveApiKey('{{ api.name }}')">
+                            onclick="saveApiKey('{{ api.slug }}')">
                       <i class="fas fa-save"></i> حفظ
                     </button>
                     <button class="btn btn-outline-{{ api.color }} btn-sm" 
-                            onclick="testApiKey('{{ api.name }}')">
+                            onclick="testApiKey('{{ api.slug }}')">
                       <i class="fas fa-vial"></i> اختبار
                     </button>
                   </div>
                   <div class="mt-2">
-                    {% if api.status == 'active' %}
-                    <span class="badge bg-success w-100"><i class="fas fa-check-circle"></i> نشط</span>
+                    {% if api.configured %}
+                    <span class="badge bg-success w-100"><i class="fas fa-check-circle"></i> مُعدّ</span>
                     {% else %}
-                    <span class="badge bg-secondary w-100"><i class="fas fa-times-circle"></i> غير نشط</span>
+                    <span class="badge bg-secondary w-100"><i class="fas fa-times-circle"></i> غير مُعدّ</span>
                     {% endif %}
                   </div>
                 </div>
@@ -945,7 +853,7 @@
           
           <!-- AI Alerts Control -->
           <div class="card ai-card mt-4">
-            <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient text-white">
               <i class="fas fa-bell"></i> تحذيرات أزاد الذكية
             </div>
             <div class="card-body">
@@ -1103,6 +1011,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         updateAlertStatus(toggle.checked);
     }
+
+    {% if active_training_job and active_training_job.job_id %}
+    if (typeof updateTrainingUI === 'function') {
+      updateTrainingUI('{{ active_training_job.job_id }}');
+    }
+    {% endif %}
 });
 
 function updateAlertStatus(enabled) {
@@ -1167,17 +1081,69 @@ setInterval(() => {
   }
 }, 1000);
 
-// Quick Training
-function startQuickTraining() {
-  if (confirm('هل تريد بدء تدريب سريع للمساعد الذكي؟')) {
-    if(typeof showToast!=='undefined'){showToast('🎓 جارٍ التدريب السريع...\nهذا قد يستغرق بضع دقائق.', 'success');}else{alert('🎓 جارٍ التدريب السريع...\nهذا قد يستغرق بضع دقائق.');};
-    
+// Quick Training — تشغيل محرك التدريب الفعلي
+async function startQuickTraining() {
+  const trainingType = document.getElementById('training-type')?.value || 'quick';
+  const dataRange = document.getElementById('data-range')?.value || 'all';
+  if (!confirm('بدء تدريب سريع للمساعد الذكي؟')) return;
+  try {
+    const response = await fetch('{{ url_for("ai.start_training") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        model_name: 'نموذج التنبؤ بالمبيعات',
+        training_type: trainingType,
+        data_range: dataRange
+      })
+    });
+    const data = await response.json();
+    if (data.success) {
+      const progressCard = document.getElementById('training-progress-card');
+      if (progressCard) {
+        progressCard.style.display = 'block';
+        progressCard.scrollIntoView({ behavior: 'smooth' });
+      }
+      updateTrainingUI(data.job_id);
+    } else {
+      alert('❌ ' + (data.error || 'فشل بدء التدريب'));
+    }
+  } catch (err) {
+    alert('❌ ' + err.message);
   }
 }
 
 // Generate Prediction
-function generatePrediction() {
-  if(typeof showToast!=='undefined'){showToast('🔮 قريباً: إنشاء تنبؤات مخصصة بناءً على بياناتك!', 'success');}else{alert('🔮 قريباً: إنشاء تنبؤات مخصصة بناءً على بياناتك!');};
+async function generatePrediction() {
+  const btn = event?.target;
+  const original = btn?.innerHTML;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ التحديث...';
+  }
+  try {
+    const response = await fetch('{{ url_for("ai.refresh_predictions") }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      },
+      credentials: 'same-origin'
+    });
+    const data = await response.json();
+    if (data.success) {
+      window.location.href = '{{ url_for("ai.hub", tab="prediction") }}';
+    } else {
+      alert('❌ ' + (data.error || 'فشل تحديث التنبؤات'));
+    }
+  } catch (err) {
+    alert('❌ ' + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  }
 }
 
 // Train Model
@@ -1196,8 +1162,8 @@ async function trainModel(modelName) {
       credentials: 'same-origin',
       body: JSON.stringify({
         model_name: modelName,
-        training_type: 'quick',
-        data_range: 'all'
+        training_type: document.getElementById('training-type')?.value || 'quick',
+        data_range: document.getElementById('data-range')?.value || 'all'
       })
     });
     
@@ -1233,12 +1199,13 @@ async function startBulkTraining() {
   }
   
   try {
-    const response = await fetch('/ai/training/start', {
+    const response = await fetch('{{ url_for("ai.start_training") }}', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || csrfToken || ''
       },
+      credentials: 'same-origin',
       body: JSON.stringify({
         model_name: 'نموذج شامل',
         training_type: trainingType,
@@ -1355,8 +1322,8 @@ function updateTrainingUI(jobId) {
 }
 
 // API Key Management
-async function saveApiKey(apiName) {
-  const keyInput = document.getElementById(`${apiName.replace(' ', '_')}_key`);
+async function saveApiKey(apiSlug) {
+  const keyInput = document.getElementById(`${apiSlug}_key`);
   const apiKey = keyInput?.value.trim();
   
   if (!apiKey) {
@@ -1373,7 +1340,7 @@ async function saveApiKey(apiName) {
       },
       credentials: 'same-origin',
       body: JSON.stringify({
-        api_name: apiName,
+        api_name: apiSlug,
         api_key: apiKey
       })
     });
@@ -1391,7 +1358,7 @@ async function saveApiKey(apiName) {
   }
 }
 
-async function testApiKey(apiName) {
+async function testApiKey(apiSlug) {
   const btn = event.target;
   const originalText = btn.innerHTML;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ الاختبار...';
@@ -1405,7 +1372,7 @@ async function testApiKey(apiName) {
         'X-CSRFToken': csrfToken
       },
       credentials: 'same-origin',
-      body: JSON.stringify({ api_name: apiName })
+      body: JSON.stringify({ api_name: apiSlug })
     });
     
     const data = await response.json();
@@ -1424,27 +1391,33 @@ async function testApiKey(apiName) {
 }
 
 // Charts (if analytics tab)
+const analyticsCharts = {{ analytics_charts|tojson }};
+
 if (document.getElementById('queryDistChart')) {
+  const typeChart = analyticsCharts.query_types || { labels: [], values: [] };
+  const pieChart = analyticsCharts.success_pie || { labels: ['ناجح', 'فاشل'], values: [0, 0] };
+  const useTypes = typeChart.labels && typeChart.labels.length > 0;
   new Chart(document.getElementById('queryDistChart'), {
     type: 'pie',
     data: {
-      labels: ['نجاح', 'فشل', 'معلق'],
+      labels: useTypes ? typeChart.labels : pieChart.labels,
       datasets: [{
-        data: [85, 10, 5],
-        backgroundColor: ['#38ef7d', '#ff6a00', '#f5576c']
+        data: useTypes ? typeChart.values : pieChart.values,
+        backgroundColor: ['#667eea', '#38ef7d', '#ff6a00', '#f5576c', '#4facfe', '#764ba2']
       }]
     }
   });
 }
 
 if (document.getElementById('performanceChart')) {
+  const daily = analyticsCharts.daily_line || { labels: [], values: [] };
   new Chart(document.getElementById('performanceChart'), {
     type: 'line',
     data: {
-      labels: ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'],
+      labels: daily.labels.length ? daily.labels : ['لا بيانات'],
       datasets: [{
         label: 'الاستعلامات',
-        data: [12, 19, 15, 25, 22, 30, 28],
+        data: daily.values.length ? daily.values : [0],
         borderColor: '#667eea',
         tension: 0.4
       }]

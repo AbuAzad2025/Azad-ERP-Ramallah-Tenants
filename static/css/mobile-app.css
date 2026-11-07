@@ -3,13 +3,13 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  --gm-app-bg: #f1f5f9;
-  --gm-app-surface: #ffffff;
-  --gm-app-text: #0f172a;
-  --gm-app-muted: #64748b;
-  --gm-app-border: rgba(15, 23, 42, 0.08);
-  --gm-app-accent: #2563eb;
-  --gm-app-accent-soft: rgba(37, 99, 235, 0.12);
+  --gm-app-bg: var(--erp-bg, #f1f5f9);
+  --gm-app-surface: var(--erp-surface, #ffffff);
+  --gm-app-text: var(--erp-text, #0f172a);
+  --gm-app-muted: var(--erp-muted, #64748b);
+  --gm-app-border: color-mix(in srgb, var(--erp-border, #e2e8f0) 50%, transparent);
+  --gm-app-accent: var(--erp-primary, #2563eb);
+  --gm-app-accent-soft: color-mix(in srgb, var(--erp-primary, #2563eb) 12%, transparent);
   --gm-app-radius: 18px;
   --gm-app-radius-sm: 14px;
   --gm-app-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.05);
@@ -113,9 +113,9 @@ html[data-ui-mode="tablet"] .gm-stat-row > .col-md-6 {
   max-width: 50% !important;
 }
 
-/* ── Cards ── */
-html[data-ui-mode="mobile"] body.gm-compact-app .card,
-html[data-ui-mode="tablet"] body.gm-compact-app .card {
+/* ── Cards (استثناء بطاقات KPI/الثيم — انظر kpi-cards-global.css) ── */
+html[data-ui-mode="mobile"] body.gm-compact-app .card:not(.erp-kpi-card):not(.summary-card):not(.erp-kpi-tile),
+html[data-ui-mode="tablet"] body.gm-compact-app .card:not(.erp-kpi-card):not(.summary-card):not(.erp-kpi-tile) {
   border: none !important;
   border-radius: var(--gm-app-radius) !important;
   box-shadow: var(--gm-app-shadow) !important;
@@ -124,8 +124,8 @@ html[data-ui-mode="tablet"] body.gm-compact-app .card {
   overflow: hidden;
 }
 
-html[data-ui-mode="mobile"] body.gm-compact-app .card-header,
-html[data-ui-mode="tablet"] body.gm-compact-app .card-header {
+html[data-ui-mode="mobile"] body.gm-compact-app .card-header:not([class*="erp-dash-header"]):not([class*="erp-theme-header"]):not(.card-header-blue):not(.card-header-green),
+html[data-ui-mode="tablet"] body.gm-compact-app .card-header:not([class*="erp-dash-header"]):not([class*="erp-theme-header"]):not(.card-header-blue):not(.card-header-green) {
   background: var(--gm-app-surface) !important;
   border-bottom: 1px solid var(--gm-app-border) !important;
   padding: 14px 16px !important;
@@ -623,8 +623,8 @@ html[data-ui-mode="tablet"] body.gm-compact-app .select2-container--open .select
 }
 
 /* ── Dark mode ── */
-html[data-ui-mode="mobile"] body.gm-compact-app.electric-theme.dark-mode,
-html[data-ui-mode="tablet"] body.gm-compact-app.electric-theme.dark-mode,
+html[data-ui-mode="mobile"] body.gm-compact-app.erp-app.dark-mode,
+html[data-ui-mode="tablet"] body.gm-compact-app.erp-app.dark-mode,
 html[data-ui-mode="mobile"] body.gm-compact-app[data-theme="dark"],
 html[data-ui-mode="tablet"] body.gm-compact-app[data-theme="dark"] {
   --gm-app-bg: #0f172a;
@@ -634,8 +634,8 @@ html[data-ui-mode="tablet"] body.gm-compact-app[data-theme="dark"] {
   --gm-app-border: rgba(255, 255, 255, 0.08);
 }
 
-html[data-ui-mode="mobile"] body.gm-compact-app.electric-theme.dark-mode .gm-mobile-bottom-nav,
-html[data-ui-mode="tablet"] body.gm-compact-app.electric-theme.dark-mode .gm-mobile-bottom-nav {
+html[data-ui-mode="mobile"] body.gm-compact-app.erp-app.dark-mode .gm-mobile-bottom-nav,
+html[data-ui-mode="tablet"] body.gm-compact-app.erp-app.dark-mode .gm-mobile-bottom-nav {
   background: rgba(30, 41, 59, 0.92) !important;
   border-top-color: rgba(255, 255, 255, 0.06) !important;
 }

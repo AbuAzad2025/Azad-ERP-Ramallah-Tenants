@@ -720,12 +720,14 @@ class UserForm(FlaskForm):
 
         self.role_id.choices = choices
 
-        from utils.branch_context import branch_choices_for_form
+        from models import Branch
+
+        from utils.tenant_ui import branch_choices_for_form
 
         br_choices = branch_choices_for_form(include_empty=False, with_company=True)
         self.branch_ids.choices = br_choices
         self.primary_branch_id.choices = [(0, "—")] + br_choices
-
+        
         try:
             from flask import request
             self._editing_user_id = request.view_args.get('user_id')
@@ -753,6 +755,19 @@ class UserForm(FlaskForm):
         if qry.first():
             raise ValidationError("البريد الإلكتروني مستخدم بالفعل.")
         field.data = email_l
+
+    def validate_branch_ids(self, field):
+        from services.user_branch_service import validate_branch_assignment
+
+        branch_ids = [int(x) for x in (field.data or []) if x]
+        primary = int(self.primary_branch_id.data or 0) or None
+        err = validate_branch_assignment(
+            branch_ids,
+            primary_branch_id=primary,
+            role_id=self.role_id.data,
+        )
+        if err:
+            raise ValidationError(err)
 
     def apply_to(self, user: User) -> User:
         user.username = (self.username.data or '').strip()
@@ -883,7 +898,7 @@ class ProductSupplierLoanForm(FlaskForm):
         ok = super().validate(extra_validators=extra_validators)
         if not ok:
             return False
-        if self.is_settled.data and (self.deferred_price.data is None or str(self.deferred_price.data).strip() in ("", "0", "0.0")):
+        if self.is_settled.data and (self.deferred_price.data is None or str(self.deferred_price.data).strip() in ("", "0", "0.0", "0.00")):
             self.deferred_price.errors.append("❌ عند تحديد التسوية يجب إدخال السعر المؤجل.")
             ok = False
         return ok

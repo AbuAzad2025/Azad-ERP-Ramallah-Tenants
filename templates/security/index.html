@@ -1,228 +1,158 @@
 {% extends 'security/base_security.html' %}
 
-{% block security_title %}لوحة مالك المنصة{% endblock %}
-{% block security_icon %}<i class="fas fa-crown"></i>{% endblock %}
-{% block security_description %}{{ hub_tagline|default('لوحة مالك المنصة — شركة أزاد') }} — {{ stats.total_modules }} وحدة • {{ stats.total_apis }} API{% endblock %}
+{% block security_title %}لوحة التحكم{% endblock %}
+{% block security_description %}إصدار {{ stats.system_version }} • {{ stats.online_users }} متصل • حالة {{ stats.system_health }}{% endblock %}
 
 {% block security_breadcrumb %}
 <li class="breadcrumb-item active">لوحة التحكم</li>
 {% endblock %}
 
 {% block security_actions %}
-<div class="d-flex gap-2 flex-wrap">
-  <a href="{{ url_for('security.help_page') }}" class="btn btn-glass btn-sm">
-    <i class="fas fa-question-circle"></i> مساعدة
-  </a>
-  <a href="{{ url_for('security.sitemap') }}" class="btn btn-glass btn-sm">
-    <i class="fas fa-sitemap"></i> خريطة
-  </a>
-</div>
+<button type="button" class="btn btn-glass btn-sm" onclick="window.SecurityTourGuide && SecurityTourGuide.start('dashboard')">
+  <i class="fas fa-route"></i> جولة
+</button>
+<a href="{{ url_for('security.help_page') }}" class="btn btn-glass btn-sm"><i class="fas fa-question-circle"></i> مساعدة</a>
+<a href="{{ url_for('security.sitemap') }}" class="btn btn-glass btn-sm"><i class="fas fa-sitemap"></i> خريطة</a>
 {% endblock %}
 
 {% block security_content %}
-  <div class="sec-card mb-4 border border-warning border-opacity-25">
-    <div class="sec-card-body py-3">
-      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <div>
-          <h4 class="mb-1"><i class="fas fa-crown text-warning"></i> {{ hub_tagline|default('لوحة مالك المنصة') }}</h4>
-          <p class="text-muted small mb-0">تطوير المنصة، SaaS، التينانتات، والهوية الافتراضية — منفصل عن لوحات مالكي التينانت.</p>
+<div class="erp-security-dashboard">
+
+  <h2 class="erp-section-title mt-0"><i class="fas fa-users ms-1"></i> المستخدمون والدخول</h2>
+  <div class="row g-3 mb-4 erp-sec-kpi-row">
+    <div class="col-xl-3 col-md-6">
+      <div class="erp-sec-kpi-card erp-sec-kpi-card--primary" data-total-users="{{ stats.total_users }}">
+        <div class="erp-sec-kpi-card__body">
+          <div class="erp-sec-kpi-card__value">{{ stats.total_users }}</div>
+          <div class="erp-sec-kpi-card__label">إجمالي المستخدمين</div>
+          <div class="erp-sec-kpi-card__chart"><canvas id="usersTrendChart"></canvas></div>
         </div>
-        <a href="{{ control_url }}" class="btn btn-danger btn-sm"><i class="fas fa-sliders-h"></i> مركز التحكم</a>
-        <a href="{{ url_for('advanced.owner_hub') }}" class="btn btn-glass btn-sm"><i class="fas fa-cloud"></i> مركز SaaS</a>
+        <div class="erp-sec-kpi-card__icon"><i class="fas fa-users"></i></div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+      <div class="erp-sec-kpi-card erp-sec-kpi-card--success" data-active-users="{{ stats.active_users }}">
+        <div class="erp-sec-kpi-card__body">
+          <div class="erp-sec-kpi-card__value">{{ stats.active_users }}</div>
+          <div class="erp-sec-kpi-card__label">مستخدمون نشطون</div>
+          <div class="erp-sec-kpi-card__chart"><canvas id="activitySparkline"></canvas></div>
+        </div>
+        <div class="erp-sec-kpi-card__icon"><i class="fas fa-user-check"></i></div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+      <div class="erp-sec-kpi-card erp-sec-kpi-card--danger" data-blocked-users="{{ stats.blocked_users }}">
+        <div class="erp-sec-kpi-card__body">
+          <div class="erp-sec-kpi-card__value">{{ stats.blocked_users }}</div>
+          <div class="erp-sec-kpi-card__label">حسابات معطّلة</div>
+          <div class="erp-sec-kpi-card__chart"><canvas id="systemHealthChart"></canvas></div>
+        </div>
+        <div class="erp-sec-kpi-card__icon"><i class="fas fa-user-lock"></i></div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+      <div class="erp-sec-kpi-card erp-sec-kpi-card--warning">
+        <div class="erp-sec-kpi-card__body">
+          <div class="erp-sec-kpi-card__value">{{ stats.failed_logins_24h }}</div>
+          <div class="erp-sec-kpi-card__label">محاولات فاشلة (24 س)</div>
+          <div class="erp-sec-kpi-card__chart"><canvas id="failedLoginsChart"></canvas></div>
+        </div>
+        <div class="erp-sec-kpi-card__icon"><i class="fas fa-shield-alt"></i></div>
       </div>
     </div>
   </div>
 
-  {% if saas_snapshot %}
-  <div class="sec-card mb-4">
-    <div class="sec-card-header d-flex align-items-center justify-content-between">
-      <strong><i class="fas fa-cloud"></i> ملخص SaaS</strong>
-      <a href="{{ url_for('advanced.multi_tenant') }}" class="btn btn-glass btn-sm">إدارة التينانتات</a>
+  <h2 class="erp-section-title"><i class="fas fa-server ms-1"></i> التشغيل والبنية</h2>
+  <div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+      <a href="{{ url_for('security.live_monitoring') }}" class="erp-sec-stat-link">
+        <div class="erp-sec-stat">
+          <span class="erp-sec-stat__value">{{ stats.online_users }}</span>
+          <span class="erp-sec-stat__label">متصلون الآن</span>
+          <i class="fas fa-circle erp-sec-stat__icon erp-sec-stat__icon--live"></i>
+        </div>
+      </a>
     </div>
-    <div class="sec-card-body">
-      <div class="row text-center">
-        <div class="col-md-4 mb-2 mb-md-0">
-          <div class="h3 mb-0">{{ saas_snapshot.tenants_total }}</div>
-          <div class="text-muted small">إجمالي التينانتات</div>
+    <div class="col-xl-3 col-md-6">
+      <a href="{{ url_for('security.blocked_ips') }}" class="erp-sec-stat-link">
+        <div class="erp-sec-stat">
+          <span class="erp-sec-stat__value">{{ stats.blocked_ips }}</span>
+          <span class="erp-sec-stat__label">عناوين IP محظورة</span>
+          <i class="fas fa-ban erp-sec-stat__icon"></i>
         </div>
-        <div class="col-md-4 mb-2 mb-md-0">
-          <div class="h3 mb-0 text-success">{{ saas_snapshot.tenants_active }}</div>
-          <div class="text-muted small">نشط</div>
-        </div>
-        <div class="col-md-4">
-          <div class="h3 mb-0 text-warning">{{ saas_snapshot.tenants_inactive }}</div>
-          <div class="text-muted small">موقوف</div>
-        </div>
-      </div>
+      </a>
     </div>
-  </div>
-  {% endif %}
-
-  <div class="sec-card mb-4">
-    <div class="sec-card-header"><strong><i class="fas fa-th-large"></i> مراكز لوحة المالك</strong></div>
-    <div class="sec-card-body sec-card-body--inset rounded-bottom">
-      {% include 'partials/owner_hub_cards.html' %}
+    <div class="col-xl-3 col-md-6">
+      <a href="{{ url_for('security.audit_log_viewer') }}" class="erp-sec-stat-link">
+        <div class="erp-sec-stat">
+          <span class="erp-sec-stat__value">{{ stats.suspicious_activities }}</span>
+          <span class="erp-sec-stat__label">IPs مشبوهة (24 س)</span>
+          <i class="fas fa-user-secret erp-sec-stat__icon"></i>
+        </div>
+      </a>
     </div>
-  </div>
-
-  <div class="sec-card mb-4">
-    <div class="sec-card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div>
-        <h5 class="mb-1 fw-bold"><i class="fas fa-bolt text-primary ms-2"></i> إجراءات سريعة</h5>
-        <div class="text-muted small">اختصارات لأكثر المراكز استخداماً داخل الكونسول</div>
-      </div>
-      <div class="text-muted small font-monospace">CTRL+K</div>
-    </div>
-    <div class="sec-card-body">
-      <div class="row g-2">
-        <div class="col-lg-4 col-md-6">
-          <a href="{{ url_for('security.owner_branding') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between">
-            <span class="d-flex align-items-center"><i class="fas fa-palette text-warning ms-2"></i> الهوية والترويسة</span>
-            <i class="fas fa-arrow-left text-muted"></i>
-          </a>
+    <div class="col-xl-3 col-md-6">
+      <a href="{{ url_for('security.database_manager') }}" class="erp-sec-stat-link">
+        <div class="erp-sec-stat">
+          <span class="erp-sec-stat__value erp-sec-stat__value--sm">{{ stats.db_size }}</span>
+          <span class="erp-sec-stat__label">حجم قاعدة البيانات</span>
+          <i class="fas fa-database erp-sec-stat__icon"></i>
         </div>
-        <div class="col-lg-4 col-md-6">
-          <a href="{{ url_for('security.settings_center') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between">
-            <span class="d-flex align-items-center"><i class="fas fa-satellite-dish text-info ms-2"></i> مركز العمليات</span>
-            <i class="fas fa-arrow-left text-muted"></i>
-          </a>
-        </div>
-        <div class="col-lg-4 col-md-6">
-          <a href="{{ url_for('security.monitoring_dashboard') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between">
-            <span class="d-flex align-items-center"><i class="fas fa-chart-line text-info ms-2"></i> لوحة المراقبة</span>
-            <i class="fas fa-arrow-left text-muted"></i>
-          </a>
-        </div>
-        <div class="col-lg-4 col-md-6">
-          <a href="{{ url_for('security.users_center') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between">
-            <span class="d-flex align-items-center"><i class="fas fa-users text-info ms-2"></i> مركز المستخدمين</span>
-            <i class="fas fa-arrow-left text-muted"></i>
-          </a>
-        </div>
-        <div class="col-lg-4 col-md-6">
-          <a href="{{ url_for('security.database_manager') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between">
-            <span class="d-flex align-items-center"><i class="fas fa-database text-info ms-2"></i> مدير قاعدة البيانات</span>
-            <i class="fas fa-arrow-left text-muted"></i>
-          </a>
-        </div>
-        <div class="col-lg-4 col-md-6">
-          <a href="{{ url_for('security.integrations') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between">
-            <span class="d-flex align-items-center"><i class="fas fa-plug text-info ms-2"></i> التكاملات</span>
-            <i class="fas fa-arrow-left text-muted"></i>
-          </a>
-        </div>
-        <div class="col-lg-4 col-md-6">
-          <a href="{{ url_for('security.emergency_tools') }}" class="btn btn-glass w-100 py-3 d-flex align-items-center justify-content-between border border-1 border-opacity-10">
-            <span class="d-flex align-items-center"><i class="fas fa-exclamation-triangle text-danger ms-2"></i> أدوات الطوارئ</span>
-            <i class="fas fa-arrow-left text-muted"></i>
-          </a>
-        </div>
-      </div>
+      </a>
     </div>
   </div>
 
-  <div class="sec-card mb-4">
-    <div class="sec-card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div>
-        <h5 class="mb-0 fw-bold"><i class="fas fa-signal text-primary ms-2"></i> الحالة الحية</h5>
-      </div>
-      <div>
-        {% if system_settings and system_settings.maintenance_mode %}
-          <a href="{{ url_for('security.emergency_tools') }}" class="badge badge-danger text-decoration-none">وضع الصيانة مفعّل</a>
-        {% endif %}
-      </div>
-    </div>
-    <div class="sec-card-body">
-      <div class="row">
-        <div class="col-lg-3 col-md-6 mb-3">
-          <div class="small-box security-summary-box security-summary-box--blue" data-total-users="{{ stats.total_users }}">
-            <div class="inner">
-              <h3>{{ stats.total_users }}</h3>
-              <p>إجمالي المستخدمين</p>
-              <div style="height: 40px; margin-top: 10px;">
-                <canvas id="usersTrendChart"></canvas>
-              </div>
-            </div>
-            <div class="icon"><i class="fas fa-users"></i></div>
-          </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-          <div class="small-box security-summary-box security-summary-box--green" data-active-users="{{ stats.active_users }}">
-            <div class="inner">
-              <h3>{{ stats.active_users }}</h3>
-              <p>مستخدمين نشطين</p>
-              <div style="height: 40px; margin-top: 10px;">
-                <canvas id="activitySparkline"></canvas>
-              </div>
-            </div>
-            <div class="icon"><i class="fas fa-user-check"></i></div>
-          </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-          <div class="small-box security-summary-box security-summary-box--red" data-blocked-users="{{ stats.blocked_users }}">
-            <div class="inner">
-              <h3>{{ stats.blocked_users }}</h3>
-              <p>مستخدمين محظورين</p>
-              <div style="height: 40px; margin-top: 10px;">
-                <canvas id="systemHealthChart"></canvas>
-              </div>
-            </div>
-            <div class="icon"><i class="fas fa-user-lock"></i></div>
-          </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-          <div class="small-box security-summary-box security-summary-box--amber">
-            <div class="inner">
-              <h3>{{ stats.failed_logins_24h }}</h3>
-              <p>محاولات فاشلة (24 ساعة)</p>
-              <div style="height: 40px; margin-top: 10px;">
-                <canvas id="failedLoginsChart"></canvas>
-              </div>
-            </div>
-            <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
+  <h2 class="erp-section-title"><i class="fas fa-history ms-1"></i> سجل التدقيق</h2>
   <div class="sec-card">
     <div class="sec-card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <h5 class="mb-0 fw-bold"><i class="fas fa-history text-primary ms-2"></i> آخر الإجراءات</h5>
-      <a href="{{ url_for('security.audit_log_viewer') }}" class="btn btn-glass btn-sm">عرض السجل</a>
+      <span class="small text-muted">آخر 10 أحداث مسجّلة</span>
+      <a href="{{ url_for('security.audit_log_viewer') }}" class="btn btn-glass btn-sm">عرض السجل الكامل</a>
     </div>
     <div class="sec-card-body p-0">
-      <div class="timeline" id="auditTimeline" style="max-height: 280px; overflow-y: auto;">
-        {% if recent %}
-          {% for audit in recent[:10] %}
-          <div class="timeline-item">
-            <div class="d-flex justify-content-between align-items-start">
-              <div class="d-flex align-items-start">
-                <i class="fas fa-circle text-{% if audit.success %}success{% else %}danger{% endif %} mt-1" style="font-size: 0.5rem; margin-left: 10px;"></i>
-                <div>
-                  <strong>{{ audit.event or 'نشاط' }}</strong>
-                  <br><small class="text-muted">
-                    <i class="fas fa-user"></i> {{ audit.user.username if audit.user else 'غير معروف' }}
-                    {% if audit.ip %} | <i class="fas fa-network-wired"></i> {{ audit.ip }}{% endif %}
-                  </small>
-                </div>
-              </div>
-              <small class="text-muted" title="{{ audit.created_at }}">
-                <i class="fas fa-clock"></i> {{ audit.created_at.strftime('%H:%M') if audit.created_at else 'غير معروف' }}
-              </small>
-            </div>
-          </div>
-          {% endfor %}
-        {% else %}
-          <div class="text-center p-4 text-muted">
-            <i class="fas fa-inbox ms-2"></i> لا توجد إجراءات حديثة
-          </div>
-        {% endif %}
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 erp-sec-table">
+          <thead class="table-header-primary">
+            <tr>
+              <th>الحدث</th>
+              <th>المستخدم</th>
+              <th>عنوان IP</th>
+              <th>الحالة</th>
+              <th>الوقت</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if recent %}
+              {% for audit in recent %}
+              <tr>
+                <td class="fw-semibold">{{ auth_event_labels.get(audit.event, audit.event) }}</td>
+                <td>{{ audit.username or '—' }}</td>
+                <td class="font-monospace small">{{ audit.ip or '—' }}</td>
+                <td>
+                  {% if audit.success %}
+                  <span class="badge bg-success">ناجح</span>
+                  {% else %}
+                  <span class="badge bg-danger">فشل</span>
+                  {% endif %}
+                </td>
+                <td class="text-muted small">{{ audit.created_at_display or '—' }}</td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">
+                  <i class="fas fa-inbox ms-1"></i> لا توجد أحداث مسجّلة
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
-{% endblock security_content %}
+</div>
+{% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="{{ url_for('static', filename='js/security_charts.js') }}"></script>
 {% endblock %}

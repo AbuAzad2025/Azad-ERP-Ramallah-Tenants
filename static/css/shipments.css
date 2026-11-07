@@ -74,3 +74,50 @@
 .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow{
   height: 38px;
 }
+
+/* ── shipment_form.html ── */
+.shipment-form-page .stat-card-mini {
+  background: var(--ship-item-bg, #f8f9fa);
+  border: 1px solid var(--ship-item-bd, #dee2e6);
+  border-radius: 0.5rem;
+  padding: 0.85rem 1rem;
+  text-align: center;
+  height: 100%;
+}
+
+.shipment-form-page .stat-card-mini h3 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  color: var(--ship-primary, #0056b3);
+}
+
+.shipment-form-page .stat-card-mini p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ship-ink-2, #495057);
+}
+
+.shipment-form-page .required-field::after {
+  content: " *";
+  color: #dc3545;
+}
+
+.shipment-form-page .nav-tabs {
+  margin-bottom: 1rem;
+}
+
+.shipment-form-page .tab-content {
+  padding: 0.25rem 0 1rem;
+}
+
+.shipment-form-page .form-actions-bar {
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--ship-item-bd, #dee2e6);
+}
+
+.shipment-form-page .partners-total-wrap {
+  float: left;
+}
+

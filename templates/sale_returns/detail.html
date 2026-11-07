@@ -3,35 +3,7 @@
 {% block title %}تفاصيل المرتجع #{{ sale_return.id }}{% endblock %}
 
 {% block head_extra %}
-<style>
-.return-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 20px;
-    border-radius: 8px 8px 0 0;
-    margin-bottom: 0;
-}
 
-.status-badge {
-    font-size: 1.1rem;
-    padding: 8px 16px;
-}
-
-.info-card {
-    border-left: 4px solid #667eea;
-}
-
-.items-table th {
-    background-color: #f8f9fa;
-    font-weight: 600;
-}
-
-.total-row {
-    background-color: #e9ecef;
-    font-weight: bold;
-    font-size: 1.1rem;
-}
-</style>
 {% endblock %}
 
 {% block content %}
@@ -264,14 +236,14 @@
     
     <!-- بنود المرتجع -->
     <div class="card">
-      <div class="card-header bg-primary">
+      <div class="card-header erp-card-header-row erp-theme-header--primary bg-primary">
         <h3 class="card-title">
           <i class="fas fa-list"></i> بنود المرتجع
         </h3>
       </div>
       <div class="card-body p-0">
         <table class="table table-hover items-table mb-0">
-          <thead>
+          <thead class="table-header-primary text-white">
             <tr>
               <th width="5%">#</th>
               <th width="35%">المنتج</th>
@@ -350,7 +322,7 @@
     <!-- Timeline -->
     {% if sale_return.created_at or sale_return.updated_at %}
     <div class="card">
-      <div class="card-header">
+      <div class="card-header erp-card-header-row erp-theme-header--primary">
         <h3 class="card-title">
           <i class="fas fa-history"></i> السجل الزمني
         </h3>

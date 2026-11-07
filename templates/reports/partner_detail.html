@@ -3,53 +3,7 @@
 {% block title %}كشف مفصل للشريك - {{ partner.name or '—' }}{% endblock %}
 
 {% block head_extra %}
-<style>
-/* تنسيقات الطباعة */
-@media print {
-    .no-print { display: none !important; }
-    .print-section { page-break-after: always; }
-    .print-section:last-child { page-break-after: auto; }
-    body { font-size: 12pt; }
-    .card { border: 1px solid #000 !important; box-shadow: none !important; }
-}
 
-/* تنسيقات الأقسام القابلة للطي */
-.collapsible-section {
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-.collapsible-section:hover {
-    background-color: rgba(0,0,0,0.03);
-}
-.section-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease;
-}
-.section-content.show {
-    max-height: 2000px;
-}
-.collapse-icon {
-    transition: transform 0.3s ease;
-}
-.collapsed .collapse-icon {
-    transform: rotate(-90deg);
-}
-
-/* ألوان الأقسام */
-.bg-sales { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-.bg-services { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-.bg-preorders { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-.bg-service-parts { background: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%); }
-.bg-payments-in { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
-.bg-payments-out { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
-.bg-expenses { background: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%); }
-
-.detail-row {
-    background-color: #f8f9fa;
-    font-size: 0.9em;
-}
-</style>
 {% endblock %}
 
 {% block content %}
@@ -77,7 +31,7 @@
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card border-0 shadow-sm">
-                <div class="card-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+ <div class="card-header erp-card-header-row erp-theme-header--primary">
                     <h5 class="mb-0"><i class="fas fa-info-circle ml-2"></i>معلومات الشريك</h5>
                 </div>
                 <div class="card-body">
@@ -102,7 +56,7 @@
         </div>
         <div class="col-md-6">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-info text-white">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
                     <h5 class="mb-0"><i class="fas fa-chart-bar ml-2"></i>ملخص الإجماليات</h5>
                 </div>
                 <div class="card-body">
@@ -285,7 +239,7 @@
 
     {% if sales %}
     <div class="card border-0 shadow-sm mb-4 print-section">
-        <div class="card-header bg-sales text-white collapsible-section collapsed" data-toggle="collapse" data-target="#salesSection">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-sales text-white collapsible-section collapsed" data-toggle="collapse" data-target="#salesSection">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-shopping-cart ml-2"></i>
@@ -317,7 +271,7 @@
                     {% if sale.lines %}
                     <div class="table-responsive">
                         <table class="table table-sm table-borderless mb-0 detail-row">
-                            <thead>
+                            <thead class="table-header-primary text-white">
                                 <tr>
                                     <th>المنتج</th>
                                     <th>الكمية</th>
@@ -352,7 +306,7 @@
 
     {% if services %}
     <div class="card border-0 shadow-sm mb-4 print-section">
-        <div class="card-header bg-services text-white collapsible-section collapsed" data-toggle="collapse" data-target="#servicesSection">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-services text-white collapsible-section collapsed" data-toggle="collapse" data-target="#servicesSection">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-wrench ml-2"></i>
@@ -384,7 +338,7 @@
                     {% if service.parts or service.tasks %}
                     <div class="table-responsive">
                         <table class="table table-sm table-borderless mb-0 detail-row">
-                            <thead>
+                            <thead class="table-header-primary text-white">
                                 <tr>
                                     <th>النوع</th>
                                     <th>الوصف</th>
@@ -430,7 +384,7 @@
 
     {% if preorders %}
     <div class="card border-0 shadow-sm mb-4 print-section">
-        <div class="card-header bg-preorders text-white collapsible-section collapsed" data-toggle="collapse" data-target="#preordersSection">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-preorders text-white collapsible-section collapsed" data-toggle="collapse" data-target="#preordersSection">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-calendar-check ml-2"></i>
@@ -449,7 +403,7 @@
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-sm table-hover">
-                        <thead class="table-light">
+                        <thead class="table-header-primary text-white table-light">
                             <tr>
                                 <th>#</th>
                                 <th>التاريخ</th>
@@ -492,7 +446,7 @@
 
     {% if service_parts %}
     <div class="card border-0 shadow-sm mb-4 print-section">
-        <div class="card-header bg-service-parts text-white collapsible-section collapsed" data-toggle="collapse" data-target="#servicePartsSection">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-service-parts text-white collapsible-section collapsed" data-toggle="collapse" data-target="#servicePartsSection">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-cogs ml-2"></i>
@@ -511,7 +465,7 @@
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-sm table-hover">
-                        <thead class="table-light">
+                        <thead class="table-header-primary text-white table-light">
                             <tr>
                                 <th>رقم الصيانة</th>
                                 <th>التاريخ</th>
@@ -552,7 +506,7 @@
 
     {% if payments_in %}
     <div class="card border-0 shadow-sm mb-4 print-section">
-        <div class="card-header bg-payments-in text-white collapsible-section collapsed" data-toggle="collapse" data-target="#paymentsInSection">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-payments-in text-white collapsible-section collapsed" data-toggle="collapse" data-target="#paymentsInSection">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-hand-holding-usd ml-2"></i>
@@ -568,7 +522,7 @@
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-sm table-hover">
-                        <thead class="table-light">
+                        <thead class="table-header-primary text-white table-light">
                             <tr>
                                 <th>رقم الدفعة</th>
                                 <th>التاريخ</th>
@@ -607,7 +561,7 @@
 
     {% if payments_out %}
     <div class="card border-0 shadow-sm mb-4 print-section">
-        <div class="card-header bg-payments-out text-white collapsible-section collapsed" data-toggle="collapse" data-target="#paymentsOutSection">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-payments-out text-white collapsible-section collapsed" data-toggle="collapse" data-target="#paymentsOutSection">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-money-bill-wave ml-2"></i>
@@ -623,7 +577,7 @@
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-sm table-hover">
-                        <thead class="table-light">
+                        <thead class="table-header-primary text-white table-light">
                             <tr>
                                 <th>رقم الدفعة</th>
                                 <th>التاريخ</th>
@@ -662,7 +616,7 @@
 
     {% if inventory %}
     <div class="card border-0 shadow-sm mb-4 print-section">
-        <div class="card-header bg-info text-white collapsible-section collapsed" data-toggle="collapse" data-target="#inventorySection">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white collapsible-section collapsed" data-toggle="collapse" data-target="#inventorySection">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-boxes ml-2"></i>
@@ -678,7 +632,7 @@
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-sm table-hover">
-                        <thead class="table-light">
+                        <thead class="table-header-primary text-white table-light">
                             <tr>
                                 <th>#</th>
                                 <th>المنتج</th>
@@ -715,7 +669,7 @@
 
     {% if expenses %}
     <div class="card border-0 shadow-sm mb-4 print-section">
-        <div class="card-header bg-expenses text-white collapsible-section collapsed" data-toggle="collapse" data-target="#expensesSection">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-expenses text-white collapsible-section collapsed" data-toggle="collapse" data-target="#expensesSection">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-receipt ml-2"></i>
@@ -734,7 +688,7 @@
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-sm table-hover">
-                        <thead class="table-light">
+                        <thead class="table-header-primary text-white table-light">
                             <tr>
                                 <th>#</th>
                                 <th>التاريخ</th>
@@ -805,25 +759,7 @@ function printPartnerFullReport() {
     const printWindow = window.open('', '', 'height=800,width=1000');
     printWindow.document.write('<html><head><title>كشف مفصل - {{ partner.name or '—' }}</title>');
     printWindow.document.write('<meta charset="UTF-8">');
-    printWindow.document.write('<style>');
-    printWindow.document.write('* { margin: 0; padding: 0; box-sizing: border-box; }');
-    printWindow.document.write('body { font-family: Arial, sans-serif; direction: rtl; padding: 10px; font-size: 7pt; line-height: 1.2; }');
-    printWindow.document.write('h2 { text-align: center; color: #333; margin-bottom: 8px; border-bottom: 2px solid #000; padding-bottom: 5px; font-size: 12pt; }');
-    printWindow.document.write('h3 { font-size: 9pt; margin: 8px 0 4px 0; padding: 3px 5px; background-color: #e0e0e0; border-right: 4px solid #667eea; }');
-    printWindow.document.write('.partner-info { border: 1px solid #000; padding: 6px; margin: 8px 0; background-color: #f8f9fa; font-size: 6.5pt; }');
-    printWindow.document.write('.partner-info table { width: 100%; border-collapse: collapse; }');
-    printWindow.document.write('.partner-info td { padding: 2px 4px; border: none; vertical-align: top; }');
-    printWindow.document.write('.partner-info strong { font-weight: bold; }');
-    printWindow.document.write('.balance-box { background-color: #e0ffe0; border: 1px solid #000; padding: 3px; margin-top: 3px; font-size: 7pt; }');
-    printWindow.document.write('.balance-box.negative { background-color: #ffe0e0; }');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 6.5pt; }');
-    printWindow.document.write('th, td { border: 1px solid #999; padding: 2px 3px; text-align: right; line-height: 1.1; }');
-    printWindow.document.write('th { background-color: #e0e0e0; font-weight: bold; text-align: center; font-size: 7pt; }');
-    printWindow.document.write('tfoot th, tfoot td { background-color: #f0f0f0; font-weight: bold; padding: 3px; }');
-    printWindow.document.write('.section { margin-bottom: 10px; page-break-inside: avoid; }');
-    printWindow.document.write('.footer { text-align: center; font-size: 6pt; color: #666; margin-top: 10px; border-top: 1px solid #ccc; padding-top: 5px; }');
-    printWindow.document.write('@page { margin: 0.8cm; size: A4 portrait; }');
-    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('</head><body>');
     
     // الترويسة
     printWindow.document.write('<h2>كشف مفصل للشريك: {{ partner.name or '—' }}</h2>');
@@ -859,7 +795,7 @@ function printPartnerFullReport() {
     printWindow.document.write('<div class="section">');
     printWindow.document.write('<h3>🛒 المبيعات ({{ sales|length }} فاتورة) - {{ total_sales|format_currency }}</h3>');
     printWindow.document.write('<table>');
-    printWindow.document.write('<thead><tr><th>رقم البيع</th><th>التاريخ</th><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>');
+    printWindow.document.write('<thead class="table-header-primary text-white"><tr><th>رقم البيع</th><th>التاريخ</th><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>');
     printWindow.document.write('<tbody>');
     {% for sale in sales %}
     {% if sale.lines %}
@@ -886,7 +822,7 @@ function printPartnerFullReport() {
     printWindow.document.write('<div class="section">');
     printWindow.document.write('<h3>💸 الدفعات الصادرة ({{ payments_out|length }} دفعة) - {{ total_payments_out|format_currency }}</h3>');
     printWindow.document.write('<table>');
-    printWindow.document.write('<thead><tr><th>رقم الدفعة</th><th>التاريخ</th><th>طريقة الدفع</th><th>المبلغ</th><th>ملاحظات</th></tr></thead>');
+    printWindow.document.write('<thead class="table-header-primary text-white"><tr><th>رقم الدفعة</th><th>التاريخ</th><th>طريقة الدفع</th><th>المبلغ</th><th>ملاحظات</th></tr></thead>');
     printWindow.document.write('<tbody>');
     {% for payment in payments_out %}
     printWindow.document.write('<tr>');
@@ -908,7 +844,7 @@ function printPartnerFullReport() {
     printWindow.document.write('<div class="section">');
     printWindow.document.write('<h3>💰 الدفعات الواردة ({{ payments_in|length }} دفعة) - {{ total_payments_in|format_currency }}</h3>');
     printWindow.document.write('<table>');
-    printWindow.document.write('<thead><tr><th>رقم الدفعة</th><th>التاريخ</th><th>طريقة الدفع</th><th>المبلغ</th><th>ملاحظات</th></tr></thead>');
+    printWindow.document.write('<thead class="table-header-primary text-white"><tr><th>رقم الدفعة</th><th>التاريخ</th><th>طريقة الدفع</th><th>المبلغ</th><th>ملاحظات</th></tr></thead>');
     printWindow.document.write('<tbody>');
     {% for payment in payments_in %}
     printWindow.document.write('<tr>');
@@ -930,7 +866,7 @@ function printPartnerFullReport() {
     printWindow.document.write('<div class="section">');
     printWindow.document.write('<h3>🔧 الصيانة ({{ services|length }} طلب) - {{ total_services|format_currency }}</h3>');
     printWindow.document.write('<table>');
-    printWindow.document.write('<thead><tr><th>رقم الصيانة</th><th>التاريخ</th><th>المبلغ</th></tr></thead>');
+    printWindow.document.write('<thead class="table-header-primary text-white"><tr><th>رقم الصيانة</th><th>التاريخ</th><th>المبلغ</th></tr></thead>');
     printWindow.document.write('<tbody>');
     {% for service in services %}
     printWindow.document.write('<tr>');
@@ -950,7 +886,7 @@ function printPartnerFullReport() {
     printWindow.document.write('<div class="section">');
     printWindow.document.write('<h3>📅 الحجوزات المسبقة ({{ preorders|length }} حجز) - {{ total_preorders|format_currency }}</h3>');
     printWindow.document.write('<table>');
-    printWindow.document.write('<thead><tr><th>#</th><th>التاريخ</th><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>');
+    printWindow.document.write('<thead class="table-header-primary text-white"><tr><th>#</th><th>التاريخ</th><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>');
     printWindow.document.write('<tbody>');
     {% for preorder in preorders %}
     printWindow.document.write('<tr>');
@@ -972,7 +908,7 @@ function printPartnerFullReport() {
     printWindow.document.write('<div class="section">');
     printWindow.document.write('<h3>🔩 قطع الغيار في الصيانة ({{ service_parts|length }} قطعة) - {{ total_service_parts|format_currency }}</h3>');
     printWindow.document.write('<table>');
-    printWindow.document.write('<thead><tr><th>رقم الصيانة</th><th>التاريخ</th><th>القطعة</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>النسبة</th></tr></thead>');
+    printWindow.document.write('<thead class="table-header-primary text-white"><tr><th>رقم الصيانة</th><th>التاريخ</th><th>القطعة</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>النسبة</th></tr></thead>');
     printWindow.document.write('<tbody>');
     {% for sp in service_parts %}
     printWindow.document.write('<tr>');
@@ -995,7 +931,7 @@ function printPartnerFullReport() {
     printWindow.document.write('<div class="section">');
     printWindow.document.write('<h3>📦 المخزون ({{ inventory|length }} منتج) - {{ total_inventory|format_currency }} ₪</h3>');
     printWindow.document.write('<table>');
-    printWindow.document.write('<thead><tr><th>#</th><th>المنتج</th><th>النسبة</th><th>قيمة النصيب</th><th>ملاحظات</th></tr></thead>');
+    printWindow.document.write('<thead class="table-header-primary text-white"><tr><th>#</th><th>المنتج</th><th>النسبة</th><th>قيمة النصيب</th><th>ملاحظات</th></tr></thead>');
     printWindow.document.write('<tbody>');
     {% for item in inventory %}
     printWindow.document.write('<tr>');
@@ -1016,7 +952,7 @@ function printPartnerFullReport() {
     printWindow.document.write('<div class="section">');
     printWindow.document.write('<h3>💼 المصاريف ({{ expenses|length }} مصروف) - {{ total_expenses|format_currency }}</h3>');
     printWindow.document.write('<table>');
-    printWindow.document.write('<thead><tr><th>#</th><th>التاريخ</th><th>المبلغ</th><th>الوصف</th></tr></thead>');
+    printWindow.document.write('<thead class="table-header-primary text-white"><tr><th>#</th><th>التاريخ</th><th>المبلغ</th><th>الوصف</th></tr></thead>');
     printWindow.document.write('<tbody>');
     {% for expense in expenses %}
     printWindow.document.write('<tr>');

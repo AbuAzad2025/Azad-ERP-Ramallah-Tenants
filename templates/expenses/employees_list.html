@@ -11,48 +11,7 @@
 
 {% block styles %}
 {{ super() }}
-<style>
-  /* تحسين النافيجيشن */
-  .expense-nav {
-    background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 4px 15px rgba(78, 115, 223, 0.3);
-    direction: rtl;
-  }
-  
-  .expense-nav .nav-link {
-    color: white;
-    font-weight: 600;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    background: rgba(255, 255, 255, 0.1);
-    margin: 0 0.25rem;
-    text-align: center;
-  }
-  
-  .expense-nav .nav-link:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
-  }
-  
-  .expense-nav .nav-link.active {
-    background: white;
-    color: #667eea;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-  }
-  
-  /* تكيّف الـ tabs مع اتجاه الـ sidebar */
-  body[data-sidebar-position="right"] .expense-nav {
-    direction: ltr;
-  }
-  
-  body[data-sidebar-position="left"] .expense-nav {
-    direction: rtl;
-  }
-</style>
+
 {% endblock %}
 
 {% block content %}
@@ -95,9 +54,9 @@
   </nav>
 
   <div class="card shadow-sm mb-3 card-hover">
-    <div class="card-header text-white d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+    <div class="card-header erp-card-header-row erp-theme-header--primary">
       <h2 class="mb-0 fs-4"><i class="fas fa-users ml-2"></i>قائمة الموظفين</h2>
-      <div class="d-flex gap-2 flex-wrap no-print">
+      <div class="erp-card-header-actions no-print">
         <button class="btn btn-light btn-sm shadow-sm text-primary fw-bold" onclick="window.print()">
           <i class="fas fa-print ml-1"></i>طباعة القائمة
         </button>
@@ -168,7 +127,7 @@
   <div class="card shadow-sm">
     <div class="card-body">
       <table id="employees-table" class="table table-striped table-hover table-bordered align-middle">
-        <thead class="table-light">
+        <thead class="table-header-primary text-white table-light">
           <tr>
             <th>الاسم</th>
             <th>الوظيفة</th>

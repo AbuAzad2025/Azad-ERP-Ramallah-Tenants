@@ -10,60 +10,10 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='adminlte/plugins/select2/css/select2.min.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='adminlte/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<style>
-  /* ضمان ظهور قائمة Select2 فوق أي عناصر أخرى */
-  .select2-container .select2-dropdown { z-index: 99999; }
-  .select2-container--bootstrap4 .select2-results__options { max-height: 260px; }
-  
-  /* تحسين مظهر تفاصيل الدفع */
-  #paymentDetails {
-    margin-top: 1rem;
-    padding: 1.5rem;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 0.5rem;
-    border: 2px dashed #dee2e6;
-  }
-  #paymentDetails .form-label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 0.5rem;
-  }
-  
-  /* تحسين مظهر الأقسام */
-  .mb-4 > h6.text-muted {
-    border-bottom: 2px solid #dee2e6;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
-    font-weight: 600;
-    color: #6c757d !important;
-  }
-  
-  /* تحسين badges */
-  #prodAvail {
-    font-size: 0.875rem;
-    padding: 0.5rem 0.75rem;
-    margin-top: 0.25rem;
-    display: inline-block;
-  }
-  
-  /* تحسين alerts */
-  .alert {
-    border-radius: 0.5rem;
-    border-left: 4px solid;
-  }
-  .alert-info {
-    border-left-color: #0dcaf0;
-    background-color: #cff4fc;
-  }
-  .alert-warning {
-    border-left-color: #ffc107;
-    background-color: #fff3cd;
-  }
-</style>
+
 {% endblock %}
 
-{% block breadcrumb %}
+{% block breadcrumb_extra %}
 <li class="breadcrumb-item"><a href="{{ url_for('warehouse_bp.preorders_list') }}">الحجوزات المسبقة</a></li>
 <li class="breadcrumb-item active">{{ edit_mode and 'تعديل' or 'جديد' }}</li>
 {% endblock %}

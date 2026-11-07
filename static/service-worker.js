@@ -2,18 +2,26 @@
 // 📱 Service Worker for Garage Manager System - PWA Support
 // ═══════════════════════════════════════════════════════════════════
 
-const CACHE_NAME = 'garage-manager-v1.1.0';
-const STATIC_CACHE = 'garage-static-v2';
-const DYNAMIC_CACHE = 'garage-dynamic-v2';
+const CACHE_NAME = 'garage-manager-v1.4.0';
+const STATIC_CACHE = 'garage-static-v7';
+const DYNAMIC_CACHE = 'garage-dynamic-v3';
 
 // الملفات المهمة للتخزين المسبق
 const STATIC_FILES = [
   '/',
   '/static/css/style.css',
   '/static/css/mobile.css',
+  '/static/css/mobile-app.css',
+  '/static/css/gm-financial-pages.css',
+  '/static/css/gm-scroll-filters.css',
+  '/static/css/gm-invoice-detail.css',
+  '/static/css/tenant-scope.css',
+  '/static/js/mobile-app.js',
+  '/static/js/layout-responsive.js',
+  '/static/js/gm-scroll-filters.js',
+  '/static/js/tenant-scope.js',
   '/static/js/ux-enhancements.js',
-  '/static/branding/platform/logos/primary.png',
-  '/static/branding/platform/favicons/favicon.png',
+  '/static/img/branding/platform/favicons/favicon.png',
   '/static/adminlte/css/adminlte.min.css',
   '/static/adminlte/plugins/fontawesome-free/css/all.min.css',
   'https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;600;700;800&display=swap'
@@ -160,8 +168,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'إشعار جديد';
   const options = {
     body: data.body || 'لديك تحديث جديد',
-    icon: '/static/branding/platform/logos/primary.png',
-    badge: '/static/branding/platform/favicons/favicon.png',
+    icon: '/static/img/branding/platform/favicons/favicon.png',
+    badge: '/static/img/branding/platform/favicons/favicon.png',
     vibrate: [200, 100, 200],
     dir: 'rtl',
     lang: 'ar',

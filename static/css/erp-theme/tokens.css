@@ -1,0 +1,148 @@
+/**
+ * Design tokens — مرجع: docs/arabic_erp_theme_system.json
+ * التفعيل: html[data-erp-variant][data-erp-mode]
+ */
+:root {
+  --erp-font: "Tajawal", "Cairo", system-ui, sans-serif;
+  --erp-radius: 12px;
+  --erp-radius-lg: 16px;
+  --erp-input-h: 44px;
+  --erp-btn-h: 44px;
+  --erp-table-head-h: 48px;
+  --erp-table-row-h: 52px;
+  --erp-gap: 16px;
+  --erp-gap-lg: 24px;
+  --erp-pad-inline: 16px;
+  --erp-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --erp-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --erp-sidebar-w: 260px;
+  --erp-header-h: 60px;
+  --erp-footer-min-h: 88px;
+  --erp-z-dropdown: 1050;
+  --erp-z-modal: 1060;
+  --erp-z-drawer: 1045;
+}
+
+/* ── Palestinian Light ── */
+html[data-erp-variant="palestinian"][data-erp-mode="light"] {
+  --erp-bg: #f8f7f2;
+  --erp-surface: #ffffff;
+  --erp-surface-alt: #f1f5f1;
+  --erp-primary: #006b3f;
+  --erp-primary-dark: #004c2f;
+  --erp-secondary: #111827;
+  --erp-accent: #c8102e;
+  --erp-gold: #c9a227;
+  --erp-text: #111827;
+  --erp-muted: #6b7280;
+  --erp-border: #e5e7eb;
+  --erp-success: #0e9f6e;
+  --erp-warning: #d97706;
+  --erp-danger: #dc2626;
+  --erp-info: #2563eb;
+  --erp-header-bg: var(--erp-primary-dark);
+  --erp-sidebar-bg: #004c2f;
+  --erp-sidebar-text: rgba(255, 255, 255, 0.9);
+  --erp-sidebar-active: rgba(0, 166, 81, 0.35);
+  --erp-pattern-opacity: 0.04;
+}
+
+/* ── Palestinian Dark ── */
+html[data-erp-variant="palestinian"][data-erp-mode="dark"] {
+  --erp-bg: #0b0f0e;
+  --erp-surface: #111827;
+  --erp-surface-alt: #17201c;
+  --erp-primary: #00a651;
+  --erp-primary-dark: #007a3d;
+  --erp-secondary: #f9fafb;
+  --erp-accent: #e11d48;
+  --erp-gold: #d6b25e;
+  --erp-text: #f9fafb;
+  --erp-muted: #a1a1aa;
+  --erp-border: #263238;
+  --erp-success: #22c55e;
+  --erp-warning: #f59e0b;
+  --erp-danger: #ef4444;
+  --erp-info: #60a5fa;
+  --erp-header-bg: #0b0f0e;
+  --erp-sidebar-bg: #111827;
+  --erp-sidebar-text: rgba(255, 255, 255, 0.88);
+  --erp-sidebar-active: rgba(0, 166, 81, 0.28);
+  --erp-pattern-opacity: 0.06;
+  --erp-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --erp-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Gulf Light ── */
+html[data-erp-variant="gulf"][data-erp-mode="light"] {
+  --erp-bg: #faf8f2;
+  --erp-surface: #ffffff;
+  --erp-surface-alt: #f4f7f8;
+  --erp-primary: #063b5b;
+  --erp-primary-dark: #022a44;
+  --erp-secondary: #0f766e;
+  --erp-accent: #c9a24a;
+  --erp-gold: #b88a2e;
+  --erp-text: #0f172a;
+  --erp-muted: #64748b;
+  --erp-border: #e2e8f0;
+  --erp-success: #059669;
+  --erp-warning: #d97706;
+  --erp-danger: #dc2626;
+  --erp-info: #0284c7;
+  --erp-header-bg: var(--erp-primary-dark);
+  --erp-sidebar-bg: #022a44;
+  --erp-sidebar-text: rgba(255, 255, 255, 0.92);
+  --erp-sidebar-active: rgba(15, 118, 110, 0.35);
+  --erp-pattern-opacity: 0.035;
+}
+
+/* ── Gulf Dark ── */
+html[data-erp-variant="gulf"][data-erp-mode="dark"] {
+  --erp-bg: #07111f;
+  --erp-surface: #0d1b2a;
+  --erp-surface-alt: #10263a;
+  --erp-primary: #0f766e;
+  --erp-primary-dark: #115e59;
+  --erp-secondary: #d4af37;
+  --erp-accent: #c89b3c;
+  --erp-gold: #d6b25e;
+  --erp-text: #f8fafc;
+  --erp-muted: #cbd5e1;
+  --erp-border: #1e3a4c;
+  --erp-success: #10b981;
+  --erp-warning: #f59e0b;
+  --erp-danger: #f43f5e;
+  --erp-info: #38bdf8;
+  --erp-header-bg: #07111f;
+  --erp-sidebar-bg: #0d1b2a;
+  --erp-sidebar-text: rgba(255, 255, 255, 0.9);
+  --erp-sidebar-active: rgba(212, 175, 55, 0.22);
+  --erp-pattern-opacity: 0.05;
+  --erp-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --erp-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* افتراضي عند التحميل */
+html:not([data-erp-variant]) {
+  --erp-bg: #f8f7f2;
+  --erp-surface: #ffffff;
+  --erp-surface-alt: #f1f5f1;
+  --erp-primary: #006b3f;
+  --erp-primary-dark: #004c2f;
+  --erp-secondary: #111827;
+  --erp-accent: #c8102e;
+  --erp-gold: #c9a227;
+  --erp-text: #111827;
+  --erp-muted: #6b7280;
+  --erp-border: #e5e7eb;
+  --erp-success: #0e9f6e;
+  --erp-warning: #d97706;
+  --erp-danger: #dc2626;
+  --erp-info: #2563eb;
+  --erp-header-bg: #004c2f;
+  --erp-sidebar-bg: #004c2f;
+  --erp-sidebar-text: rgba(255, 255, 255, 0.9);
+  --erp-sidebar-active: rgba(0, 166, 81, 0.35);
+  --erp-pattern-opacity: 0.04;
+}

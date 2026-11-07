@@ -10,290 +10,7 @@
 {% endblock %}
 
 {% block extra_head %}
-<style>
-/* تحسينات التصميم */
-.stat-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-    transition: transform 0.3s ease;
-}
 
-.stat-card:hover {
-    transform: translateY(-5px);
-}
-
-.stat-icon {
-    font-size: 2.5rem;
-    opacity: 0.8;
-}
-
-.card-modern {
-    border: none;
-    border-radius: 15px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-.card-modern:hover {
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
-}
-
-.card-header-modern {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 15px 15px 0 0 !important;
-    border: none;
-    padding: 20px;
-}
-
-.card-header-modern h3 {
-    margin: 0;
-    font-weight: 600;
-}
-
-.btn-modern {
-    border-radius: 10px;
-    padding: 12px 24px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    border: none;
-}
-
-.btn-modern:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-}
-
-.form-control-modern {
-    border: 2px solid #e9ecef;
-    border-radius: 10px;
-    padding: 12px 16px;
-    transition: all 0.3s ease;
-}
-
-.form-control-modern:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-}
-
-.warehouse-type-badge {
-    font-size: 0.75rem;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-weight: 600;
-}
-
-.partner-fields, .supplier-fields {
-    background: #f8f9fa;
-    border: 2px dashed #dee2e6;
-    border-radius: 10px;
-    padding: 15px;
-    margin-top: 10px;
-}
-
-.stock-info {
-    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-    color: white;
-    border-radius: 10px;
-    padding: 15px;
-    margin: 10px 0;
-}
-
-.warning-info {
-    background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
-    color: white;
-    border-radius: 10px;
-    padding: 15px;
-    margin: 10px 0;
-}
-
-.alert-modern {
-    border: none;
-    border-radius: 15px;
-    padding: 20px;
-    margin: 15px 0;
-}
-
-.product-card {
-    background: white;
-    border-radius: 15px;
-    padding: 20px;
-    margin: 10px 0;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-    border-left: 5px solid #667eea;
-}
-
-.barcode-preview {
-    text-align: center;
-    background: white;
-    border-radius: 15px;
-    padding: 20px;
-    margin: 15px 0;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
-
-/* تحسينات للجداول */
-.table-modern {
-    border-radius: 15px;
-    overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-}
-
-.table-modern th {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    font-weight: 600;
-    padding: 15px;
-}
-
-.table-modern td {
-    padding: 12px 15px;
-    border-color: #f1f3f4;
-}
-
-/* تحسينات للأزرار */
-.btn-primary-modern {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    color: white;
-}
-
-.btn-success-modern {
-    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-    border: none;
-    color: white;
-}
-
-.btn-warning-modern {
-    background: linear-gradient(135deg, #ff9a56 0%, #ffad56 100%);
-    border: none;
-    color: white;
-}
-
-.btn-danger-modern {
-    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
-    border: none;
-    color: white;
-}
-
-.btn-info-modern {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    border: none;
-    color: white;
-}
-
-/* تحسينات للـ loading */
-.loading-spinner {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #667eea;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* تحسينات للـ notifications */
-.notification-success {
-    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-    color: white;
-    border-radius: 10px;
-    padding: 15px;
-    margin: 10px 0;
-    border: none;
-}
-
-.notification-error {
-    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
-    color: white;
-    border-radius: 10px;
-    padding: 15px;
-    margin: 10px 0;
-    border: none;
-}
-
-.notification-warning {
-    background: linear-gradient(135deg, #ff9a56 0%, #ffad56 100%);
-    color: white;
-    border-radius: 10px;
-    padding: 15px;
-    margin: 10px 0;
-    border: none;
-}
-
-/* تحسينات للـ responsive */
-@media (max-width: 768px) {
-    .stat-card {
-        margin-bottom: 15px;
-    }
-    
-    .card-modern {
-        margin-bottom: 20px;
-    }
-    
-    .btn-modern {
-        width: 100%;
-        margin: 5px 0;
-    }
-}
-
-/* تحسينات للـ animations */
-.fade-in {
-    animation: fadeIn 0.5s ease-in;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.slide-in {
-    animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-    from { transform: translateX(-100%); }
-    to { transform: translateX(0); }
-}
-
-/* تحسينات للـ focus states */
-.form-control-modern:focus,
-.select2-container--default .select2-selection--single:focus,
-.select2-container--default .select2-selection--multiple:focus {
-    outline: none;
-    border-color: #667eea !important;
-    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
-}
-
-/* تحسينات للـ select2 */
-.select2-container--default .select2-selection--single,
-.select2-container--default .select2-selection--multiple {
-    border: 2px solid #e9ecef !important;
-    border-radius: 10px !important;
-    padding: 8px 12px !important;
-    min-height: 45px !important;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 30px !important;
-    padding-left: 0 !important;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 30px !important;
-    right: 8px !important;
-}
-</style>
 {% endblock %}
 
 {% from 'macros/permissions.html' import readonly_banner with context %}
@@ -329,7 +46,7 @@
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6 col-12 mb-4">
-                    <div class="stat-card fade-in" style="background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);">
+                    <div class="stat-card erp-kpi-tile erp-kpi-tile--primary fade-in">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <h2 class="mb-1" id="products-with-barcode">
@@ -344,7 +61,7 @@
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6 col-12 mb-4">
-                    <div class="stat-card fade-in" style="background: linear-gradient(135deg, #ff9a56 0%, #ffad56 100%);">
+                    <div class="stat-card erp-kpi-tile erp-kpi-tile--primary fade-in">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <h2 class="mb-1" id="products-without-barcode">
@@ -364,7 +81,7 @@
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6 col-12 mb-4">
-                    <div class="stat-card fade-in" style="background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);">
+                    <div class="stat-card erp-kpi-tile erp-kpi-tile--primary fade-in">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <h2 class="mb-1" id="barcode-percentage">
@@ -385,7 +102,7 @@
                 <!-- ماسح الباركود -->
                 <div class="col-lg-6 col-md-12 mb-4">
                     <div class="card card-modern">
-                        <div class="card-header-modern">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary-modern">
                             <h3>
                                 <i class="fas fa-qrcode ml-2"></i>
                                 ماسح الباركود الذكي
@@ -457,7 +174,7 @@
                 <!-- توليد الباركود -->
                 <div class="col-lg-6 col-md-12 mb-4">
                     <div class="card card-modern">
-                        <div class="card-header-modern" style="background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary-modern">
                             <h3>
                                 <i class="fas fa-print ml-2"></i>
                                 توليد الباركود
@@ -538,7 +255,7 @@
             <div class="row">
                 <div class="col-12 mb-4">
                     <div class="card card-modern">
-                        <div class="card-header-modern" style="background: linear-gradient(135deg, #ff9a56 0%, #ffad56 100%);">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary-modern">
                             <h3>
                                 <i class="fas fa-warehouse ml-2"></i>
                                 تحديث المخزون بالباركود
@@ -756,7 +473,7 @@
             <div class="row">
                 <div class="col-12 mb-4">
                     <div class="card card-modern">
-                        <div class="card-header-modern" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                        <div class="card-header erp-card-header-row erp-theme-header--primary-modern">
                             <h3>
                                 <i class="fas fa-layer-group ml-2"></i>
                                 توليد باركودات متعددة
@@ -1624,17 +1341,7 @@ $(document).ready(function() {
             <html dir="rtl">
             <head>
                 <title>طباعة الباركودات</title>
-                <style>
-                    body { font-family: Arial; padding: 20px; }
-                    .row { display: flex; flex-wrap: wrap; }
-                    .col-md-3 { width: 25%; padding: 10px; }
-                    .card { border: 1px solid #ddd; text-align: center; }
-                    img { max-width: 100%; }
-                    @media print { 
-                        .no-print { display: none; }
-                        .col-md-3 { page-break-inside: avoid; }
-                    }
-                </style>
+                
             </head>
             <body>
                 ${bulkGrid.outerHTML}

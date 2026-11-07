@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}{{ order.number }}{% endblock %}
+{% block content %}
+<div class="container py-3" dir="rtl">
+  <h4>{{ order.number }} — {{ order.status }}</h4>
+  <p>المورد: {{ order.supplier.name if order.supplier else '—' }} | الإجمالي: {{ order.total_amount }} {{ order.currency }}</p>
+  <table class="table table-sm table-bordered"><thead class="table-header-primary text-white"><tr><th>منتج</th><th>كمية</th><th>سعر</th><th>مستلم</th></tr></thead>
+  <tbody>{% for ln in order.lines %}<tr><td>{{ ln.product.name if ln.product else ln.product_id }}</td><td>{{ ln.quantity }}</td><td>{{ ln.unit_price }}</td><td>{{ ln.received_qty }}</td></tr>{% endfor %}</tbody>
+  </table>
+  <form method="post" action="{{ url_for('purchases_bp.set_status', id=order.id) }}" class="form-inline d-inline-flex align-items-center gap-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <select name="status" class="form-control form-control-sm"><option>ORDERED</option><option>PARTIAL</option><option>RECEIVED</option><option>CANCELLED</option></select>
+    <button class="btn btn-sm btn-warning">تحديث الحالة</button>
+  </form>
+  <form method="post" action="{{ url_for('purchases_bp.create_shipment_from_po', id=order.id) }}" class="d-inline ml-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-sm btn-success">إنشاء شحنة</button>
+  </form>
+  <form method="post" action="{{ url_for('purchases_bp.create_supplier_invoice', id=order.id) }}" class="d-inline ml-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-sm btn-info">فاتورة مورد + GL</button>
+  </form>
+  <form method="post" action="{{ url_for('purchases_bp.request_po_approval', id=order.id) }}" class="d-inline ml-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-sm btn-outline-secondary">طلب اعتماد</button>
+  </form>
+  <form method="post" action="{{ url_for('purchases_bp.create_grn', id=order.id) }}" class="d-inline ml-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-sm btn-dark">إشعار استلام GRN</button>
+  </form>
+  <a href="{{ url_for('purchases_bp.supplier_invoices') }}" class="btn btn-sm btn-outline-primary ml-2">فواتير الموردين</a>
+  <hr>
+  <h6>استلام جزئي</h6>
+  <form method="post" action="{{ url_for('purchases_bp.partial_receive', id=order.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <table class="table table-sm"><tbody>
+    {% for ln in order.lines %}
+    <tr><td>{{ ln.product.name if ln.product else ln.product_id }}</td><td>طلب: {{ ln.quantity }}</td>
+    <td><input name="recv_qty_{{ ln.id }}" type="number" step="0.001" class="form-control form-control-sm" value="{{ ln.received_qty }}"></td></tr>
+    {% endfor %}
+    </tbody></table>
+    <button class="btn btn-sm btn-warning">تسجيل استلام</button>
+  </form>
+  {% if order.shipments %}<p class="small mt-2">شحنات مرتبطة: {% for sh in order.shipments %}<a href="{{ url_for('shipments_bp.edit_shipment', id=sh.id) }}">#{{ sh.id }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+  <a href="{{ url_for('purchases_bp.index') }}" class="btn btn-secondary btn-sm mt-2">رجوع</a>
+</div>
+{% endblock %}

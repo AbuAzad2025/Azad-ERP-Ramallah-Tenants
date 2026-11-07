@@ -598,9 +598,10 @@ def index():
     )
     from utils.company_scope import filter_payments_query
 
-    base_q = filter_payments_query(
-        Payment.query.filter(active_filter)
-        .filter(*filters)
+    base_q = (
+        filter_payments_query(
+            Payment.query.filter(active_filter).filter(*filters)
+        )
         .options(
             load_only(
                 Payment.id,
@@ -1438,6 +1439,10 @@ def create_payment():
                     return None
 
             target_id = _parse_optional_id(getattr(form, field_name).data if field_name and hasattr(form, field_name) else None)
+            from utils.company_scope import assert_payment_entity_scope
+
+            if etype and target_id:
+                assert_payment_entity_scope(etype, target_id)
             if etype and field_name and not target_id and etype not in ("MISCELLANEOUS", "OTHER", "EXPENSE"):
                 msg = "نوع الجهة محدد بدون رقم مرجع."
                 if _wants_json():
@@ -1446,7 +1451,10 @@ def create_payment():
                 return render_template("payments/form.html", form=form, entity_info=None)
             target_currency = "ILS"
             split_entries = getattr(form, "splits", []).entries
-            parsed_splits, sum_converted, has_split_error = _parse_split_forms(split_entries, target_currency)
+            pay_at = form.payment_date.data or _utc_now_naive()
+            parsed_splits, sum_converted, has_split_error = _parse_split_forms(
+                split_entries, target_currency, pay_at
+            )
             if has_split_error:
                 if _wants_json():
                     return jsonify(status="error", errors=form.errors), 400
@@ -1609,16 +1617,10 @@ def create_payment():
                     payment_auto_allocate_enabled,
                     normalize_customer_payment_booking,
                 )
-                _auto_allocate_payments = payment_auto_allocate_enabled()
+                allocation_enabled = payment_auto_allocate_enabled()
             except Exception:
-                _auto_allocate_payments = False
+                allocation_enabled = bool(current_app.config.get("PAYMENT_ALLOCATION_ENABLED", False))
                 normalize_customer_payment_booking = None
-            from utils.company_scope import (
-                filter_expenses_query,
-                filter_sales_query,
-                filter_service_requests_query,
-            )
-
             target_kwargs = {}
             if etype == "CUSTOMER":
                 target_kwargs["customer_id"] = target_id
@@ -1647,9 +1649,9 @@ def create_payment():
                     target_kwargs["supplier_id"] = final_supplier_id
                 elif final_partner_id:
                     target_kwargs["partner_id"] = final_partner_id
-            if normalize_customer_payment_booking and related_customer_id:
+            if normalize_customer_payment_booking and final_customer_id:
                 etype, target_kwargs = normalize_customer_payment_booking(
-                    etype, target_kwargs, customer_id=int(related_customer_id)
+                    etype, target_kwargs, customer_id=int(final_customer_id)
                 )
             base_receipt = (_fd(getattr(form, "receipt_number", None)) or None)
             base_reference = ref_text or None
@@ -1764,7 +1766,7 @@ def create_payment():
                 splits_by_payment[p] = splits
                 return amt
 
-            if _auto_allocate_payments and etype == "CUSTOMER" and direction_val == "IN" and final_customer_id:
+            if allocation_enabled and etype == "CUSTOMER" and direction_val == "IN" and final_customer_id:
                 obligations = []
                 try:
                     open_services = (
@@ -1855,7 +1857,7 @@ def create_payment():
                     _add_alloc("CUSTOMER", remaining, receipt_number=None, customer_id=final_customer_id)
                     remaining = q0(0)
 
-            if _auto_allocate_payments and etype == "SUPPLIER" and direction_val == "IN" and final_supplier_id and not payments_to_create:
+            if allocation_enabled and etype == "SUPPLIER" and direction_val == "IN" and final_supplier_id and not payments_to_create:
                 linked_customer_id = None
                 try:
                     s_obj = db.session.get(Supplier, final_supplier_id)
@@ -1954,7 +1956,7 @@ def create_payment():
                         _add_alloc("SUPPLIER", remaining, receipt_number=None, supplier_id=final_supplier_id)
                         remaining = q0(0)
 
-            if _auto_allocate_payments and etype == "PARTNER" and direction_val == "IN" and final_partner_id and not payments_to_create:
+            if allocation_enabled and etype == "PARTNER" and direction_val == "IN" and final_partner_id and not payments_to_create:
                 linked_customer_id = None
                 try:
                     p_obj = db.session.get(Partner, final_partner_id)
@@ -2053,7 +2055,7 @@ def create_payment():
                         _add_alloc("PARTNER", remaining, receipt_number=None, partner_id=final_partner_id)
                         remaining = q0(0)
 
-            if etype == "SUPPLIER" and direction_val == "OUT" and final_supplier_id and not payments_to_create:
+            if allocation_enabled and etype == "SUPPLIER" and direction_val == "OUT" and final_supplier_id and not payments_to_create:
                 obligations = []
                 try:
                     rows = (
@@ -2124,7 +2126,7 @@ def create_payment():
                     _add_alloc("SUPPLIER", remaining, receipt_number=None, supplier_id=final_supplier_id)
                     remaining = q0(0)
 
-            if etype == "PARTNER" and direction_val == "OUT" and final_partner_id and not payments_to_create:
+            if allocation_enabled and etype == "PARTNER" and direction_val == "OUT" and final_partner_id and not payments_to_create:
                 obligations = []
                 try:
                     rows = (
@@ -2411,7 +2413,10 @@ def create_expense_payment(exp_id):
     try:
         target_currency = "ILS"
         split_entries = getattr(form, "splits", []).entries
-        parsed_splits, sum_converted, has_split_error = _parse_split_forms(split_entries, target_currency)
+        pay_at = form.payment_date.data or _utc_now_naive()
+        parsed_splits, sum_converted, has_split_error = _parse_split_forms(
+            split_entries, target_currency, pay_at
+        )
         if has_split_error:
             if _wants_json():
                 return jsonify(status="error", errors=form.errors), 400
@@ -2564,6 +2569,7 @@ def delete_split(split_id):
 @login_required
 def view_payment(payment_id: str):
     """عرض تفاصيل الدفعة"""
+    from utils.company_scope import assert_payment_access
     # معالجة المعرفات المركبة (مثل 309_split_233)
     real_id = payment_id
     split_id = None
@@ -2584,6 +2590,7 @@ def view_payment(payment_id: str):
         utils.flash_error("معرف السند غير صالح")
         return redirect(url_for("payments.index"))
 
+    assert_payment_access(real_id)
     payment = _safe_get_payment(real_id, all_rels=True)
     if not payment:
         if _wants_json():
@@ -2887,7 +2894,7 @@ def _sum_splits_decimal(splits=None, parsed_splits=None) -> Decimal:
         total += q0(getattr(s, "amount", 0))
     return q0(total)
 
-def _parse_split_forms(split_entries, target_currency: str):
+def _parse_split_forms(split_entries, target_currency: str, payment_at: datetime | None = None):
     parsed = []
     total_converted = Decimal("0")
     has_error = False
@@ -2930,7 +2937,9 @@ def _parse_split_forms(split_entries, target_currency: str):
                 rate_source = "manual"
             else:
                 try:
-                    rate_info = get_fx_rate_with_fallback(split_currency, target_currency)
+                    rate_info = get_fx_rate_with_fallback(
+                        split_currency, target_currency, payment_at or _utc_now_naive()
+                    )
                 except Exception:
                     rate_info = {"success": False, "rate": 0}
                 rate_val = Decimal(str(rate_info.get("rate", 0) or 0))
@@ -2982,17 +2991,30 @@ def fx_rate_lookup():
     quote = ensure_currency(request.args.get("quote") or "ILS")
     if base == quote:
         return jsonify(success=True, rate=1.0, source="same", base=base, quote=quote)
+    at = _utc_now_naive()
+    date_raw = (request.args.get("date") or request.args.get("at") or "").strip()
+    if date_raw:
+        try:
+            if len(date_raw) <= 10:
+                at = datetime.combine(
+                    datetime.strptime(date_raw[:10], "%Y-%m-%d").date(), datetime.max.time()
+                )
+            else:
+                at = datetime.fromisoformat(date_raw.replace("Z", "+00:00")).replace(tzinfo=None)
+        except Exception:
+            pass
     try:
-        rate_info = get_fx_rate_with_fallback(base, quote)
+        rate_info = get_fx_rate_with_fallback(base, quote, at)
     except Exception as e:
         current_app.logger.exception('fx rate lookup error')
-        return jsonify(success=False, rate=0, base=base, quote=quote, message="تعذر تنفيذ العملية. حاول مرة أخرى."), 500
-    rate = float(rate_info.get("rate", 0) or 0)
-    success_flag = bool(rate_info.get("success"))
+        return jsonify(success=False, rate=0, base=base, quote=quote, message="حدث خطأ داخلي"), 500
+    raw_rate = rate_info.get("rate")
+    rate = float(raw_rate) if raw_rate is not None else 0.0
+    success_flag = bool(rate_info.get("success")) and rate > 0
     source = rate_info.get("source")
     if rate <= 0 or not success_flag:
         try:
-            inverse_info = get_fx_rate_with_fallback(quote, base)
+            inverse_info = get_fx_rate_with_fallback(quote, base, at)
         except Exception:
             inverse_info = None
         inv_rate = float(inverse_info.get("rate", 0) or 0) if inverse_info else 0

@@ -3,26 +3,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
-<style>
-  .variance-positive {
-    background-color: #d4edda !important;
-    color: #155724;
-  }
-  .variance-negative {
-    background-color: #f8d7da !important;
-    color: #721c24;
-  }
-  .variance-neutral {
-    background-color: #fff3cd !important;
-    color: #856404;
-  }
-  .progress-bar-under {
-    background-color: #28a745;
-  }
-  .progress-bar-over {
-    background-color: #dc3545;
-  }
-</style>
+
 {% endblock %}
 {% block page_title %}<i class="fas fa-balance-scale text-warning"></i> تقرير الانحراف عن الميزانية{% endblock %}
 
@@ -77,7 +58,7 @@
 
   <div class="row mb-3">
     <div class="col-md-4">
-      <div class="card border-0 shadow-sm bg-info text-white">
+      <div class="card border-0 shadow-sm erp-kpi-tile erp-kpi-tile--info text-white card-hover">
         <div class="card-body">
           <h5 class="card-title"><i class="fas fa-wallet"></i> إجمالي الميزانيات</h5>
           <h2 class="mb-0">{{ "{:,.2f}".format(totals.budget) }} ₪</h2>
@@ -112,13 +93,13 @@
   </div>
 
   <div class="card border-0 shadow-sm">
-    <div class="card-header bg-gradient-primary text-white">
+    <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-primary text-white">
       <h3 class="card-title"><i class="fas fa-table"></i> تفاصيل الانحراف لكل مركز تكلفة</h3>
     </div>
     <div class="card-body">
       <div class="table-responsive">
         <table class="table table-hover table-bordered" id="varianceTable">
-          <thead class="table-light">
+          <thead class="table-header-primary text-white table-light">
             <tr>
               <th width="5%">#</th>
               <th width="25%">مركز التكلفة</th>
@@ -198,7 +179,7 @@
   <div class="row mt-3 no-print">
     <div class="col-12">
       <div class="card border-0 shadow-sm">
-        <div class="card-header bg-info text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
           <h5 class="card-title mb-0"><i class="fas fa-info-circle"></i> ملاحظات</h5>
         </div>
         <div class="card-body">

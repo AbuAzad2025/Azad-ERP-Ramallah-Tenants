@@ -1,9 +1,9 @@
 <div class="company-info card border-0 shadow-sm">
   <div class="card-body">
     <div class="d-flex align-items-center mb-3">
-      <img src="{{ system_settings.custom_logo_url }}" 
-           alt="{{ system_settings.company_name or system_settings.system_name or 'النظام' }}" class="mr-3" style="max-height:50px;max-width:100px;object-fit:contain;">
-      <h4 class="mb-0 fw-bold text-primary">{{ system_settings.company_name or system_settings.system_name or 'النظام' }}</h4>
+      <img src="{{ system_settings.tenant_logo_url }}" 
+           alt="{{ tenant_company_name or system_settings.tenant_company_name or system_settings.system_name or 'النظام' }}" class="mr-3" style="max-height:50px;max-width:100px;object-fit:contain;">
+      <h4 class="mb-0 fw-bold text-primary">{{ tenant_company_name or system_settings.tenant_company_name or system_settings.system_name or 'النظام' }}</h4>
     </div>
     
     <div class="row">

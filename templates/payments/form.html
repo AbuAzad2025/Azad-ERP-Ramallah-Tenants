@@ -2,542 +2,7 @@
 {% block title %}{{ payment and 'تعديل دفعة' or 'إنشاء دفعة' }}{% endblock %}
 
 {% block head_extra %}
-<style>
-/* 🎨 Modern Gradient Design - تصميم عصري */
 
-/* Page Background */
-.content-wrapper {
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%) !important;
-}
-
-/* Payment Cards - تدرجات عصرية */
-.payment-form-card {
-    border-radius: 20px !important;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.12) !important;
-    margin-bottom: 25px;
-    border: none !important;
-    background: white;
-    overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease !important;
-}
-
-.payment-form-card:hover {
-    transform: translateY(-5px) !important;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.18) !important;
-}
-
-/* Card Headers - تدرجات مختلفة لكل قسم */
-/* الصف الأول: 3 cards */
-/* نوع المعاملة */
-form .row:nth-of-type(1) .col-md-4:nth-child(1) .card-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-}
-
-/* المبلغ والتاريخ */
-form .row:nth-of-type(1) .col-md-4:nth-child(2) .card-header {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
-}
-
-/* تفاصيل إضافية */
-form .row:nth-of-type(1) .col-md-4:nth-child(3) .card-header {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
-}
-
-/* الصف الثاني: الجهة المرتبطة والدفعات الجزئية */
-/* الجهة المرتبطة */
-form .row:nth-of-type(2) .col-md-6:nth-child(1) .card-header {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
-}
-
-/* الدفعات الجزئية */
-form .row:nth-of-type(2) .col-md-6:nth-child(2) .card-header {
-    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%) !important;
-    color: #2c3e50 !important;
-}
-
-/* الصف الثالث: ملاحظات */
-form .row:nth-of-type(3) .card-header {
-    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important;
-}
-
-/* تحسين زر إضافة دفعة جزئية */
-#addSplit {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    border: none !important;
-    color: white !important;
-    font-weight: 600 !important;
-    padding: 10px 25px !important;
-    border-radius: 10px !important;
-    transition: all 0.3s ease !important;
-}
-
-#addSplit:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3) !important;
-}
-
-.card-header {
-    color: white !important;
-    font-weight: 700 !important;
-    font-size: 1.1rem !important;
-    border-radius: 20px 20px 0 0 !important;
-    padding: 18px 25px !important;
-    border: none !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-}
-
-.card-header i {
-    font-size: 1.4rem !important;
-    opacity: 0.95;
-}
-
-.card-body {
-    padding: 25px !important;
-    overflow: visible !important;
-}
-
-/* Form Labels - أوضح وأجمل */
-.form-label {
-    color: #2c3e50 !important;
-    font-weight: 700 !important;
-    margin-bottom: 10px !important;
-    font-size: 0.95rem !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-}
-
-/* Required Fields - الحقول الإجبارية */
-.required-field {
-    position: relative !important;
-}
-
-.required-field i {
-    margin-left: 6px !important;
-}
-
-.required-field .text-danger {
-    font-size: 1.1rem !important;
-    margin-right: 4px !important;
-}
-
-/* Optional Fields - الحقول الاختيارية */
-.optional-field i {
-    margin-left: 6px !important;
-}
-
-.optional-field .badge {
-    padding: 3px 8px !important;
-    border-radius: 10px !important;
-    font-weight: 600 !important;
-}
-
-/* Help Text - النصوص المساعدة */
-.form-text {
-    font-size: 0.85rem !important;
-    color: #6c757d !important;
-    margin-top: 6px !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 6px !important;
-}
-
-.form-text i {
-    color: #667eea !important;
-}
-
-/* Amount Input - حقل المبلغ */
-.amount-input {
-    font-size: 1.2rem !important;
-    font-weight: 700 !important;
-    text-align: center !important;
-    color: #11998e !important;
-}
-
-/* Form Controls - عصرية ومريحة */
-.form-control, .custom-select {
-    border: 2px solid #e8ecf1 !important;
-    border-radius: 12px !important;
-    padding: 12px 18px !important;
-    transition: all 0.3s ease !important;
-    color: #2c3e50 !important;
-    font-weight: 500 !important;
-    font-size: 0.95rem !important;
-    background: #f8f9fa !important;
-    display: flex !important;
-    align-items: center !important;
-    min-height: 54px !important;
-}
-
-.form-control:focus, .custom-select:focus {
-    border-color: #667eea !important;
-    background: white !important;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1) !important;
-    transform: scale(1.01) !important;
-}
-
-/* تحسين عرض النص في حقول الاختيار */
-.custom-select {
-    text-align: center !important;
-    text-align-last: center !important;
-    -moz-text-align-last: center !important;
-    appearance: none !important;
-    -webkit-appearance: none !important;
-    -moz-appearance: none !important;
-}
-.select2-container {
-    width: 100% !important;
-}
-.select2-container--default .select2-selection--single {
-    border: 2px solid #e8ecf1 !important;
-    border-radius: 12px !important;
-    padding: 12px 18px !important;
-    min-height: 54px !important;
-    display: flex !important;
-    align-items: center !important;
-    background: #f8f9fa !important;
-}
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    font-weight: 500 !important;
-    font-size: 0.95rem !important;
-    color: #2c3e50 !important;
-    white-space: normal !important; /* ✅ السماح بظهور النص كاملاً */
-    overflow: visible !important; /* ✅ عدم إخفاء النص */
-    text-overflow: clip !important; /* ✅ إزالة "..." */
-    line-height: 1.5 !important; /* ✅ ارتفاع مناسب للنص */
-    padding-left: 10px !important;
-    padding-right: 10px !important;
-    margin: 0 !important;
-    display: flex !important; /* ✅ توسيط أفضل */
-    align-items: center !important; /* ✅ توسيط عمودي */
-    min-height: 54px !important; /* ✅ الحفاظ على ارتفاع الحقل */
-    height: 100% !important; /* ✅ ملء الحقل بالكامل */
-}
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 54px !important; /* ✅ مطابقة ارتفاع السهم */
-    top: 0 !important;
-    transform: none !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Split Forms - تصميم كارت أنيق */
-.split-form {
-    background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%) !important;
-    border: 2px solid #e0e7ff !important;
-    border-radius: 16px !important;
-    padding: 20px !important;
-    margin-bottom: 18px !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.06) !important;
-    transition: all 0.3s ease !important;
-}
-
-.split-form:hover {
-    border-color: #667eea !important;
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15) !important;
-}
-
-.split-form h5 {
-    color: #667eea !important;
-    font-weight: 800 !important;
-    font-size: 1.05rem !important;
-    display: flex !important;
-.split-method-col {
-    flex: 0 0 100% !important;
-    max-width: 100% !important;
-}
-
-.split-amount-col {
-    flex: 0 0 100% !important;
-    max-width: 100% !important;
-}
-
-@media (min-width: 768px) {
-    .split-method-col {
-        flex: 0 0 60% !important;
-        max-width: 60% !important;
-    }
-    .split-amount-col {
-        flex: 0 0 40% !important;
-        max-width: 40% !important;
-    }
-}
-
-    align-items: center !important;
-    gap: 8px !important;
-}
-
-.split-form h5 i {
-    color: #667eea !important;
-}
-
-/* Buttons - أزرار عصرية */
-.btn-success {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
-    border: none !important;
-    font-weight: 700 !important;
-    padding: 14px 35px !important;
-    border-radius: 12px !important;
-    box-shadow: 0 6px 20px rgba(17, 153, 142, 0.3) !important;
-    transition: all 0.3s ease !important;
-    font-size: 1.05rem !important;
-}
-
-.btn-success:hover {
-    transform: translateY(-3px) scale(1.02) !important;
-    box-shadow: 0 10px 25px rgba(17, 153, 142, 0.4) !important;
-}
-
-.btn-danger {
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%) !important;
-    border: none !important;
-    font-weight: 700 !important;
-    border-radius: 10px !important;
-    transition: all 0.3s ease !important;
-}
-
-.btn-danger:hover {
-    transform: scale(1.05) !important;
-    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3) !important;
-}
-
-.btn-secondary {
-    background: linear-gradient(135deg, #868f96 0%, #596164 100%) !important;
-    border: none !important;
-    font-weight: 600 !important;
-    border-radius: 10px !important;
-}
-
-/* Entity Info Card */
-.entity-info-card {
-    background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%) !important;
-    border: 3px solid #00bcd4 !important;
-    border-radius: 16px !important;
-    box-shadow: 0 6px 20px rgba(0, 188, 212, 0.2) !important;
-}
-
-.entity-info-card .card-header {
-    background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%) !important;
-}
-
-#splitSum {
-    color: #667eea !important;
-    font-weight: 700 !important;
-    font-size: 1rem !important;
-    margin-top: 8px !important;
-    padding: 8px 12px !important;
-    background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%) !important;
-    border-radius: 8px !important;
-    display: inline-block !important;
-}
-
-/* Badges - عصرية */
-.badge {
-    padding: 8px 16px !important;
-    border-radius: 20px !important;
-    font-weight: 600 !important;
-    font-size: 0.85rem !important;
-}
-
-.badge-info {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
-    border: none !important;
-}
-
-.badge-success {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
-}
-
-.badge-danger {
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%) !important;
-}
-
-.badge-warning {
-    background: linear-gradient(135deg, #f7b733 0%, #fc4a1a 100%) !important;
-}
-
-/* Alerts - تصميم حديث */
-.alert {
-    border-radius: 12px !important;
-    border: none !important;
-    padding: 15px 20px !important;
-    font-weight: 500 !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08) !important;
-}
-
-.alert-danger {
-    background: linear-gradient(135deg, #ffe0e0 0%, #ffd0d0 100%) !important;
-    color: #d32f2f !important;
-}
-
-.alert-warning {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffe4a3 100%) !important;
-    color: #856404 !important;
-}
-
-.alert-info {
-    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%) !important;
-    color: #0c5460 !important;
-}
-
-.alert-success {
-    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%) !important;
-    color: #155724 !important;
-}
-
-/* Input Groups - عصري */
-.input-group {
-    border-radius: 12px !important;
-    overflow: hidden !important;
-}
-
-.input-group .btn {
-    border-radius: 0 12px 12px 0 !important;
-    padding: 12px 20px !important;
-    font-weight: 600 !important;
-}
-
-/* Search Results - قائمة البحث الذكية */
-.search-results {
-    position: absolute !important;
-    top: calc(100% + 5px) !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    max-height: 500px !important; /* ✅ زيادة المساحة من 350 إلى 500 */
-    overflow-y: auto !important;
-    z-index: 9999 !important;
-    border-radius: 12px !important;
-    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.35) !important;
-    border: 3px solid #667eea !important;
-    background: white !important;
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-/* Dropdown Toggle Button - زر السهم */
-.dropdown-toggle-btn {
-    border-left: none !important;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
-    color: #495057 !important;
-    font-size: 0.9rem !important;
-    padding: 0.5rem 1rem !important;
-    transition: all 0.3s ease !important;
-    border: 1px solid #ced4da !important;
-}
-
-.dropdown-toggle-btn:hover {
-    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%) !important;
-    color: #667eea !important;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
-}
-
-.dropdown-toggle-btn:active {
-    transform: translateY(0);
-}
-
-.dropdown-toggle-btn i {
-    transition: transform 0.3s ease;
-}
-
-.dropdown-toggle-btn:hover i {
-    transform: rotate(180deg);
-}
-
-/* Search Dropdown Field */
-.search-dropdown-field {
-    border-right: none !important;
-}
-
-/* إخفاء الإشعارات المزعجة في صفحة الدفعات */
-.toast,
-.toastr,
-[class*="toast-"],
-[class*="notification-"],
-.alert-toast,
-.swal2-container {
-    display: none !important;
-}
-
-/* ضمان positioning صحيح */
-.entity-field-container {
-    position: relative !important;
-    z-index: 1 !important;
-    overflow: visible !important; /* ✅ ضمان عدم قطع القائمة */
-}
-
-.entity-field-container .input-group {
-    position: relative !important;
-    z-index: 1 !important;
-    overflow: visible !important; /* ✅ ضمان عدم قطع القائمة */
-}
-
-/* ✅ التأكد من أن الـ card يسمح للقائمة بالظهور */
-.payment-form-card {
-    overflow: visible !important;
-}
-
-.payment-form-card .card-body {
-    overflow: visible !important;
-}
-
-.search-results .list-group-item {
-    border: none !important;
-    border-bottom: 1px solid #f0f0f0 !important;
-    padding: 8px 12px !important; /* ✅ مضغوط - عشان نشوف بنود أكثر */
-    transition: all 0.25s ease !important;
-    background: transparent !important; /* ✅ بدون خلفية - النص واضح */
-}
-
-/* ✅ إزالة الخلفية من النصوص داخل القائمة */
-.search-results .text-primary,
-.search-results .fw-bold,
-.search-results .list-group-item div,
-.search-results .list-group-item span {
-    background: transparent !important;
-    background-color: transparent !important;
-}
-
-.search-results .list-group-item:hover {
-    background: linear-gradient(135deg, #f8f9ff 0%, #ededff 100%) !important;
-    transform: translateX(-3px) !important; /* ✅ حركة أقل */
-    padding-right: 15px !important; /* ✅ padding أقل */
-    cursor: pointer !important;
-}
-
-.search-results .list-group-item:last-child {
-    border-bottom: none !important;
-}
-
-/* Input Fields للبحث */
-input[name$="_search"] {
-    border: 2px solid #e8ecf1 !important;
-    transition: all 0.3s ease !important;
-}
-
-input[name$="_search"]:focus {
-    border-color: #667eea !important;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1) !important;
-}
-
-input[name$="_search"]::placeholder {
-    color: #adb5bd !important;
-    font-style: italic !important;
-}
-
-/* Page Title */
-h2, h3, h4 {
-    color: #2c3e50 !important;
-    font-weight: 700 !important;
-}
-
-/* تم حذف Animation لتجنب المشاكل */
-</style>
 {% endblock %}
 
 {% block content %}
@@ -570,7 +35,7 @@ h2, h3, h4 {
 
   {% if entity_info %}
   <div class="card mb-4 entity-info-card">
-    <div class="card-header">
+    <div class="card-header erp-card-header-row erp-theme-header--primary">
       <h5 class="mb-0"><i class="fas fa-info-circle"></i> معلومات مرتبطة</h5>
     </div>
     <div class="card-body">
@@ -629,7 +94,7 @@ h2, h3, h4 {
       <!-- Card 1: نوع المعاملة والجهة -->
       <div class="col-md-4">
         <div class="card mb-4 payment-form-card">
-          <div class="card-header">
+          <div class="card-header erp-card-header-row erp-theme-header--primary">
             <i class="fas fa-tags"></i> نوع المعاملة
           </div>
           <div class="card-body">
@@ -695,7 +160,7 @@ h2, h3, h4 {
       <!-- Card 2: المبلغ والتاريخ -->
       <div class="col-md-4">
         <div class="card mb-4 payment-form-card">
-          <div class="card-header">
+          <div class="card-header erp-card-header-row erp-theme-header--primary">
             <i class="fas fa-money-bill-wave"></i> المبلغ والتاريخ
           </div>
           <div class="card-body">
@@ -767,7 +232,7 @@ h2, h3, h4 {
       <!-- Card 3: تفاصيل إضافية -->
       <div class="col-md-4">
         <div class="card mb-4 payment-form-card">
-          <div class="card-header">
+          <div class="card-header erp-card-header-row erp-theme-header--primary">
             <i class="fas fa-info-circle"></i> تفاصيل إضافية
           </div>
           <div class="card-body">
@@ -861,7 +326,7 @@ h2, h3, h4 {
       <!-- Card 4: الجهة المرتبطة -->
       <div class="col-md-6">
         <div class="card mb-4 payment-form-card">
-          <div class="card-header">
+          <div class="card-header erp-card-header-row erp-theme-header--primary">
             <i class="fas fa-user-tie"></i> الجهة المرتبطة
             <span class="text-danger fw-bold ms-2">* مطلوب</span>
           </div>
@@ -877,7 +342,7 @@ h2, h3, h4 {
       <!-- Card 5: الدفعات الجزئية -->
       <div class="col-md-6">
         <div class="card mb-4 payment-form-card">
-          <div class="card-header d-flex justify-content-between align-items-center">
+          <div class="card-header erp-card-header-row erp-theme-header--primary d-flex justify-content-between align-items-center">
             <span><i class="fas fa-layer-group"></i> طرق الدفع</span>
             <small class="badge badge-info">بحد أقصى 3 طرق دفع</small>
           </div>
@@ -1016,7 +481,7 @@ h2, h3, h4 {
     <div class="row">
       <div class="col-12">
         <div class="card mb-4 payment-form-card">
-          <div class="card-header">
+          <div class="card-header erp-card-header-row erp-theme-header--primary">
             <i class="fas fa-sticky-note"></i> ملاحظات إضافية
             <span class="badge bg-secondary ms-2" style="font-size: 0.8rem;">اختياري</span>
           </div>
@@ -1828,13 +1293,17 @@ function updateSplitSum() {
       }
     }
     if (infoNode) {
+      const AD = window.AzadDom;
       if (amount > 0 && baseCurrency !== paymentCurrency && fxRate > 0) {
-        infoNode.innerHTML = `<i class="fas fa-equals text-primary"></i> ${amount.toFixed(2)} ${baseCurrency} ≈ ${converted.toFixed(2)} ${paymentCurrency}`;
+        const msg = amount.toFixed(2) + ' ' + baseCurrency + ' ≈ ' + converted.toFixed(2) + ' ' + paymentCurrency;
+        if (AD) AD.setHtmlTrusted(infoNode, '<i class="fas fa-equals text-primary"></i> ' + AD.escapeHtml(msg));
+        else infoNode.textContent = msg;
       } else if (amount > 0 && baseCurrency === paymentCurrency) {
-        infoNode.innerHTML = `<i class="fas fa-equals text-primary"></i> ${amount.toFixed(2)} ${paymentCurrency}`;
-      } else {
-        infoNode.innerHTML = '';
-      }
+        const msg = amount.toFixed(2) + ' ' + paymentCurrency;
+        if (AD) AD.setHtmlTrusted(infoNode, '<i class="fas fa-equals text-primary"></i> ' + AD.escapeHtml(msg));
+        else infoNode.textContent = msg;
+      } else if (AD) AD.clear(infoNode);
+      else infoNode.textContent = '';
     }
     sumConverted += converted;
   });
@@ -1843,11 +1312,15 @@ function updateSplitSum() {
   }
   const splitSumEl = document.getElementById('splitSum');
   if (splitSumEl) {
+    const AD = window.AzadDom;
     if (hasMissingRate) {
-      splitSumEl.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> أدخل سعر الصرف لكل دفعة بعملة مختلفة.';
+      if (AD) AD.setHtmlTrusted(splitSumEl, '<i class="fas fa-exclamation-triangle text-danger"></i> أدخل سعر الصرف لكل دفعة بعملة مختلفة.');
+      else splitSumEl.textContent = 'أدخل سعر الصرف لكل دفعة بعملة مختلفة.';
       splitSumEl.className = 'form-text text-danger';
     } else {
-      splitSumEl.innerHTML = `<i class="fas fa-check-circle text-success"></i> مجموع الدفعات بعد التحويل: <strong>${sumConverted.toFixed(2)}</strong> ${paymentCurrency}`;
+      const msg = 'مجموع الدفعات بعد التحويل: ' + sumConverted.toFixed(2) + ' ' + paymentCurrency;
+      if (AD) AD.setHtmlTrusted(splitSumEl, '<i class="fas fa-check-circle text-success"></i> <strong>' + AD.escapeHtml(msg) + '</strong>');
+      else splitSumEl.textContent = msg;
       splitSumEl.className = 'form-text text-success';
     }
   }

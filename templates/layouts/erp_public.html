@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-erp-variant="palestinian" data-erp-mode="light"{% if system_settings.primary_color %} data-erp-tenant-color="1"{% endif %}>
+<head>
+  {% include 'partials/erp_theme_head_early.html' %}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{% block title %}{{ system_settings.platform_product_name or 'أزاد' }} — {{ system_settings.platform_company_name or 'نظام ERP' }}{% endblock %}</title>
+  {% if system_settings.custom_favicon %}
+  <link rel="icon" href="{{ system_settings.custom_favicon_url }}">
+  {% else %}
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  {% endif %}
+  {% include 'partials/erp_head_assets.html' %}
+  <link rel="stylesheet" href="{{ static_url('css/public_mobile.css') }}">
+  {% block head %}{% endblock %}
+  <link rel="stylesheet" href="{{ static_url('css/erp-theme/kpi-cards-global.css') }}" id="erp-kpi-cards-layer">
+</head>
+<body class="erp-app erp-layout-public {% block body_class %}{% endblock %}"{% if system_settings.platform_login_bg_url %} data-auth-bg="{{ system_settings.platform_login_bg_url }}"{% endif %}>
+  {% include 'partials/erp_public_navbar.html' %}
+  {% include 'partials/erp_public_drawer.html' %}
+
+  <main class="erp-public-main">
+    {% block public_hero %}{% endblock %}
+    <div class="erp-public-content">
+      {% include 'partials/ux_flash_messages.html' %}
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  {% include 'partials/footer.html' %}
+
+  <script src="{{ static_url('adminlte/plugins/jquery/jquery.min.js') }}"></script>
+  <script src="{{ static_url('adminlte/plugins/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+  <script>window.UX_MSG = {{ UX_MSG | tojson }};</script>
+  <script src="{{ static_url('js/ux-messages.js') }}"></script>
+  <script src="{{ static_url('js/erp-public-shell.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

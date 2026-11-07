@@ -91,7 +91,9 @@ def search_database_for_query(query: str, permission_context: Optional[Dict[str,
             results.update(search_inventory(query_lower))
 
         if len(results) <= 1:
-            results.update(get_general_statistics(permission_context=permission_context))
+            from AI.engine.ai_conversation import get_small_talk_response
+            if not get_small_talk_response(query):
+                results.update(get_general_statistics(permission_context=permission_context))
         return filter_search_results(results, permission_context)
     except Exception as exc:
         return {"error": str(exc), "intent": None}

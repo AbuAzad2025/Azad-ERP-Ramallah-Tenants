@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-erp-variant="palestinian" data-erp-mode="light"{% if system_settings.primary_color %} data-erp-tenant-color="1"{% endif %}>
 <head>
+  {% include 'partials/erp_theme_head_early.html' %}
   <meta charset="utf-8">
   <title>{% block title %}{{ system_settings.system_name or 'شركة ازاد' }} - {{ system_settings.company_name or 'شركة ازاد' }}{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -9,13 +10,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="{{ system_settings.system_name or 'شركة ازاد' }}">
   <meta name="format-detection" content="telephone=yes">
-  <meta name="theme-color" content="{{ system_settings.primary_color or '#667eea' }}">
+  <meta name="theme-color" content="{{ system_settings.primary_color or '#062A5A' }}">
 
   <meta name="description" content="{{ system_settings.system_name or 'منصة أزاد ERP' }} - {{ system_settings.company_name or 'شركة أزاد للأنظمة الذكية' }}">
   <meta name="keywords" content="ERP، محاسبة، {{ system_settings.company_name or 'شركة أزاد للأنظمة الذكية' }}">
   <meta name="author" content="{{ system_settings.company_name or 'شركة ازاد للأنظمة الذكية' }}">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <script>window.GM_AUTH = {{ gm_auth()|tojson }};</script>
+  {% if current_user.is_authenticated and tenant_branch_id %}
+  <meta name="tenant-branch-id" content="{{ tenant_branch_id }}">
+  <meta name="tenant-company-id" content="{{ tenant_company_id or '' }}">
+  {% endif %}
   <script>
   (function(){
     try{
@@ -143,99 +147,21 @@
   <link rel="apple-touch-icon" sizes="180x180" href="{{ system_settings.custom_favicon_url }}">
   {% else %}
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-  <link rel="apple-touch-icon" href="{{ system_settings.custom_logo_url }}">
-  <link rel="apple-touch-icon" sizes="180x180" href="{{ system_settings.custom_logo_url }}">
+  <link rel="apple-touch-icon" href="{{ system_settings.tenant_favicon_url or system_settings.custom_favicon_url or url_for('static', filename='img/branding/platform/favicons/favicon.png') }}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ system_settings.tenant_favicon_url or system_settings.custom_favicon_url or url_for('static', filename='img/branding/platform/favicons/favicon.png') }}">
   {% endif %}
 
   <meta name="gm-company-name" content="{{ system_settings.company_name or system_settings.system_name or 'النظام' }}">
-  <meta name="gm-logo-url" content="{{ system_settings.custom_logo_url }}">
-  <meta name="gm-favicon-url" content="{{ system_settings.custom_favicon_url }}">
-  <meta name="gm-company-name" content="{{ system_settings.company_name or '' }}">
-  <meta name="gm-branding-scope" content="{{ system_settings.branding_scope or 'platform' }}">
-  {% if system_settings.custom_header_url %}
-  <meta name="gm-header-url" content="{{ system_settings.custom_header_url }}">
-  {% endif %}
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;600;700;800&display=swap"></noscript>
-  <link rel="preload" href="{{ static_url('adminlte/css/adminlte.min.css') }}" as="style">
-  <link rel="preload" href="{{ static_url('adminlte/plugins/fontawesome-free/css/all.min.css') }}" as="style">
-  <link rel="stylesheet" href="{{ static_url('adminlte/plugins/fontawesome-free/css/all.min.css') }}">
-  <link rel="stylesheet" href="{{ static_url('adminlte/plugins/overlayScrollbars/css/OverlayScrollbars.min.css') }}">
-  <link rel="stylesheet" href="{{ static_url('adminlte/css/adminlte.min.css') }}">
-  <link rel="stylesheet" href="{{ static_url('adminlte/plugins/select2/css/select2.min.css') }}">
-  <link rel="preload" href="{{ static_url('css/ui.css') }}" as="style">
-  <link rel="stylesheet" href="{{ static_url('css/ui.css') }}">
-  <link rel="preload" href="{{ static_url('css/style.css') }}" as="style">
-  <link rel="stylesheet" href="{{ static_url('css/style.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/mobile.css') }}" id="mobile-css" data-default-media="(max-width: 575.98px)" media="(max-width: 575.98px)">
-  <link rel="stylesheet" href="{{ static_url('css/mobile-app.css') }}" id="mobile-app-css" data-default-media="(max-width: 575.98px)" media="(max-width: 575.98px)">
-  <link rel="stylesheet" href="{{ static_url('css/tenant-scope.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/gm-financial-pages.css') }}" id="gm-financial-css" data-default-media="(max-width: 575.98px)" media="(max-width: 575.98px)">
-  <link rel="stylesheet" href="{{ static_url('css/gm-scroll-filters.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/gm-invoice-detail.css') }}" id="gm-invoice-detail-css" data-default-media="(max-width: 575.98px)" media="(max-width: 575.98px)">
-  <script>
-    (function() {
-      const html = document.documentElement;
-      const link = document.getElementById('mobile-css');
-      const stored = (function() {
-        try { return localStorage.getItem('ui_mode') || 'auto'; } catch (e) { return 'auto'; }
-      })();
-      const mode = stored === 'mobile' || stored === 'tablet' || stored === 'desktop' ? stored : 'auto';
-      const autoMode = (function() {
-        try {
-          if (window.matchMedia('(max-width: 575.98px)').matches) return 'mobile';
-          if (window.matchMedia('(min-width: 576px) and (max-width: 991.98px)').matches) return 'tablet';
-          return 'desktop';
-        } catch (_) {
-          return 'desktop';
-        }
-      })();
-      const effective = mode === 'auto' ? autoMode : mode;
-      html.setAttribute('data-ui-mode', effective);
-      if (link) link.media = effective === 'mobile' ? 'all' : 'not all';
-    })();
-  </script>
-  <link rel="stylesheet" href="{{ static_url('css/numbers-fix.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/bs5-utils.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/ux-unified.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/ux-contrast.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/enhancements.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/security_dark_mode.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/gm-theme-tokens.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/gm-design-system.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/gm-spacing-dropdowns.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/gm-security-console.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/gm-theme-components.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/gm-conflict-guard.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/print.css') }}" media="print">
-  <script>
-  (function () {
-    try {
-      var root = document.documentElement;
-      var v = localStorage.getItem("gmVariant");
-      root.setAttribute("data-gm-variant", (v === "gulf") ? "gulf" : "palestinian");
-      root.setAttribute("data-gm-pattern", root.getAttribute("data-gm-variant"));
-      var k = localStorage.getItem("gmTheme");
-      var leg = localStorage.getItem("securityDarkMode");
-      var dark = k === "dark" || (!k && leg === "true");
-      if (!dark && !k && leg !== "false") {
-        dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      }
-      root.setAttribute("data-gm-theme", dark ? "dark" : "light");
-      if (dark) document.body.classList.add("dark-mode");
-    } catch (e) {}
-  })();
-  </script>
+  <meta name="gm-logo-url" content="{% if system_settings.custom_logo_url %}{{ system_settings.custom_logo_url }}{% else %}{{ url_for('static', filename='img/branding/tenants/phe/logos/primary.png') }}{% endif %}">
+  {% set erp_head_mode = 'app' %}
+  {% include 'partials/erp_head_assets.html' %}
   
   <!-- NProgress for loading indicator -->
   <link rel="stylesheet" href="{{ static_url('vendor/nprogress/nprogress.min.css') }}" />
   <style>
     /* Customize NProgress Color */
     #nprogress .bar {
-      background: {{ system_settings.primary_color or '#667eea' }} !important;
+      background: var(--erp-primary, {{ system_settings.primary_color or '#006b3f' }}) !important;
       height: 3px !important;
     }
     #nprogress .peg {
@@ -261,85 +187,10 @@
   <script src="{{ static_url('js/performance-utils.js') }}" defer></script>
   <script src="{{ static_url('js/safe-enhancements.js') }}" defer></script>
   <script src="{{ static_url('vendor/nprogress/nprogress.min.js') }}" defer></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Configure NProgress
-      if (typeof NProgress !== 'undefined') {
-        NProgress.configure({ 
-          showSpinner: false,
-          minimum: 0.1,
-          speed: 500,
-          trickleSpeed: 200
-        });
-        
-        // Start on load
-        // NProgress.start(); 
-        // window.addEventListener('load', function() { NProgress.done(); });
-
-        // Bind to jQuery Ajax events if jQuery is present
-        if (typeof $ !== 'undefined') {
-          $(document).ajaxStart(function() { NProgress.start(); });
-          $(document).ajaxStop(function() { NProgress.done(); });
-        }
-
-        // Bind to Fetch API
-        const originalFetch = window.fetch;
-        window.fetch = function() {
-          NProgress.start();
-          return originalFetch.apply(this, arguments).then(res => {
-            NProgress.done();
-            return res;
-          }).catch(err => {
-            NProgress.done();
-            throw err;
-          });
-        };
-        
-        // Bind to page transitions (simple click handler for links)
-        document.body.addEventListener('click', function(e) {
-            const link = e.target.closest('a');
-            if (link && 
-                link.href && 
-                !link.href.startsWith('#') && 
-                !link.href.startsWith('javascript:') && 
-                link.target !== '_blank' &&
-                !e.ctrlKey && !e.metaKey &&
-                link.hostname === window.location.hostname
-            ) {
-                // Check if it's a download link or has special class to ignore
-                if (!link.hasAttribute('download') && !link.classList.contains('no-nprogress')) {
-                    NProgress.start();
-                }
-            }
-        });
-      }
-    });
-  </script>
-  {% if system_settings.primary_color %}
-  <style>
-    /* System Dynamic Colors - Root variables only to prevent UI breakage */
-    :root {
-      --primary-color: {{ system_settings.primary_color }};
-      --theme-primary: {{ system_settings.primary_color }};
-      /* Overriding Electric Theme primary with user choice if needed */
-      --primary-cyan: {{ system_settings.primary_color }};
-    }
-    
-    /* Subtle overrides without !important to allow style.css to take precedence */
-    .btn-primary:not(.btn-electric) {
-      background-color: var(--primary-color);
-      border-color: var(--primary-color);
-    }
-    
-    .text-primary {
-      color: var(--primary-color);
-    }
-  </style>
-  {% endif %}
-  
-  {% block styles %}{% endblock %}
-  {% block head_extra %}{% endblock %}
+  {% block styles %}{% block head_extra %}{% endblock %}{% endblock %}
   {% block extra_head %}{% endblock %}
+  {# إعادة طبقة البطاقات بعد CSS الصفحة لتفادي تعارض sales.css / service.css #}
+  <link rel="stylesheet" href="{{ static_url('css/erp-theme/kpi-cards-global.css') }}" id="erp-kpi-cards-final">
   
   <style>
     /* إصلاح Sidebar في RTL */
@@ -378,10 +229,18 @@
     }
     
     .content-wrapper {
-        min-height: calc(100vh - 57px);
         transition: margin 0.3s ease-in-out, width 0.3s ease-in-out;
-        overflow-x: auto !important; /* Allow horizontal scrolling to prevent content hiding */
-        padding-top: 65px !important; /* Force space for fixed navbar */
+        overflow-x: hidden !important;
+        padding-top: 0 !important;
+        box-sizing: border-box;
+    }
+
+    body.erp-app:not(.security-body) .content-wrapper {
+        min-height: 0;
+    }
+
+    body.gm-compact-app .content-wrapper {
+        overflow-x: hidden !important;
     }
     
     /* Ensure no content is hidden behind fixed elements */
@@ -401,32 +260,7 @@
         transition: margin 0.3s ease-in-out, width 0.3s ease-in-out;
     }
     
-    /* Fix for Select2 and Inputs Height globally */
-    .form-control, .form-select, .select2-container .select2-selection--single, .select2-container--default .select2-selection--multiple {
-        min-height: 45px !important;
-        height: auto !important;
-        padding-top: 0.5rem;
-        padding-bottom: 0.5rem;
-        font-size: 1rem;
-    }
-    
-    .select2-container--default .select2-selection--single .select2-selection__rendered {
-        line-height: 30px !important;
-        padding-top: 0;
-        padding-bottom: 0;
-    }
-    
-    .select2-container--default .select2-selection--single .select2-selection__arrow {
-        height: 43px !important;
-        top: 1px !important;
-    }
-
-    textarea.form-control {
-        height: auto !important;
-        min-height: 100px !important;
-    }
-
-    /* RTL Sidebar Fixes are now handled in style.css */
+    /* ارتفاع الحقول: erp-forms-spacing.css + erp-conflict-fixes.css */
   </style>
   {% block extra_css %}{% endblock %}
   {% if ledger_api_base %}
@@ -434,7 +268,7 @@
   {% endif %}
   <!-- Bootstrap shim already defined at top of <head>; no duplicate needed here. -->
 </head>
-<body class="hold-transition sidebar-mini layout-fixed text-sm layout-navbar-fixed ui-v2 electric-theme gm-pro-ui {% block body_class %}{% endblock %}">
+<body class="hold-transition sidebar-mini layout-fixed text-sm layout-navbar-fixed ui-v2 erp-app {% block body_class %}{% endblock %}"{% if tenant_company_id %} data-tenant-scoped="1"{% endif %}>
 <div class="wrapper">
   {% include 'partials/navbar.html' %}
   <div id="gm-open-in-app-banner" class="gm-open-in-app-banner d-none" role="banner" aria-label="فتح كتطبيق">
@@ -450,7 +284,7 @@
       <div class="container-fluid">
         <div class="row align-items-center">
           <div class="col-sm-6">
-            <h1 class="m-0 font-weight-bold text-primary">{% block page_title %}{% endblock %}</h1>
+            <h1 class="m-0 font-weight-bold">{% block page_title %}{% endblock %}</h1>
           </div>
           <div class="col-sm-6">
             <ol class="breadcrumb float-sm-left small m-0">
@@ -460,51 +294,50 @@
         </div>
       </div>
     </div>
-    <section class="content">
+    <section class="content gm-app-content">
       <div class="container-fluid">
-        {% include 'partials/_flash_messages.html' %}
+        {% include 'partials/ux_flash_messages.html' %}
+        {% block content_toolbar %}{% endblock %}
         {% block content %}{% endblock %}
       </div>
     </section>
   </div>
+  {% block app_footer %}
   {% include 'partials/footer.html' %}
+  {% endblock %}
 </div>
+
+{% block report_print_modal %}{% endblock %}
 
 {% if current_user.is_authenticated %}
 <nav class="gm-mobile-bottom-nav d-lg-none" aria-label="التنقل السريع">
-  {% if user_home_url %}
-  <a class="gm-tab" href="{{ user_home_url }}">
-    <i class="fas fa-home"></i>
-    <span>{{ user_home_label|default('الرئيسية') }}</span>
-  </a>
-  {% elif 'main.dashboard' in current_app.view_functions %}
-  <a class="gm-tab" href="{{ url_for('main.dashboard') }}">
+  {% if 'main.dashboard' in current_app.view_functions %}
+  <a class="gm-tab" href="{{ url_for('main.dashboard') }}" aria-label="الرئيسية">
     <i class="fas fa-home"></i>
     <span>الرئيسية</span>
   </a>
   {% endif %}
-  {% if (has_perm('view_customers') or has_perm('manage_customers')) and ('customers_bp.list_customers' in current_app.view_functions) %}
-  <a class="gm-tab" href="{{ url_for('customers_bp.list_customers') }}">
-    <i class="fas fa-users"></i>
-    <span>الزبائن</span>
-  </a>
-  {% endif %}
   {% if (has_perm('view_sales') or has_perm('manage_sales')) and ('sales_bp.list_sales' in current_app.view_functions) %}
-  <a class="gm-tab" href="{{ url_for('sales_bp.list_sales') }}">
+  <a class="gm-tab" href="{{ url_for('sales_bp.list_sales') }}" aria-label="المبيعات">
     <i class="fas fa-shopping-cart"></i>
     <span>المبيعات</span>
   </a>
   {% endif %}
-  {% if (has_perm('view_service') or has_perm('manage_service')) and ('service.list_requests' in current_app.view_functions) %}
-  <a class="gm-tab" href="{{ url_for('service.list_requests') }}">
-    <i class="fas fa-wrench"></i>
-    <span>الصيانة</span>
+  {% if (has_perm('view_customers') or has_perm('manage_customers')) and ('customers_bp.list_customers' in current_app.view_functions) %}
+  <a class="gm-tab" href="{{ url_for('customers_bp.list_customers') }}" aria-label="الزبائن">
+    <i class="fas fa-users"></i>
+    <span>الزبائن</span>
   </a>
   {% endif %}
-  {% if has_perm('view_reports') and ('reports_bp.dynamic_report' in current_app.view_functions) %}
-  <a class="gm-tab" href="{{ url_for('reports_bp.dynamic_report') }}">
-    <i class="fas fa-chart-line"></i>
-    <span>التقارير</span>
+  {% if (has_perm('view_payments') or has_perm('manage_payments')) and ('payments.index' in current_app.view_functions) %}
+  <a class="gm-tab" href="{{ url_for('payments.index') }}" aria-label="الدفعات">
+    <i class="fas fa-money-bill-wave"></i>
+    <span>الدفعات</span>
+  </a>
+  {% elif (has_perm('view_service') or has_perm('manage_service')) and ('service.list_requests' in current_app.view_functions) %}
+  <a class="gm-tab" href="{{ url_for('service.list_requests') }}" aria-label="الصيانة">
+    <i class="fas fa-wrench"></i>
+    <span>الصيانة</span>
   </a>
   {% endif %}
   <button type="button" class="gm-tab gm-tab-more" id="gm-mobile-more-btn" aria-label="المزيد">
@@ -571,6 +404,17 @@
   })();
 </script>
 
+<script src="{{ static_url('js/dom-safe.js') }}"></script>
+<script src="{{ static_url('js/export-helpers.js') }}" defer></script>
+<script src="{{ static_url('js/ux-forms.js') }}"></script>
+<script>window.UX_MSG = {{ UX_MSG | tojson }};</script>
+<script src="{{ static_url('js/ux-messages.js') }}"></script>
+<script src="{{ static_url('js/layout-responsive.js') }}"></script>
+<script src="{{ static_url('js/erp-navbar.js') }}"></script>
+<script src="{{ static_url('js/erp-calculator.js') }}" defer></script>
+<script src="{{ static_url('js/mobile-app.js') }}"></script>
+<script src="{{ static_url('js/gm-scroll-filters.js') }}"></script>
+<script src="{{ static_url('js/tenant-scope.js') }}"></script>
 <script src="{{ static_url('js/fx_utils.js') }}"></script>
 {% if show_charts %}
 <script src="{{ static_url('js/charts.js') }}"></script>
@@ -597,37 +441,32 @@ function applyUIMode(mode, silent) {
     try { return mode || localStorage.getItem('ui_mode') || 'auto'; } catch (e) { return mode || 'auto'; }
   })();
   const next = stored === 'mobile' || stored === 'tablet' || stored === 'desktop' ? stored : 'auto';
-  let effective = next;
-  if (window.GMLayout && typeof window.GMLayout.applyUIMode === 'function') {
-    effective = window.GMLayout.applyUIMode(next) || next;
-  } else {
-    const autoMode = (function() {
-      try {
-        if (window.matchMedia('(max-width: 575.98px)').matches) return 'mobile';
-        if (window.matchMedia('(min-width: 576px) and (max-width: 991.98px)').matches) return 'tablet';
-        return 'desktop';
-      } catch (_) {
-        return 'desktop';
-      }
-    })();
-    effective = next === 'auto' ? autoMode : next;
-    html.setAttribute('data-ui-mode', effective);
-    const compact = effective === 'mobile' || effective === 'tablet';
-    if (link) link.media = compact ? 'all' : (link.getAttribute('data-default-media') || 'not all');
-    if (appLink) appLink.media = compact ? 'all' : (appLink.getAttribute('data-default-media') || 'not all');
-    if (finLink) finLink.media = compact ? 'all' : (finLink.getAttribute('data-default-media') || 'not all');
-    if (invLink) invLink.media = compact ? 'all' : (invLink.getAttribute('data-default-media') || 'not all');
+  const autoMode = (function() {
+    try {
+      if (window.matchMedia('(max-width: 575.98px)').matches) return 'mobile';
+      if (window.matchMedia('(min-width: 576px) and (max-width: 991.98px)').matches) return 'tablet';
+      return 'desktop';
+    } catch (_) {
+      return 'desktop';
+    }
+  })();
+  const effective = next === 'auto' ? autoMode : next;
+  html.setAttribute('data-ui-mode', effective);
+  const compactMedia = (effective === 'mobile' || effective === 'tablet') ? 'all' : (link && link.getAttribute('data-default-media')) || '(max-width: 575.98px)';
+  if (link) link.media = compactMedia;
+  if (appLink) appLink.media = compactMedia;
+  if (finLink) finLink.media = compactMedia;
+  if (invLink) invLink.media = compactMedia;
+  if (document.body) {
+    document.body.classList.toggle('gm-compact-app', effective === 'mobile' || effective === 'tablet');
   }
   if (document.body && effective === 'desktop') {
-    document.body.classList.remove('sidebar-open');
-    const backdrop = document.getElementById('gm-sidebar-backdrop');
-    if (backdrop) backdrop.remove();
-    document.body.classList.remove('gm-mobile');
+    document.body.classList.remove('sidebar-open', 'gm-mobile');
   }
   syncUIModeButton(next);
   if (typeof applySidebarPosition === 'function' && document.body) {
     const currentPos = (function() {
-      try { return localStorage.getItem('sidebarPosition') || 'left'; } catch (e) { return 'left'; }
+      try { return typeof getSidebarPosition === 'function' ? getSidebarPosition() : (localStorage.getItem('sidebarPosition') || 'right'); } catch (e) { return 'right'; }
     })();
     applySidebarPosition(currentPos);
   }
@@ -635,11 +474,8 @@ function applyUIMode(mode, silent) {
     try { window.dispatchEvent(new Event('resize')); } catch (_) {}
   }
   try {
-    window.dispatchEvent(new CustomEvent('gm:layout-change', { detail: { mode: effective, stored: next } }));
+    window.dispatchEvent(new CustomEvent('gm:layout-change', { detail: { effective: effective, stored: next } }));
   } catch (_) {}
-  if (window.gmInitFinancialScroll) {
-    try { window.gmInitFinancialScroll(document); } catch (_) {}
-  }
   try { if (window.AppCharts && typeof window.AppCharts.refresh === 'function') window.AppCharts.refresh(); } catch (_) {}
 }
 
@@ -664,26 +500,50 @@ function syncUIModeButton(mode) {
 }
 
 // ========== تبديل موقع Sidebar يمين/يسار ==========
+function getSidebarPosition() {
+  try {
+    const v = localStorage.getItem('sidebarPosition');
+    if (v === 'left' || v === 'right') return v;
+  } catch (_) {}
+  const dir = (document.documentElement.getAttribute('dir') || 'rtl').toLowerCase();
+  return dir === 'rtl' ? 'right' : 'left';
+}
+
+function syncSidebarPositionButton(position) {
+  const btn = document.getElementById('sidebar-position-toggle-btn');
+  if (!btn) return;
+  const onRight = position === 'right';
+  btn.setAttribute('title', onRight ? 'القائمة على اليمين — انقر للنقل لليسار' : 'القائمة على اليسار — انقر للنقل لليمين');
+  btn.setAttribute('aria-pressed', onRight ? 'true' : 'false');
+  btn.classList.toggle('erp-sidebar-pos-active', true);
+  const icon = btn.querySelector('i');
+  if (icon) {
+    icon.className = onRight ? 'fas fa-arrow-alt-circle-left' : 'fas fa-arrow-alt-circle-right';
+  }
+}
+
 function toggleSidebarPosition() {
   const body = document.body;
-  const currentPosition = localStorage.getItem('sidebarPosition') || 'left';
+  const currentPosition = getSidebarPosition();
   const newPosition = currentPosition === 'left' ? 'right' : 'left';
-  
-  // حفظ الموقع الجديد
+
   localStorage.setItem('sidebarPosition', newPosition);
-  
-  // تحديث data attribute
   body.setAttribute('data-sidebar-position', newPosition);
-  
-  // تطبيق التغيير
   applySidebarPosition(newPosition);
-  
-  // تحديث النص في الزر
+  syncSidebarPositionButton(newPosition);
+
   const badge = document.getElementById('sidebar-position-badge');
   if (badge) {
     badge.textContent = newPosition === 'left' ? 'يسار' : 'يمين';
   }
+  try { window.dispatchEvent(new Event('resize')); } catch (_) {}
+  if (window.ErpNavbar && typeof window.ErpNavbar.syncPushmenuState === 'function') {
+    window.ErpNavbar.syncPushmenuState();
+  }
 }
+window.toggleSidebarPosition = toggleSidebarPosition;
+window.getSidebarPosition = getSidebarPosition;
+window.applySidebarPosition = applySidebarPosition;
 
 function applySidebarPosition(position) {
   const body = document.body;
@@ -709,10 +569,15 @@ function applySidebarPosition(position) {
       navbar.style.setProperty('margin-right', '0', 'important');
       navbar.style.setProperty('width', '100%', 'important');
     }
-    if (footer) {
+    if (footer && !body.classList.contains('security-body')) {
       footer.style.setProperty('margin-left', '0', 'important');
       footer.style.setProperty('margin-right', '0', 'important');
       footer.style.setProperty('width', '100%', 'important');
+    }
+    if (footer && body.classList.contains('security-body')) {
+      footer.style.removeProperty('margin-left');
+      footer.style.removeProperty('margin-right');
+      footer.style.removeProperty('width');
     }
     return;
   }
@@ -798,20 +663,26 @@ function applySidebarPosition(position) {
 
 // تطبيق الموقع المحفوظ قبل تحميل الصفحة لمنع الـ flash
 (function() {
-  const savedPosition = localStorage.getItem('sidebarPosition') || 'left';
+  const savedPosition = (typeof getSidebarPosition === 'function' ? getSidebarPosition() : 'right');
   document.body.setAttribute('data-sidebar-position', savedPosition);
 })();
 
 // تطبيق الموقع المحفوظ عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {
   applyUIMode();
-  const savedPosition = localStorage.getItem('sidebarPosition') || 'left';
+  const savedPosition = (typeof getSidebarPosition === 'function' ? getSidebarPosition() : 'right');
   applySidebarPosition(savedPosition);
-  
-  // تحديث النص في الزر
+
+  if (window.ErpNavbar && typeof window.ErpNavbar.bindPushmenu === 'function') {
+    window.ErpNavbar.bindPushmenu();
+  }
+
   const badge = document.getElementById('sidebar-position-badge');
   if (badge) {
     badge.textContent = savedPosition === 'left' ? 'يسار' : 'يمين';
+  }
+  if (typeof syncSidebarPositionButton === 'function') {
+    syncSidebarPositionButton(savedPosition);
   }
 });
 
@@ -820,12 +691,24 @@ let resizeTimeout;
 window.addEventListener('resize', function() {
   clearTimeout(resizeTimeout);
   resizeTimeout = setTimeout(function() {
-    try {
-      const currentMode = localStorage.getItem('ui_mode') || 'auto';
-      if (currentMode === 'auto') applyUIMode('auto', true);
-    } catch (_) {}
-    const savedPosition = localStorage.getItem('sidebarPosition') || 'left';
+    if (window.GMLayout && typeof window.GMLayout.reconcileUIModeOnResize === 'function') {
+      window.GMLayout.reconcileUIModeOnResize();
+    } else {
+      try {
+        const currentMode = localStorage.getItem('ui_mode') || 'auto';
+        if (currentMode === 'auto') applyUIMode('auto', true);
+      } catch (_) {}
+    }
+    const savedPosition = (typeof getSidebarPosition === 'function' ? getSidebarPosition() : 'right');
     applySidebarPosition(savedPosition);
+    if (window.ErpNavbar && typeof window.ErpNavbar.syncPushmenuState === 'function') {
+      window.ErpNavbar.syncPushmenuState();
+    }
+    if (window.GMLayout && typeof window.GMLayout.isCompactLayout === 'function' && !window.GMLayout.isCompactLayout()) {
+      document.body.classList.remove('sidebar-open', 'gm-mobile');
+      const bd = document.getElementById('gm-sidebar-backdrop');
+      if (bd) bd.style.display = 'none';
+    }
   }, 150);
 });
 
@@ -837,7 +720,7 @@ const desktopQuery = window.matchMedia('(min-width: 992px)');
 function handleBreakpointChange(query, name) {
   query.addEventListener('change', function(e) {
     if (e.matches) {
-      const savedPosition = localStorage.getItem('sidebarPosition') || 'left';
+      const savedPosition = (typeof getSidebarPosition === 'function' ? getSidebarPosition() : 'right');
       applySidebarPosition(savedPosition);
     }
   });
@@ -856,6 +739,9 @@ handleBreakpointChange(desktopQuery, 'desktop');
   
   // التحقق من الموبايل باستخدام matchMedia للدقة
   function isMobile() {
+    if (window.GMLayout && typeof window.GMLayout.isCompactLayout === 'function') {
+      return window.GMLayout.isCompactLayout();
+    }
     const forced = (document.documentElement.getAttribute('data-ui-mode') || '').toLowerCase();
     if (forced === 'mobile' || forced === 'tablet') return true;
     if (forced === 'desktop') return false;
@@ -886,95 +772,32 @@ handleBreakpointChange(desktopQuery, 'desktop');
     };
   }
   
+  function closeMobileSidebar() {
+    if (window.ErpNavbar && typeof window.ErpNavbar.closeCompactSidebar === 'function') {
+      window.ErpNavbar.closeCompactSidebar();
+      return;
+    }
+    document.body.classList.remove('sidebar-open');
+    const bd = document.getElementById('gm-sidebar-backdrop');
+    if (bd) bd.style.display = 'none';
+  }
+
   // تهيئة للموبايل
   function initMobile() {
     if (!isMobile()) return;
-    
+
     const body = document.body;
     const sidebar = document.querySelector('.main-sidebar');
-    const pushmenuBtns = Array.from(document.querySelectorAll('[data-widget="pushmenu"]'));
-    const navbar = document.querySelector('.main-header.navbar');
-    const ensureBackdrop = function() {
-      let el = document.getElementById('gm-sidebar-backdrop');
-      if (el) return el;
-      el = document.createElement('div');
-      el.id = 'gm-sidebar-backdrop';
-      el.style.position = 'fixed';
-      el.style.left = '0';
-      el.style.right = '0';
-      el.style.bottom = '0';
-      el.style.top = 'var(--gm-navbar-height, 60px)';
-      el.style.background = 'rgba(0, 0, 0, 0.5)';
-      el.style.zIndex = '1039';
-      el.style.display = 'none';
-      el.style.pointerEvents = 'auto';
-      el.addEventListener('click', function(e) {
-        if (!isMobile()) return;
-        try { e.preventDefault(); } catch (_) {}
-        try { e.stopPropagation(); } catch (_) {}
-        body.classList.remove('sidebar-open');
-        el.style.display = 'none';
-      });
-      document.body.appendChild(el);
-      return el;
-    };
-    if (navbar) {
-      document.documentElement.style.setProperty('--gm-navbar-height', `${navbar.offsetHeight}px`);
+
+    if (window.ErpNavbar && typeof window.ErpNavbar.initCompactLayout === 'function') {
+      window.ErpNavbar.initCompactLayout();
     }
-    body.classList.add('gm-mobile');
-    const backdrop = ensureBackdrop();
-    
-    // إغلاق Sidebar افتراضياً على الموبايل
+
     if (sidebar && !body.classList.contains('sidebar-open')) {
       sidebar.style.display = 'block';
     }
-    backdrop.style.display = body.classList.contains('sidebar-open') ? 'block' : 'none';
-    
-    // التعامل مع فتح/إغلاق Sidebar
-    pushmenuBtns.forEach(btn => {
-      if (!btn || btn.dataset.gmPushmenuBound === '1') return;
-      let lastToggleAt = 0;
-      const toggleSidebar = function(e) {
-        if (!isMobile()) {
-          return;
-        }
-        const now = Date.now();
-        if (now - lastToggleAt < 450) {
-          try { e.preventDefault(); } catch (_) {}
-          try { e.stopImmediatePropagation(); } catch (_) {}
-          try { e.stopPropagation(); } catch (_) {}
-          return;
-        }
-        lastToggleAt = now;
-        try { e.preventDefault(); } catch (_) {}
-        try { e.stopImmediatePropagation(); } catch (_) {}
-        try { e.stopPropagation(); } catch (_) {}
-        body.classList.remove('sidebar-collapse');
-        body.classList.remove('sidebar-hidden');
-        body.classList.toggle('sidebar-open');
-        backdrop.style.display = body.classList.contains('sidebar-open') ? 'block' : 'none';
-      };
-      btn.addEventListener('click', toggleSidebar, { capture: true });
-      btn.addEventListener('touchend', toggleSidebar, { passive: false, capture: true });
-      btn.addEventListener('pointerup', toggleSidebar, { capture: true });
-      btn.dataset.gmPushmenuBound = '1';
-    });
-    
-    // إغلاق Sidebar عند النقر على الـ Overlay
-    if (body.dataset.gmMobileListeners !== '1') {
-      body.addEventListener('click', function(e) {
-        if (!isMobile()) {
-          return;
-        }
-        const currentBtns = Array.from(document.querySelectorAll('[data-widget="pushmenu"]'));
-        const clickedPush = currentBtns.some(btn => btn && btn.contains(e.target));
-        const currentSidebar = document.querySelector('.main-sidebar');
-        if (body.classList.contains('sidebar-open') && currentSidebar && !currentSidebar.contains(e.target) && !clickedPush) {
-          body.classList.remove('sidebar-open');
-          backdrop.style.display = 'none';
-        }
-      });
 
+    if (body.dataset.gmMobileListeners !== '1') {
       const treeviewToggles = Array.from(document.querySelectorAll('.main-sidebar .nav-item.has-treeview > .nav-link'));
       treeviewToggles.forEach(link => {
         if (!link || link.dataset.gmTreeBound === '1') return;
@@ -1015,29 +838,21 @@ handleBreakpointChange(desktopQuery, 'desktop');
           if (!isMobile()) return;
           const href = (this.getAttribute('href') || '').trim();
           if (!href || href === '#') return;
-          setTimeout(() => {
-            body.classList.remove('sidebar-open');
-            backdrop.style.display = 'none';
-          }, 200);
+          setTimeout(closeMobileSidebar, 200);
         });
       });
 
       const closeBtn = document.querySelector('.main-sidebar .gm-sidebar-close');
-      if (closeBtn) {
-        closeBtn.addEventListener('click', function(e) {
+      if (closeBtn && closeBtn.dataset.gmCloseBound !== '1') {
+        const onClose = function(e) {
           if (!isMobile()) return;
           try { e.preventDefault(); } catch (_) {}
           try { e.stopPropagation(); } catch (_) {}
-          body.classList.remove('sidebar-open');
-          backdrop.style.display = 'none';
-        });
-        closeBtn.addEventListener('touchend', function(e) {
-          if (!isMobile()) return;
-          try { e.preventDefault(); } catch (_) {}
-          try { e.stopPropagation(); } catch (_) {}
-          body.classList.remove('sidebar-open');
-          backdrop.style.display = 'none';
-        }, { passive: false });
+          closeMobileSidebar();
+        };
+        closeBtn.addEventListener('click', onClose);
+        closeBtn.addEventListener('touchend', onClose, { passive: false });
+        closeBtn.dataset.gmCloseBound = '1';
       }
       body.dataset.gmMobileListeners = '1';
     }
@@ -1087,7 +902,11 @@ handleBreakpointChange(desktopQuery, 'desktop');
       } catch (e) {}
     });
     links.forEach(a => a.classList.remove('active'));
-    if (best) best.classList.add('active');
+    if (best) {
+      best.classList.add('active');
+      best.setAttribute('aria-current', 'page');
+    }
+    links.forEach(a => { if (a !== best) a.removeAttribute('aria-current'); });
   }
   
   // تحسينات اللمس
@@ -1097,7 +916,9 @@ handleBreakpointChange(desktopQuery, 'desktop');
   
   // تحسين الجداول للموبايل
   function enhanceTables() {
-    return;
+    if (window.GMMobileApp && typeof window.GMMobileApp.enhanceTables === 'function') {
+      window.GMMobileApp.enhanceTables(document);
+    }
   }
   
   // منع Zoom عند double-tap
@@ -1173,6 +994,23 @@ handleBreakpointChange(desktopQuery, 'desktop');
     smoothScroll();
     lazyLoadImages();
     
+    window.addEventListener('gm:layout-change', function() {
+      if (isMobile()) {
+        initMobile();
+        enhanceTables();
+        initMobileBottomNavActive();
+      } else if (window.GMLayout && typeof window.GMLayout.cleanupCompactLayout === 'function') {
+        window.GMLayout.cleanupCompactLayout();
+      }
+      if (window.ErpNavbar && typeof window.ErpNavbar.initCompactLayout === 'function') {
+        window.ErpNavbar.initCompactLayout();
+      } else {
+        document.body.classList.remove('gm-mobile', 'sidebar-open', 'erp-sidebar-drawer-open');
+        const bd = document.getElementById('gm-sidebar-backdrop');
+        if (bd) bd.style.display = 'none';
+      }
+    });
+    
     // إعادة تهيئة عند تغيير حجم الشاشة
     let resizeTimer;
     window.addEventListener('resize', function() {
@@ -1182,6 +1020,16 @@ handleBreakpointChange(desktopQuery, 'desktop');
           initMobile();
           enhanceTables();
           initMobileBottomNavActive();
+        } else {
+          if (window.ErpNavbar && typeof window.ErpNavbar.closeCompactSidebar === 'function') {
+            window.ErpNavbar.closeCompactSidebar();
+          }
+          document.body.classList.remove('gm-mobile', 'sidebar-open', 'erp-sidebar-drawer-open');
+          const bd = document.getElementById('gm-sidebar-backdrop');
+          if (bd) bd.style.display = 'none';
+          if (typeof applySidebarPosition === 'function') {
+            applySidebarPosition((typeof getSidebarPosition === 'function' ? getSidebarPosition() : 'right'));
+          }
         }
       }, 250);
     });
@@ -1280,43 +1128,7 @@ handleBreakpointChange(desktopQuery, 'desktop');
 
 
 {% block scripts %}{% endblock %}
-<script>
-(function(){
-  try{
-    var g=window; var b=g.bootstrap||(g.bootstrap={});
-    b.Modal=function(el){ var id=el&&el.id?('#'+el.id):null; return {
-      show:function(){ if(id&&g.$&&$.fn&&$.fn.modal){ try{$(id).modal('show');}catch(e){} } },
-      hide:function(){ if(id&&g.$&&$.fn&&$.fn.modal){ try{$(id).modal('hide');}catch(e){} } }
-    }; };
-    b.Tab=function(el){ var id=el&&el.id?('#'+el.id):null; return {
-      show:function(){ if(id&&g.$&&$.fn&&$.fn.tab){ try{$(id).tab('show');}catch(e){} } }
-    }; };
-    b.Modal.getOrCreateInstance=function(el){ return b.Modal(el); };
-    b.Tab.getOrCreateInstance=function(el){ return b.Tab(el); };
-  }catch(e){}
-})();
-</script>
 <script src="{{ static_url('js/enhanced-tabs.js') }}" defer></script>
 <script src="{{ static_url('js/security-favorites.js') }}" defer></script>
 </body>
-<script>
-(function(){
-  if (typeof window.getOrCreateModal !== 'function') {
-    window.getOrCreateModal = function(el){
-      try {
-        if (window.$ && $.fn && $.fn.modal) {
-          var id = el && el.id ? ('#' + el.id) : null;
-          if (id) {
-            return {
-              show: function(){ try { $(id).modal('show'); } catch(e){} },
-              hide: function(){ try { $(id).modal('hide'); } catch(e){} }
-            };
-          }
-        }
-      } catch(e) {}
-      return null;
-    };
-  }
-})();
-</script>
 </html>

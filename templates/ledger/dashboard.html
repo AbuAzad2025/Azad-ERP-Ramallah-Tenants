@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="card shadow-sm">
-        <div class="card-header bg-gradient-primary text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-primary text-white">
             <h3 class="mb-0">
                 <i class="fas fa-book"></i>
                 دفتر الأستاذ العام - General Ledger
@@ -148,7 +148,7 @@
                     <div class="row g-4 mt-2">
                         <div class="col-md-6">
                             <div class="card h-100">
-                                <div class="card-header bg-success text-white">
+                                <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white">
                                     <h5 class="mb-0"><i class="fas fa-chart-line"></i> قائمة الدخل</h5>
                                 </div>
                                 <div class="card-body">
@@ -162,7 +162,7 @@
                         
                         <div class="col-md-6">
                             <div class="card h-100">
-                                <div class="card-header bg-primary text-white">
+                                <div class="card-header erp-card-header-row erp-theme-header--primary">
                                     <h5 class="mb-0"><i class="fas fa-balance-scale"></i> الميزانية العمومية</h5>
                                 </div>
                                 <div class="card-body">
@@ -176,7 +176,7 @@
                         
                         <div class="col-md-6">
                             <div class="card h-100">
-                                <div class="card-header bg-info text-white">
+                                <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
                                     <h5 class="mb-0"><i class="fas fa-money-bill-wave"></i> التدفقات النقدية</h5>
                                 </div>
                                 <div class="card-body">
@@ -190,7 +190,7 @@
                         
                         <div class="col-md-6">
                             <div class="card h-100">
-                                <div class="card-header bg-warning text-dark">
+                                <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-dark">
                                     <h5 class="mb-0"><i class="fas fa-clock"></i> الذمم المعمرة</h5>
                                 </div>
                                 <div class="card-body">
@@ -208,46 +208,7 @@
     </div>
 </div>
 
-<style>
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
 
-.stat-card {
-    border: none;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    transition: all 0.3s;
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-}
-
-.nav-tabs {
-    border-bottom: 2px solid #dee2e6;
-}
-
-.nav-tabs .nav-link {
-    border: none;
-    color: #6c757d;
-    font-weight: 500;
-    padding: 1rem 1.5rem;
-}
-
-.nav-tabs .nav-link:hover {
-    color: #667eea;
-    background: #f8f9fa;
-}
-
-.nav-tabs .nav-link.active {
-    color: #667eea;
-    border-bottom: 3px solid #667eea;
-    background: white;
-    font-weight: 600;
-}
-</style>
 
 <script>
 // تحميل الإحصائيات
@@ -273,7 +234,7 @@ async function loadTrialBalance() {
         
         let html = `
             <table class="table table-bordered table-hover">
-                <thead class="table-dark">
+                <thead class="table-header-primary text-white ">
                     <tr>
                         <th>الحساب</th>
                         <th class="text-end">المدين</th>
@@ -307,7 +268,7 @@ async function loadTrialBalance() {
         
         html += `
                 </tbody>
-                <tfoot class="table-dark fw-bold">
+                <tfoot class=" fw-bold">
                     <tr>
                         <td>الإجمالي</td>
                         <td class="text-end">${totalDebit.toLocaleString('en-US', {minimumFractionDigits: 2})} ₪</td>

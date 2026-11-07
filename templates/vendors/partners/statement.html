@@ -3,52 +3,7 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/statement-print.css') }}">
-<style>
-/* تحسين تباين الألوان - للشاشة فقط */
-.statement-card {
-    border-radius: 12px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-}
 
-.statement-header {
-    background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
-    color: white !important;
-    padding: 20px;
-    border-radius: 12px 12px 0 0;
-}
-
-.stat-box {
-    border-left: 4px solid #667eea;
-    transition: all 0.3s;
-}
-
-.stat-box:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
-}
-
-.table thead th {
-    background-color: #343a40 !important;
-    color: white !important;
-    font-weight: 600 !important;
-    border-color: #454d55 !important;
-}
-
-.table tbody td {
-    color: #343a40 !important;
-    font-weight: 500 !important;
-}
-
-.balance-positive {
-    color: #dc3545 !important;
-    font-weight: bold !important;
-}
-
-.balance-negative {
-    color: #28a745 !important;
-    font-weight: bold !important;
-}
-</style>
 {% endblock %}
 
 {% block breadcrumb %}
@@ -319,7 +274,7 @@
   } %}
 
   <div class="card shadow-sm rounded">
-    <div class="card-header bg-primary text-white">
+    <div class="card-header erp-card-header-row erp-theme-header--primary">
       <h5 class="card-title m-0">
         <i class="fas fa-file-invoice ms-2"></i> كشف حساب: {{ partner.name }}
       </h5>
@@ -340,7 +295,7 @@
       </div>
       <div class="table-responsive">
         <table class="table table-bordered table-sm table-striped align-middle" id="partnerStatementTable" data-realtime-statement-partner="{{ partner.id }}">
-          <thead class="table-light">
+          <thead class="table-header-primary text-white table-light">
             <tr>
               <th style="width: 110px">التاريخ</th>
               <th style="width: 110px">النوع</th>
@@ -410,7 +365,7 @@
                     </button>
                     <div class="collapse mt-2" id="details-{{ loop.index }}">
                       <table class="table table-sm table-bordered mb-0" style="font-size: 0.7rem;">
-                        <thead class="bg-light">
+                        <thead class="table-header-primary text-white bg-light">
                           <tr>
                             <th>النوع</th>
                             <th>الاسم</th>
@@ -462,7 +417,7 @@
               <td colspan="7" class="p-0">
                 <div class="payment-split-details" style="background-color:#f9fbff; padding:10px; margin:5px;">
                   <table class="table table-sm table-bordered mb-0" style="font-size:0.85em; border:1px solid #ced4da;">
-                    <thead style="background-color:#e9ecef;">
+                    <thead class="table-header-primary text-white" style="background-color:#e9ecef;">
                       <tr>
                         <th style="width:22%; text-align:start;">الطريقة</th>
                         <th style="width:18%; text-align:end;">المبلغ</th>
@@ -520,7 +475,7 @@
   <div class="row mt-4">
     <div class="col-md-6">
       <div class="card shadow-sm">
-        <div class="card-header bg-info text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
           <h5 class="mb-0"><i class="fas fa-info-circle ml-2"></i>معلومات الشريك</h5>
         </div>
         <div class="card-body">
@@ -556,7 +511,7 @@
     
     <div class="col-md-6">
       <div class="card shadow-sm">
-        <div class="card-header bg-secondary text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-secondary text-white">
           <h5 class="mb-0"><i class="fas fa-chart-line ml-2"></i>ملخص الحساب</h5>
         </div>
         <div class="card-body">
@@ -597,13 +552,13 @@
 
   {% if inventory_items %}
   <div class="card shadow-sm mt-4">
-    <div class="card-header bg-warning text-dark">
+    <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-dark">
       <h5 class="mb-0"><i class="fas fa-boxes ml-2"></i>مخزون الشريك (القطع غير المباعة)</h5>
     </div>
     <div class="card-body">
       <div class="table-responsive">
         <table class="table table-sm table-bordered table-striped align-middle">
-          <thead class="table-light">
+          <thead class="table-header-primary text-white table-light">
             <tr>
               <th>اسم المنتج</th>
               <th>SKU</th>
@@ -653,13 +608,13 @@
 
   {% if all_partner_products %}
   <div class="card shadow-sm mt-4">
-    <div class="card-header bg-primary text-white">
+    <div class="card-header erp-card-header-row erp-theme-header--primary">
       <h5 class="mb-0"><i class="fas fa-list-check ml-2"></i>جميع القطع التي للشريك نسبة بها (مباعة وغير مباعة)</h5>
     </div>
     <div class="card-body">
       <div class="table-responsive">
         <table class="table table-sm table-bordered table-striped align-middle">
-          <thead class="table-light">
+          <thead class="table-header-primary text-white table-light">
             <tr>
               <th>اسم المنتج</th>
               <th>SKU</th>
@@ -787,24 +742,7 @@
     const printWindow = window.open('', '', 'height=800,width=1000');
     printWindow.document.write('<html><head><title>كشف حساب - {{ partner.name }}</title>');
     printWindow.document.write('<meta charset="UTF-8">');
-    printWindow.document.write('<style>');
-    printWindow.document.write('* { margin: 0; padding: 0; box-sizing: border-box; }');
-    printWindow.document.write('body { font-family: Arial, sans-serif; direction: rtl; padding: 10px; font-size: 8pt; line-height: 1.2; }');
-    printWindow.document.write('h2 { text-align: center; color: #333; margin-bottom: 6px; border-bottom: 2px solid #000; padding-bottom: 4px; font-size: 11pt; }');
-    printWindow.document.write('.partner-info { border: 1px solid #000; padding: 6px; margin: 8px 0; background-color: #f8f9fa; font-size: 7pt; }');
-    printWindow.document.write('.partner-info table { width: 100%; border-collapse: collapse; }');
-    printWindow.document.write('.partner-info td { padding: 2px 4px; border: none; }');
-    printWindow.document.write('.partner-info strong { font-weight: bold; }');
-    printWindow.document.write('.balance-box { background-color: #e0ffe0; border: 1px solid #000; padding: 3px; margin-top: 3px; font-size: 7pt; }');
-    printWindow.document.write('.balance-box.negative { background-color: #ffe0e0; }');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 7pt; }');
-    printWindow.document.write('th, td { border: 1px solid #000; padding: 3px 4px; text-align: right; line-height: 1.1; }');
-    printWindow.document.write('th { background-color: #e0e0e0; font-weight: bold; text-align: center; font-size: 7.5pt; }');
-    printWindow.document.write('tfoot th, tfoot td { background-color: #f0f0f0; font-weight: bold; padding: 4px; }');
-    printWindow.document.write('.text-end { text-align: left; }');
-    printWindow.document.write('.footer { text-align: center; font-size: 6pt; color: #666; margin-top: 15px; border-top: 1px solid #ccc; padding-top: 5px; }');
-    printWindow.document.write('@page { margin: 0.8cm; size: A4 portrait; }');
-    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('</head><body>');
     
     // الترويسة
     printWindow.document.write('<h2>كشف حساب شريك</h2>');

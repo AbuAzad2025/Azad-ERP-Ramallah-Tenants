@@ -26,7 +26,7 @@
   
 
   <div class="card shadow-sm mb-3">
-    <div class="card-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+ <div class="card-header erp-card-header-row erp-theme-header--primary">
       <i class="fas fa-filter"></i> فلاتر التقرير
     </div>
     <div class="card-body">
@@ -112,7 +112,7 @@
       {% else %}
       <div class="table-responsive">
         <table id="report-table" class="table table-striped table-bordered align-middle">
-          <thead class="table-dark">
+          <thead class="table-header-primary text-white ">
           <tr>
             <th style="width:60px">#</th>
             <th>{{ FIELD_LABELS.get("name", "الاسم") }}</th>
@@ -241,7 +241,11 @@
   };
   Array.from(tbody.rows).forEach((tr, idx) => {
     const cell = tr.querySelector('td.rank');
-    if (cell) cell.innerHTML = medal(idx + 1);
+    if (cell) {
+      const html = medal(idx + 1);
+      if (window.AzadDom && AzadDom.setHtmlTrusted) AzadDom.setHtmlTrusted(cell, html);
+      else cell.textContent = (idx + 1).toString();
+    }
   });
 })();
 

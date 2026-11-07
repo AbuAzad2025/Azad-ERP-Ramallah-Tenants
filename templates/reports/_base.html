@@ -12,7 +12,7 @@
 {% block content %}
 {{ readonly_banner('view_reports', 'manage_reports', 'التقارير') }}
 <div class="card card-primary card-outline">
-  <div class="card-header">
+  <div class="card-header erp-card-header-row erp-theme-header--primary">
     <h3 class="card-title">
       <i class="fas fa-chart-bar mr-1"></i>
       {% block report_title %}تقرير عام{% endblock %}
@@ -79,15 +79,7 @@
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/reporting.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/report-print.css') }}">
-<style>
-  @media print {
-    .d-print-none { display: none !important; }
-    .d-print-block { display: block !important; }
-    .card { border: none !important; box-shadow: none !important; }
-    .card-header { display: none !important; }
-    .card-footer { display: none !important; }
-  }
-</style>
+
 {% endblock %}
 
 <!-- Scripts -->

@@ -1,0 +1,183 @@
+/**
+ * صفحات عامة: دخول، متجر، أخطاء
+ */
+body.erp-layout-public {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--erp-bg);
+  color: var(--erp-text);
+  padding-top: var(--erp-header-h);
+}
+
+body.erp-layout-public[data-auth-bg],
+body.erp-layout-public.erp-auth-page {
+  background-image: var(--erp-public-bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+body.erp-layout-public.erp-auth-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--erp-bg) 55%, transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.erp-layout-public .erp-public-navbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: var(--erp-z-drawer);
+  min-height: var(--erp-header-h);
+}
+
+body.erp-layout-public .erp-public-main {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem 2rem;
+}
+
+body.erp-layout-public .erp-public-content {
+  width: 100%;
+  max-width: 480px;
+}
+
+body.erp-layout-public .erp-auth-card {
+  background: var(--erp-surface);
+  border: 1px solid var(--erp-border);
+  border-radius: var(--erp-radius-lg);
+  box-shadow: var(--erp-shadow);
+  padding: 1.75rem 1.5rem;
+}
+
+body.erp-layout-public .erp-auth-card .form-control,
+body.erp-layout-public .erp-auth-card .custom-select,
+body.erp-layout-public .erp-auth-card select.form-control {
+  min-height: var(--erp-input-h);
+  text-align: center;
+}
+
+body.erp-layout-public .erp-auth-logo {
+  display: block;
+  margin: 0 auto 1rem;
+  max-height: 56px;
+  max-width: 160px;
+  object-fit: contain;
+}
+
+body.erp-layout-public .erp-auth-title {
+  text-align: center;
+  font-weight: 800;
+  color: var(--erp-primary-dark);
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 575.98px) {
+  body.erp-layout-public .erp-public-main {
+    padding: 1rem 0.75rem 1.5rem;
+  }
+
+  body.erp-layout-public .erp-auth-card {
+    padding: 1.25rem 1rem;
+  }
+
+  body.erp-layout-public .erp-public-content {
+    max-width: 100%;
+  }
+}
+
+body.erp-layout-public .main-footer.erp-footer {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+}
+
+/* درج عام */
+.erp-public-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(300px, 88vw);
+  height: 100%;
+  background: var(--erp-sidebar-bg);
+  color: var(--erp-sidebar-text);
+  z-index: calc(var(--erp-z-drawer) + 2);
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.2);
+}
+
+.erp-public-drawer.is-open {
+  transform: translateX(0);
+}
+
+.erp-public-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.erp-public-drawer__nav {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem;
+  gap: 0.25rem;
+  overflow-y: auto;
+}
+
+.erp-public-drawer__nav a {
+  color: var(--erp-sidebar-text);
+  padding: 0.65rem 1rem;
+  border-radius: var(--erp-radius);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.erp-public-drawer__nav a:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.erp-public-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: calc(var(--erp-z-drawer) + 1);
+}
+
+body.erp-drawer-open {
+  overflow: hidden;
+}
+
+/* أخطاء */
+body.erp-layout-error .erp-error-card {
+  max-width: 640px;
+  margin: 2rem auto;
+  text-align: center;
+  padding: 2rem;
+  background: var(--erp-surface);
+  border: 1px solid var(--erp-border);
+  border-radius: var(--erp-radius-lg);
+  box-shadow: var(--erp-shadow);
+}
+
+body.erp-layout-error .erp-error-code {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--erp-danger);
+  line-height: 1;
+}

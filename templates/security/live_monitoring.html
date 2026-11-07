@@ -1,21 +1,21 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}live_monitoring{% endblock %}
-{% block security_title %}Live Monitoring{% endblock %}
+{% block security_title %}المراقبة الحية{% endblock %}
 {% block security_icon %}<i class="fas fa-satellite-dish"></i>{% endblock %}
 {% block security_description %}مراقبة فورية للمستخدمين المتصلين والعمليات الجارية{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">Live Monitoring</li>{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">المراقبة الحية</li>{% endblock %}
 {% block security_content %}
   
   <div class="row g-3">
     <!-- المستخدمين المتصلين -->
     <div class="col-lg-6">
       <div class="card">
-        <div class="card-header bg-success text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white">
           <h5 class="mb-0"><i class="fas fa-circle text-white"></i> متصلين الآن ({{ live_data.online_users|length }})</h5>
         </div>
         <div class="card-body" style="max-height:400px; overflow-y:auto;">
           <table class="table table-sm">
-            <thead>
+            <thead class="table-header-primary text-white">
               <tr>
                 <th>المستخدم</th>
                 <th>الدور</th>
@@ -39,12 +39,12 @@
     <!-- آخر الإجراءات -->
     <div class="col-lg-6">
       <div class="card">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary">
           <h5 class="mb-0"><i class="fas fa-list"></i> آخر الإجراءات ({{ live_data.recent_actions|length }})</h5>
         </div>
         <div class="card-body" style="max-height:400px; overflow-y:auto;">
           <table class="table table-sm">
-            <thead>
+            <thead class="table-header-primary text-white">
               <tr>
                 <th>الوقت</th>
                 <th>الإجراء</th>
@@ -68,7 +68,7 @@
     <!-- مقاييس النظام -->
     <div class="col-lg-12">
       <div class="card">
-        <div class="card-header bg-info text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
           <h5 class="mb-0"><i class="fas fa-chart-area"></i> مقاييس النظام الحية</h5>
         </div>
         <div class="card-body">

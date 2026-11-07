@@ -317,11 +317,10 @@ def list_shipments():
     if _wants_json():
         from utils.company_scope import filter_shipments_query
 
-        q = filter_shipments_query(
-            db.session.query(Shipment).filter(Shipment.is_archived == False)
-        ).options(
+        q = db.session.query(Shipment).filter(Shipment.is_archived == False).options(
             joinedload(Shipment.destination_warehouse),
         )
+        q = filter_shipments_query(q)
 
         if status:
             q = q.filter(Shipment.status == status)
@@ -408,10 +407,8 @@ def list_shipments():
         date_from=date_from,
         date_to=date_to,
         destination=destination,
+        pre_po_id=request.args.get("purchase_order_id", type=int),
     )
-
-
-shipments_bp.add_url_rule("/", endpoint="shipments", view_func=list_shipments)
 
 
 def _parse_dt(s):
@@ -568,6 +565,7 @@ def shipments_data():
 def create_shipment():
     form = ShipmentForm()
     pre_dest_id = request.args.get("destination_id", type=int)
+    pre_po_id = request.args.get("purchase_order_id", type=int)
 
     if request.method == "GET":
         if not form.shipment_date.data:
@@ -590,13 +588,28 @@ def create_shipment():
         if dest_prefill:
             form.destination_id.data = dest_prefill
 
+    pre_po = None
+    if pre_po_id:
+        from models import PurchaseOrder
+        pre_po = db.session.get(PurchaseOrder, pre_po_id)
+        if pre_po and pre_po.branch_id:
+            wh = Warehouse.query.filter_by(branch_id=pre_po.branch_id, is_active=True).first()
+            if wh and not form.destination_id.data:
+                form.destination_id.data = wh
+
     if request.method == "POST" and not form.validate_on_submit():
         if _wants_json():
             return jsonify({"ok": False, "errors": form.errors}), 422
         for field, errors in form.errors.items():
             for err in errors:
-                utils.flash_error(f"{form[field].label.text}: {err}", "danger")
-        return render_template("warehouses/shipment_form.html", form=form, shipment=None)
+                flash(f"❌ {form[field].label.text}: {err}", "danger")
+        return render_template(
+            "warehouses/shipment_form.html",
+            form=form,
+            shipment=None,
+            pre_po=pre_po,
+            pre_po_id=pre_po_id,
+        )
 
     if form.validate_on_submit():
         dest_obj = form.destination_id.data
@@ -617,6 +630,7 @@ def create_shipment():
             notes=form.notes.data or None,
             currency=_norm_currency(getattr(form, "currency", None) and form.currency.data),
             sale_id=(form.sale_id.data.id if getattr(form, "sale_id", None) and getattr(form.sale_id.data, "id", None) else None),
+            purchase_order_id=request.form.get("purchase_order_id", type=int) or pre_po_id or None,
             # الحقول الإضافية
             weight=form.weight.data if hasattr(form, "weight") else None,
             dimensions=form.dimensions.data if hasattr(form, "dimensions") else None,
@@ -741,7 +755,15 @@ def create_shipment():
             current_app.logger.exception('internal error')
             utils.flash_error("تعذر إتمام العملية")
 
-    return render_template("warehouses/shipment_form.html", form=form, shipment=None)
+    return render_template(
+        "warehouses/shipment_form.html",
+        form=form,
+        shipment=None,
+        pre_po=pre_po,
+        pre_po_id=pre_po_id,
+    )
+
+
 @shipments_bp.route("/<int:id>/edit", methods=["GET", "POST"], endpoint="edit_shipment")
 @login_required
 def edit_shipment(id: int):

@@ -1,295 +1,112 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}system_settings{% endblock %}
-{% block security_title %}System Settings{% endblock %}
+{% block security_title %}إعدادات النظام الشاملة{% endblock %}
 {% block security_icon %}<i class="fas fa-cog"></i>{% endblock %}
-{% block security_description %}إعدادات شاملة للنظام - عامة • متقدمة • ثوابت{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">System Settings</li>{% endblock %}
+{% block security_description %}تحكم في الإعدادات العامة والمتقدمة وبيانات الشركة وثوابت الأعمال والهوية{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">إعدادات النظام</li>{% endblock %}
 {% block security_content %}
-  <style>
-    /* --- FINAL CLEAN CSS FIX --- */
-    
-    /* 1. Tabs Visibility */
-    .nav-tabs {
-        border-bottom: 2px solid rgba(255,255,255,0.1);
-        margin-bottom: 20px;
-    }
-    .nav-tabs .nav-link {
-        color: #fff !important;
-        opacity: 0.8;
-        font-weight: bold;
-        border: 1px solid transparent;
-    }
-    .nav-tabs .nav-link.active {
-        background-color: #fff !important;
-        color: #000 !important;
-        opacity: 1;
-        border-radius: 5px 5px 0 0;
-    }
+<div class="sys-settings">
 
-    /* 2. Module Cards Layout */
-    .module-card {
-        background: #fff !important;
-        color: #212529 !important;
-        border: 1px solid #dee2e6;
-        position: relative; /* For absolute positioning */
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-    .module-card .card-body {
-        padding: 1.5rem;
-        flex: 1;
-    }
-    
-    /* Switch Position in Card (Absolute Top-Left) */
-    .card-switch-absolute {
-        position: absolute;
-        top: 15px;
-        left: 15px; /* RTL: Left side */
-        z-index: 5;
-    }
-    
-    /* Icon Position in Card */
-    .module-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        margin-bottom: 1rem;
-    }
-
-    /* 3. Switch Styling */
-    .form-check-input {
-        width: 3em !important;
-        height: 1.5em !important;
-        cursor: pointer;
-        border: 2px solid #adb5bd;
-        float: none !important;
-        margin: 0;
-    }
-    .form-check-input:checked {
-        background-color: #0d6efd;
-        border-color: #0d6efd;
-    }
-    
-    /* 4. General Settings Alignment */
-    .general-setting-wrapper {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-    .general-setting-wrapper label {
-        margin: 0;
-        font-weight: bold;
-        color: #000;
-        cursor: pointer;
-        line-height: 1.2;
-    }
-    
-    /* 5. Bottom Section (Tax, Payroll, etc) */
-    .collapse {
-        background-color: #f8f9fa;
-        color: #212529;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 20px;
-        margin-top: 15px;
-    }
-    .collapse label { color: #212529; font-weight: bold; }
-    .collapse h4 { color: #0d6efd; }
-    
-    /* Dark Mode Support for Bottom Section */
-    body.dark-mode .collapse {
-        background-color: #2c3034;
-        color: #fff;
-        border-color: #454d55;
-    }
-    body.dark-mode .collapse label { color: #fff; }
-    body.dark-mode .collapse .form-control {
-        background-color: #343a40;
-        color: #fff;
-        border-color: #6c757d;
-    }
-  </style>
-
-  <div class="alert alert-info border-0 shadow-sm">
-    <i class="fas fa-info-circle"></i>
-    <strong>إعدادات موحدة:</strong> جميع إعدادات النظام في مكان واحد (عامة + متقدمة + ثوابت)
-    <div class="mt-2">
-      {% if stats %}
-      <span class="badge bg-success">{{ stats.total_modules }} وحدة</span>
-      <span class="badge bg-info">{{ stats.total_apis }} API</span>
-      <span class="badge bg-warning text-dark">{{ stats.total_indexes }} فهرس</span>
-      <span class="badge bg-danger">{{ stats.total_relations }}+ علاقة</span>
-      {% else %}
-      <span class="badge bg-success">🔄 وحدة</span>
-      <span class="badge bg-info">🔄 API</span>
-      <span class="badge bg-warning text-dark">🔄 فهرس</span>
-      <span class="badge bg-danger">🔄 علاقة</span>
-      {% endif %}
-    </div>
+  {% if stats %}
+  <div class="sys-settings__stats">
+    <span class="sys-settings__stats-label"><i class="fas fa-chart-line"></i> حالة النظام</span>
+    <span class="sys-settings__stat sys-settings__stat--ok">{{ stats.active_users }} نشط</span>
+    <span class="sys-settings__stat">{{ stats.online_users }} متصل</span>
+    <span class="sys-settings__stat sys-settings__stat--warn">{{ stats.system_health }}</span>
+    <span class="sys-settings__stat">{{ stats.db_size }}</span>
   </div>
+  {% endif %}
 
-  <div class="card">
-    <div class="card-header bg-gradient-primary text-white">
-      <h5 class="mb-0"><i class="fas fa-cogs"></i> إعدادات النظام الشاملة</h5>
+  <div class="sys-settings__shell">
+    <div class="sys-settings__shell-head">
+      <h5><i class="fas fa-cogs"></i> إعدادات النظام</h5>
     </div>
-    <div class="card-body">
-      
-      <!-- Nav tabs -->
-      <ul class="nav nav-tabs nav-fill mb-4" id="settingsTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link {% if active_tab == 'general' %}active{% endif %}" 
-                  id="general-tab" 
-                  data-toggle="tab" 
-                  data-target="#general" 
-                  type="button" 
-                  role="tab">
-            <i class="fas fa-sliders-h"></i> الإعدادات العامة
-          </button>
+    <div class="sys-settings__shell-body">
+
+      <ul class="nav sys-settings__tabs" id="settingsTabs" role="tablist">
+        <li class="nav-item">
+          <a class="nav-link {% if active_tab == 'general' %}active{% endif %}"
+             href="{{ url_for('security.system_settings', tab='general') }}">
+            <i class="fas fa-sliders-h"></i><span>الإعدادات العامة</span>
+          </a>
         </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link {% if active_tab == 'advanced' %}active{% endif %}" 
-                  id="advanced-tab" 
-                  data-toggle="tab" 
-                  data-target="#advanced" 
-                  type="button" 
-                  role="tab">
-            <i class="fas fa-cog"></i> التكوينات المتقدمة
-          </button>
+        <li class="nav-item">
+          <a class="nav-link {% if active_tab == 'advanced' %}active{% endif %}"
+             href="{{ url_for('security.system_settings', tab='advanced') }}">
+            <i class="fas fa-cog"></i><span>التكوينات المتقدمة</span>
+          </a>
         </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link {% if active_tab == 'company' %}active{% endif %}" 
-                  id="company-tab" 
-                  data-toggle="tab" 
-                  data-target="#company" 
-                  type="button" 
-                  role="tab">
-            <i class="fas fa-building"></i> بيانات الشركة
-          </button>
+        <li class="nav-item">
+          <a class="nav-link {% if active_tab == 'company' %}active{% endif %}"
+             href="{{ url_for('security.system_settings', tab='company') }}">
+            <i class="fas fa-building"></i><span>بيانات الشركة</span>
+          </a>
         </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link {% if active_tab == 'business' %}active{% endif %}" 
-                  id="business-tab" 
-                  data-toggle="tab" 
-                  data-target="#business" 
-                  type="button" 
-                  role="tab">
-            <i class="fas fa-briefcase"></i> ثوابت الأعمال
-          </button>
+        <li class="nav-item">
+          <a class="nav-link {% if active_tab == 'business' %}active{% endif %}"
+             href="{{ url_for('security.system_settings', tab='business') }}">
+            <i class="fas fa-briefcase"></i><span>ثوابت الأعمال</span>
+          </a>
         </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link {% if active_tab == 'branding' %}active{% endif %}" 
-                  id="branding-tab" 
-                  data-toggle="tab" 
-                  data-target="#branding" 
-                  type="button" 
-                  role="tab">
-            <i class="fas fa-paint-brush"></i> الهوية والمظهر
-          </button>
+        <li class="nav-item">
+          <a class="nav-link {% if active_tab == 'branding' %}active{% endif %}"
+             href="{{ url_for('security.system_settings', tab='branding') }}">
+            <i class="fas fa-paint-brush"></i><span>الهوية والمظهر</span>
+          </a>
         </li>
       </ul>
 
-      <!-- Tab panes -->
       <div class="tab-content" id="settingsTabContent">
-        
-        <!-- التبويب 1: الإعدادات العامة -->
-        <div class="tab-pane fade {% if active_tab == 'general' %}show active{% endif %}" 
-             id="general" 
-             role="tabpanel">
+
+        <div class="tab-pane fade {% if active_tab == 'general' %}show active{% endif %}" id="general" role="tabpanel">
           <form method="POST" novalidate>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="active_tab" value="general">
-            
-            <div class="row">
-              <div class="col-md-4">
-                <div class="card mb-3 border-warning">
-                  <div class="card-header bg-warning text-dark">
-                    <strong><i class="fas fa-tools"></i> وضع الصيانة</strong>
-                  </div>
-                  <div class="card-body">
-                    <div class="general-setting-wrapper">
-                        <div class="form-check form-switch m-0 p-0">
-                          <input class="form-check-input" type="checkbox" name="maintenance_mode" id="maintenance_mode" {% if data.general.maintenance_mode %}checked{% endif %}>
-                        </div>
-                        <label class="form-check-label" for="maintenance_mode">
-                            تفعيل وضع الصيانة<br>
-                            <small class="text-muted fw-normal">سيمنع الوصول لجميع المستخدمين</small>
-                        </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="col-md-4">
-                <div class="card mb-3 border-info">
-                  <div class="card-header bg-info text-white">
-                    <strong><i class="fas fa-user-plus"></i> التسجيل</strong>
-                  </div>
-                  <div class="card-body">
-                    <div class="general-setting-wrapper">
-                        <div class="form-check form-switch m-0 p-0">
-                          <input class="form-check-input" type="checkbox" name="registration_enabled" id="registration_enabled" {% if data.general.registration_enabled %}checked{% endif %}>
-                        </div>
-                        <label class="form-check-label" for="registration_enabled">
-                            السماح بتسجيل مستخدمين جدد<br>
-                            <small class="text-muted fw-normal">يمكن للزوار إنشاء حسابات</small>
-                        </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="col-md-4">
-                <div class="card mb-3 border-primary">
-                  <div class="card-header bg-primary text-white">
-                    <strong><i class="fas fa-code"></i> API</strong>
-                  </div>
-                  <div class="card-body">
-                    <div class="general-setting-wrapper">
-                        <div class="form-check form-switch m-0 p-0">
-                          <input class="form-check-input" type="checkbox" name="api_enabled" id="api_enabled" {% if data.general.api_enabled %}checked{% endif %}>
-                        </div>
-                        <label class="form-check-label" for="api_enabled">
-                            تفعيل الوصول لـ API<br>
-                            <small class="text-muted fw-normal">يسمح بالاتصال عبر API</small>
-                        </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
+
+            <div class="sys-settings__toggle-grid">
+              <label class="sys-settings__toggle-card" for="maintenance_mode">
+                <input class="form-check-input" type="checkbox" name="maintenance_mode" id="maintenance_mode" {% if data.general.maintenance_mode %}checked{% endif %}>
+                <span>
+                  <strong><i class="fas fa-tools text-warning"></i> وضع الصيانة</strong>
+                  <small>يمنع وصول المستخدمين العاديين</small>
+                </span>
+              </label>
+              <label class="sys-settings__toggle-card" for="registration_enabled">
+                <input class="form-check-input" type="checkbox" name="registration_enabled" id="registration_enabled" {% if data.general.registration_enabled %}checked{% endif %}>
+                <span>
+                  <strong><i class="fas fa-user-plus text-info"></i> التسجيل</strong>
+                  <small>السماح بتسجيل عملاء جدد</small>
+                </span>
+              </label>
+              <label class="sys-settings__toggle-card" for="api_enabled">
+                <input class="form-check-input" type="checkbox" name="api_enabled" id="api_enabled" {% if data.general.api_enabled %}checked{% endif %}>
+                <span>
+                  <strong><i class="fas fa-code text-primary"></i> API</strong>
+                  <small>تفعيل الوصول لـ /api</small>
+                </span>
+              </label>
             </div>
-            
-            <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-primary btn-lg">
-                <i class="fas fa-save"></i> حفظ الإعدادات العامة
-              </button>
-            </div>
+
+            <button type="submit" class="btn btn-primary sys-settings__save">
+              <i class="fas fa-save"></i> حفظ الإعدادات العامة
+            </button>
           </form>
         </div>
         
-        <!-- التبويب 2: التكوينات المتقدمة -->
-        <div class="tab-pane fade {% if active_tab == 'advanced' %}show active{% endif %}" 
-             id="advanced" 
-             role="tabpanel">
-          
-          <div class="alert alert-danger">
-            <i class="fas fa-radiation"></i> <strong>تحذير:</strong> تعديل هذه الإعدادات يؤثر على سلوك النظام!
+        <div class="tab-pane fade {% if active_tab == 'advanced' %}show active{% endif %}" id="advanced" role="tabpanel">
+
+          <div class="sys-settings__alert sys-settings__alert--danger">
+            <i class="fas fa-exclamation-triangle"></i> تعديل هذه الإعدادات يؤثر مباشرة على الأمان والجلسات.
           </div>
           
           <form method="POST" novalidate>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="active_tab" value="advanced">
             
-            <div class="row">
+            <div class="row g-3">
               <div class="col-md-6">
-                <div class="card mb-3">
-                  <div class="card-header bg-primary text-white">
-                    <strong><i class="fas fa-shield-alt"></i> الجلسات والأمان</strong>
-                  </div>
+                <div class="card mb-0 border">
+                  <div class="card-header fw-bold"><i class="fas fa-shield-alt"></i> الجلسات والأمان</div>
                   <div class="card-body">
                     <div class="mb-3">
                       <label class="form-label">مهلة الجلسة (ثانية)</label>
@@ -313,10 +130,8 @@
               </div>
               
               <div class="col-md-6">
-                <div class="card mb-3">
-                  <div class="card-header bg-success text-white">
-                    <strong><i class="fas fa-database"></i> النسخ الاحتياطي</strong>
-                  </div>
+                <div class="card mb-0 border">
+                  <div class="card-header fw-bold"><i class="fas fa-database"></i> النسخ الاحتياطي</div>
                   <div class="card-body">
                     <div class="mb-3">
                       <div class="form-check form-switch">
@@ -334,8 +149,7 @@
                       <small class="text-muted">الافتراضي: 24 ساعة (يومياً)</small>
                     </div>
                     
-                    <div class="alert alert-info">
-                      <i class="fas fa-info-circle"></i>
+                    <div class="sys-settings__alert sys-settings__alert--info mb-0">
                       <small>النظام يحتفظ بآخر 5 نسخ فقط تلقائياً</small>
                     </div>
                   </div>
@@ -343,10 +157,8 @@
               </div>
               
               <div class="col-md-6">
-                <div class="card mb-3">
-                  <div class="card-header bg-info text-white">
-                    <strong><i class="fas fa-bell"></i> الإشعارات</strong>
-                  </div>
+                <div class="card mb-0 border">
+                  <div class="card-header fw-bold"><i class="fas fa-bell"></i> الإشعارات</div>
                   <div class="card-body">
                     <div class="mb-3">
                       <div class="form-check form-switch">
@@ -372,32 +184,41 @@
               </div>
             </div>
             
-            <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-success btn-lg">
-                <i class="fas fa-save"></i> حفظ التكوينات المتقدمة
-              </button>
-            </div>
+            <button type="submit" class="btn btn-success sys-settings__save">
+              <i class="fas fa-save"></i> حفظ التكوينات المتقدمة
+            </button>
           </form>
         </div>
-        
-        <!-- التبويب 3: بيانات الشركة -->
-        <div class="tab-pane fade {% if active_tab == 'company' or active_tab == 'constants' %}show active{% endif %}" 
-             id="company" 
-             role="tabpanel">
-          
-          <div class="alert alert-warning">
-            <i class="fas fa-building"></i> <strong>معلومات الشركة:</strong> هذه البيانات تظهر في الفواتير والتقارير
+
+        <div class="tab-pane fade {% if active_tab == 'company' %}show active{% endif %}" id="company" role="tabpanel">
+
+          <div class="sys-settings__alert sys-settings__alert--warn">
+            <i class="fas fa-building"></i> <strong>معلومات الشركة:</strong> تظهر في الفواتير والتقارير وتحدّث كيان الشركة القانوني (الشريط الجانبي).
+            {% if data.company.company_code %}
+            <span class="badge bg-dark ms-2">{{ data.company.company_code }}</span>
+            {% endif %}
+            <a href="{{ url_for('companies_bp.index') }}" class="btn btn-sm btn-outline-primary ms-2">إدارة الشركات</a>
           </div>
           
           <form method="POST" novalidate>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="active_tab" value="company">
+            {% if data.company.company_id %}
+            <input type="hidden" name="company_id" value="{{ data.company.company_id }}">
+            {% endif %}
             
             <div class="row">
               <div class="col-md-6">
                 <div class="mb-3">
-                  <label class="form-label"><i class="fas fa-building"></i> <strong>اسم الشركة</strong></label>
-                  <input type="text" name="company_name" class="form-control form-control-lg" value="{{ data.company.COMPANY_NAME }}" placeholder="اسم الشركة">
+                  <label class="form-label"><i class="fas fa-id-card"></i> <strong>اسم الكيان القانوني</strong></label>
+                  <input type="text" name="legal_entity_name" class="form-control form-control-lg" value="{{ data.company.legal_entity_name }}" placeholder="الاسم في الشريط الجانبي">
+                  <small class="text-muted">يُحفظ في جدول الشركات ويظهر في القائمة الجانبية.</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label"><i class="fas fa-building"></i> <strong>اسم العرض في التقارير</strong></label>
+                  <input type="text" name="company_name" class="form-control form-control-lg" value="{{ data.company.COMPANY_NAME }}" placeholder="اسم الشركة على الفواتير">
                 </div>
               </div>
               
@@ -473,122 +294,20 @@
               </div>
             </div>
             
-            <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-warning btn-lg">
-                <i class="fas fa-save"></i> حفظ بيانات الشركة
-              </button>
-            </div>
+            <button type="submit" class="btn btn-warning sys-settings__save">
+              <i class="fas fa-save"></i> حفظ بيانات الشركة
+            </button>
           </form>
         </div>
-        
-        <!-- التبويب 4: ثوابت الأعمال -->
-        <div class="tab-pane fade {% if active_tab == 'business' %}show active{% endif %}" 
-             id="business" 
-             role="tabpanel">
-          
-          <div class="alert alert-primary border-0 shadow-sm mb-4">
-            <div class="d-flex align-items-center">
-              <div class="fs-1 me-3 text-primary"><i class="fas fa-briefcase"></i></div>
-              <div>
-                <h5 class="alert-heading fw-bold mb-1">ثوابت الأعمال وقواعد النظام</h5>
-                <p class="mb-0 text-muted">تحكم في القواعد المالية، الضرائب، الرواتب، وسلوك النظام الآلي. تفعيل هذه الوحدات يؤثر مباشرة على العمليات اليومية.</p>
-              </div>
-            </div>
-          </div>
-          
+
+        <div class="tab-pane fade {% if active_tab == 'business' %}show active{% endif %}" id="business" role="tabpanel">
+
+          <p class="sys-settings__section-title"><i class="fas fa-briefcase"></i> ثوابت الأعمال وقواعد النظام</p>
           <form method="POST" novalidate id="businessSettingsForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="active_tab" value="business">
-            <style>
-              .constants-section {
-                transition: all 0.3s ease;
-              }
-              .constants-section.constants-disabled {
-                opacity: 0.6;
-                pointer-events: none;
-                filter: grayscale(0.8);
-              }
-              .module-card {
-                border: 0;
-                border-radius: 16px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-                transition: transform 0.2s, box-shadow 0.2s;
-                height: 100%;
-                overflow: hidden;
-                background: #fff;
-                color: #212529 !important;
-                border-top: 4px solid transparent;
-              }
-              .module-card .text-muted {
-                color: #6c757d !important;
-              }
-              .module-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 12px 30px rgba(0,0,0,0.1);
-              }
-              .module-card .card-body {
-                padding: 1.5rem;
-              }
-              .module-icon {
-                width: 56px;
-                height: 56px;
-                border-radius: 14px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 1.75rem;
-                margin-bottom: 1.25rem;
-                transition: transform 0.2s;
-              }
-              .module-card:hover .module-icon {
-                transform: scale(1.1);
-              }
-              .accordion-button:not(.collapsed) {
-                background-color: #f0f7ff;
-                color: #0d6efd;
-                box-shadow: inset 0 -1px 0 rgba(0,0,0,.125);
-              }
-              .accordion-button::after {
-                background-size: 1rem;
-              }
-              .form-label {
-                font-weight: 600;
-                font-size: 0.9rem;
-                color: #495057;
-              }
-              .input-group-text {
-                background-color: #f8f9fa;
-                border-color: #ced4da;
-              }
-              .floating-save-btn {
-                position: fixed;
-                bottom: 30px;
-                left: 30px;
-                z-index: 1000;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-                border-radius: 50px;
-                padding: 12px 25px;
-                font-weight: bold;
-                transition: all 0.3s;
-                opacity: 0.9;
-              }
-              .floating-save-btn:hover {
-                transform: scale(1.05);
-                opacity: 1;
-              }
-              /* Card Specific Colors */
-              .card-tax { border-top-color: var(--bs-primary); }
-              .card-payroll { border-top-color: var(--bs-success); }
-              .card-assets { border-top-color: var(--bs-info); }
-              .card-accounting { border-top-color: var(--bs-warning); }
-              .card-notifications { border-top-color: var(--bs-danger); }
-              .card-rules { border-top-color: var(--bs-dark); }
-              .card-saas { border-top-color: var(--bs-secondary); }
-            </style>
-            
-            <h6 class="text-muted fw-bold text-uppercase mb-3 small"><i class="fas fa-th-large me-1"></i> وحدات النظام (System Modules)</h6>
-            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4 mb-5">
-              <!-- 1. Tax Module -->
+
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4 mb-4">
               <div class="col">
                 <div class="card module-card card-tax">
                   <div class="card-body">
@@ -598,24 +317,22 @@
                       </div>
                       <div class="form-check form-switch">
                         <input class="form-check-input constants-toggle fs-4" type="checkbox"
-                               data-target="#tax-constants-section"
-                               data-target="#collapseTax"
+                               data-section-target="#tax-constants-section"
+                               data-collapse-target="#collapseTax"
                                name="enable_tax_constants"
                                id="toggle_tax"
                                {% if data.business.enable_tax_constants %}checked{% endif %}>
                       </div>
                     </div>
                     <h5 class="card-title fw-bold">الضرائب</h5>
-                    <p class="card-text text-muted small">إعدادات ضريبة القيمة المضافة (VAT)، ضريبة الدخل، والخصم من المنبع.</p>
+                    <p class="card-text text-muted small">ضريبة القيمة المضافة والدخل والخصم من المنبع.</p>
                     <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">
                       {% if data.business.enable_tax_constants %}مفعّل{% else %}معطّل{% endif %}
                     </span>
                   </div>
                 </div>
               </div>
-              
-              <!-- 2. Payroll Module -->
-              <div class="col">
+<div class="col">
                 <div class="card module-card card-payroll">
                   <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
@@ -624,24 +341,22 @@
                       </div>
                       <div class="form-check form-switch">
                         <input class="form-check-input constants-toggle fs-4" type="checkbox"
-                               data-target="#payroll-constants-section"
-                               data-target="#collapsePayroll"
+                               data-section-target="#payroll-constants-section"
+                               data-collapse-target="#collapsePayroll"
                                name="enable_payroll_constants"
                                id="toggle_payroll"
                                {% if data.business.enable_payroll_constants %}checked{% endif %}>
                       </div>
                     </div>
                     <h5 class="card-title fw-bold">الرواتب</h5>
-                    <p class="card-text text-muted small">حسابات التأمينات الاجتماعية، ساعات العمل، ومعدلات الأوفر تايم.</p>
+                    <p class="card-text text-muted small">تأمينات ورواتب وساعات العمل.</p>
                     <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">
                       {% if data.business.enable_payroll_constants %}مفعّل{% else %}معطّل{% endif %}
                     </span>
                   </div>
                 </div>
               </div>
-              
-              <!-- 3. Assets Module -->
-              <div class="col">
+<div class="col">
                 <div class="card module-card card-assets">
                   <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
@@ -650,24 +365,22 @@
                       </div>
                       <div class="form-check form-switch">
                         <input class="form-check-input constants-toggle fs-4" type="checkbox"
-                               data-target="#assets-constants-section"
-                               data-target="#collapseAssets"
+                               data-section-target="#assets-constants-section"
+                               data-collapse-target="#collapseAssets"
                                name="enable_asset_constants"
                                id="toggle_assets"
                                {% if data.business.enable_asset_constants %}checked{% endif %}>
                       </div>
                     </div>
                     <h5 class="card-title fw-bold">الأصول الثابتة</h5>
-                    <p class="card-text text-muted small">إدارة الأصول، الاستهلاك التلقائي الشهري، وحدود الرسملة.</p>
+                    <p class="card-text text-muted small">أصول واستهلاك ورسملة.</p>
                     <span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3">
                       {% if data.business.enable_asset_constants %}مفعّل{% else %}معطّل{% endif %}
                     </span>
                   </div>
                 </div>
               </div>
-              
-              <!-- 4. Accounting Module -->
-              <div class="col">
+<div class="col">
                 <div class="card module-card card-accounting">
                   <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
@@ -676,24 +389,22 @@
                       </div>
                       <div class="form-check form-switch">
                         <input class="form-check-input constants-toggle fs-4" type="checkbox"
-                               data-target="#accounting-constants-section"
-                               data-target="#collapseAccounting"
+                               data-section-target="#accounting-constants-section"
+                               data-collapse-target="#collapseAccounting"
                                name="enable_accounting_constants"
                                id="toggle_accounting"
                                {% if data.business.enable_accounting_constants %}checked{% endif %}>
                       </div>
                     </div>
                     <h5 class="card-title fw-bold">المحاسبة</h5>
-                    <p class="card-text text-muted small">مراكز التكلفة، الموازنات التقديرية، وتحديد بداية السنة المالية.</p>
+                    <p class="card-text text-muted small">مراكز تكلفة وموازنات وسنة مالية.</p>
                     <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">
                       {% if data.business.enable_accounting_constants %}مفعّل{% else %}معطّل{% endif %}
                     </span>
                   </div>
                 </div>
               </div>
-
-              <!-- 5. Notifications Module -->
-              <div class="col">
+<div class="col">
                 <div class="card module-card card-notifications">
                   <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
@@ -702,23 +413,22 @@
                       </div>
                       <div class="form-check form-switch">
                         <input class="form-check-input constants-toggle fs-4" type="checkbox"
-                               data-target="#notification-constants-section"
+                               data-section-target="#notification-constants-section"
+                               data-collapse-target="#collapseNotifications"
                                name="enable_notification_constants"
                                id="toggle_notifications"
                                {% if data.business.enable_notification_constants %}checked{% endif %}>
                       </div>
                     </div>
                     <h5 class="card-title fw-bold">الإشعارات</h5>
-                    <p class="card-text text-muted small">تنبيهات الدفع، اكتمال الخدمات، ونقص المخزون.</p>
+                    <p class="card-text text-muted small">تنبيهات دفع ومخزون وخدمات.</p>
                     <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3">
                       {% if data.business.enable_notification_constants %}مفعّل{% else %}معطّل{% endif %}
                     </span>
                   </div>
                 </div>
               </div>
-
-              <!-- 6. Business Rules Module -->
-              <div class="col">
+<div class="col">
                 <div class="card module-card card-rules">
                   <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
@@ -727,24 +437,22 @@
                       </div>
                       <div class="form-check form-switch">
                         <input class="form-check-input constants-toggle fs-4" type="checkbox"
-                               data-target="#business-rules-constants-section"
-                               data-target="#collapseRules"
+                               data-section-target="#business-rules-constants-section"
+                               data-collapse-target="#collapseRules"
                                name="enable_business_rules_constants"
                                id="toggle_rules"
                                {% if data.business.enable_business_rules_constants %}checked{% endif %}>
                       </div>
                     </div>
                     <h5 class="card-title fw-bold">قواعد العمل</h5>
-                    <p class="card-text text-muted small">سياسات المخزون، حدود الائتمان، وسقوف الخصومات.</p>
+                    <p class="card-text text-muted small">مخزون وائتمان وخصومات.</p>
                     <span class="badge bg-dark bg-opacity-10 text-dark rounded-pill px-3">
                       {% if data.business.enable_business_rules_constants %}مفعّل{% else %}معطّل{% endif %}
                     </span>
                   </div>
                 </div>
               </div>
-
-              <!-- 7. SaaS Module -->
-              <div class="col">
+<div class="col">
                 <div class="card module-card card-saas">
                   <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
@@ -753,15 +461,15 @@
                       </div>
                       <div class="form-check form-switch">
                         <input class="form-check-input constants-toggle fs-4" type="checkbox"
-                               data-target="#multi-tenancy-constants-section"
-                               data-target="#collapseTenancy"
+                               data-section-target="#multi-tenancy-constants-section"
+                               data-collapse-target="#collapseTenancy"
                                name="enable_multi_tenancy_constants"
                                id="toggle_saas"
                                {% if data.business.enable_multi_tenancy_constants %}checked{% endif %}>
                       </div>
                     </div>
-                    <h5 class="card-title fw-bold">Multi-Tenancy</h5>
-                    <p class="card-text text-muted small">إعدادات النظام متعدد المستأجرين والفترات التجريبية.</p>
+                    <h5 class="card-title fw-bold">تعدد المستأجرين</h5>
+                    <p class="card-text text-muted small">عزل بيانات الزبائن والفترات التجريبية.</p>
                     <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3">
                       {% if data.business.enable_multi_tenancy_constants %}مفعّل{% else %}معطّل{% endif %}
                     </span>
@@ -770,16 +478,12 @@
               </div>
             </div>
             
-            <h6 class="text-muted fw-bold text-uppercase mb-3 small"><i class="fas fa-sliders-h me-1"></i> تفاصيل الإعدادات (Configuration)</h6>
-            
-            <!-- Accordion للثوابت -->
-            <div class="accordion accordion-flush shadow-sm rounded overflow-hidden border" id="businessConstantsAccordion">
-              
-              <!-- 1. Tax Settings -->
-              <div class="accordion-item">
+            <h6 class="sys-settings__section-title"><i class="fas fa-sliders-h"></i> تفاصيل الإعدادات</h6>
+<div class="accordion accordion-flush shadow-sm rounded overflow-hidden border" id="businessConstantsAccordion">
+<div class="accordion-item">
                 <h2 class="accordion-header" id="headingTax">
                   <button class="accordion-button fw-bold" type="button" data-toggle="collapse" data-target="#collapseTax" aria-expanded="true" aria-controls="collapseTax">
-                    <i class="fas fa-percentage text-primary me-2"></i> إعدادات الضرائب (Tax Settings)
+                    <i class="fas fa-percentage text-primary me-2"></i> إعدادات الضرائب
                   </button>
                 </h2>
                 <div id="collapseTax" class="accordion-collapse collapse show" data-parent="#businessConstantsAccordion">
@@ -829,12 +533,10 @@
                   </div>
                 </div>
               </div>
-              
-              <!-- 2. Payroll Settings -->
-              <div class="accordion-item">
+<div class="accordion-item">
                 <h2 class="accordion-header" id="headingPayroll">
                   <button class="accordion-button collapsed fw-bold" type="button" data-toggle="collapse" data-target="#collapsePayroll" aria-expanded="false" aria-controls="collapsePayroll">
-                    <i class="fas fa-user-clock text-success me-2"></i> إعدادات الرواتب (Payroll Settings)
+                    <i class="fas fa-user-clock text-success me-2"></i> إعدادات الرواتب
                   </button>
                 </h2>
                 <div id="collapsePayroll" class="accordion-collapse collapse" data-parent="#businessConstantsAccordion">
@@ -892,9 +594,7 @@
                   </div>
                 </div>
               </div>
-              
-              <!-- 3. Fixed Assets Settings -->
-              <div class="accordion-item">
+<div class="accordion-item">
                 <h2 class="accordion-header" id="headingAssets">
                   <button class="accordion-button collapsed fw-bold" type="button" data-toggle="collapse" data-target="#collapseAssets" aria-expanded="false" aria-controls="collapseAssets">
                     <i class="fas fa-building text-info me-2"></i> إعدادات الأصول الثابتة (Fixed Assets)
@@ -929,9 +629,7 @@
                   </div>
                 </div>
               </div>
-              
-              <!-- 4. Accounting Settings -->
-              <div class="accordion-item">
+<div class="accordion-item">
                 <h2 class="accordion-header" id="headingAccounting">
                   <button class="accordion-button collapsed fw-bold" type="button" data-toggle="collapse" data-target="#collapseAccounting" aria-expanded="false" aria-controls="collapseAccounting">
                     <i class="fas fa-balance-scale text-warning me-2"></i> إعدادات المحاسبة (Accounting)
@@ -974,9 +672,7 @@
                   </div>
                 </div>
               </div>
-              
-              <!-- 5. Notification Settings -->
-              <div class="accordion-item">
+<div class="accordion-item">
                 <h2 class="accordion-header" id="headingNotifications">
                   <button class="accordion-button collapsed fw-bold" type="button" data-toggle="collapse" data-target="#collapseNotifications" aria-expanded="false" aria-controls="collapseNotifications">
                     <i class="fas fa-bell text-danger me-2"></i> إعدادات الإشعارات (Notifications)
@@ -1025,9 +721,7 @@
                   </div>
                 </div>
               </div>
-              
-              <!-- 6. Business Rules -->
-              <div class="accordion-item">
+<div class="accordion-item">
                 <h2 class="accordion-header" id="headingRules">
                   <button class="accordion-button collapsed fw-bold" type="button" data-toggle="collapse" data-target="#collapseRules" aria-expanded="false" aria-controls="collapseRules">
                     <i class="fas fa-cogs text-dark me-2"></i> قواعد العمل (Business Rules)
@@ -1077,12 +771,10 @@
                   </div>
                 </div>
               </div>
-              
-              <!-- 7. Multi-Tenancy Settings -->
-              <div class="accordion-item">
+<div class="accordion-item">
                 <h2 class="accordion-header" id="headingTenancy">
                   <button class="accordion-button collapsed fw-bold" type="button" data-toggle="collapse" data-target="#collapseTenancy" aria-expanded="false" aria-controls="collapseTenancy">
-                    <i class="fas fa-cloud text-secondary me-2"></i> إعدادات SaaS (Multi-Tenancy)
+                    <i class="fas fa-cloud text-secondary me-2"></i> إعدادات تعدد المستأجرين
                   </button>
                 </h2>
                 <div id="collapseTenancy" class="accordion-collapse collapse" data-parent="#businessConstantsAccordion">
@@ -1117,155 +809,151 @@
               
             </div>
             
-            <div class="d-grid gap-2 mt-5 mb-5">
-              <button type="submit" class="btn btn-primary btn-lg shadow p-3">
-                <i class="fas fa-save me-2"></i> حفظ ثوابت الأعمال وتحديث النظام
-              </button>
-            </div>
-            
-            <!-- Floating Save Button -->
-            <button type="submit" class="btn btn-primary floating-save-btn">
-              <i class="fas fa-save me-2"></i> حفظ التغييرات
+            <button type="submit" class="btn btn-primary sys-settings__save">
+              <i class="fas fa-save"></i> حفظ ثوابت الأعمال
             </button>
           </form>
         </div>
-        
-        <!-- Branding Tab -->
-        <div class="tab-pane fade {% if active_tab == 'branding' %}show active{% endif %}" 
-             id="branding" 
-             role="tabpanel">
+
+        <div class="tab-pane fade {% if active_tab == 'branding' %}show active{% endif %}" id="branding" role="tabpanel">
           <form method="POST" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="active_tab" value="branding">
-            
-            <div class="card shadow-sm border-0">
+
+            <div class="sys-settings__alert sys-settings__alert--info">
+              <i class="fas fa-image"></i> لشعارات متعددة استخدم
+              <a href="{{ url_for('security.logo_manager') }}" class="fw-bold">مدير الشعارات</a>.
+            </div>
+
+            <div class="card border-0 shadow-sm">
                 <div class="card-body p-4">
-                    <h5 class="card-title fw-bold mb-4 text-primary"><i class="fas fa-paint-brush me-2"></i> إعدادات الهوية والمظهر</h5>
+                    <h5 class="sys-settings__section-title"><i class="fas fa-paint-brush"></i> الهوية والمظهر</h5>
                     
                     <div class="row g-4">
                       <div class="col-md-6">
                         <div class="mb-3">
-                          <label class="form-label fw-bold">اسم النظام (يظهر في الشريط العلوي)</label>
+                          <label class="form-label fw-bold">اسم النظام</label>
                           <input type="text" name="system_name" class="form-control form-control-lg" 
-                                 value="{{ data.branding.system_name }}" placeholder="منصة أزاد ERP">
-                          <div class="form-text">الاسم الذي سيظهر في الزاوية العلوية اليمنى للنظام.</div>
+                                 value="{{ data.branding.system_name }}" placeholder="نظام الحازم">
+                          <div class="form-text">يظهر في عنوان الصفحة وشاشة الدخول.</div>
                         </div>
                       </div>
                       
                       <div class="col-md-6">
                         <div class="mb-3">
-                          <label class="form-label fw-bold">اسم الشركة (يظهر في التقارير)</label>
+                          <label class="form-label fw-bold">اسم الشركة (العلامة)</label>
                           <input type="text" name="company_name" class="form-control form-control-lg" 
-                                 value="{{ data.branding.company_name }}" placeholder="شركة أزاد للأنظمة الذكية">
-                          <div class="form-text">الاسم الرسمي للشركة الذي سيظهر في الفواتير والتقارير المطبوعة.</div>
+                                 value="{{ data.branding.company_name }}" placeholder="شركة الحازم">
+                          <div class="form-text">اسم افتراضي للتقارير إذا لم يُحدد في تبويب الشركة.</div>
                         </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">عنوان شاشة الدخول</label>
+                          <input type="text" name="login_title" class="form-control" value="{{ data.branding.login_title }}">
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">وصف شاشة الدخول</label>
+                          <input type="text" name="login_subtitle" class="form-control" value="{{ data.branding.login_subtitle }}">
+                        </div>
+                      </div>
+                      <div class="col-md-12">
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">نص التذييل</label>
+                          <input type="text" name="footer_text" class="form-control" value="{{ data.branding.footer_text }}">
+                        </div>
+                      </div>
+
+                      <div class="col-md-3">
+                        <label class="form-label fw-bold">اللون الأساسي</label>
+                        <input type="color" name="primary_color" class="form-control form-control-color w-100" value="{{ data.branding.primary_color }}">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label fw-bold">اللون الثانوي</label>
+                        <input type="color" name="secondary_color" class="form-control form-control-color w-100" value="{{ data.branding.secondary_color }}">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label fw-bold">خلفية الشريط الجانبي</label>
+                        <input type="color" name="sidebar_bg" class="form-control form-control-color w-100" value="{{ data.branding.sidebar_bg }}">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label fw-bold">نص الشريط الجانبي</label>
+                        <input type="color" name="sidebar_text" class="form-control form-control-color w-100" value="{{ data.branding.sidebar_text }}">
                       </div>
         
                       <div class="col-md-12">
                         <div class="mb-3 p-4 border rounded bg-light">
-                          <label class="form-label fw-bold mb-3 d-block">شعار النظام (Logo)</label>
-                          <div class="d-flex align-items-center gap-4">
+                          <label class="form-label fw-bold mb-3 d-block">شعار الشركة (Logo)</label>
+                          <div class="d-flex align-items-center gap-4 flex-wrap">
                               <div class="text-center">
                                   {% if data.branding.company_logo %}
                                     <img src="{{ url_for('static', filename=data.branding.company_logo.replace('static/', '')) }}" 
-                                         class="img-thumbnail bg-white" 
-                                         style="height: 80px; width: auto; object-fit: contain;">
+                                         class="img-thumbnail bg-white logo-preview">
                                     <div class="small text-muted mt-1">الشعار الحالي</div>
                                   {% else %}
-                                    <img src="{{ url_for('static', filename='branding/platform/logos/primary.png') }}" 
-                                         class="img-thumbnail bg-white opacity-50" 
-                                         style="height: 80px; width: auto; object-fit: contain;">
-                                    <div class="small text-muted mt-1">الشعار الافتراضي (المنصة)</div>
+                                    <img src="{{ system_settings.tenant_logo_url or url_for('static', filename='img/branding/platform/logos/primary.png') }}" 
+                                         class="img-thumbnail bg-white opacity-50 logo-preview">
+                                    <div class="small text-muted mt-1">الشعار الافتراضي</div>
                                   {% endif %}
                               </div>
-                              <div class="flex-grow-1">
+                              <div class="flex-grow-1 logo-upload-col">
                                   <input type="file" name="custom_logo" class="form-control" accept="image/*">
-                                  <div class="form-text mt-2">يفضل استخدام صورة بخلفية شفافة (PNG) وبأبعاد متناسقة.</div>
+                                  <div class="form-text mt-2">يُحفظ في مجلد أصول الشركة النشطة تلقائياً.</div>
                               </div>
                           </div>
                         </div>
                       </div>
                     </div>
                     
-                    <div class="d-grid gap-2 mt-4">
-                      <button type="submit" class="btn btn-primary btn-lg shadow p-3">
-                        <i class="fas fa-save me-2"></i> حفظ إعدادات الهوية
-                      </button>
-                    </div>
+                    <button type="submit" class="btn btn-primary sys-settings__save">
+                      <i class="fas fa-save"></i> حفظ إعدادات الهوية
+                    </button>
                 </div>
             </div>
           </form>
         </div>
-        
+
       </div>
-      
     </div>
   </div>
-
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// حفظ التبويب النشط في localStorage
-document.querySelectorAll('#settingsTabs button').forEach(tab => {
-  tab.addEventListener('shown.bs.tab', function (event) {
-    const tabId = (event.target.getAttribute('data-target') || event.target.getAttribute('data-target') || '').replace('#', '');
-    localStorage.setItem('settingsActiveTab', tabId);
-  });
-});
-
-// استعادة التبويب النشط
 document.addEventListener('DOMContentLoaded', function() {
-  const savedTab = localStorage.getItem('settingsActiveTab');
-  if (savedTab && !{{ 'true' if active_tab else 'false' }}) {
-    const tabTrigger = document.querySelector(`#settingsTabs button[data-target="#${savedTab}"]`);
-    if (tabTrigger) {
-      $(tabTrigger).tab('show');
-    }
-  }
-  
-  document.querySelectorAll('.constants-toggle-wrapper .constants-toggle').forEach(el => {
-    el.disabled = true;
-    el.name = '';
-    el.classList.remove('constants-toggle');
-  });
-  
   const updateConstantSection = (toggle) => {
-    const targetSelector = toggle.getAttribute('data-target');
-    const section = document.querySelector(targetSelector);
-    if (!section) {
-      return;
+    const sectionSelector = toggle.getAttribute('data-section-target');
+    const section = sectionSelector ? document.querySelector(sectionSelector) : null;
+    if (section) {
+      const enabled = toggle.checked;
+      section.classList.toggle('constants-disabled', !enabled);
+      section.querySelectorAll('input:not(.constants-toggle), select, textarea').forEach(el => {
+        el.classList.toggle('opacity-50', !enabled);
+      });
     }
-    const enabled = toggle.checked;
-    section.classList.toggle('constants-disabled', !enabled);
-    section.querySelectorAll('input, select, textarea').forEach(el => {
-      el.disabled = !enabled;
-    });
-    
-    // Handle Collapse Logic (BS5/BS4 Compatible)
-    const collapseSelector = toggle.getAttribute('data-bs-target') || toggle.getAttribute('data-target');
+
+    const collapseSelector = toggle.getAttribute('data-collapse-target');
     if (collapseSelector) {
-        // Try BS5 API first, then jQuery
-        try {
-            const collapseEl = document.querySelector(collapseSelector);
-            if (window.bootstrap && window.bootstrap.Collapse) {
-                const bsCollapse = bootstrap.Collapse.getInstance(collapseEl) || new bootstrap.Collapse(collapseEl, {toggle: false});
-                if (enabled) bsCollapse.show();
-                else bsCollapse.hide();
-            } else if (window.jQuery) {
-                $(collapseSelector).collapse(enabled ? 'show' : 'hide');
-            }
-        } catch (e) {
+      try {
+        const collapseEl = document.querySelector(collapseSelector);
+        if (!collapseEl) return;
+        if (window.bootstrap && window.bootstrap.Collapse) {
+          const bsCollapse = bootstrap.Collapse.getInstance(collapseEl) || new bootstrap.Collapse(collapseEl, {toggle: false});
+          if (toggle.checked) bsCollapse.show();
+          else bsCollapse.hide();
+        } else if (window.jQuery) {
+          $(collapseSelector).collapse(toggle.checked ? 'show' : 'hide');
         }
+      } catch (e) { /* ignore */ }
     }
   };
-  
+
   document.querySelectorAll('.constants-toggle').forEach(toggle => {
-    // Initial State
     updateConstantSection(toggle);
-    
-    // Change Listener
     toggle.addEventListener('change', () => updateConstantSection(toggle));
   });
 });

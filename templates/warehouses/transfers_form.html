@@ -1,142 +1,29 @@
 {% extends 'warehouses/base.html' %}
-{% block page_title %}تحويل جديد - {{ warehouse.name }}{% endblock %}
-
-{% block head_extra %}
-{{ super() }}
-<style>
-  .stock-info-card {
-    background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
-    color: white;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 20px;
-    display: none;
-  }
-  
-  .stock-info-card.show {
-    display: block;
-    animation: slideDown 0.3s ease;
-  }
-  
-  @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  
-  .stock-available {
-    font-size: 2rem;
-    font-weight: bold;
-    margin: 10px 0;
-  }
-  
-  .stock-warning {
-    background: #fff3cd;
-    border-left: 4px solid #ffc107;
-    padding: 12px;
-    border-radius: 5px;
-    margin-top: 15px;
-    display: none;
-  }
-  
-  .stock-warning.show {
-    display: block;
-    animation: shake 0.5s;
-  }
-  
-  .stock-danger {
-    background: #f8d7da;
-    border-left: 4px solid #dc3545;
-  }
-  
-  @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
-  }
-  
-  .field-icon {
-    color: #6c757d;
-    margin-right: 5px;
-  }
-  
-  .info-tooltip {
-    cursor: help;
-    color: #17a2b8;
-  }
-  
-  .card-section {
-    border-bottom: 2px solid #e9ecef;
-    padding-bottom: 20px;
-    margin-bottom: 20px;
-  }
-  
-  .card-section:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-  }
-  
-  .card-section-title {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 15px;
-    font-size: 1.1rem;
-  }
-  
-  .form-control:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-  }
-  
-  .btn-submit {
-    position: relative;
-    min-width: 120px;
-  }
-  
-  .btn-submit .btn-text {
-    display: inline;
-  }
-  
-  .btn-submit .btn-loading {
-    display: none;
-  }
-  
-  .btn-submit.loading .btn-text {
-    display: none;
-  }
-  
-  .btn-submit.loading .btn-loading {
-    display: inline;
-  }
-  
-  .reference-preview {
-    font-family: 'Courier New', monospace;
-    color: #6c757d;
-    font-size: 0.9rem;
-    margin-top: 5px;
-  }
-</style>
+{% block page_title %}<i class="fas fa-random ml-1"></i> تحويل جديد — {{ warehouse.name }}{% endblock %}
+{% block breadcrumb_extra %}
+<li class="breadcrumb-item"><a href="{{ url_for('warehouse_bp.detail', warehouse_id=warehouse.id) }}">{{ warehouse.name }}</a></li>
+<li class="breadcrumb-item"><a href="{{ url_for('warehouse_bp.transfers', id=warehouse.id) }}">التحويلات</a></li>
+<li class="breadcrumb-item active">تحويل جديد</li>
 {% endblock %}
 
-{% block w_content %}
+{% block content %}
+<div class="warehouse-transfer-page">
 
-<!-- تنبيه توضيحي -->
 <div class="alert alert-info alert-dismissible fade show" role="alert">
   <i class="fas fa-info-circle ml-2"></i>
   <strong>ملاحظة:</strong> سيتم خصم الكمية من <strong>{{ warehouse.name }}</strong> وإضافتها للمستودع الوجهة تلقائياً.
   <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
 </div>
 
-<!-- تنبيه قواعد التحويل -->
 <div class="alert alert-warning" role="alert" style="border-right: 4px solid #ffc107;">
   <h6 class="mb-2"><i class="fas fa-exclamation-triangle ml-2"></i><strong>قواعد التحويل حسب نوع المستودع:</strong></h6>
-  <ul class="mb-0" style="font-size: 0.9rem; line-height: 1.8;">
+  <ul class="mb-0 small" style="line-height: 1.8;">
     <li><strong>مستودع شريك:</strong> يحول فقط لمستودع شريك آخر</li>
     <li><strong>مستودع تبادل:</strong> يحول فقط لمستودع تبادل آخر</li>
     <li><strong>مستودع رئيسي/أونلاين/ملكية كاملة:</strong> يحولون لبعضهم بحرية</li>
   </ul>
 </div>
 
-<!-- بطاقة معلومات المخزون -->
 <div class="stock-info-card" id="stockInfo">
   <div class="row align-items-center">
     <div class="col-md-8">
@@ -146,7 +33,7 @@
       </h5>
       <p class="mb-0 opacity-75">الكمية المتاحة في {{ warehouse.name }}</p>
     </div>
-    <div class="col-md-4 text-end">
+    <div class="col-md-4 text-left">
       <div class="stock-available" id="stockAvailable">-</div>
       <small class="opacity-75">قطعة</small>
     </div>
@@ -157,41 +44,33 @@
   {{ form.hidden_tag() }}
   <input type="hidden" name="source_id" value="{{ warehouse.id }}">
 
-  <div class="card shadow-lg rounded-4 border-0 mb-4">
-    <div class="card-header text-white d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="card-header erp-card-header-row erp-theme-header--primary d-flex justify-content-between align-items-center">
       <h5 class="mb-0">
         <i class="fas fa-random ml-2"></i>
         تسجيل تحويل جديد
       </h5>
-      <div class="btn-group shadow-sm rounded-pill overflow-hidden bg-white">
-          <button onclick="window.history.back()" class="btn btn-sm text-primary fw-bold border-end">
-              <i class="fas fa-arrow-right" style="pointer-events: none;"></i>
-          </button>
-          <button onclick="window.history.forward()" class="btn btn-sm text-primary fw-bold">
-              <i class="fas fa-arrow-left" style="pointer-events: none;"></i>
-          </button>
-      </div>
+      <a href="{{ url_for('warehouse_bp.transfers', id=warehouse.id) }}" class="btn btn-light btn-sm">
+        <i class="fas fa-arrow-right ml-1"></i> رجوع للتحويلات
+      </a>
     </div>
     <div class="card-body p-4">
-      
-      <!-- قسم 1: معلومات المرجع والتاريخ -->
+
       <div class="card-section">
         <h6 class="card-section-title">
           <i class="fas fa-hashtag field-icon"></i>
           معلومات التحويل الأساسية
         </h6>
-        <div class="row g-3">
-          <div class="col-md-6">
+        <div class="row">
+          <div class="col-lg-6 col-md-12 form-group">
             <label class="form-label fw-bold">
               <i class="fas fa-barcode field-icon"></i>
               {{ form.reference.label }}
-              <i class="fas fa-info-circle info-tooltip ms-1"></i>
             </label>
             {{ form.reference(class="form-control form-control-modern", placeholder="اتركه فارغاً للتوليد التلقائي") }}
             <div class="reference-preview" id="referencePreview"></div>
           </div>
-          
-          <div class="col-md-6">
+          <div class="col-lg-6 col-md-12 form-group">
             <label class="form-label fw-bold">
               <i class="fas fa-calendar-alt field-icon"></i>
               {{ form.transfer_date.label }}
@@ -200,16 +79,15 @@
             <small class="form-text text-muted">الافتراضي: التاريخ والوقت الحالي</small>
           </div>
         </div>
-        </div>
+      </div>
 
-      <!-- قسم 2: معلومات المنتج -->
       <div class="card-section">
         <h6 class="card-section-title">
           <i class="fas fa-box field-icon"></i>
           معلومات المنتج
         </h6>
-        <div class="row g-3">
-          <div class="col-md-12">
+        <div class="row">
+          <div class="col-md-12 form-group mb-0">
             <label class="form-label fw-bold">
               <i class="fas fa-cube field-icon"></i>
               {{ form.product_id.label }} <span class="text-danger">*</span>
@@ -219,14 +97,13 @@
         </div>
       </div>
 
-      <!-- قسم 3: معلومات التحويل -->
       <div class="card-section">
         <h6 class="card-section-title">
           <i class="fas fa-exchange-alt field-icon"></i>
           تفاصيل التحويل
         </h6>
-        <div class="row g-3">
-          <div class="col-md-4">
+        <div class="row">
+          <div class="col-lg-4 col-md-12 form-group">
             <label class="form-label fw-bold">
               <i class="fas fa-warehouse field-icon text-danger"></i>
               {{ form.source_id.label }}
@@ -237,16 +114,14 @@
               مثبت على: {{ warehouse.name }}
             </small>
           </div>
-
-          <div class="col-md-4">
+          <div class="col-lg-4 col-md-12 form-group">
             <label class="form-label fw-bold">
               <i class="fas fa-warehouse field-icon text-success"></i>
               {{ form.destination_id.label }} <span class="text-danger">*</span>
             </label>
             {{ form.destination_id(class="form-control form-control-modern select2", required=True) }}
-        </div>
-
-        <div class="col-md-4">
+          </div>
+          <div class="col-lg-4 col-md-12 form-group mb-0">
             <label class="form-label fw-bold">
               <i class="fas fa-sort-numeric-up field-icon"></i>
               {{ form.quantity.label }} <span class="text-danger">*</span>
@@ -260,36 +135,31 @@
         </div>
       </div>
 
-      <!-- قسم 4: ملاحظات -->
-      <div class="card-section">
+      <div class="card-section mb-0 pb-0">
         <h6 class="card-section-title">
           <i class="fas fa-sticky-note field-icon"></i>
           ملاحظات إضافية
         </h6>
-        <div class="row g-3">
-          <div class="col-md-12">
-            <label class="form-label fw-bold">
-              <i class="fas fa-comment field-icon"></i>
-              {{ form.notes.label }}
-            </label>
-            {{ form.notes(class="form-control form-control-modern", rows="3", placeholder="أضف أي ملاحظات أو تفاصيل إضافية عن التحويل...") }}
-            <small class="form-text text-muted">اختياري - الحد الأقصى 2000 حرف</small>
-        </div>
+        <div class="form-group mb-0">
+          <label class="form-label fw-bold">
+            <i class="fas fa-comment field-icon"></i>
+            {{ form.notes.label }}
+          </label>
+          {{ form.notes(class="form-control form-control-modern", rows="3", placeholder="أضف أي ملاحظات أو تفاصيل إضافية عن التحويل...") }}
+          <small class="form-text text-muted">اختياري — الحد الأقصى 2000 حرف</small>
         </div>
       </div>
 
     </div>
   </div>
 
-  <div class="d-flex justify-content-between align-items-center">
-    <div>
-      <small class="text-muted">
-        <i class="fas fa-keyboard ml-1"></i>
-        <kbd>Ctrl+S</kbd> للحفظ | <kbd>Esc</kbd> للرجوع
-      </small>
-    </div>
-    <div class="d-flex gap-2">
-    <a class="btn btn-secondary" href="{{ url_for('warehouse_bp.transfers', id=warehouse.id) }}">
+  <div class="form-actions-bar d-flex flex-wrap justify-content-between align-items-center">
+    <small class="text-muted mb-2 mb-md-0">
+      <i class="fas fa-keyboard ml-1"></i>
+      <kbd>Ctrl+S</kbd> للحفظ | <kbd>Esc</kbd> للرجوع
+    </small>
+    <div class="d-flex flex-wrap">
+      <a class="btn btn-secondary ml-2" href="{{ url_for('warehouse_bp.transfers', id=warehouse.id) }}">
         <i class="fas fa-times ml-1"></i> إلغاء
       </a>
       <button type="submit" class="btn btn-success btn-submit">
@@ -305,6 +175,7 @@
     </div>
   </div>
 </form>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -313,7 +184,6 @@
 (function() {
   'use strict';
 
-  // ========== العناصر ==========
   const form = document.getElementById('transferForm');
   const sourceIdField = document.getElementById('source_id');
   const productIdField = document.querySelector('[name="product_id"]');
@@ -321,8 +191,7 @@
   const quantityField = document.querySelector('[name="quantity"]');
   const referenceField = document.querySelector('[name="reference"]');
   const transferDateField = document.querySelector('[name="transfer_date"]');
-  const notesField = document.querySelector('[name="notes"]');
-  
+
   const stockInfo = document.getElementById('stockInfo');
   const productName = document.getElementById('productName');
   const stockAvailable = document.getElementById('stockAvailable');
@@ -332,15 +201,12 @@
   const btnSubmit = form.querySelector('.btn-submit');
 
   let currentStock = 0;
-  let selectedProductName = '';
 
-  // ========== تثبيت المستودع المصدر ==========
   if (sourceIdField) {
     sourceIdField.value = '{{ warehouse.id }}';
     sourceIdField.setAttribute('disabled', 'disabled');
   }
 
-  // ========== تعيين التاريخ الافتراضي ==========
   if (transferDateField && !transferDateField.value) {
     const now = new Date();
     const year = now.getFullYear();
@@ -351,16 +217,13 @@
     transferDateField.value = `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 
-  // ========== توليد رقم مرجعي تلقائي ==========
   if (referenceField && !referenceField.value) {
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
     const randomStr = Math.random().toString(36).substring(2, 10).toUpperCase();
-    const autoRef = `TRF${dateStr}${randomStr}`;
-    referencePreview.textContent = `سيتم توليد رقم تلقائي مثل: ${autoRef}`;
+    referencePreview.textContent = `سيتم توليد رقم تلقائي مثل: TRF${dateStr}${randomStr}`;
   }
 
-  // ========== معاينة الرقم المرجعي ==========
   if (referenceField) {
     referenceField.addEventListener('input', function() {
       if (this.value.trim()) {
@@ -374,7 +237,6 @@
     });
   }
 
-  // ========== جلب معلومات المخزون عند اختيار المنتج ==========
   if (productIdField) {
     productIdField.addEventListener('change', async function() {
       const productId = this.value;
@@ -384,24 +246,19 @@
       }
 
       try {
-        // جلب معلومات المنتج والمخزون
         const response = await fetch(`/api/products/${productId}/stock?warehouse_id={{ warehouse.id }}`);
         if (!response.ok) throw new Error('فشل في جلب البيانات');
-        
+
         const data = await response.json();
-        selectedProductName = data.product_name || 'منتج';
         currentStock = parseInt(data.stock_quantity) || 0;
-        
-        showStockInfo(selectedProductName, currentStock);
+        showStockInfo(data.product_name || 'منتج', currentStock);
         checkQuantity();
       } catch (error) {
-
         showNotification('فشل في جلب معلومات المخزون', 'warning');
       }
     });
   }
 
-  // ========== عرض معلومات المخزون ==========
   function showStockInfo(name, stock) {
     productName.textContent = name;
     stockAvailable.textContent = stock;
@@ -411,10 +268,8 @@
   function hideStockInfo() {
     stockInfo.classList.remove('show');
     currentStock = 0;
-    selectedProductName = '';
   }
 
-  // ========== التحقق من الكمية ==========
   if (quantityField) {
     quantityField.addEventListener('input', checkQuantity);
     quantityField.addEventListener('blur', checkQuantity);
@@ -422,7 +277,7 @@
 
   function checkQuantity() {
     const qty = parseInt(quantityField.value) || 0;
-    
+
     if (!currentStock || qty === 0) {
       hideWarning();
       return;
@@ -437,59 +292,39 @@
     }
   }
 
-  function showWarning(message, type = 'warning') {
+  function showWarning(message, type) {
     warningMessage.textContent = message;
     stockWarning.classList.add('show');
-    
-    if (type === 'danger') {
-      stockWarning.classList.add('stock-danger');
-    } else {
-      stockWarning.classList.remove('stock-danger');
-    }
+    stockWarning.classList.toggle('stock-danger', type === 'danger');
   }
 
   function hideWarning() {
     stockWarning.classList.remove('show');
   }
 
-  // ========== قواعد التوافق بين المستودعات ==========
   function canTransferBetween(sourceType, destType) {
-    // PARTNER معزول - فقط PARTNER → PARTNER
     if (sourceType === 'PARTNER' || destType === 'PARTNER') {
       return sourceType === 'PARTNER' && destType === 'PARTNER';
     }
-    
-    // EXCHANGE معزول - فقط EXCHANGE → EXCHANGE
     if (sourceType === 'EXCHANGE' || destType === 'EXCHANGE') {
       return sourceType === 'EXCHANGE' && destType === 'EXCHANGE';
     }
-    
-    // المستودعات المفتوحة: MAIN, ONLINE, INVENTORY
     const openTypes = ['MAIN', 'ONLINE', 'INVENTORY'];
     return openTypes.includes(sourceType) && openTypes.includes(destType);
   }
-  
-  // جلب نوع المستودع
+
   async function getWarehouseType(warehouseId) {
     try {
       const response = await fetch(`/api/warehouses/${warehouseId}/info`);
       const data = await response.json();
-      
-      if (data.success) {
-        return data.warehouse_type;
-      }
-    } catch (error) {
-
-    }
-    
+      if (data.success) return data.warehouse_type;
+    } catch (error) {}
     return null;
   }
-  
-  // ========== التحقق قبل الإرسال ==========
+
   form.addEventListener('submit', async function(e) {
     e.preventDefault();
-    
-    // التحقق من الحقول الإلزامية
+
     if (!productIdField.value) {
       showNotification('الرجاء اختيار المنتج', 'error');
       productIdField.focus();
@@ -509,48 +344,21 @@
       return false;
     }
 
-    // التحقق من أن الوجهة مختلفة عن المصدر
     if (destinationIdField.value === '{{ warehouse.id }}') {
       showNotification('لا يمكن التحويل إلى نفس المستودع!', 'error');
       destinationIdField.focus();
       return false;
     }
 
-    // ========== التحقق من التوافق بين المستودعات ==========
     const sourceType = await getWarehouseType('{{ warehouse.id }}');
     const destType = await getWarehouseType(destinationIdField.value);
-    
+
     if (!canTransferBetween(sourceType, destType)) {
-      const typeNames = {
-        'PARTNER': 'شريك',
-        'EXCHANGE': 'تبادل',
-        'MAIN': 'رئيسي',
-        'ONLINE': 'أونلاين',
-        'INVENTORY': 'ملكية كاملة'
-      };
-      
-      let errorMsg = '';
-      
-      if (sourceType === 'PARTNER' && destType !== 'PARTNER') {
-        errorMsg = '⛔ خطأ في التحويل!\n\nمستودع الشريك يحول فقط لمستودع شريك آخر.\nالرجاء اختيار مستودع شريك كوجهة.';
-      } else if (destType === 'PARTNER' && sourceType !== 'PARTNER') {
-        errorMsg = '⛔ خطأ في التحويل!\n\nمستودع الشريك يستقبل فقط من مستودع شريك آخر.\nالرجاء اختيار مستودع شريك كمصدر.';
-      } else if (sourceType === 'EXCHANGE' && destType !== 'EXCHANGE') {
-        errorMsg = '⛔ خطأ في التحويل!\n\nمستودع التبادل يحول فقط لمستودع تبادل آخر.\nالرجاء اختيار مستودع تبادل كوجهة.';
-      } else if (destType === 'EXCHANGE' && sourceType !== 'EXCHANGE') {
-        errorMsg = '⛔ خطأ في التحويل!\n\nمستودع التبادل يستقبل فقط من مستودع تبادل آخر.\nالرجاء اختيار مستودع تبادل كمصدر.';
-      } else {
-        const sourceName = typeNames[sourceType] || sourceType;
-        const destName = typeNames[destType] || destType;
-        errorMsg = `⛔ خطأ في التحويل!\n\nلا يمكن التحويل من مستودع ${sourceName} إلى مستودع ${destName}.\nالرجاء مراجعة قواعد التحويل أعلاه.`;
-      }
-      
-      showNotification(errorMsg, 'error');
-      destinationIdField.value = '';
+      showNotification('لا يمكن التحويل بين هذين النوعين من المستودعات. راجع القواعد أعلاه.', 'error');
+      destinationIdField.focus();
       return false;
     }
 
-    // تأكيد إذا كانت الكمية أكبر من المتاح
     if (qty > currentStock) {
       if (typeof Swal !== 'undefined') {
         Swal.fire({
@@ -559,18 +367,12 @@
           icon: 'warning',
           showCancelButton: true,
           confirmButtonText: 'نعم، متابعة',
-          cancelButtonText: 'إلغاء',
-          confirmButtonColor: '#d33',
-          cancelButtonColor: '#6c757d'
+          cancelButtonText: 'إلغاء'
         }).then((result) => {
-          if (result.isConfirmed) {
-            submitForm();
-          }
+          if (result.isConfirmed) submitForm();
         });
-      } else {
-        if (confirm(`الكمية المطلوبة (${qty}) أكبر من المتاح (${currentStock}).\nهل تريد المتابعة؟`)) {
-          submitForm();
-        }
+      } else if (confirm(`الكمية المطلوبة (${qty}) أكبر من المتاح (${currentStock}).\nهل تريد المتابعة؟`)) {
+        submitForm();
       }
       return false;
     }
@@ -580,83 +382,47 @@
   });
 
   function submitForm() {
-    // تفعيل loading state
     btnSubmit.classList.add('loading');
     btnSubmit.disabled = true;
-
-    // إعادة تفعيل source_id للإرسال
-    if (sourceIdField) {
-      sourceIdField.removeAttribute('disabled');
-    }
-
-    // إرسال الفورم
+    if (sourceIdField) sourceIdField.removeAttribute('disabled');
     form.submit();
   }
 
-  // ========== Keyboard Shortcuts ==========
   document.addEventListener('keydown', function(e) {
-    // Ctrl+S للحفظ
     if (e.ctrlKey && e.key === 's') {
       e.preventDefault();
       form.dispatchEvent(new Event('submit'));
     }
-    
-    // Esc للرجوع
     if (e.key === 'Escape') {
       e.preventDefault();
       window.location.href = '{{ url_for("warehouse_bp.transfers", id=warehouse.id) }}';
     }
   });
 
-  // ========== تفعيل Tooltips ==========
-  if (typeof bootstrap !== 'undefined') {
-    $('[data-toggle="tooltip"]').tooltip();
-  }
-
-  // ========== Focus على أول حقل ==========
-  setTimeout(() => {
-    if (productIdField) {
-      productIdField.focus();
-    }
-  }, 300);
-
-  // ========== Notification Helper ==========
-  function showNotification(message, type = 'info') {
-    // إذا كان SweetAlert متاح
+  function showNotification(message, type) {
     if (typeof Swal !== 'undefined') {
       Swal.fire({
-        title: type === 'error' ? 'خطأ!' : type === 'success' ? 'نجح!' : 'تنبيه',
+        title: type === 'error' ? 'خطأ!' : 'تنبيه',
         text: message,
-        icon: type === 'error' ? 'error' : type === 'success' ? 'success' : 'info',
-        confirmButtonText: 'حسناً',
-        timer: 3000
+        icon: type === 'error' ? 'error' : 'info',
+        confirmButtonText: 'حسناً'
       });
-    }
-    // إذا كان Toastr متاح
-    else if (typeof toastr !== 'undefined') {
-      toastr[type](message);
-    }
-    // استخدام native alert
-    else {
-      if(typeof showToast !== 'undefined') showToast(message, 'info'); else alert(message);
+    } else if (typeof showToast !== 'undefined') {
+      showToast(message, type === 'error' ? 'error' : 'info');
+    } else {
+      alert(message);
     }
   }
 
-  // ========== تحذير عند المغادرة ==========
   let formChanged = false;
-  
-  const formInputs = form.querySelectorAll('input, textarea, select');
-  formInputs.forEach(input => {
-    input.addEventListener('change', () => {
-      formChanged = true;
-    });
+  form.querySelectorAll('input, textarea, select').forEach(input => {
+    input.addEventListener('change', () => { formChanged = true; });
   });
 
   window.addEventListener('beforeunload', function(e) {
     if (formChanged && !form.classList.contains('submitted')) {
       e.preventDefault();
       e.returnValue = '';
-      return '';
     }
   });
 
@@ -665,6 +431,7 @@
     formChanged = false;
   });
 
-  })();
+  setTimeout(() => { if (productIdField) productIdField.focus(); }, 300);
+})();
 </script>
 {% endblock %}

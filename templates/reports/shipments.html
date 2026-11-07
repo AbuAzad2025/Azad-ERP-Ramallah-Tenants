@@ -27,7 +27,7 @@
   
 
   <div class="card shadow-sm mb-4">
-    <div class="card-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+ <div class="card-header erp-card-header-row erp-theme-header--primary">
       {{ FIELD_LABELS.get("date_range", "نطاق التاريخ") }}
     </div>
     <div class="card-body">
@@ -87,7 +87,7 @@
     <div class="card-body">
       <div class="table-responsive">
         <table class="table table-bordered table-striped align-middle mb-0">
-          <thead class="table-secondary">
+          <thead class="table-header-primary text-white table-secondary">
             <tr>
               <th>العملة</th>
               <th class="text-end">{{ FIELD_LABELS.get("value_before", "قيمة قبل") }}</th>
@@ -116,11 +116,11 @@
   
 
   <div class="card shadow-sm">
-    <div class="card-header text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">{{ FIELD_LABELS.get("shipments_table", "جدول الشحنات") }}</div>
+ <div class="card-header erp-card-header-row erp-theme-header--primary">{{ FIELD_LABELS.get("shipments_table", "جدول الشحنات") }}</div>
     <div class="card-body">
       <div class="table-responsive">
         <table id="report-table" class="table table-bordered table-striped align-middle">
-          <thead class="text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+          <thead class="table-header-primary text-white">
             <tr>
               <th>{{ FIELD_LABELS.get("number", "الرقم") }}</th>
               <th>{{ FIELD_LABELS.get("shipment_date", "التاريخ") }}</th>

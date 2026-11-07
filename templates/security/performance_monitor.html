@@ -1,15 +1,15 @@
 {% extends 'security/base_security.html' %}
 {% block tour_name %}performance_monitor{% endblock %}
-{% block security_title %}Performance Monitor{% endblock %}
+{% block security_title %}مراقبة الأداء{% endblock %}
 {% block security_icon %}<i class="fas fa-tachometer-alt"></i>{% endblock %}
-{% block security_description %}مراقبة أداء النظام - CPU • Memory • Database{% endblock %}
+{% block security_description %}مراقبة CPU والذاكرة{% endblock %}
 {% block security_breadcrumb %}<li class="breadcrumb-item active">Performance</li>{% endblock %}
 {% block security_content %}
   
   <div class="row g-3">
     <div class="col-md-4">
       <div class="card">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary">
           <h6 class="mb-0">CPU Usage</h6>
         </div>
         <div class="card-body text-center">
@@ -23,7 +23,7 @@
     
     <div class="col-md-4">
       <div class="card">
-        <div class="card-header bg-success text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white">
           <h6 class="mb-0">Memory Usage</h6>
         </div>
         <div class="card-body text-center">
@@ -37,7 +37,7 @@
     
     <div class="col-md-4">
       <div class="card">
-        <div class="card-header bg-info text-white">
+        <div class="card-header erp-card-header-row erp-theme-header--primary bg-info text-white">
           <h6 class="mb-0">Avg Response Time</h6>
         </div>
         <div class="card-body text-center">
@@ -51,13 +51,13 @@
   </div>
 
   <div class="card mt-3">
-    <div class="card-header bg-warning text-dark">
+    <div class="card-header erp-card-header-row erp-theme-header--primary bg-warning text-dark">
       <h5 class="mb-0">استعلامات بطيئة</h5>
     </div>
     <div class="card-body">
       {% if performance.db_queries %}
         <table class="table">
-          <thead>
+          <thead class="table-header-primary text-white">
             <tr>
               <th>الاستعلام</th>
               <th>الوقت</th>

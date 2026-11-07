@@ -16,10 +16,11 @@
 {% endblock %}
 
 {% block content %}
-<div class="container my-4">
-  <div class="alert alert-info border-0 shadow-sm mb-4">
-    <h4 class="mb-0"><i class="fas fa-tools"></i> {{ edit_mode and 'تعديل' or 'إضافة' }} طلب صيانة</h4>
-    <p class="mb-0">أدخل تفاصيل طلب الصيانة بدقة</p>
+<div class="service-form-page">
+  <div class="d-flex justify-content-end mb-3">
+    <a href="{{ url_for('service.list_requests') }}" class="btn btn-light btn-sm">
+      <i class="fas fa-arrow-right ml-1"></i> رجوع للقائمة
+    </a>
   </div>
 
   <form method="POST" id="serviceForm" autocomplete="off" action="{{ url_for('service.create_request') }}">
@@ -27,7 +28,7 @@
 
     <!-- معلومات الزبون -->
     <div class="card border-0 shadow-sm mb-4">
-      <div class="card-header bg-gradient-primary text-white">
+      <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-primary text-white">
         <h5 class="mb-0"><i class="fas fa-user"></i> معلومات الزبون</h5>
       </div>
       <div class="card-body">
@@ -70,7 +71,7 @@
 
     <!-- معلومات المركبة -->
     <div class="card border-0 shadow-sm mb-4">
-      <div class="card-header bg-gradient-success text-white">
+      <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-success text-white">
         <h5 class="mb-0"><i class="fas fa-car"></i> معلومات المركبة</h5>
       </div>
       <div class="card-body">
@@ -112,7 +113,7 @@
 
     <!-- تفاصيل الصيانة -->
     <div class="card border-0 shadow-sm mb-4">
-      <div class="card-header bg-gradient-warning text-dark">
+      <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-warning text-dark">
         <h5 class="mb-0"><i class="fas fa-wrench"></i> تفاصيل الصيانة</h5>
       </div>
       <div class="card-body">
@@ -148,8 +149,11 @@
     </div>
 
     {% if form.parts %}
-    <div class="mb-3">
-      <div class="form-label fw-bold">القطع المستخدمة</div>
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header erp-card-header-row erp-theme-header--primary">
+        <h5 class="mb-0"><i class="fas fa-cogs"></i> القطع المستخدمة</h5>
+      </div>
+      <div class="card-body">
       <div id="parts-list">
         {% for part in form.parts %}
         <div class="row g-2 mb-2 part-line">
@@ -174,12 +178,16 @@
       <button type="button" class="btn btn-outline-success btn-sm mt-2" id="addPartBtn">
         <i class="fa fa-plus"></i> إضافة قطعة
       </button>
+      </div>
     </div>
     {% endif %}
 
     {% if form.tasks %}
-    <div class="mb-3">
-      <div class="form-label fw-bold">المهام المنفذة</div>
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header erp-card-header-row erp-theme-header--primary">
+        <h5 class="mb-0"><i class="fas fa-tasks"></i> المهام المنفذة</h5>
+      </div>
+      <div class="card-body">
       <div id="tasks-list">
         {% for task in form.tasks %}
         <div class="row g-2 mb-2 task-line">
@@ -193,11 +201,16 @@
         {% endfor %}
       </div>
       <button type="button" class="btn btn-outline-success btn-sm" id="addTaskBtn"><i class="fa fa-plus"></i> إضافة مهمة</button>
+      </div>
     </div>
     {% endif %}
 
-    <button type="submit" class="btn btn-primary">{{ edit_mode and 'تحديث' or 'حفظ' }}</button>
-    <a href="{{ url_for('service.list_requests') }}" class="btn btn-secondary ms-2">إلغاء</a>
+    <div class="d-flex flex-wrap pt-3 border-top">
+      <button type="submit" class="btn btn-primary btn-modern">
+        <i class="fas fa-save ml-1"></i> {{ edit_mode and 'تحديث' or 'حفظ' }}
+      </button>
+      <a href="{{ url_for('service.list_requests') }}" class="btn btn-secondary btn-modern ml-2">إلغاء</a>
+    </div>
   </form>
 </div>
 
@@ -235,18 +248,7 @@
   </div>
 </div>
 
-<style>
-  @media print { .btn, .breadcrumb, .page-header { display:none!important; } }
-  .custom-modal{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999}
-  .custom-modal-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5)}
-  .custom-modal-content{position:relative;width:500px;max-width:90%;margin:50px auto;background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.3);z-index:10000}
-  .custom-modal-header{padding:15px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center}
-  .custom-modal-header h5{margin:0;font-size:18px}
-  .custom-modal-close{background:none;border:none;font-size:24px;cursor:pointer;padding:0;width:30px;height:30px}
-  .custom-modal-body{padding:20px}
-  .custom-modal-footer{padding:15px;border-top:1px solid #ddd;text-align:left}
-  .custom-modal-footer .btn{margin-left:5px}
-</style>
+
 {% endblock %}
 
 {% block scripts %}

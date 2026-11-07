@@ -18,6 +18,68 @@
     "border_radius": "12px",
     "font_family": "Tajawal, Cairo, system-ui, sans-serif"
   },
+  "alignment_rules": {
+    "inputs": {
+      "text_align": "center",
+      "vertical_align": "middle",
+      "padding_inline": "16px",
+      "white_space": "nowrap",
+      "overflow": "visible"
+    },
+    "selects": {
+      "closed_field_text_align": "center",
+      "dropdown_item_text_align": "center",
+      "show_full_text": true,
+      "min_item_height_px": 44,
+      "padding_inline": "16px",
+      "avoid_text_cutting": true
+    },
+    "tables": {
+      "header_text_align": "center",
+      "cell_text_align": "center",
+      "header_font_weight": 700,
+      "cell_padding": "14px 16px",
+      "row_height_min_px": 48
+    },
+    "buttons": {
+      "text_align": "center",
+      "white_space": "nowrap",
+      "padding_inline": "20px",
+      "avoid_crowding": true
+    }
+  },
+  "required_layout_sections": {
+    "header": {
+      "include_user_avatar": true,
+      "include_user_name": true,
+      "include_user_role": true,
+      "include_notifications": true,
+      "include_search": true,
+      "include_tenant_switcher": true
+    },
+    "sidebar": {
+      "position": "right",
+      "collapsible": true,
+      "icons": true,
+      "active_item_clear": true
+    },
+    "footer": {
+      "include_platform_name": true,
+      "include_developer_company_logo": true,
+      "include_developer_company_info": true,
+      "include_owner_info": true,
+      "placement": "centered_or_balanced",
+      "not_hidden_in_corner": true
+    },
+    "content": {
+      "include_kpi_cards": true,
+      "include_charts": true,
+      "include_tables": true,
+      "include_filters": true,
+      "include_forms": true,
+      "include_quick_actions": true
+    }
+  },
   "themes": {
     "palestinian_light": {
       "name": "Palestinian Light",
@@ -100,11 +162,82 @@
       "pattern": "subtle_gulf_geometric"
     }
   },
-  "css_files": [
-    "static/css/gm-theme-tokens.css",
-    "static/css/gm-design-system.css",
-    "static/css/gm-spacing-dropdowns.css",
-    "static/css/gm-theme-components.css",
-    "static/css/gm-conflict-guard.css"
-  ]
+  "component_requirements": {
+    "input": {
+      "height": "44px",
+      "border_radius": "10px",
+      "text_align": "center",
+      "padding": "0 16px",
+      "font_size": "14px"
+    },
+    "select": {
+      "height": "44px",
+      "text_align": "center",
+      "dropdown_text_align": "center",
+      "item_height": "44px",
+      "show_full_text": true,
+      "z_index": 1000
+    },
+    "button": {
+      "height": "44px",
+      "border_radius": "10px",
+      "font_weight": 700,
+      "padding": "0 20px"
+    },
+    "table": {
+      "header_height": "48px",
+      "row_height": "52px",
+      "header_text_align": "center",
+      "cell_text_align": "center",
+      "sticky_header": true
+    },
+    "card": {
+      "border_radius": "16px",
+      "padding": "20px",
+      "shadow": "soft",
+      "spacing_between_items": "16px"
+    },
+    "footer": {
+      "height_desktop": "88px",
+      "height_mobile": "auto",
+      "developer_logo_visible": true,
+      "platform_name_visible": true,
+      "owner_info_visible": true,
+      "contact_info_visible": true
+    }
+  },
+  "responsive_rules": {
+    "desktop": {
+      "sidebar": "right_fixed",
+      "content_grid": "multi_column",
+      "footer": "horizontal_balanced"
+    },
+    "tablet": {
+      "sidebar": "collapsible",
+      "content_grid": "two_columns",
+      "tables": "horizontal_scroll_if_needed"
+    },
+    "mobile": {
+      "sidebar": "drawer",
+      "bottom_nav": true,
+      "content_grid": "single_column",
+      "cards": "stacked",
+      "tables": "cards_or_horizontal_scroll",
+      "footer": "stacked_centered"
+    }
+  },
+  "implementation_instructions": [
+    "Audit existing UI styles before applying this theme.",
+    "Remove duplicated or conflicting CSS rules.",
+    "Create one central theme configuration file.",
+    "Apply tokens to all components consistently.",
+    "Do not hardcode colors inside components.",
+    "Make all form controls and dropdown text centered.",
+    "Ensure Arabic labels are fully visible and not truncated.",
+    "Test light and dark modes.",
+    "Test Palestinian and Gulf variants.",
+    "Test desktop, tablet, and mobile layouts."
+  ],
+  "css_entry": "static/css/erp-theme/index.css",
+  "js_entry": "static/js/erp-theme.js"
 }

@@ -11,11 +11,29 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <div class="row">
-          <div class="col-md-6 mb-3">
+          <div class="col-md-4 mb-3">
             <label class="form-label">السنة المالية *</label>
             <input type="number" name="fiscal_year" class="form-control" 
                    value="{{ budget.fiscal_year if budget else now().year }}" 
                    min="2020" max="2050" required {% if budget %}readonly{% endif %}>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label class="form-label">نوع الموازنة *</label>
+            <select name="period_type" class="custom-select" required {% if budget %}disabled{% endif %}>
+              <option value="ANNUAL" {% if budget and budget.period_type == 'ANNUAL' %}selected{% endif %}>سنوية</option>
+              <option value="HALF" {% if budget and budget.period_type == 'HALF' %}selected{% endif %}>نصف سنوية</option>
+              <option value="QUARTER" {% if budget and budget.period_type == 'QUARTER' %}selected{% endif %}>ربع سنوية</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label class="form-label">رقم الفترة *</label>
+            <select name="period_number" class="custom-select" required {% if budget %}disabled{% endif %}>
+              <option value="1" {% if budget and budget.period_number == 1 %}selected{% endif %}>1</option>
+              <option value="2" {% if budget and budget.period_number == 2 %}selected{% endif %}>2</option>
+              <option value="3" {% if budget and budget.period_number == 3 %}selected{% endif %}>3</option>
+              <option value="4" {% if budget and budget.period_number == 4 %}selected{% endif %}>4</option>
+            </select>
+            <small class="text-muted">سنوي=1، نصف سنوي=1-2، ربع سنوي=1-4</small>
           </div>
           
           <div class="col-md-6 mb-3">

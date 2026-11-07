@@ -8,7 +8,7 @@
   <!-- إحصائيات سريعة -->
   <div class="row g-3 mb-4">
     <div class="col-md-3">
-      <div class="card border-0 shadow-lg text-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+      <div class="card border-0 shadow-lg text-center erp-kpi-tile erp-kpi-tile--primary text-white card-hover">
         <div class="card-body text-white">
           <i class="fas fa-tools fa-3x mb-3 opacity-75"></i>
           <h4 class="fw-bold">{{ total_requests }}</h4>
@@ -17,7 +17,7 @@
       </div>
     </div>
     <div class="col-md-3">
-      <div class="card border-0 shadow-lg text-center" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+      <div class="card border-0 shadow-lg text-center erp-kpi-tile erp-kpi-tile--success text-white card-hover">
         <div class="card-body text-white">
           <i class="fas fa-check-circle fa-3x mb-3 opacity-75"></i>
           <h4 class="fw-bold">{{ completed_this_month }}</h4>
@@ -26,7 +26,7 @@
       </div>
     </div>
     <div class="col-md-3">
-      <div class="card border-0 shadow-lg text-center" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+      <div class="card border-0 shadow-lg text-center erp-kpi-tile erp-kpi-tile--danger text-white card-hover">
         <div class="card-body text-white">
           <i class="fas fa-clock fa-3x mb-3 opacity-75"></i>
           <h4 class="fw-bold">{{ "%.1f"|format(avg_completion_time) }}</h4>
@@ -35,7 +35,7 @@
       </div>
     </div>
     <div class="col-md-3">
-      <div class="card border-0 shadow-lg text-center" style="background: linear-gradient(135deg, #f12711 0%, #f5af19 100%);">
+      <div class="card border-0 shadow-lg text-center erp-kpi-tile erp-kpi-tile--warning text-white card-hover">
         <div class="card-body text-white">
           <i class="fas fa-chart-line fa-3x mb-3 opacity-75"></i>
           <h4 class="fw-bold">{{ weekly_stats.new }}</h4>
@@ -49,7 +49,7 @@
   <div class="row g-3 mb-4">
     <div class="col-md-4">
       <div class="card border-0 shadow-sm">
-        <div class="card-header bg-gradient-primary text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-primary text-white">
           <h5 class="mb-0"><i class="fas fa-plus"></i> جديد</h5>
         </div>
         <div class="card-body text-center">
@@ -60,7 +60,7 @@
     </div>
     <div class="col-md-4">
       <div class="card border-0 shadow-sm">
-        <div class="card-header bg-gradient-success text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-success text-white">
           <h5 class="mb-0"><i class="fas fa-check"></i> مكتمل</h5>
         </div>
         <div class="card-body text-center">
@@ -71,7 +71,7 @@
     </div>
     <div class="col-md-4">
       <div class="card border-0 shadow-sm">
-        <div class="card-header bg-gradient-warning text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-warning text-white">
           <h5 class="mb-0"><i class="fas fa-cog"></i> قيد التنفيذ</h5>
         </div>
         <div class="card-body text-center">
@@ -86,14 +86,14 @@
   <div class="row g-3">
     <div class="col-md-12">
       <div class="card border-0 shadow-sm">
-        <div class="card-header bg-gradient-info text-white">
+        <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-info text-white">
           <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> أكثر المشاكل شيوعاً</h5>
         </div>
         <div class="card-body">
           {% if common_problems %}
           <div class="table-responsive">
             <table class="table table-hover">
-              <thead class="table-light">
+              <thead class="table-header-primary text-white table-light">
                 <tr>
                   <th>المشكلة</th>
                   <th>عدد المرات</th>

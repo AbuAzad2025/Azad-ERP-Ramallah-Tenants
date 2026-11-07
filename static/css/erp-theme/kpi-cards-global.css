@@ -1,0 +1,644 @@
+/**
+ * بطاقات KPI وإحصائيات — على مستوى النظام (body.erp-app)
+ * ألوان من tokens.css: data-erp-variant + data-erp-mode
+ */
+body.erp-app {
+  --erp-kpi-tint: 14%;
+  --erp-dash-header-tint: 16%;
+}
+
+html[data-erp-mode="dark"] body.erp-app {
+  --erp-kpi-tint: 22%;
+  --erp-dash-header-tint: 24%;
+}
+
+/* ── erp-kpi-card / dashboard-stats-card ── */
+body.erp-app .dashboard-stats-card,
+body.erp-app .dashboard-stats-card.erp-kpi-card,
+body.erp-app .erp-kpi-card {
+  --erp-kpi-accent: var(--erp-primary);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--erp-kpi-accent) 28%, var(--erp-border)) !important;
+  border-radius: var(--erp-radius, 12px);
+  box-shadow: var(--erp-shadow-sm);
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--erp-kpi-accent) var(--erp-kpi-tint), var(--erp-surface)) 0%,
+    var(--erp-surface) 62%
+  ) !important;
+  color: var(--erp-text) !important;
+}
+
+body.erp-app .erp-kpi-card--primary,
+body.erp-app .erp-kpi-card.erp-kpi-card--primary {
+  --erp-kpi-accent: var(--erp-primary);
+}
+
+body.erp-app .erp-kpi-card--info {
+  --erp-kpi-accent: var(--erp-info);
+}
+
+body.erp-app .erp-kpi-card--success {
+  --erp-kpi-accent: var(--erp-success);
+}
+
+body.erp-app .erp-kpi-card--warning {
+  --erp-kpi-accent: var(--erp-warning);
+}
+
+body.erp-app .erp-kpi-card--danger {
+  --erp-kpi-accent: var(--erp-danger);
+}
+
+body.erp-app .erp-kpi-card--accent {
+  --erp-kpi-accent: var(--erp-accent);
+}
+
+body.erp-app .erp-kpi-card--secondary {
+  --erp-kpi-accent: var(--erp-secondary);
+}
+
+body.erp-app .erp-kpi-card--gold {
+  --erp-kpi-accent: var(--erp-gold);
+}
+
+body.erp-app .erp-kpi-card--neutral {
+  --erp-kpi-accent: var(--erp-muted);
+}
+
+body.erp-app .dashboard-stats-card::before,
+body.erp-app .erp-kpi-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--erp-kpi-accent);
+  border-radius: 0 var(--erp-radius, 12px) var(--erp-radius, 12px) 0;
+  z-index: 1;
+}
+
+body.erp-app .erp-kpi-card .card-body {
+  color: var(--erp-text) !important;
+}
+
+body.erp-app .erp-kpi-card .metric-value,
+body.erp-app .erp-kpi-card .erp-kpi-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--erp-primary-dark) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-erp-mode="dark"] body.erp-app .erp-kpi-card .metric-value,
+html[data-erp-mode="dark"] body.erp-app .erp-kpi-card .erp-kpi-value {
+  color: var(--erp-text) !important;
+}
+
+body.erp-app .erp-kpi-card .small,
+body.erp-app .erp-kpi-card .erp-kpi-label {
+  color: var(--erp-muted) !important;
+}
+
+body.erp-app .erp-kpi-card .card-footer,
+body.erp-app a.erp-kpi-card__footer {
+  display: block;
+  background: var(--erp-kpi-accent) !important;
+  border-top: none !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+
+body.erp-app .erp-kpi-card .card-footer:hover,
+body.erp-app a.erp-kpi-card__footer:hover {
+  filter: brightness(1.08);
+  color: #fff !important;
+  text-decoration: none;
+}
+
+body.erp-app .erp-kpi-card .erp-kpi-icon,
+body.erp-app .erp-kpi-card .card-body > i.fa-3x {
+  color: var(--erp-kpi-accent);
+  opacity: 0.5;
+}
+
+/* ── erp-kpi-tile (بطاقات ملوّنة كاملة) ── */
+body.erp-app .erp-kpi-tile {
+  border: none !important;
+  color: #fff !important;
+}
+
+body.erp-app .erp-kpi-tile .card-title,
+body.erp-app .erp-kpi-tile h3,
+body.erp-app .erp-kpi-tile h6 {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+body.erp-app .erp-kpi-tile--primary {
+  background: linear-gradient(135deg, var(--erp-primary) 0%, var(--erp-primary-dark) 100%) !important;
+}
+
+body.erp-app .erp-kpi-tile--success {
+  background: linear-gradient(
+    135deg,
+    var(--erp-success) 0%,
+    color-mix(in srgb, var(--erp-success) 65%, #000) 100%
+  ) !important;
+}
+
+body.erp-app .erp-kpi-tile--info {
+  background: linear-gradient(
+    135deg,
+    var(--erp-info) 0%,
+    color-mix(in srgb, var(--erp-info) 65%, #000) 100%
+  ) !important;
+}
+
+body.erp-app .erp-kpi-tile--warning {
+  background: linear-gradient(
+    135deg,
+    var(--erp-warning) 0%,
+    color-mix(in srgb, var(--erp-warning) 60%, #000) 100%
+  ) !important;
+  color: #fff !important;
+}
+
+body.erp-app .erp-kpi-tile--warning .text-dark,
+body.erp-app .erp-kpi-tile--warning h3 {
+  color: #fff !important;
+}
+
+body.erp-app .erp-kpi-tile--danger {
+  background: linear-gradient(
+    135deg,
+    var(--erp-danger) 0%,
+    color-mix(in srgb, var(--erp-danger) 65%, #000) 100%
+  ) !important;
+}
+
+body.erp-app .erp-kpi-tile--accent {
+  background: linear-gradient(
+    135deg,
+    var(--erp-accent) 0%,
+    color-mix(in srgb, var(--erp-accent) 65%, #000) 100%
+  ) !important;
+}
+
+body.erp-app .erp-kpi-tile--secondary {
+  background: linear-gradient(
+    135deg,
+    var(--erp-secondary) 0%,
+    color-mix(in srgb, var(--erp-secondary) 65%, #000) 100%
+  ) !important;
+}
+
+body.erp-app .erp-kpi-tile--neutral {
+  background: linear-gradient(
+    135deg,
+    var(--erp-muted) 0%,
+    color-mix(in srgb, var(--erp-muted) 70%, #000) 100%
+  ) !important;
+}
+
+/* ── summary-card ── */
+body.erp-app .summary-card {
+  border-radius: var(--erp-radius-lg, 16px) !important;
+  border: 1px solid var(--erp-border) !important;
+}
+
+body.erp-app .summary-card.summary-card--primary,
+body.erp-app .summary-card--primary {
+  background: linear-gradient(135deg, var(--erp-primary) 0%, var(--erp-primary-dark) 100%) !important;
+  color: #fff !important;
+}
+
+body.erp-app .summary-card.summary-card--success,
+body.erp-app .summary-card--success {
+  background: linear-gradient(
+    135deg,
+    var(--erp-success) 0%,
+    color-mix(in srgb, var(--erp-success) 70%, #000) 100%
+  ) !important;
+  color: #fff !important;
+}
+
+body.erp-app .summary-card.summary-card--info,
+body.erp-app .summary-card--info {
+  background: linear-gradient(
+    135deg,
+    var(--erp-info) 0%,
+    color-mix(in srgb, var(--erp-info) 70%, #000) 100%
+  ) !important;
+  color: #fff !important;
+}
+
+body.erp-app .summary-card.summary-card--danger,
+body.erp-app .summary-card--danger {
+  background: linear-gradient(
+    135deg,
+    var(--erp-danger) 0%,
+    color-mix(in srgb, var(--erp-danger) 70%, #000) 100%
+  ) !important;
+  color: #fff !important;
+}
+
+body.erp-app .summary-card.summary-card--warning,
+body.erp-app .summary-card--warning {
+  background: linear-gradient(
+    135deg,
+    var(--erp-warning) 0%,
+    color-mix(in srgb, var(--erp-warning) 65%, #000) 100%
+  ) !important;
+  color: #fff !important;
+}
+
+body.erp-app .summary-card.summary-card--neutral,
+body.erp-app .summary-card--neutral {
+  background: linear-gradient(
+    135deg,
+    var(--erp-secondary) 0%,
+    color-mix(in srgb, var(--erp-secondary) 70%, #000) 100%
+  ) !important;
+  color: #fff !important;
+}
+
+/* ── AdminLTE small-box ── */
+body.erp-app .small-box.bg-primary {
+  background: linear-gradient(135deg, var(--erp-primary), var(--erp-primary-dark)) !important;
+  color: #fff !important;
+}
+
+body.erp-app .small-box.bg-success {
+  background: linear-gradient(
+    135deg,
+    var(--erp-success),
+    color-mix(in srgb, var(--erp-success) 70%, #000)
+  ) !important;
+  color: #fff !important;
+}
+
+body.erp-app .small-box.bg-info {
+  background: linear-gradient(
+    135deg,
+    var(--erp-info),
+    color-mix(in srgb, var(--erp-info) 70%, #000)
+  ) !important;
+  color: #fff !important;
+}
+
+body.erp-app .small-box.bg-warning {
+  background: linear-gradient(
+    135deg,
+    var(--erp-warning),
+    color-mix(in srgb, var(--erp-warning) 65%, #000)
+  ) !important;
+  color: #fff !important;
+}
+
+body.erp-app .small-box.bg-danger {
+  background: linear-gradient(
+    135deg,
+    var(--erp-danger),
+    color-mix(in srgb, var(--erp-danger) 70%, #000)
+  ) !important;
+  color: #fff !important;
+}
+
+body.erp-app .small-box.bg-secondary {
+  background: linear-gradient(
+    135deg,
+    var(--erp-secondary),
+    color-mix(in srgb, var(--erp-secondary) 70%, #000)
+  ) !important;
+  color: #fff !important;
+}
+
+body.erp-app .small-box .small-box-footer {
+  background: rgba(0, 0, 0, 0.12) !important;
+  color: inherit !important;
+}
+
+body.erp-app .small-box.text-dark.bg-warning,
+body.erp-app .small-box.bg-warning.text-dark {
+  color: #fff !important;
+}
+
+body.erp-app .small-box.text-dark.bg-warning .small-box-footer,
+body.erp-app .small-box.text-dark.bg-warning a {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* ── AdminLTE info-box ── */
+body.erp-app .info-box-icon.bg-primary {
+  background: var(--erp-primary) !important;
+}
+
+body.erp-app .info-box-icon.bg-success {
+  background: var(--erp-success) !important;
+}
+
+body.erp-app .info-box-icon.bg-info {
+  background: var(--erp-info) !important;
+}
+
+body.erp-app .info-box-icon.bg-warning {
+  background: var(--erp-warning) !important;
+}
+
+body.erp-app .info-box-icon.bg-danger {
+  background: var(--erp-danger) !important;
+}
+
+body.erp-app .info-box-icon.bg-secondary {
+  background: var(--erp-secondary) !important;
+}
+
+/* ── رؤوس بطاقات ملوّنة (ثيم) ── */
+body.erp-app .erp-theme-header,
+body.erp-app .erp-dash-header {
+  border-bottom: 1px solid var(--erp-border);
+  font-weight: 700;
+}
+
+body.erp-app .erp-theme-header--primary,
+body.erp-app .erp-dash-header--primary,
+body.erp-app .dashboard-chart-card .card-header-blue,
+body.erp-app .card-header.card-header-blue {
+  background: color-mix(in srgb, var(--erp-primary) var(--erp-dash-header-tint), var(--erp-surface)) !important;
+  color: var(--erp-primary-dark) !important;
+  border-bottom-color: color-mix(in srgb, var(--erp-primary) 30%, var(--erp-border)) !important;
+}
+
+body.erp-app .erp-theme-header--success,
+body.erp-app .erp-dash-header--success,
+body.erp-app .dashboard-chart-card .card-header-green,
+body.erp-app .card-header.card-header-green {
+  background: color-mix(in srgb, var(--erp-success) var(--erp-dash-header-tint), var(--erp-surface)) !important;
+  color: color-mix(in srgb, var(--erp-success) 75%, var(--erp-text)) !important;
+}
+
+body.erp-app .erp-theme-header--warning,
+body.erp-app .erp-dash-header--warning {
+  background: color-mix(in srgb, var(--erp-warning) var(--erp-dash-header-tint), var(--erp-surface)) !important;
+  color: color-mix(in srgb, var(--erp-warning) 80%, var(--erp-text)) !important;
+}
+
+body.erp-app .erp-theme-header--info,
+body.erp-app .erp-dash-header--info {
+  background: color-mix(in srgb, var(--erp-info) var(--erp-dash-header-tint), var(--erp-surface)) !important;
+  color: color-mix(in srgb, var(--erp-info) 75%, var(--erp-text)) !important;
+}
+
+body.erp-app .erp-theme-header--accent,
+body.erp-app .erp-dash-header--accent {
+  background: color-mix(in srgb, var(--erp-accent) var(--erp-dash-header-tint), var(--erp-surface)) !important;
+  color: color-mix(in srgb, var(--erp-accent) 75%, var(--erp-text)) !important;
+}
+
+body.erp-app .erp-theme-header--secondary,
+body.erp-app .erp-dash-header--secondary {
+  background: color-mix(in srgb, var(--erp-secondary) var(--erp-dash-header-tint), var(--erp-surface)) !important;
+  color: color-mix(in srgb, var(--erp-secondary) 75%, var(--erp-text)) !important;
+}
+
+body.erp-app .erp-theme-header--gold,
+body.erp-app .erp-dash-header--gold {
+  background: color-mix(in srgb, var(--erp-gold) var(--erp-dash-header-tint), var(--erp-surface)) !important;
+  color: color-mix(in srgb, var(--erp-gold) 80%, var(--erp-text)) !important;
+}
+
+body.erp-app .erp-theme-header--danger,
+body.erp-app .erp-dash-header--danger {
+  background: color-mix(in srgb, var(--erp-danger) var(--erp-dash-header-tint), var(--erp-surface)) !important;
+  color: color-mix(in srgb, var(--erp-danger) 75%, var(--erp-text)) !important;
+}
+
+/* إصلاح text-white على رؤوس فاتحة (بدون تدرج داكن) */
+body.erp-app .card-header.text-white.erp-card-header-row:not([class*="bg-gradient"]):not(.bg-primary):not(.bg-success):not(.bg-info):not(.bg-warning):not(.bg-danger):not(.bg-dark):not(.bg-secondary) {
+  background: color-mix(in srgb, var(--erp-primary) var(--erp-dash-header-tint), var(--erp-surface)) !important;
+  color: var(--erp-primary-dark) !important;
+}
+
+body.erp-app .card-header.text-white.erp-card-header-row:not([class*="bg-gradient"]):not(.bg-primary) .card-title,
+body.erp-app .card-header.text-white.erp-card-header-row:not([class*="bg-gradient"]):not(.bg-primary) i {
+  color: inherit !important;
+}
+
+body.erp-app .card-header.card-header-primary.text-white:not([class*="bg-gradient"]):not(.bg-primary):not(.bg-success):not(.bg-info):not(.bg-warning):not(.bg-danger) {
+  background: color-mix(in srgb, var(--erp-primary) var(--erp-dash-header-tint), var(--erp-surface)) !important;
+  color: var(--erp-primary-dark) !important;
+}
+
+body.erp-app .card-header.card-header-primary.text-white:not([class*="bg-gradient"]) .card-title,
+body.erp-app .card-header.card-header-primary.text-white:not([class*="bg-gradient"]) h1,
+body.erp-app .card-header.card-header-primary.text-white:not([class*="bg-gradient"]) h2,
+body.erp-app .card-header.card-header-primary.text-white:not([class*="bg-gradient"]) h3,
+body.erp-app .card-header.card-header-primary.text-white:not([class*="bg-gradient"]) h4,
+body.erp-app .card-header.card-header-primary.text-white:not([class*="bg-gradient"]) h5,
+body.erp-app .card-header.card-header-primary.text-white:not([class*="bg-gradient"]) i {
+  color: inherit !important;
+}
+
+/* Bootstrap bg-* على بطاقات — أيقونات سريعة */
+body.erp-app .card.bg-primary,
+body.erp-app .card.bg-success,
+body.erp-app .card.bg-info,
+body.erp-app .card.bg-warning,
+body.erp-app .card.bg-danger {
+  border: none !important;
+}
+
+body.erp-app .card.bg-primary {
+  background: linear-gradient(135deg, var(--erp-primary), var(--erp-primary-dark)) !important;
+}
+
+body.erp-app .card.bg-success {
+  background: linear-gradient(135deg, var(--erp-success), color-mix(in srgb, var(--erp-success) 70%, #000)) !important;
+}
+
+body.erp-app .card.bg-info {
+  background: linear-gradient(135deg, var(--erp-info), color-mix(in srgb, var(--erp-info) 70%, #000)) !important;
+}
+
+body.erp-app .card.bg-warning {
+  background: linear-gradient(135deg, var(--erp-warning), color-mix(in srgb, var(--erp-warning) 65%, #000)) !important;
+}
+
+body.erp-app .card.bg-danger {
+  background: linear-gradient(135deg, var(--erp-danger), color-mix(in srgb, var(--erp-danger) 70%, #000)) !important;
+}
+
+/* ── مخططات Chart.js (كل الصفحات) ── */
+body.erp-app .erp-chart-host {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+  height: 280px;
+  max-height: 280px;
+  overflow: hidden;
+}
+
+body.erp-app .erp-chart-host--lg {
+  min-height: 240px;
+  height: 300px;
+  max-height: 300px;
+}
+
+body.erp-app .erp-chart-host--sm {
+  min-height: 180px;
+  height: 220px;
+  max-height: 220px;
+}
+
+body.erp-app .card-body:has(> .erp-chart-host),
+body.erp-app .dashboard-chart-card .card-body {
+  overflow: hidden;
+}
+
+body.erp-app .erp-chart-host canvas.chartjs-chart {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+body.erp-app .chart-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--erp-surface) 92%, transparent);
+  text-align: center;
+}
+
+body.erp-app .chart-fallback-title {
+  font-weight: 700;
+  color: var(--erp-primary-dark);
+}
+
+html[data-erp-mode="dark"] body.erp-app .chart-fallback-title {
+  color: var(--erp-text);
+}
+
+body.erp-app .chart-fallback-message {
+  color: var(--erp-muted);
+  font-size: 0.9rem;
+}
+
+/* gm-action / stat row */
+body.erp-app .gm-action-icon.bg-primary {
+  background: var(--erp-primary) !important;
+}
+
+body.erp-app .gm-action-icon.bg-success {
+  background: var(--erp-success) !important;
+}
+
+body.erp-app .gm-action-icon.bg-info {
+  background: var(--erp-info) !important;
+}
+
+body.erp-app .gm-action-icon.bg-warning {
+  background: var(--erp-warning) !important;
+}
+
+body.erp-app .gm-action-icon.bg-danger {
+  background: var(--erp-danger) !important;
+}
+
+body.erp-app .gm-action-icon.bg-secondary {
+  background: var(--erp-secondary) !important;
+}
+
+@media (max-width: 768px) {
+  body.erp-app .erp-chart-host--lg {
+    height: 260px;
+    max-height: 260px;
+  }
+
+  body.erp-app .erp-chart-host--sm {
+    height: 200px;
+    max-height: 200px;
+  }
+}
+
+/* ── موبايل / تابلت (data-ui-mode) — أولوية فوق mobile-app.css ── */
+html[data-ui-mode="mobile"] body.erp-app.gm-compact-app,
+html[data-ui-mode="tablet"] body.erp-app.gm-compact-app {
+  --erp-kpi-tint: 18%;
+}
+
+html[data-ui-mode="mobile"] body.erp-app.gm-compact-app .erp-kpi-card,
+html[data-ui-mode="tablet"] body.erp-app.gm-compact-app .erp-kpi-card,
+html[data-ui-mode="mobile"] body.erp-app.gm-compact-app .dashboard-stats-card.erp-kpi-card,
+html[data-ui-mode="tablet"] body.erp-app.gm-compact-app .dashboard-stats-card.erp-kpi-card {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--erp-kpi-accent) var(--erp-kpi-tint), var(--erp-surface)) 0%,
+    var(--erp-surface) 62%
+  ) !important;
+  border: 1px solid color-mix(in srgb, var(--erp-kpi-accent) 28%, var(--erp-border)) !important;
+  box-shadow: var(--erp-shadow-sm, var(--gm-app-shadow));
+}
+
+html[data-ui-mode="mobile"] body.erp-app.gm-compact-app .erp-kpi-card .metric-value,
+html[data-ui-mode="tablet"] body.erp-app.gm-compact-app .erp-kpi-card .metric-value,
+html[data-ui-mode="mobile"] body.erp-app.gm-compact-app .erp-kpi-card .erp-kpi-value,
+html[data-ui-mode="tablet"] body.erp-app.gm-compact-app .erp-kpi-card .erp-kpi-value {
+  font-size: 1.45rem;
+}
+
+html[data-ui-mode="mobile"] body.erp-app.gm-compact-app .erp-kpi-card .card-footer,
+html[data-ui-mode="tablet"] body.erp-app.gm-compact-app .erp-kpi-card .card-footer,
+html[data-ui-mode="mobile"] body.erp-app.gm-compact-app a.erp-kpi-card__footer,
+html[data-ui-mode="tablet"] body.erp-app.gm-compact-app a.erp-kpi-card__footer {
+  background: var(--erp-kpi-accent) !important;
+  color: #fff !important;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.8rem;
+}
+
+html[data-ui-mode="mobile"] body.erp-app.gm-compact-app .summary-card,
+html[data-ui-mode="tablet"] body.erp-app.gm-compact-app .summary-card {
+  /* يحتفظ بتدرجات kpi-cards-global */
+  border-radius: var(--gm-app-radius, var(--erp-radius)) !important;
+}
+
+html[data-ui-mode="mobile"] body.erp-app.gm-compact-app .small-box,
+html[data-ui-mode="tablet"] body.erp-app.gm-compact-app .small-box {
+  border-radius: var(--gm-app-radius-sm, 14px);
+  margin-bottom: 12px;
+}
+
+html[data-ui-mode="mobile"] body.erp-app.gm-compact-app .erp-chart-host,
+html[data-ui-mode="tablet"] body.erp-app.gm-compact-app .erp-chart-host {
+  height: 240px;
+  max-height: 240px;
+  min-height: 200px;
+}
+
+html[data-ui-mode="mobile"] body.erp-app.gm-compact-app .erp-chart-host--lg,
+html[data-ui-mode="tablet"] body.erp-app.gm-compact-app .erp-chart-host--lg {
+  height: 240px;
+  max-height: 240px;
+}
+
+html[data-ui-mode="mobile"] body.erp-app.gm-compact-app .erp-chart-host--sm,
+html[data-ui-mode="tablet"] body.erp-app.gm-compact-app .erp-chart-host--sm {
+  height: 200px;
+  max-height: 200px;
+}
+
+html[data-ui-mode="mobile"] body.erp-app.gm-compact-app [class*="erp-dash-header"],
+html[data-ui-mode="tablet"] body.erp-app.gm-compact-app [class*="erp-dash-header"],
+html[data-ui-mode="mobile"] body.erp-app.gm-compact-app [class*="erp-theme-header"],
+html[data-ui-mode="tablet"] body.erp-app.gm-compact-app [class*="erp-theme-header"] {
+  /* لا تُسطّح إلى أبيض — الألوان من القواعد العامة أعلاه */
+  border-bottom: 1px solid var(--erp-border) !important;
+}

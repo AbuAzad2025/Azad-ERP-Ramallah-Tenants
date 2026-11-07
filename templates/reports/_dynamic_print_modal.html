@@ -1,0 +1,69 @@
+<div class="modal fade" id="reportPrintModal" tabindex="-1" role="dialog" aria-labelledby="reportPrintModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reportPrintModalLabel">خيارات الطباعة</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="إغلاق">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form id="reportPrintForm">
+        <div class="modal-body">
+          <p class="small text-muted mb-3">
+            الصفوف: <strong id="printRowCount">0</strong>
+            — الصفحات التقديرية: <strong id="printPageCount">1</strong>
+          </p>
+          <div class="form-group">
+            <label class="font-weight-bold">نطاق الطباعة</label>
+            <div class="custom-control custom-radio mb-1">
+              <input type="radio" class="custom-control-input" name="print_mode" id="printModeAll" value="all" checked>
+              <label class="custom-control-label" for="printModeAll">كل الصفوف</label>
+            </div>
+            <div class="custom-control custom-radio mb-1">
+              <input type="radio" class="custom-control-input" name="print_mode" id="printModeRows" value="rows">
+              <label class="custom-control-label" for="printModeRows">نطاق صفوف</label>
+            </div>
+            <div class="row mb-2">
+              <div class="col-6">
+                <input type="number" name="start_row" class="form-control form-control-sm" min="1" value="1" placeholder="من صف">
+              </div>
+              <div class="col-6">
+                <input type="number" name="end_row" class="form-control form-control-sm" min="1" value="1" placeholder="إلى صف">
+              </div>
+            </div>
+            <div class="custom-control custom-radio mb-1">
+              <input type="radio" class="custom-control-input" name="print_mode" id="printModePages" value="pages">
+              <label class="custom-control-label" for="printModePages">نطاق صفحات</label>
+            </div>
+            <div class="row">
+              <div class="col-4">
+                <input type="number" name="start_page" class="form-control form-control-sm" min="1" value="1" placeholder="من صفحة">
+              </div>
+              <div class="col-4">
+                <input type="number" name="end_page" class="form-control form-control-sm" min="1" value="1" placeholder="إلى صفحة">
+              </div>
+              <div class="col-4">
+                <input type="number" name="rows_per_page" class="form-control form-control-sm" min="1" value="35" placeholder="صف/صفحة">
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="font-weight-bold" for="printOrientationDynamic">اتجاه الورقة</label>
+            <select name="orientation" id="printOrientationDynamic" class="form-control form-control-sm">
+              <option value="portrait">طولي (Portrait)</option>
+              <option value="landscape">عرضي (Landscape)</option>
+            </select>
+          </div>
+          <div class="form-group mb-0">
+            <label class="font-weight-bold">الأعمدة</label>
+            <div id="printColumnsContainer" class="border rounded p-2 bg-light"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">إلغاء</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-print ml-1"></i> طباعة</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

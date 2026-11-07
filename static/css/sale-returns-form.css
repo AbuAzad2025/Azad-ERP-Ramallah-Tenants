@@ -1,0 +1,49 @@
+.sale-return-form-page .form-card {
+  border: 0;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-bottom: 1rem;
+}
+
+.sale-return-form-page .form-card .form-header {
+  background: var(--erp-primary, #006b3f);
+  color: #fff;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.sale-return-form-page .form-card .form-header h3 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.sale-return-form-page .line-item {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.sale-return-form-page .line-number {
+  font-weight: 700;
+  color: var(--erp-primary, #006b3f);
+}
+
+.sale-return-form-page .total-section {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  margin-top: 1rem;
+}
+
+.sale-return-form-page .total-amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--erp-primary, #006b3f);
+}
+
+.sale-return-form-page .form-label.required::after {
+  content: " *";
+  color: #dc3545;
+}

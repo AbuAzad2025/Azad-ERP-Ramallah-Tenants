@@ -1,206 +1,218 @@
 ﻿{% extends 'warehouses/base.html' %}
 {% block title %}الحجوزات المسبقة{% endblock %}
 {% block page_title %}الحجوزات المسبقة{% endblock %}
+{% block body_class %}warehouses-page warehouses-page--preorders{% endblock %}
+
+{% block breadcrumb_extra %}
+  <li class="breadcrumb-item active" aria-current="page">الحجوزات المسبقة</li>
+{% endblock %}
+
+{% block warehouse_toolbar %}
+  <nav class="warehouse-toolbar warehouse-toolbar--compact" aria-label="اختصارات الحجوزات">
+    <div class="warehouse-toolbar__scroll">
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('warehouse_bp.list') }}">
+        <i class="fas fa-arrow-right ml-1"></i> المستودعات
+      </a>
+      <span class="warehouse-toolbar__current">الحجوزات المسبقة</span>
+      <a class="btn btn-sm btn-primary ms-auto" href="{{ url_for('warehouse_bp.preorder_create') }}">
+        <i class="fas fa-plus ml-1"></i> حجز جديد
+      </a>
+    </div>
+  </nav>
+{% endblock %}
 
 {% block content %}
 {% set status_map = {'PENDING':'معلّق','CONFIRMED':'مؤكّد','FULFILLED':'منفّذ','CANCELLED':'ملغي'} %}
+{% set stats = preorder_stats or {} %}
 
-<!-- إحصائيات سريعة -->
-<div class="row g-3 mb-4">
-  <div class="col-lg-3 col-md-6">
-    <div class="card border-0 shadow-sm bg-primary text-white">
-      <div class="card-body">
-        <div class="d-flex justify-content-between">
+<div class="preorders-page">
+  <div class="row g-2 mb-3 preorders-kpi-row">
+    <div class="col-6 col-lg-3">
+      <div class="card erp-kpi-card erp-kpi-card--primary h-100">
+        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between gap-2">
           <div>
-            <h6 class="card-title text-white-50 mb-1">إجمالي الحجوزات</h6>
-            <h3 class="mb-0 fw-bold">{{ preorders|length }}</h3>
+            <div class="erp-kpi-card__label small text-muted mb-0">إجمالي الحجوزات</div>
+            <div class="erp-kpi-card__value fw-bold fs-5 mb-0">{{ stats.get('total', 0) }}</div>
           </div>
-          <div class="align-self-center">
-            <i class="fas fa-clipboard-list fa-2x opacity-75"></i>
+          <i class="fas fa-clipboard-list text-primary opacity-75"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card erp-kpi-card erp-kpi-card--warning h-100">
+        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between gap-2">
+          <div>
+            <div class="erp-kpi-card__label small text-muted mb-0">معلّقة</div>
+            <div class="erp-kpi-card__value fw-bold fs-5 mb-0">{{ stats.get('pending', 0) }}</div>
           </div>
+          <i class="fas fa-clock text-warning opacity-75"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card erp-kpi-card erp-kpi-card--success h-100">
+        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between gap-2">
+          <div>
+            <div class="erp-kpi-card__label small text-muted mb-0">منفّذة</div>
+            <div class="erp-kpi-card__value fw-bold fs-5 mb-0">{{ stats.get('fulfilled', 0) }}</div>
+          </div>
+          <i class="fas fa-check-circle text-success opacity-75"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card erp-kpi-card erp-kpi-card--info h-100">
+        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between gap-2">
+          <div>
+            <div class="erp-kpi-card__label small text-muted mb-0">إجمالي العربون ₪</div>
+            <div class="erp-kpi-card__value fw-bold fs-5 mb-0">{{ "%.0f"|format(stats.get('prepaid_total', 0) or 0) }}</div>
+          </div>
+          <i class="fas fa-money-bill-wave text-info opacity-75"></i>
         </div>
       </div>
     </div>
   </div>
-  
-  <div class="col-lg-3 col-md-6">
-    <div class="card border-0 shadow-sm bg-warning text-white">
-      <div class="card-body">
-        <div class="d-flex justify-content-between">
-          <div>
-            <h6 class="card-title text-white-50 mb-1">حجوزات معلّقة</h6>
-            <h3 class="mb-0 fw-bold">{{ preorders|selectattr('status', 'equalto', 'PENDING')|list|length }}</h3>
-          </div>
-          <div class="align-self-center">
-            <i class="fas fa-clock fa-2x opacity-75"></i>
-          </div>
-        </div>
+
+  <div class="card card-outline card-primary preorders-table-card">
+    <div class="card-header erp-card-header-row py-2 d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <h3 class="card-title mb-0 small font-weight-bold">
+        <i class="fas fa-list ml-1"></i> قائمة الحجوزات
+      </h3>
+      <a href="{{ url_for('warehouse_bp.preorder_create') }}" class="btn btn-sm btn-primary d-none d-md-inline-flex">
+        <i class="fas fa-plus ml-1"></i> إنشاء حجز
+      </a>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive preorders-table-wrap">
+        <table class="table table-sm table-hover table-striped align-middle mb-0" id="preorders-table">
+          <thead class="thead-light">
+            <tr>
+              <th>رمز الحجز</th>
+              <th>الجهة</th>
+              <th>القطعة</th>
+              <th>المستودع</th>
+              <th class="text-center">الكمية</th>
+              <th class="text-end">العربون</th>
+              <th>الدفع</th>
+              <th>الحالة</th>
+              <th>التاريخ</th>
+              <th class="text-center preorders-col-actions">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in preorders %}
+            {% set entity_name = p.customer and p.customer.name
+                               or p.supplier and p.supplier.name
+                               or p.partner and p.partner.name
+                               or 'غير محدد' %}
+            {% set entity_type = p.customer and 'زبون'
+                               or p.supplier and 'مورد'
+                               or p.partner and 'شريك'
+                               or '' %}
+            <tr>
+              <td class="text-nowrap">
+                <a href="{{ url_for('warehouse_bp.preorder_detail', preorder_id=p.id) }}">
+                  {{ p.reference or 'PR-' ~ p.id }}
+                </a>
+              </td>
+              <td><span class="text-muted small">{{ entity_type }}</span> {{ entity_name }}</td>
+              <td>{{ p.product.name if p.product else '—' }}</td>
+              <td>{{ p.warehouse.name if p.warehouse else '—' }}</td>
+              <td class="text-center">{{ p.quantity or 0 }}</td>
+              <td class="text-end text-nowrap">{{ "%.2f"|format(p.prepaid_amount or 0) }}</td>
+              <td class="text-nowrap small">{{ p.payment_method and {'cash':'نقدي','card':'بطاقة','bank':'تحويل','cheque':'شيك'}.get(p.payment_method, p.payment_method) or '—' }}</td>
+              <td>
+                <span class="badge badge-pill
+                  {% if p.status=='FULFILLED' %}badge-success
+                  {% elif p.status=='CONFIRMED' %}badge-primary
+                  {% elif p.status=='CANCELLED' %}badge-secondary
+                  {% else %}badge-warning text-dark{% endif %}">
+                  {{ status_map.get(p.status, p.status) }}
+                </span>
+              </td>
+              <td class="text-nowrap small">{{ p.created_at.strftime('%Y-%m-%d %H:%M') if p.created_at else '' }}</td>
+              <td class="preorders-col-actions">
+                <div class="btn-group btn-group-sm" role="group">
+                  <a href="{{ url_for('warehouse_bp.preorder_detail', preorder_id=p.id) }}"
+                     class="btn btn-outline-info" title="عرض">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                  {% if p.status not in ('CANCELLED','FULFILLED') %}
+                    {% set prepaid = (p.prepaid_amount or 0)|float %}
+                    {% set total = (p.total_amount or 0)|float %}
+                    {% set balance = total - prepaid %}
+                    {% if current_user.has_permission('manage_sales') and prepaid > 0 %}
+                    <form method="post"
+                          action="{{ url_for('warehouse_bp.preorder_convert_to_sale', preorder_id=p.id) }}"
+                          class="d-inline"
+                          onsubmit="return confirm('تحويل الحجز إلى مبيعة؟');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-outline-success" title="تسليم — متبقي {{ '%.2f'|format(balance) }}">
+                        <i class="fas fa-truck"></i>
+                      </button>
+                    </form>
+                    {% endif %}
+                    {% if current_user.has_permission('delete_preorder') %}
+                    <form method="post"
+                          action="{{ url_for('warehouse_bp.preorder_cancel', preorder_id=p.id) }}"
+                          class="d-inline"
+                          onsubmit="return confirm('إلغاء الحجز؟');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-outline-danger" title="إلغاء">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </form>
+                    {% endif %}
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="10" class="text-center text-muted py-4">لا توجد حجوزات مطابقة</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
-  </div>
-  
-  <div class="col-lg-3 col-md-6">
-    <div class="card border-0 shadow-sm bg-success text-white">
-      <div class="card-body">
-        <div class="d-flex justify-content-between">
-          <div>
-            <h6 class="card-title text-white-50 mb-1">حجوزات منفّذة</h6>
-            <h3 class="mb-0 fw-bold">{{ preorders|selectattr('status', 'equalto', 'FULFILLED')|list|length }}</h3>
-          </div>
-          <div class="align-self-center">
-            <i class="fas fa-check-circle fa-2x opacity-75"></i>
-          </div>
-        </div>
-      </div>
+    {% if pagination.pages > 1 %}
+    <div class="card-footer py-2">
+      <nav aria-label="صفحات الحجوزات">
+        <ul class="pagination pagination-sm justify-content-center mb-0">
+          <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('warehouse_bp.preorders_list', page=pagination.prev_num) }}">السابق</a>
+          </li>
+          <li class="page-item disabled">
+            <span class="page-link">صفحة {{ pagination.page }} / {{ pagination.pages }}</span>
+          </li>
+          <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('warehouse_bp.preorders_list', page=pagination.next_num) }}">التالي</a>
+          </li>
+        </ul>
+      </nav>
     </div>
-  </div>
-  
-  <div class="col-lg-3 col-md-6">
-    <div class="card border-0 shadow-sm bg-info text-white">
-      <div class="card-body">
-        <div class="d-flex justify-content-between">
-          <div>
-            <h6 class="card-title text-white-50 mb-1">إجمالي العربون</h6>
-            <h3 class="mb-0 fw-bold">{{ "%.0f"|format(preorders|sum(attribute='prepaid_amount') or 0) }}</h3>
-          </div>
-          <div class="align-self-center">
-            <i class="fas fa-money-bill-wave fa-2x opacity-75"></i>
-          </div>
-        </div>
-      </div>
-    </div>
+    {% endif %}
   </div>
 </div>
-
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <div></div>
-  <a href="{{ url_for('warehouse_bp.preorder_create') }}" class="btn btn-primary">
-    <i class="fas fa-plus"></i> إنشاء حجز
-  </a>
-</div>
-
-<div class="table-responsive">
-  <table class="table table-bordered table-hover align-middle" id="preorders-table">
-    <thead class="thead-light">
-      <tr>
-        <th>رمز الحجز</th>
-        <th>الجهة</th>
-        <th>القطعة</th>
-        <th>المستودع</th>
-        <th>الكمية</th>
-        <th>العربون</th>
-        <th>طريقة الدفع</th>
-        <th>الحالة</th>
-        <th>التاريخ</th>
-        <th style="width:160px;">إجراءات</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for p in preorders %}
-      {% set entity_name = p.customer and p.customer.name
-                         or p.supplier and p.supplier.name
-                         or p.partner and p.partner.name
-                         or 'غير محدد' %}
-      {% set entity_type = p.customer and 'زبون'
-                         or p.supplier and 'مورد'
-                         or p.partner and 'شريك'
-                         or '' %}
-      <tr>
-        <td>
-          <a href="{{ url_for('warehouse_bp.preorder_detail', preorder_id=p.id) }}">
-            {{ p.reference or 'PR-' ~ p.id }}
-          </a>
-        </td>
-        <td>{{ entity_type }}: {{ entity_name }}</td>
-        <td>{{ p.product.name if p.product else '—' }}</td>
-        <td>{{ p.warehouse.name if p.warehouse else '—' }}</td>
-        <td>{{ p.quantity or 0 }}</td>
-        <td>{{ "%.2f"|format(p.prepaid_amount or 0) }}</td>
-        <td>{{ p.payment_method and {'cash':'نقدي','card':'بطاقة','bank':'تحويل','cheque':'شيك'}.get(p.payment_method, p.payment_method) or '—' }}</td>
-        <td>
-          <span class="badge 
-            {% if p.status=='FULFILLED' %} bg-success
-            {% elif p.status=='CONFIRMED' %} bg-primary
-            {% elif p.status=='CANCELLED' %} bg-secondary
-            {% else %} bg-warning text-dark {% endif %}">
-            {{ status_map.get(p.status, p.status) }}
-          </span>
-        </td>
-        <td>{{ p.created_at.strftime('%Y-%m-%d %H:%M') if p.created_at else '' }}</td>
-        <td>
-          <div class="btn-group" role="group">
-            {# زر عرض التفاصيل #}
-            <a href="{{ url_for('warehouse_bp.preorder_detail', preorder_id=p.id) }}" 
-               class="btn btn-sm btn-info" 
-               title="عرض التفاصيل">
-              <i class="fas fa-eye"></i>
-            </a>
-            
-            {% if p.status not in ('CANCELLED','FULFILLED') %}
-              {% set prepaid = (p.prepaid_amount or 0)|float %}
-              {% set total = (p.total_amount or 0)|float %}
-              {% set balance = total - prepaid %}
-              
-              {# زر تسليم المنتج - يظهر فقط بعد دفع عربون #}
-              {% if has_perm('manage_sales') and prepaid > 0 %}
-              <form method="post" 
-                    action="{{ url_for('warehouse_bp.preorder_convert_to_sale', preorder_id=p.id) }}" 
-                    class="d-inline"
-                    onsubmit="return confirm('تحويل الحجز إلى مبيعة وشحن البضاعة؟');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-sm btn-success" title="تسليم المنتج المحجوز - المبلغ المتبقي: {{ '%.2f'|format(balance) }}">
-                  <i class="fas fa-truck"></i> تسليم
-                </button>
-              </form>
-              {% endif %}
-              
-              {# زر إلغاء #}
-              {% if has_perm('delete_preorder') %}
-              <form method="post" 
-                    action="{{ url_for('warehouse_bp.preorder_cancel', preorder_id=p.id) }}" 
-                    class="d-inline" 
-                    onsubmit="return confirm('إلغاء الحجز؟');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="btn btn-sm btn-danger" title="إلغاء الحجز">
-                  <i class="fas fa-times"></i>
-                </button>
-              </form>
-              {% endif %}
-            {% endif %}
-          </div>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-{% if pagination.pages > 1 %}
-<nav class="mt-3">
-  <ul class="pagination justify-content-center">
-    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-      <a class="page-link" href="{{ url_for('warehouse_bp.preorders_list', page=pagination.prev_num) }}">السابق</a>
-    </li>
-    <li class="page-item disabled"><span class="page-link">صفحة {{ pagination.page }} / {{ pagination.pages }}</span></li>
-    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-      <a class="page-link" href="{{ url_for('warehouse_bp.preorders_list', page=pagination.next_num) }}">التالي</a>
-    </li>
-  </ul>
-</nav>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}
   {{ super() }}
-  <script src="{{ url_for('static', filename='js/warehouses.js') }}"></script>
   <script>
-    (function(){
-      if (window.jQuery && $.fn.DataTable) {
-        $('#preorders-table').DataTable({
-          pageLength: 25,
-          order: [[8, 'desc']],
-          language: { url: (window.gmPath||window.gmU||function(p){return p;})('//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json') }
-        });
+    (function () {
+      if (window.jQuery && $.fn.DataTable && document.getElementById('preorders-table')) {
+        var rowCount = document.querySelectorAll('#preorders-table tbody tr').length;
+        if (rowCount > 0 && !document.querySelector('#preorders-table tbody tr td[colspan]')) {
+          $('#preorders-table').DataTable({
+            pageLength: 25,
+            order: [[8, 'desc']],
+            autoWidth: false,
+            scrollX: true,
+            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json' },
+            dom: '<"row align-items-center mb-2"<"col-sm-6"l><"col-sm-6"f>>rtip'
+          });
+        }
       }
     })();
   </script>

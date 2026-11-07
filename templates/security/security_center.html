@@ -2,19 +2,20 @@
 
 {% block tour_name %}security_center{% endblock %}
 
-{% block security_title %}Security & Monitoring Center{% endblock %}
+{% block security_title %}مركز الأمان والمراقبة{% endblock %}
 {% block security_icon %}<i class="fas fa-shield-alt"></i>{% endblock %}
-{% block security_description %}مراقبة فورية • جدار حماية • تنبيهات أمنية • نشاط المستخدمين{% endblock %}
+{% block security_description %}جدار حماية وتنبيهات{% endblock %}
 
 {% block security_breadcrumb %}
-<li class="breadcrumb-item active">Security Center</li>
+<li class="breadcrumb-item active">مركز الأمان</li>
 {% if active_tab %}
-<li class="breadcrumb-item active">{{ active_tab|title }}</li>
+{% set sec_tab_labels = {'monitoring': 'مراقبة فورية', 'firewall': 'جدار الحماية', 'alerts': 'التنبيهات', 'audit': 'سجل التدقيق'} %}
+<li class="breadcrumb-item active">{{ sec_tab_labels.get(active_tab, active_tab) }}</li>
 {% endif %}
 {% endblock %}
 
 {% block security_actions %}
-<span class="badge bg-success fs-6">4 أدوات</span>
+<span class="badge bg-primary">4 أقسام</span>
 {% endblock %}
 
 {% block security_content %}
@@ -123,7 +124,7 @@
           </div>
           
           <div class="card border-primary">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header erp-card-header-row erp-theme-header--primary">
               <i class="fas fa-chart-line"></i> مراقبة مباشرة
             </div>
             <div class="card-body text-center">
@@ -150,7 +151,7 @@
           </div>
           
           <div class="card border-danger">
-            <div class="card-header bg-danger text-white">
+            <div class="card-header erp-card-header-row erp-theme-header--primary bg-danger text-white">
               <i class="fas fa-ban"></i> IPs المحظورة ({{ security_stats.blocked_ips }})
             </div>
             <div class="card-body text-center">
@@ -176,7 +177,7 @@
              role="tabpanel">
         <div class="container-fluid">
           <div class="card shadow-sm">
-            <div class="card-header bg-gradient-warning text-white">
+            <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-warning text-white">
               <h5 class="mb-0"><i class="fas fa-bell"></i> مركز التنبيهات والإشعارات</h5>
             </div>
             <div class="card-body">
@@ -262,7 +263,7 @@
              role="tabpanel">
         <div class="container-fluid">
           <div class="card shadow-sm">
-            <div class="card-header bg-gradient-info text-white">
+            <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-info text-white">
               <h5 class="mb-0"><i class="fas fa-history"></i> الخط الزمني للنشاط</h5>
             </div>
             <div class="card-body">

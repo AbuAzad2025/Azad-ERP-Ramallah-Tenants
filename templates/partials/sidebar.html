@@ -1,26 +1,25 @@
 <aside class="main-sidebar sidebar-dark-primary elevation-4" dir="rtl">
   <div class="garage-brand-area">
-    <a href="{{ user_home_url or url_for('main.dashboard') }}" class="garage-brand-link">
-      <img src="{{ system_settings.custom_logo_url }}" alt="{{ system_settings.company_name or system_settings.system_name or 'النظام' }}" class="garage-brand-image gm-brand-mark" loading="lazy" decoding="async">
-      <span class="garage-brand-text">{{ system_settings.company_name or system_settings.system_name or 'النظام' }}</span>
+    <a href="{{ url_for('main.dashboard') }}" class="garage-brand-link" title="{{ tenant_company_name or system_settings.tenant_company_name or system_settings.system_name or 'النظام' }}">
+      <span class="garage-brand-text">{{ tenant_company_name or system_settings.tenant_company_name or system_settings.system_name or 'النظام' }}</span>
+      {% if tenant_show_nav_scope and tenant_branch_name %}
+      <span class="garage-brand-branch">{{ tenant_branch_name }}</span>
+      {% endif %}
+      <img
+        src="{{ system_settings.tenant_logo_url }}"
+        data-fallback="{{ system_settings.tenant_logo_white_url or system_settings.tenant_logo_url }}"
+        alt="{{ tenant_company_name or system_settings.tenant_company_name or 'شعار الشركة' }}"
+        class="garage-brand-image garage-brand-image--tenant"
+        loading="eager"
+        decoding="async"
+        onerror="if(this.dataset.fallback && this.src !== this.dataset.fallback){this.src = this.dataset.fallback;}">
     </a>
-    <button type="button" class="gm-sidebar-close d-lg-none" aria-label="إغلاق القائمة">
+    <button type="button" class="gm-sidebar-close" aria-label="إغلاق القائمة">
       <i class="fas fa-times"></i>
     </button>
   </div>
   
   <div class="sidebar">
-    <div class="user-panel mt-3 pb-3 mb-3 d-flex justify-content-end">
-      <div class="info text-right">
-        <a href="{{ url_for('users_bp.profile') }}" class="d-block">
-          {{ current_user.username if current_user.is_authenticated else "ضيف" }}
-        </a>
-      </div>
-      <div class="image">
-        <i class="fas fa-user-circle fa-2x text-light"></i>
-      </div>
-    </div>
-
     <nav class="mt-2">
       <ul class="nav nav-pills nav-sidebar flex-column text-right" data-widget="treeview" role="menu" data-accordion="false">
 
@@ -90,7 +89,7 @@
               </a>
             </li>
             {% endif %}
-            {% if can_ep('recurring.index') or has_perm('access_owner_dashboard') %}
+            {% if has_perm('manage_sales') or has_perm('manage_ledger') %}
             <li class="nav-item">
               <a href="{{ url_for('recurring.index') }}" class="nav-link {% if request.blueprint == 'recurring' %}active{% endif %}">
                 <i class="far fa-circle nav-icon text-primary"></i>
@@ -105,8 +104,8 @@
 
         {# --- المخزون والشحن --- #}
         {% if has_perm('view_warehouses') or has_perm('manage_warehouses') or has_perm('manage_vendors') or has_perm('manage_shipments') %}
-        <li class="nav-item has-treeview {% if request.blueprint in ['warehouse_bp', 'vendors_bp', 'shipments_bp'] %}menu-open{% endif %}">
-          <a href="#" class="nav-link {% if request.blueprint in ['warehouse_bp', 'vendors_bp', 'shipments_bp'] %}active{% endif %}">
+        <li class="nav-item has-treeview {% if request.blueprint in ['warehouse_bp', 'vendors_bp', 'shipments_bp', 'purchases_bp'] %}menu-open{% endif %}">
+          <a href="#" class="nav-link {% if request.blueprint in ['warehouse_bp', 'vendors_bp', 'shipments_bp', 'purchases_bp'] %}active{% endif %}">
             <i class="nav-icon fas fa-boxes text-success"></i>
             <p>
               المخزون والشحن
@@ -152,6 +151,12 @@
                 <p>الشحنات</p>
               </a>
             </li>
+            <li class="nav-item">
+              <a href="{{ url_for('purchases_bp.index') }}" class="nav-link {% if request.blueprint == 'purchases_bp' %}active{% endif %}">
+                <i class="far fa-circle nav-icon text-success"></i>
+                <p>أوامر الشراء</p>
+              </a>
+            </li>
             {% endif %}
             {% endif %}
           </ul>
@@ -159,9 +164,9 @@
         {% endif %}
 
         {# --- المحاسبة (Basic) --- #}
-        {% if has_perm('manage_payments') or has_perm('view_payments') or has_perm('manage_expenses') or has_perm('manage_ledger') or has_perm('manage_currencies') or has_perm('manage_branches') %}
-        <li class="nav-item has-treeview {% if request.blueprint in ['payments', 'checks', 'expenses_bp', 'ledger', 'currencies', 'companies_bp', 'branches_bp'] %}menu-open{% endif %}">
-          <a href="#" class="nav-link {% if request.blueprint in ['payments', 'checks', 'expenses_bp', 'ledger', 'currencies', 'companies_bp', 'branches_bp'] %}active{% endif %}">
+        {% if has_perm('manage_payments') or has_perm('view_payments') or has_perm('manage_expenses') or has_perm('manage_ledger') or has_perm('manage_currencies') or has_perm('view_reports') %}
+        <li class="nav-item has-treeview {% if request.blueprint in ['payments', 'checks', 'expenses_bp', 'ledger', 'currencies', 'accounting_hub_bp', 'companies_bp', 'purchases_bp', 'fiscal_periods_bp', 'budgets', 'financial_reports'] %}menu-open{% endif %}">
+          <a href="#" class="nav-link {% if request.blueprint in ['payments', 'checks', 'expenses_bp', 'ledger', 'currencies', 'accounting_hub_bp', 'companies_bp', 'purchases_bp', 'fiscal_periods_bp', 'budgets', 'financial_reports'] %}active{% endif %}">
             <i class="nav-icon fas fa-calculator text-warning"></i>
             <p>
               المحاسبة
@@ -169,6 +174,36 @@
             </p>
           </a>
           <ul class="nav nav-treeview">
+            {% if has_perm('view_reports') %}
+            <li class="nav-item">
+              <a href="{{ url_for('accounting_hub_bp.index') }}" class="nav-link {% if request.blueprint == 'accounting_hub_bp' %}active{% endif %}">
+                <i class="far fa-circle nav-icon text-warning"></i>
+                <p>مركز المحاسبة</p>
+              </a>
+            </li>
+            {% endif %}
+            {% if has_perm('manage_ledger') %}
+            <li class="nav-item">
+              <a href="{{ url_for('fiscal_periods_bp.index') }}" class="nav-link {% if request.blueprint == 'fiscal_periods_bp' %}active{% endif %}">
+                <i class="far fa-circle nav-icon text-dark"></i>
+                <p>الفترات والإقفال</p>
+              </a>
+            </li>
+            {% endif %}
+            {% if has_perm('manage_branches') %}
+            <li class="nav-item">
+              <a href="{{ url_for('companies_bp.index') }}" class="nav-link {% if request.blueprint == 'companies_bp' %}active{% endif %}">
+                <i class="far fa-circle nav-icon text-secondary"></i>
+                <p>الشركات</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ url_for('branches_bp.list_branches') }}" class="nav-link {% if request.blueprint == 'branches_bp' %}active{% endif %}">
+                <i class="far fa-circle nav-icon text-info"></i>
+                <p>الفروع</p>
+              </a>
+            </li>
+            {% endif %}
             {% if is_module_enabled('payments') %}
             {% if has_perm('view_payments') or has_perm('manage_payments') %}
             <li class="nav-item">

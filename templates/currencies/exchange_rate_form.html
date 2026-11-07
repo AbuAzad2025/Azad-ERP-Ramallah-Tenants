@@ -17,7 +17,7 @@
 <div class="row">
     <div class="col-md-8">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header erp-card-header-row erp-theme-header--primary">
                 <h3 class="card-title">
                     <i class="fas fa-{% if exchange_rate %}edit{% else %}plus{% endif %} ml-2"></i>
                     {% if exchange_rate %}تعديل سعر الصرف{% else %}إضافة سعر صرف جديد{% endif %}
@@ -30,7 +30,7 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                {{ form.base_code.label(class="form-label") }}
+                                {{ form.base_code.label }}
                                 {{ form.base_code(class="form-control") }}
                                 {% if form.base_code.errors %}
                                     <div class="text-danger">
@@ -43,7 +43,7 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                {{ form.quote_code.label(class="form-label") }}
+                                {{ form.quote_code.label }}
                                 {{ form.quote_code(class="form-control") }}
                                 {% if form.quote_code.errors %}
                                     <div class="text-danger">
@@ -73,7 +73,7 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                {{ form.valid_from.label(class="form-label") }}
+                                {{ form.valid_from.label }}
                                 {{ form.valid_from(class="form-control") }}
                                 {% if form.valid_from.errors %}
                                     <div class="text-danger">
@@ -90,7 +90,7 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                {{ form.source.label(class="form-label") }}
+                                {{ form.source.label }}
                                 {{ form.source(class="form-control") }}
                                 {% if form.source.errors %}
                                     <div class="text-danger">
@@ -126,7 +126,7 @@
     
     <div class="col-md-4">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header erp-card-header-row erp-theme-header--primary">
                 <h3 class="card-title">
                     <i class="fas fa-info-circle ml-2"></i>
                     معلومات مهمة

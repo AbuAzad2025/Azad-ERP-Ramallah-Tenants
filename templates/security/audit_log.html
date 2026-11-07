@@ -2,12 +2,12 @@
 
 {% block tour_name %}audit_log{% endblock %}
 
-{% block security_title %}Audit Log{% endblock %}
+{% block security_title %}سجل التدقيق{% endblock %}
 {% block security_icon %}<i class="fas fa-history"></i>{% endblock %}
-{% block security_description %}سجل شامل لجميع الإجراءات والنشاطات في النظام{% endblock %}
+{% block security_description %}سجل الإجراءات والنشاط{% endblock %}
 
 {% block security_breadcrumb %}
-<li class="breadcrumb-item active">Audit Log</li>
+<li class="breadcrumb-item active">سجل التدقيق</li>
 {% endblock %}
 
 {% block security_content %}
@@ -139,7 +139,7 @@
     <div class="card-body p-0">
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
-          <thead class="bg-light">
+          <thead class="table-header-primary text-white bg-light">
             <tr>
               <th class="ps-4">التوقيت</th>
               <th>المستخدم</th>
@@ -250,8 +250,6 @@ function exportCSV() {
 }
 </script>
 
-<style>
-.icon-square { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
-</style>
+
 {% endblock %}
 

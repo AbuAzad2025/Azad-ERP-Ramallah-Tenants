@@ -34,6 +34,12 @@
               class="btn btn-success btn-sm">
         <i class="fas fa-file-csv"></i> تصدير CSV
       </button>
+      <button type="button"
+              class="btn btn-outline-dark btn-sm report-table-print"
+              data-table-target="#report-table"
+              title="طباعة الجدول">
+        <i class="fas fa-print"></i> طباعة
+      </button>
   <div class="ms-auto d-flex align-items-center gap-2">
     <span class="text-muted small d-none d-md-inline">نتائج:</span>
     <span id="result-count" class="badge bg-secondary">0</span>
@@ -52,7 +58,7 @@
   </div>
 
   <div class="card shadow-sm mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center text-white" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+ <div class="card-header d-flex justify-content-between align-items-center erp-card-header-row erp-theme-header--primary">
       <span><i class="fas fa-filter"></i> إعدادات التقرير</span>
       <button class="btn btn-sm text-white p-0" type="button" data-toggle="collapse" data-target="#advFilters">
         <i class="fas fa-chevron-down"></i> إظهار/إخفاء الفلاتر الإضافية
@@ -145,7 +151,7 @@
     <div class="card-body">
       <div class="table-responsive">
         <table id="report-table" class="table table-striped table-bordered align-middle w-100">
-          <thead class="table-dark" id="thead-dynamic"></thead>
+          <thead class="table-header-primary text-white " id="thead-dynamic"></thead>
           <tbody id="tbody-dynamic"></tbody>
         </table>
       </div>
@@ -160,6 +166,10 @@
 </div>
 {% endblock %}
 
+{% block report_print_modal %}
+{% include 'reports/_dynamic_print_modal.html' %}
+{% endblock %}
+
 {% block scripts %}
 <script>
   window.FIELD_LABELS = {{ FIELD_LABELS|tojson }};
@@ -169,5 +179,6 @@
   window.__selectedColumns = {{ (columns or [])|tojson }};
   window.EXCLUDED_FIELDS = ["warranty_until"];
 </script>
+<script src="{{ static_url('js/reporting.js') }}" defer></script>
 {{ super() }}
 {% endblock %}

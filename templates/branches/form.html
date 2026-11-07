@@ -18,7 +18,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     
     <div class="card shadow-sm">
-      <div class="card-header bg-primary text-white">
+      <div class="card-header erp-card-header-row erp-theme-header--primary">
         <i class="fas fa-info-circle ml-1"></i> المعلومات الأساسية
       </div>
       <div class="card-body">
@@ -46,6 +46,15 @@
               الاسم <span class="text-danger">*</span>
             </label>
             <input type="text" name="name" class="form-control" placeholder="مثال: فرع رام الله" value="{{ branch.name if branch else '' }}" required>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-bold">الشركة <span class="text-danger">*</span></label>
+            <select name="company_id" class="custom-select" required>
+              {% for co in companies|default([]) %}
+              <option value="{{ co.id }}" {% if branch and branch.company_id == co.id %}selected{% endif %}>{{ co.name }} ({{ co.code }})</option>
+              {% endfor %}
+            </select>
           </div>
 
           <div class="col-md-4">
@@ -128,7 +137,7 @@
 
     <!-- بطاقة الموقع GPS -->
     <div class="card shadow-sm mt-3">
-      <div class="card-header bg-success text-white">
+      <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white">
         <i class="fas fa-map-marked-alt ml-1"></i> تحديد الموقع على الخريطة
         <small class="float-end">اختياري - يساعد في تحديد موقع الفرع بدقة</small>
       </div>

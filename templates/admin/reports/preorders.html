@@ -41,7 +41,7 @@
   <!-- إحصائيات سريعة -->
   <div class="row mb-3">
     <div class="col-md-3">
-      <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+      <div class="card shadow-sm border-0 summary-card summary-card--primary text-white card-hover">
         <div class="card-body text-white text-center">
           <h3 class="mb-1">{{ totals.total if totals is defined else (rows|length) }}</h3>
           <p class="mb-0 small">إجمالي الطلبات</p>
@@ -49,7 +49,7 @@
       </div>
     </div>
     <div class="col-md-3">
-      <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);">
+      <div class="card shadow-sm border-0 summary-card summary-card--success text-white card-hover">
         <div class="card-body text-white text-center">
           <h3 class="mb-1">{{ totals.fulfilled if totals is defined else (rows|selectattr('status', 'equalto', 'FULFILLED')|list|length) }}</h3>
           <p class="mb-0 small">طلبات مكتملة</p>
@@ -57,7 +57,7 @@
       </div>
     </div>
     <div class="col-md-3">
-      <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);">
+      <div class="card shadow-sm border-0 summary-card summary-card--warning text-white card-hover">
         <div class="card-body text-white text-center">
           <h3 class="mb-1">{{ (totals.total_amount if totals is defined else (rows|map(attribute='total_amount')|sum))|round(2) }}</h3>
           <p class="mb-0 small">إجمالي المبالغ (₪)</p>
@@ -65,7 +65,7 @@
       </div>
     </div>
     <div class="col-md-3">
-      <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+      <div class="card shadow-sm border-0 summary-card summary-card--danger text-white card-hover">
         <div class="card-body text-white text-center">
           <h3 class="mb-1">{{ (totals.prepaid_amount if totals is defined else (rows|map(attribute='prepaid_amount')|sum))|round(2) }}</h3>
           <p class="mb-0 small">إجمالي العربون (₪)</p>
@@ -110,7 +110,7 @@
     <div class="card-body">
       <div class="table-responsive">
         <table class="table table-hover align-middle">
-          <thead>
+          <thead class="table-header-primary text-white">
             <tr>
               <th>التاريخ</th>
               <th>رقم الطلب</th>

@@ -21,6 +21,7 @@ wheels/
 
 instance/
 !instance/.gitkeep
+audit_report.json
 *.db
 *.db-shm
 *.db-wal
@@ -29,6 +30,7 @@ instance/
 
 .env
 .env.local
+.dbg/
 .venv
 .venv/
 temp_env/
@@ -47,6 +49,7 @@ logs/
 .coverage
 htmlcov/
 *.cover
+*,cover
 .hypothesis/
 
 .mypy_cache/
@@ -85,10 +88,6 @@ AI/data/auto_learning_log.json
 AI/data/code_issues.json
 AI/data/discovered_changes.json
 AI/data/last_scan.json
-tests/
-**/tests/
-test_*.py
-*_test.py
 non_production/
 
 production_data.sql

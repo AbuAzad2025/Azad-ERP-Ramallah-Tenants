@@ -1,9 +1,9 @@
 ﻿{% extends 'security/base_security.html' %}
 {% block tour_name %}theme_editor{% endblock %}
-{% block security_title %}Theme Editor{% endblock %}
+{% block security_title %}محرر الثيم{% endblock %}
 {% block security_icon %}<i class="fas fa-palette"></i>{% endblock %}
-{% block security_description %}محرر الكود الموحد - CSS • HTML • Text{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">Theme Editor</li>{% endblock %}
+{% block security_description %}محرر CSS وHTML{% endblock %}
+{% block security_breadcrumb %}<li class="breadcrumb-item active">محرر الثيم</li>{% endblock %}
 {% block security_content %}
   
   <div class="alert alert-warning border-0 shadow-sm">
@@ -11,7 +11,7 @@
   </div>
 
   <div class="card">
-    <div class="card-header bg-dark text-white">
+    <div class="card-header erp-card-header-row erp-theme-header--primary bg-dark text-white">
       <h5 class="mb-0"><i class="fas fa-code"></i> محرر الأكواد والنصوص الشامل</h5>
     </div>
     <div class="card-body">
@@ -61,7 +61,7 @@
           <div class="row">
             <div class="col-md-3">
               <div class="card">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header erp-card-header-row erp-theme-header--primary">
                   <h6 class="mb-0"><i class="fas fa-folder"></i> ملفات CSS</h6>
                 </div>
                 <div class="list-group list-group-flush">
@@ -82,7 +82,7 @@
                 <input type="hidden" name="filename" value="{{ data.css.selected }}">
                 
                 <div class="card">
-                  <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center">
+                  <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-primary text-white d-flex justify-content-between align-items-center">
                     <h6 class="mb-0"><i class="fas fa-edit"></i> تحرير: {{ data.css.selected }}</h6>
                     <button type="submit" class="btn btn-light btn-sm">
                       <i class="fas fa-save"></i> حفظ
@@ -105,7 +105,7 @@
           <div class="row">
             <div class="col-md-3">
               <div class="card">
-                <div class="card-header bg-success text-white">
+                <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white">
                   <h6 class="mb-0"><i class="fas fa-folder-open"></i> القوالب</h6>
                 </div>
                 <div class="list-group list-group-flush" style="max-height: 600px; overflow-y: auto;">
@@ -129,7 +129,7 @@
                 <input type="hidden" name="filepath" value="{{ data.html.selected }}">
                 
                 <div class="card">
-                  <div class="card-header bg-gradient-success text-white d-flex justify-content-between align-items-center">
+                  <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-success text-white d-flex justify-content-between align-items-center">
                     <h6 class="mb-0"><i class="fas fa-edit"></i> تحرير: {{ data.html.selected }}</h6>
                     <button type="submit" class="btn btn-light btn-sm">
                       <i class="fas fa-save"></i> حفظ
@@ -152,7 +152,7 @@
           <div class="row">
             <div class="col-md-8 mx-auto">
               <div class="card">
-                <div class="card-header bg-gradient-warning">
+                <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-warning">
                   <h5 class="mb-0"><i class="fas fa-language"></i> إعدادات النصوص والترجمات</h5>
                 </div>
                 <div class="card-body">
@@ -191,7 +191,7 @@
                     <input type="hidden" name="editor_type" value="text">
                     
                     <div class="card border-primary">
-                      <div class="card-header bg-primary text-white">
+                      <div class="card-header erp-card-header-row erp-theme-header--primary">
                         <strong><i class="fas fa-plus"></i> إضافة نص جديد</strong>
                       </div>
                       <div class="card-body">
@@ -225,18 +225,7 @@
 {% endblock %}
 
 {% block extra_css %}
-<style>
-.code-editor {
-  font-family: 'Courier New', Consolas, monospace;
-  font-size: 14px;
-  border: none;
-  min-height: 600px;
-  direction: ltr;
-  text-align: left;
-  background: #f8f9fa;
-  padding: 1rem;
-}
-</style>
+
 {% endblock %}
 
 {% block extra_js %}

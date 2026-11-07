@@ -4,17 +4,18 @@
 
 {% block security_title %}مركز التقارير والأداء{% endblock %}
 {% block security_icon %}<i class="fas fa-chart-bar"></i>{% endblock %}
-{% block security_description %}تقارير إدارية • مراقبة الأداء • Grafana • تحليلات متقدمة{% endblock %}
+{% block security_description %}تقارير إدارية ومراقبة{% endblock %}
 
 {% block security_breadcrumb %}
 <li class="breadcrumb-item active">مركز التقارير</li>
 {% if active_tab %}
-<li class="breadcrumb-item active">{{ active_tab|title }}</li>
+{% set report_tab_labels = {'reports': 'التقارير', 'monitoring': 'المراقبة', 'performance': 'الأداء'} %}
+<li class="breadcrumb-item active">{{ report_tab_labels.get(active_tab, active_tab) }}</li>
 {% endif %}
 {% endblock %}
 
 {% block security_actions %}
-<span class="badge bg-info fs-6">3 أدوات</span>
+<span class="badge bg-info">3 أقسام</span>
 {% endblock %}
 
 {% block security_content %}
@@ -53,47 +54,8 @@
              id="reports" 
              role="tabpanel">
         <div class="container-fluid">
-          <div class="row g-3 mb-4">
-            <div class="col-md-3">
-              <div class="card border-0 shadow-sm bg-primary text-white">
-                <div class="card-body text-center">
-                  <i class="fas fa-file-invoice fa-2x mb-2"></i>
-                  <h6>تقارير مالية</h6>
-                  <h4 class="mb-0">8</h4>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="card border-0 shadow-sm bg-success text-white">
-                <div class="card-body text-center">
-                  <i class="fas fa-warehouse fa-2x mb-2"></i>
-                  <h6>تقارير مخزون</h6>
-                  <h4 class="mb-0">3</h4>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="card border-0 shadow-sm bg-info text-white">
-                <div class="card-body text-center">
-                  <i class="fas fa-users fa-2x mb-2"></i>
-                  <h6>تقارير زبائن</h6>
-                  <h4 class="mb-0">4</h4>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="card border-0 shadow-sm bg-warning text-white">
-                <div class="card-body text-center">
-                  <i class="fas fa-chart-line fa-2x mb-2"></i>
-                  <h6>تقارير ديناميكية</h6>
-                  <h4 class="mb-0">∞</h4>
-                </div>
-              </div>
-            </div>
-          </div>
-          
           <div class="card shadow-sm">
-            <div class="card-header bg-gradient-primary text-white">
+            <div class="card-header card-header-primary text-white erp-card-header-row bg-gradient-primary text-white">
               <h5 class="mb-0"><i class="fas fa-chart-bar"></i> التقارير المتاحة</h5>
             </div>
             <div class="card-body">
@@ -150,42 +112,15 @@
              id="monitoring" 
              role="tabpanel">
         <div class="container-fluid">
-          <div class="card shadow-sm">
-            <div class="card-header bg-gradient-info text-white">
-              <h5 class="mb-0"><i class="fas fa-chart-area"></i> لوحة المراقبة الشاملة</h5>
-            </div>
-            <div class="card-body">
-              <div class="row g-4">
-                <div class="col-md-6">
-                  <div class="card border-info">
-                    <div class="card-body">
-                      <h6 class="text-info"><i class="fas fa-chart-line"></i> مراقبة الأداء الحي</h6>
-                      <ul class="list-unstyled small">
-                        <li><i class="fas fa-check text-success"></i> استخدام CPU والذاكرة</li>
-                        <li><i class="fas fa-check text-success"></i> عدد الطلبات في الثانية</li>
-                        <li><i class="fas fa-check text-success"></i> زمن الاستجابة</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="card border-primary">
-                    <div class="card-body">
-                      <h6 class="text-primary"><i class="fas fa-database"></i> قاعدة البيانات</h6>
-                      <ul class="list-unstyled small">
-                        <li><i class="fas fa-check text-success"></i> حجم قاعدة البيانات</li>
-                        <li><i class="fas fa-check text-success"></i> عدد الاستعلامات</li>
-                        <li><i class="fas fa-check text-success"></i> أبطأ الاستعلامات</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="mt-3">
-                <a href="{{ url_for('security.monitoring_dashboard') }}" class="btn btn-info">
-                  <i class="fas fa-tv"></i> فتح لوحة المراقبة الحية
-                </a>
-              </div>
+          <div class="sec-card">
+            <div class="sec-card-body">
+              <p class="text-muted mb-3">مراقبة الموارد والعمليات من لوحة مخصصة.</p>
+              <a href="{{ url_for('security.monitoring_dashboard') }}" class="btn btn-glass btn-sm">
+                <i class="fas fa-tv"></i> فتح لوحة المراقبة
+              </a>
+              <a href="{{ url_for('security.live_monitoring') }}" class="btn btn-glass btn-sm ms-2">
+                <i class="fas fa-radar"></i> المراقبة الحية
+              </a>
             </div>
           </div>
         </div>
@@ -196,48 +131,37 @@
              id="performance" 
              role="tabpanel">
         <div class="container-fluid">
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <div class="erp-sec-stat">
+                <span class="erp-sec-stat__value">{{ stats.failed_logins_24h }}</span>
+                <span class="erp-sec-stat__label">محاولات دخول فاشلة (24 س)</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="erp-sec-stat">
+                <span class="erp-sec-stat__value">{{ stats.online_users }}</span>
+                <span class="erp-sec-stat__label">متصلون الآن</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="erp-sec-stat">
+                <span class="erp-sec-stat__value erp-sec-stat__value--sm">{{ stats.db_size }}</span>
+                <span class="erp-sec-stat__label">حجم قاعدة البيانات</span>
+              </div>
+            </div>
+          </div>
           <div class="card shadow-sm">
-            <div class="card-header bg-gradient-success text-white">
+            <div class="card-header erp-card-header-row">
               <h5 class="mb-0"><i class="fas fa-tachometer-alt"></i> مراقبة الأداء</h5>
             </div>
             <div class="card-body">
-              <div class="row g-3">
-                <div class="col-md-4">
-                  <div class="card border-success">
-                    <div class="card-body text-center">
-                      <i class="fas fa-rocket fa-2x text-success mb-2"></i>
-                      <h6>سرعة التحميل</h6>
-                      <h4 class="text-success">< 1s</h4>
-                      <p class="small text-muted mb-0">متوسط زمن الاستجابة</p>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="card border-primary">
-                    <div class="card-body text-center">
-                      <i class="fas fa-memory fa-2x text-primary mb-2"></i>
-                      <h6>استخدام الذاكرة</h6>
-                      <h4 class="text-primary">متوازن</h4>
-                      <p class="small text-muted mb-0">RAM Usage</p>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="card border-info">
-                    <div class="card-body text-center">
-                      <i class="fas fa-database fa-2x text-info mb-2"></i>
-                      <h6>قاعدة البيانات</h6>
-                      <h4 class="text-info">محسّنة</h4>
-                      <p class="small text-muted mb-0">فهارس + Cache</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="mt-3">
-                <a href="{{ url_for('security.performance_monitor') }}" class="btn btn-success">
+              <p class="text-muted mb-3">حالة النظام: <strong>{{ stats.system_health }}</strong> — إصدار {{ stats.system_version }}</p>
+              <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('security.performance_monitor') }}" class="btn btn-glass btn-sm">
                   <i class="fas fa-tachometer-alt"></i> مراقبة الأداء التفصيلية
                 </a>
-                <a href="{{ url_for('security.tax_reports') }}" class="btn btn-outline-success ms-2">
+                <a href="{{ url_for('security.tax_reports') }}" class="btn btn-glass btn-sm">
                   <i class="fas fa-file-invoice-dollar"></i> تقارير الضرائب
                 </a>
               </div>

@@ -7,113 +7,113 @@
   --ux-gap: 0.75rem;
 }
 
-body:not(.gm-pro-ui) .form-control,
-body:not(.gm-pro-ui) .custom-select,
-body:not(.gm-pro-ui) select.form-control {
+.form-control,
+.custom-select,
+select.form-control {
   min-height: var(--ux-input-height);
   border-radius: var(--ux-radius);
   font-size: 0.95rem;
 }
 
-body:not(.gm-pro-ui) .form-control:focus,
-body:not(.gm-pro-ui) .custom-select:focus,
-body:not(.gm-pro-ui) select.form-control:focus {
+.form-control:focus,
+.custom-select:focus,
+select.form-control:focus {
   border-color: #667eea;
   box-shadow: 0 0 0 0.15rem rgba(102, 126, 234, 0.2);
 }
 
-body:not(.gm-pro-ui) .form-label,
-body:not(.gm-pro-ui) label.col-form-label {
+.form-label,
+label.col-form-label {
   font-weight: 600;
   margin-bottom: 0.35rem;
   color: #374151;
 }
 
-body:not(.gm-pro-ui) .form-text,
-body:not(.gm-pro-ui) small.text-muted {
+.form-text,
+small.text-muted {
   font-size: 0.8rem;
   line-height: 1.4;
 }
 
-body:not(.gm-pro-ui) .btn {
+.btn {
   border-radius: var(--ux-radius);
   font-weight: 600;
   padding: 0.45rem 0.9rem;
   white-space: nowrap;
 }
 
-body:not(.gm-pro-ui) .btn-group .btn,
-body:not(.gm-pro-ui) .input-group .btn {
+.btn-group .btn,
+.input-group .btn {
   min-height: var(--ux-input-height);
 }
 
-body:not(.gm-pro-ui) .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
-  border-color: #5a67d8;
+.btn-primary {
+  background: var(--erp-blue, #0b68ff);
+  border-color: var(--erp-blue, #0b68ff);
 }
 
-body:not(.gm-pro-ui) .btn-primary:hover {
-  background: linear-gradient(135deg, #5a67d8 0%, #4c51bf 100%);
-  border-color: #4c51bf;
+.btn-primary:hover {
+  background: #0952cc;
+  border-color: #0952cc;
 }
 
-body:not(.gm-pro-ui) .btn-secondary,
-body:not(.gm-pro-ui) .btn-outline-secondary {
+.btn-secondary,
+.btn-outline-secondary {
   color: #4b5563;
 }
 
-body:not(.gm-pro-ui) .btn-sm {
+.btn-sm {
   padding: 0.3rem 0.65rem;
   font-size: 0.85rem;
 }
 
 /* تباعد صفوف الفلاتر */
-body:not(.gm-pro-ui) .filter-toolbar,
+.filter-toolbar,
 .form-inline.gap-2,
 .card-body .row.g-2 {
   gap: var(--ux-gap);
 }
 
-body:not(.gm-pro-ui) .filter-toolbar .form-group,
-body:not(.gm-pro-ui) .filter-toolbar .col-md-auto {
+.filter-toolbar .form-group,
+.filter-toolbar .col-md-auto {
   margin-bottom: 0.5rem;
 }
 
 /* Select2 / AJAX selects */
-body:not(.gm-pro-ui) .select2-container--default .select2-selection--single {
+.select2-container--default .select2-selection--single {
   min-height: var(--ux-input-height);
   border-radius: var(--ux-radius);
   border-color: #ced4da;
 }
 
-body:not(.gm-pro-ui) .select2-container--default .select2-selection--single .select2-selection__rendered {
+.select2-container--default .select2-selection--single .select2-selection__rendered {
   line-height: calc(var(--ux-input-height) - 6px);
   padding-right: 12px;
 }
 
-body:not(.gm-pro-ui) .select2-container--default .select2-selection--single .select2-selection__arrow {
+.select2-container--default .select2-selection--single .select2-selection__arrow {
   height: var(--ux-input-height);
 }
 
 /* جداول — عناوين أوضح */
-body:not(.gm-pro-ui) .table thead th {
+.table thead th {
   font-weight: 700;
   font-size: 0.88rem;
   white-space: nowrap;
   vertical-align: middle;
 }
 
-body:not(.gm-pro-ui) .table td {
+.table td {
   vertical-align: middle;
 }
 
 /* بطاقات إجراءات */
-body:not(.gm-pro-ui) .card-header .btn + .btn {
+.card-header .btn + .btn {
   margin-inline-start: 0.35rem;
 }
 
 /* منع تزاحم الأزرار في الشريط */
-body:not(.gm-pro-ui) .page-actions {
+.page-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;

@@ -12,16 +12,6 @@ from utils import permission_required
 
 engineering_bp = Blueprint('engineering', __name__, url_prefix='/engineering')
 
-@engineering_bp.before_request
-@login_required
-def restrict_engineering_access():
-    # الحماية: فقط للمالك والمطور (Level 0)
-    from permissions_config.role_policy import is_platform_owner_role
-
-    if not is_platform_owner_role(current_user):
-        utils.flash_error('غير مصرح لك بالوصول للإدارة الهندسية', 'danger')
-        return redirect(url_for('main.dashboard'))
-
 
 @engineering_bp.route('/')
 @login_required

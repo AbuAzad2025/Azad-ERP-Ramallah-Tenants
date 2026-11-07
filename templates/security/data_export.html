@@ -1,34 +1,84 @@
 {% extends 'security/base_security.html' %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ static_url('css/data-export.css') }}">
+{% endblock %}
+
 {% block tour_name %}data_export{% endblock %}
-{% block security_title %}Data Export{% endblock %}
+{% block security_title %}تصدير البيانات{% endblock %}
 {% block security_icon %}<i class="fas fa-file-export"></i>{% endblock %}
-{% block security_description %}تصدير أي جدول إلى CSV أو Excel{% endblock %}
-{% block security_breadcrumb %}<li class="breadcrumb-item active">Data Export</li>{% endblock %}
+{% block security_description %}تصدير أي جدول من قاعدة البيانات إلى ملف CSV{% endblock %}
+{% block security_breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('security.index') }}">الأمان</a></li>
+<li class="breadcrumb-item active">تصدير البيانات</li>
+{% endblock %}
+
+{% block security_actions %}
+<span class="badge badge-success">{{ tables|length }} جدول</span>
+{% endblock %}
+
 {% block security_content %}
-  
-  <div class="card">
-    <div class="card-header bg-success text-white">
-      <h5 class="mb-0">تصدير أي جدول كـ CSV</h5>
+<div class="data-export-page">
+  <div class="alert alert-info border-0 shadow-sm">
+    <i class="fas fa-info-circle"></i>
+    التصدير متاح بصيغة <strong>CSV</strong> فقط. يُصدَّر حتى <strong>{{ export_row_limit|default(10000) }}</strong> صف لكل جدول.
+    أعداد الصفوف المعروضة تقديرية من إحصائيات PostgreSQL.
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-header erp-card-header-row erp-theme-header--primary bg-success text-white d-flex flex-wrap justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="fas fa-table"></i> اختر جدولاً للتصدير</h5>
+      <div class="data-export-search-wrap mt-2 mt-md-0">
+        <input type="search" id="dataExportSearch" class="form-control form-control-sm" placeholder="بحث في الجداول..." aria-label="بحث في الجداول">
+      </div>
     </div>
     <div class="card-body">
-      <div class="row">
+      <div class="row" id="dataExportGrid">
         {% for table in tables %}
-        <div class="col-md-3 mb-3">
-          <div class="card border-success">
-            <div class="card-body text-center">
+        <div class="col-lg-3 col-md-4 col-sm-6 mb-3 data-export-card-wrap" data-table-name="{{ table|lower }}">
+          <div class="card border-success h-100 data-export-card">
+            <div class="card-body text-center d-flex flex-column">
               <i class="fas fa-table fa-2x text-success mb-2"></i>
-              <h6>{{ table }}</h6>
-              <a href="{{ url_for('security.export_table_csv', table_name=table) }}" class="btn btn-sm btn-success">
-                <i class="fas fa-download"></i> تصدير
+              <h6 class="data-export-table-name text-break">{{ table }}</h6>
+              <p class="text-muted small mb-2">
+                <span class="badge badge-secondary">{{ table_counts.get(table, 0) }} صف تقريباً</span>
+              </p>
+              <a href="{{ url_for('security.export_table_csv', table_name=table) }}"
+                 class="btn btn-sm btn-success mt-auto"
+                 title="تصدير CSV (حد أقصى {{ export_row_limit|default(10000) }} صف)">
+                <i class="fas fa-download"></i> تصدير CSV
               </a>
             </div>
           </div>
         </div>
+        {% else %}
+        <div class="col-12">
+          <div class="alert alert-warning mb-0">لا توجد جداول للتصدير.</div>
+        </div>
         {% endfor %}
       </div>
+      <p id="dataExportNoMatch" class="text-muted text-center mb-0" style="display: none;">لا توجد جداول مطابقة للبحث.</p>
     </div>
   </div>
-
 </div>
-{% endblock %}
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var input = document.getElementById('dataExportSearch');
+  var cards = document.querySelectorAll('.data-export-card-wrap');
+  var noMatch = document.getElementById('dataExportNoMatch');
+  if (!input || !cards.length) return;
+  input.addEventListener('input', function() {
+    var q = this.value.trim().toLowerCase();
+    var visible = 0;
+    cards.forEach(function(card) {
+      var name = card.getAttribute('data-table-name') || '';
+      var show = !q || name.indexOf(q) !== -1;
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    if (noMatch) noMatch.style.display = visible === 0 ? 'block' : 'none';
+  });
+});
+</script>
+{% endblock %}

@@ -182,6 +182,7 @@ role_permissions = db.Table(
     db.Column("permission_id", db.Integer, db.ForeignKey("permissions.id"), primary_key=True),
 )
 
+
 import constants
 from constants import (
     DEFAULT_CURRENCY, CURRENCY_CHOICES, CENT, TWOPLACES, ZERO_PLACES
@@ -810,21 +811,8 @@ class DeletionStatus(str, enum.Enum):
             "RESTORED": "info",
         }[self.value]
 
-class TenantRegistry(db.Model):
-    __tablename__ = "tenants"
-
-    id = db.Column(db.Integer, primary_key=True)
-    slug = db.Column(db.String(60), unique=True, nullable=False, index=True)
-    schema_name = db.Column(db.String(63), unique=True, nullable=False, index=True)
-    display_name = db.Column(db.String(200))
-    domain = db.Column(db.String(255), unique=True)
-    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-
 class SystemSettings(db.Model):
     __tablename__ = "system_settings"
-
 
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(100), unique=True, nullable=False, index=True)
@@ -1313,37 +1301,27 @@ def _fx_rate_local_via_connection(connection, base: str, quote: str, at: datetim
         return Decimal("0")
 
 def fx_rate(base: str, quote: str, at: datetime | None = None, raise_on_missing: bool = False) -> Decimal:
-    """سعر الصرف الذكي - محلي أولاً، ثم عالمي
-    
-    Args:
-        base: العملة الأساسية
-        quote: العملة المقابلة
-        at: التاريخ (اختياري)
-        raise_on_missing: إذا True، يرمي استثناء بدلاً من إرجاع صفر
-    
-    Returns:
-        سعر الصرف أو Decimal("0") أو يرمي استثناء
-    """
+    """سعر لتاريخ الحركة — يُثبت على القيد عند الإنشاء (fx_rate_used) ولا يُحدَّث يومياً."""
     b = ensure_currency(base)
     qv = ensure_currency(quote)
     if b == qv:
         return Decimal("1")
-    
+
     t = at or datetime.now(timezone.utc)
-    # استخدام التاريخ كـ Key للكاش (يومياً)
-    date_key = t.strftime("%Y-%m-%d")
-    
     try:
-        rate = _get_rate_cached(b, qv, date_key)
-        if rate is not None:
-            return rate
+        from services.fx_resolution import resolve_fx_rate_for_date
+
+        info = resolve_fx_rate_for_date(b, qv, t)
+        if info.get("success") and info.get("rate"):
+            return Decimal(str(info["rate"]))
     except Exception:
         pass
 
-    # إذا فشل الكاش أو لم يجد نتيجة
     if raise_on_missing:
-        raise ValueError(f"⚠️ سعر الصرف غير متوفر لـ {b}/{qv}. يرجى:\n1. إدخال سعر يدوي من إعدادات العملات\n2. تفعيل السيرفر الأونلاين\n3. إعادة المحاولة لاحقاً")
-    
+        raise ValueError(
+            f"⚠️ سعر الصرف غير متوفر لـ {b}/{qv} بتاريخ {t.date()}. "
+            "أدخل سعراً يدوياً لذلك اليوم أو فعّل الأونلاين."
+        )
     return Decimal("0")
 
 def _fetch_external_fx_rate(base: str, quote: str, at: datetime) -> Decimal:
@@ -1364,10 +1342,10 @@ def _fetch_external_fx_rate(base: str, quote: str, at: datetime) -> Decimal:
     
     # قائمة السيرفرات العالمية (بترتيب الأولوية)
     fx_services = [
-        _fetch_from_fixer_io,
         _fetch_from_exchangerate_api,
+        _fetch_from_exchangerate_host,
+        _fetch_from_fixer_io,
         _fetch_from_currencylayer,
-        _fetch_from_exchangerate_host
     ]
     
     for service in fx_services:
@@ -1552,92 +1530,20 @@ def auto_update_missing_rates():
         }
 
 def get_fx_rate_with_fallback(base: str, quote: str, at: datetime | None = None) -> dict:
-    """الحصول على سعر الصرف مع معلومات المصدر والبديل الذكي - يدوي أولاً، ثم أونلاين"""
+    """سعر لتاريخ محدد (at) — يدوي أولاً عند تعذّر الأونلاين. انظر services.fx_resolution."""
     try:
-        b = ensure_currency(base)
-        qv = ensure_currency(quote)
-        if b == qv:
-            return {
-                'rate': 1.0,
-                'source': 'same_currency',
-                'base': base,
-                'quote': quote,
-                'timestamp': at or datetime.now(timezone.utc),
-                'success': True
-            }
-        
-        t = at or datetime.now(timezone.utc)
-        
-        local_rate_value = None
-        try:
-            with db.session.no_autoflush:
-                q = (
-                    db.session.query(ExchangeRate.rate, ExchangeRate.source)
-                    .filter(
-                        ExchangeRate.base_code == b,
-                        ExchangeRate.quote_code == qv,
-                        ExchangeRate.is_active.is_(True),
-                        ExchangeRate.valid_from <= t,
-                    )
-                    .order_by(ExchangeRate.valid_from.desc())
-                )
-                v = q.first()
-            if v:
-                local_rate_value = Decimal(str(v[0]))
-                rate_source = v[1]
-                
-                if local_rate_value and local_rate_value > Decimal("0"):
-                    is_manual = (rate_source != 'External API')
-                    return {
-                        'rate': float(local_rate_value),
-                        'source': 'manual' if is_manual else 'online_cached',
-                        'base': base,
-                        'quote': quote,
-                        'timestamp': at or datetime.now(timezone.utc),
-                        'success': True
-                    }
-        except Exception:
-            pass
-        
-        try:
-            online_rate = _fetch_external_fx_rate(b, qv, t)
-            if online_rate and online_rate > Decimal("0"):
-                return {
-                    'rate': float(online_rate),
-                    'source': 'online',
-                    'base': base,
-                    'quote': quote,
-                    'timestamp': at or datetime.now(timezone.utc),
-                    'success': True
-                }
-        except Exception:
-            pass
-        
-        return {
-            'rate': 0.0,
-            'source': 'unavailable',
-            'base': base,
-            'quote': quote,
-            'timestamp': at or datetime.now(timezone.utc),
-            'success': False,
-            'error': f'سعر الصرف غير متوفر لـ {b}/{qv}. يرجى إدخال سعر يدوي من صفحة إدارة العملات أو تفعيل السيرفر الأونلاين.',
-            'message_ar': f'⚠️ سعر الصرف غير متوفر لـ {b}/{qv}',
-            'instructions': [
-                '1. إدخال سعر يدوي من صفحة إدارة العملات',
-                '2. تفعيل السيرفر الأونلاين من إعدادات العملات',
-                '3. التحقق من اتصال الإنترنت إذا كان الأونلاين مفعّل'
-            ]
-        }
-        
+        from services.fx_resolution import resolve_fx_rate_for_date
+
+        return resolve_fx_rate_for_date(base, quote, at)
     except Exception as e:
         return {
-            'rate': 0.0,
-            'source': 'failed',
-            'base': base,
-            'quote': quote,
-            'timestamp': at or datetime.now(timezone.utc),
-            'success': False,
-            'error': str(e)
+            "rate": None,
+            "source": "failed",
+            "base": base,
+            "quote": quote,
+            "timestamp": at or datetime.now(timezone.utc),
+            "success": False,
+            "error": str(e),
         }
 
 def _payment_fk_column_for_type(PaymentModel, et: PaymentEntityType | str):
@@ -1865,6 +1771,10 @@ class User(db.Model, UserMixin, TimestampMixin, AuditMixin):
     login_count = db.Column(db.Integer, nullable=False, server_default=sa_text("0"))
     avatar_url = db.Column(db.String(500))
     notes_text = db.Column(db.Text)
+    totp_secret = db.Column(db.String(64), nullable=True)
+    totp_enabled = db.Column(db.Boolean, nullable=False, server_default=sa_text("false"))
+    login_schedule_json = db.Column(db.Text, nullable=True)
+    allowed_stations_json = db.Column(db.Text, nullable=True)
     role = relationship("Role", backref="users", lazy="select")
     extra_permissions = relationship(
         "Permission",
@@ -2143,6 +2053,26 @@ class Role(db.Model, AuditMixin):
 
     def __repr__(self):
         return f"<Role {self.name}>"
+
+
+class UserPermissionLink(db.Model):
+    """ربط مستخدم ↔ صلاحية (جدول user_permissions)."""
+    __table__ = user_permissions
+
+
+class RolePermissionLink(db.Model):
+    """ربط دور ↔ صلاحية (جدول role_permissions)."""
+    __table__ = role_permissions
+
+
+class DbPatchApplied(db.Model):
+    """سجل ترقيات/باتشات DB المطبّقة."""
+    __tablename__ = "db_patches_applied"
+
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    checksum = db.Column(db.String(64), nullable=False)
+    applied_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now())
 
 class Customer(db.Model, TimestampMixin, AuditMixin, UserMixin):
     __tablename__ = "customers"
@@ -2455,9 +2385,7 @@ def _opening_balance_expected_net(opening_balance: float) -> float:
 
 
 def _opening_balance_posted_batch(connection, *, source_type: str, source_id: int, account_code: str):
-    dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
-    batch_table = "public.gl_batches" if dialect_name == "postgresql" else "gl_batches"
-    entry_table = "public.gl_entries" if dialect_name == "postgresql" else "gl_entries"
+    batch_table, entry_table = _gl_table_names(connection)
     return connection.execute(
         sa_text(
             f"""
@@ -2476,9 +2404,7 @@ def _opening_balance_posted_batch(connection, *, source_type: str, source_id: in
 
 
 def _delete_opening_balance_batches(connection, *, source_type: str, source_id: int):
-    dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
-    batch_table = "public.gl_batches" if dialect_name == "postgresql" else "gl_batches"
-    entry_table = "public.gl_entries" if dialect_name == "postgresql" else "gl_entries"
+    batch_table, entry_table = _gl_table_names(connection)
     connection.execute(
         sa_text(
             f"""
@@ -4557,7 +4483,7 @@ def _product_before_save(mapper, connection, t: Product):
     t.is_published = bool(t.is_published)
 
 class Company(db.Model, TimestampMixin, AuditMixin):
-    """كيان قانوني داخل تينانت SaaS — شركة واحدة أو أكثر لكل عميل."""
+    """كيان قانوني — قاعدة واحدة، عدة شركات وفروع (بدون multi-tenant)."""
     __tablename__ = "companies"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -5599,6 +5525,8 @@ class Sale(db.Model, TimestampMixin, AuditMixin):
     refunded_total = db.Column(db.Numeric(12, 2), default=0, nullable=False)
     refund_of_id = db.Column(db.Integer, db.ForeignKey("sales.id", ondelete="SET NULL"), index=True)
     idempotency_key = db.Column(db.String(64), unique=True, index=True)
+    sale_channel = db.Column(db.String(20), nullable=False, server_default=sa_text("'STANDARD'"), index=True)
+    is_quotation = db.Column(db.Boolean, default=False, nullable=False, server_default=sa_text("false"), index=True)
 
     stock_deducted = db.Column(db.Boolean, default=False, nullable=False)
 
@@ -5795,6 +5723,7 @@ class Sale(db.Model, TimestampMixin, AuditMixin):
         # كمّي المدفوع للعرض؛ balance_due = ذمة المستند (إجمالي البيع) وليس المتبقي بعد الدفعات
         self.total_paid = float(q(total_paid))
         total_amount = float(q(self.total_amount or self.total or 0))
+        # ذمة المستند = الإجمالي؛ الدفعات على حساب الزبون تُخفّض الرصيد العام فقط
         self.balance_due = float(q(total_amount))
         
         self.payment_status = (
@@ -5846,10 +5775,12 @@ def _sale_before_insert_ref(mapper, connection, target: "Sale"):
     if sale_currency != default_currency:
         try:
             at = getattr(target, "sale_date", None) or getattr(target, "created_at", None) or datetime.now(timezone.utc)
-            rate = _fx_rate_local_via_connection(connection, sale_currency, default_currency, at)
-            if rate and rate > 0:
-                target.fx_rate_used = Decimal(str(rate))
-                target.fx_rate_source = "manual"
+            from services.fx_resolution import resolve_fx_rate_for_date
+
+            info = resolve_fx_rate_for_date(sale_currency, default_currency, at)
+            if info.get("success") and info.get("rate"):
+                target.fx_rate_used = Decimal(str(info["rate"]))
+                target.fx_rate_source = info.get("source") or "manual"
                 target.fx_rate_timestamp = datetime.now(timezone.utc)
                 target.fx_base_currency = sale_currency
                 target.fx_quote_currency = DEFAULT_CURRENCY
@@ -5896,7 +5827,13 @@ def _reserve_release_on_status_change(target, value, oldvalue, initiator):
     if newv == SaleStatus.CONFIRMED.value and oldv != SaleStatus.CONFIRMED.value:
         # التحقق من حد الائتمان فقط
         if target.customer and float(target.customer.credit_limit or 0) > 0:
-            cur_bal = float(target.customer.balance or 0)
+            try:
+                from utils.customer_balance_updater import update_customer_balance_components
+                update_customer_balance_components(int(target.customer_id), db.session)
+                db.session.flush()
+            except Exception:
+                pass
+            cur_bal = float(target.customer.current_balance or target.customer.balance or 0)
             new_total = float(getattr(target, "total", None) or getattr(target, "total_amount", 0) or 0)
             if cur_bal + new_total > float(target.customer.credit_limit or 0):
                 raise Exception("تأكيد البيع مرفوض: حد الائتمان للزبون سيتجاوز المسموح.")
@@ -5925,8 +5862,23 @@ def _sale_clear_balance_cache(mapper, connection, target: "Sale"):
 def _sale_create_tax_entry(mapper, connection, target: "Sale"):
     """إنشاء/تحديث سجل ضريبي للبيع تلقائياً"""
     if target.status != SaleStatus.CONFIRMED.value:
+        _gl_reverse_posted_batches(
+            connection,
+            source_type="SALE",
+            source_id=target.id,
+            reversal_source_type="SALE_REVERSAL",
+            memo_prefix=f"Reversal - sale status {target.status}",
+            purposes=["REVENUE"],
+        )
+        _gl_reverse_posted_batches(
+            connection,
+            source_type="SALE_PARTNER_SHARE",
+            source_id=target.id,
+            reversal_source_type="SALE_PARTNER_SHARE_REVERSAL",
+            memo_prefix=f"Reversal - partner share sale status {target.status}",
+        )
         return
-    
+
     tax_rate = float(target.tax_rate or 0)
     if tax_rate <= 0:
         return
@@ -6022,71 +5974,47 @@ def _amount_to_ils_via_connection(
     return Decimal("0.00")
 
 
-def _payment_amount_to_ils(connection, target: "Payment") -> float:
-    """تحويل مبلغ الدفعة إلى ILS باستخدام السعر المحفوظ أولاً."""
-    return float(
-        _amount_to_ils_via_connection(
-            connection,
-            getattr(target, "total_amount", 0) or 0,
-            getattr(target, "currency", None),
-            getattr(target, "payment_date", None) or datetime.now(timezone.utc),
-            getattr(target, "fx_rate_used", None),
-        )
-    )
-
-
 def _sale_gl_upsert_core(connection, target: "Sale") -> None:
     """منطق إنشاء/تحديث قيد GL للبيع (يُستدعى من معاملة منفصلة بعد commit)."""
     from decimal import Decimal, ROUND_HALF_UP
     from sqlalchemy import select as sa_select
     _sale_status = getattr(getattr(target, "status", None), "value", getattr(target, "status", None))
     if _sale_status in (SaleStatus.CANCELLED.value, SaleStatus.REFUNDED.value):
-        # قيد عكسي: عكس كل قيود SALE/SALE_PARTNER_SHARE المُرحّلة حتى لا يبقى إيراد وهمي
         try:
-            _existing_rev = connection.execute(
-                sa_text("SELECT id FROM gl_batches WHERE source_type='SALE_REVERSAL' AND source_id=:sid AND purpose='REVERSAL' AND status='POSTED' ORDER BY id DESC LIMIT 1"),
-                {"sid": int(target.id)},
-            ).scalar()
+            _existing_rev = connection.execute(sa_text("SELECT id FROM gl_batches WHERE source_type='SALE_REVERSAL' AND source_id=:sid AND purpose='REVERSAL' AND status='POSTED' ORDER BY id DESC LIMIT 1"), {"sid": int(target.id)}).scalar()
             if _existing_rev:
                 return
-            _orig_batches = connection.execute(
-                sa_text("SELECT id FROM gl_batches WHERE source_type IN ('SALE','SALE_PARTNER_SHARE') AND source_id=:sid AND status='POSTED'"),
-                {"sid": int(target.id)},
-            ).fetchall()
-            _orig_ids = [int(b[0]) for b in _orig_batches]
+            _orig = connection.execute(sa_text("SELECT id FROM gl_batches WHERE source_type IN ('SALE','SALE_PARTNER_SHARE') AND source_id=:sid AND status='POSTED'"), {"sid": int(target.id)}).fetchall()
+            _orig_ids = [int(b[0]) for b in _orig]
             if not _orig_ids:
                 return
-            _rev_entries: list = []
+            _rev_entries = []
             for _bid in _orig_ids:
-                _rows = connection.execute(
-                    sa_text("SELECT account, debit, credit FROM gl_entries WHERE batch_id=:bid ORDER BY id"),
-                    {"bid": _bid},
-                ).fetchall()
+                _rows = connection.execute(sa_text("SELECT account, debit, credit FROM gl_entries WHERE batch_id=:bid ORDER BY id"), {"bid": _bid}).fetchall()
                 for _acc, _d, _c in _rows:
-                    _d_f = float(_d or 0)
-                    _c_f = float(_c or 0)
+                    _d_f = float(_d or 0); _c_f = float(_c or 0)
                     if _d_f <= 0 and _c_f <= 0:
                         continue
                     _rev_entries.append((str(_acc or "").strip().upper(), _c_f, _d_f))
             if not _rev_entries:
                 return
-            _rev_posted = getattr(target, "cancelled_at", None) or datetime.now(timezone.utc)
-            _gl_upsert_batch_and_entries(
+            _gl_reverse_posted_batches(
                 connection,
-                source_type="SALE_REVERSAL",
+                source_type="SALE",
                 source_id=target.id,
-                purpose="REVERSAL",
-                currency=DEFAULT_CURRENCY,
-                memo=f"Reversal - cancelled/refunded sale #{target.sale_number or target.id}",
-                entries=_rev_entries,
-                ref=f"REV-SALE-{target.id}",
-                entity_type="CUSTOMER",
-                entity_id=target.customer_id,
-                posted_at=_rev_posted,
+                reversal_source_type="SALE_REVERSAL",
+                memo_prefix=f"Reversal - cancelled/refunded sale #{target.sale_number or target.id}",
+                purposes=["REVENUE"],
+            )
+            _gl_reverse_posted_batches(
+                connection,
+                source_type="SALE_PARTNER_SHARE",
+                source_id=target.id,
+                reversal_source_type="SALE_REVERSAL",
+                memo_prefix=f"Reversal - cancelled/refunded sale #{target.sale_number or target.id}",
             )
         except Exception:
-            # لا نكسر معاملة الإلغاء لخطأ GL — يُسجّل كتحذير في run_sale_gl_sync
-            raise
+            pass
         return
     if target.status != SaleStatus.CONFIRMED.value:
         return
@@ -6107,6 +6035,7 @@ def _sale_gl_upsert_core(connection, target: "Sale") -> None:
         except Exception:
             pass
     amount_ils = amount * exchange_rate
+    # تكلفة البضاعة: سعر الشراء/التكلفة بعملة المنتج → ILS
     sale_lines = connection.execute(
         sa_text("""
             SELECT sl.id, sl.product_id, sl.warehouse_id, sl.quantity, sl.unit_price,
@@ -6279,22 +6208,8 @@ def _sale_gl_upsert_core(connection, target: "Sale") -> None:
         entries.append((GL_ACCOUNTS.get("INVENTORY", "1200_INVENTORY"), Decimal(0), total_cogs_inv_amt))
     customer_name = getattr(getattr(target, "customer", None), "name", None) or "Customer"
     memo = f"Sale #{target.sale_number or target.id} - {customer_name}"
-    _sale_batch_rows = connection.execute(
-        sa_text("SELECT id, posted_at FROM gl_batches WHERE source_type = 'SALE' AND source_id = :sid AND purpose = 'REVENUE'"),
-        {"sid": target.id},
-    ).fetchall()
-    for _bid, _bposted in _sale_batch_rows:
-        _cs = _bposted.date() if isinstance(_bposted, datetime) else _bposted
-        if _cs:
-            _lock = connection.execute(
-                sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"),
-                {"d": _cs},
-            ).first()
-            if _lock:
-                raise ValueError("القيد الأصلي في فترة مقفلة — لا يمكن إعادة إنشائه")
-    for (bid, _bp) in _sale_batch_rows:
-        connection.execute(sa_text("DELETE FROM gl_entries WHERE batch_id = :bid"), {"bid": int(bid)})
-        connection.execute(sa_text("DELETE FROM gl_batches WHERE id = :bid"), {"bid": int(bid)})
+    _gl_delete_batches(connection, source_type="SALE_REVERSAL", source_id=target.id, purposes=["REVENUE"])
+    _gl_delete_batches(connection, source_type="SALE", source_id=target.id, purposes=["REVENUE"])
     _gl_upsert_batch_and_entries(
         connection,
         source_type="SALE",
@@ -6310,22 +6225,8 @@ def _sale_gl_upsert_core(connection, target: "Sale") -> None:
         cost_center_id=getattr(target, "cost_center_id", None),
     )
 
-    _ps_rows = connection.execute(
-        sa_text("SELECT id, posted_at FROM gl_batches WHERE source_type = 'SALE_PARTNER_SHARE' AND source_id = :sid"),
-        {"sid": target.id},
-    ).fetchall()
-    for _bid, _bposted in _ps_rows:
-        _cs = _bposted.date() if isinstance(_bposted, datetime) else _bposted
-        if _cs:
-            _lock = connection.execute(
-                sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"),
-                {"d": _cs},
-            ).first()
-            if _lock:
-                raise ValueError("قيد الشريك الأصلي في فترة مقفلة — لا يمكن إعادة إنشائه")
-    for (bid, _bp) in _ps_rows:
-        connection.execute(sa_text("DELETE FROM gl_entries WHERE batch_id = :bid"), {"bid": int(bid)})
-        connection.execute(sa_text("DELETE FROM gl_batches WHERE id = :bid"), {"bid": int(bid)})
+    _gl_delete_batches(connection, source_type="SALE_PARTNER_SHARE_REVERSAL", source_id=target.id)
+    _gl_delete_batches(connection, source_type="SALE_PARTNER_SHARE", source_id=target.id)
     for partner_id, amount in total_revenue_partners.items():
         amt = _q2(Decimal(amount))
         if amt > 0:
@@ -6585,18 +6486,8 @@ def _sale_line_touch_sale_total(mapper, connection, target: "SaleLine"):
             {"id": sid}
         ).first()
         
-        if sale_data and sale_data[2] > 0 and sale_data[3] == 'CONFIRMED':  # total > 0 and CONFIRMED
-            # استدعاء _sale_gl_batch_upsert يدوياً
-            from models import Sale as SaleModel
-            sale_obj = SaleModel()
-            sale_obj.id = sale_data[0]
-            sale_obj.sale_number = sale_data[1]
-            sale_obj.total_amount = sale_data[2]
-            sale_obj.status = sale_data[3]
-            sale_obj.customer_id = sale_data[4]
-            sale_obj.currency = sale_data[5]
-            
-            _sale_gl_batch_upsert(None, connection, sale_obj)
+        if sale_data and sale_data[2] > 0 and sale_data[3] == 'CONFIRMED':
+            pass  # GL يُزامَن بعد commit عبر run_sale_gl_sync_after_commit من مسارات البيع
 
 class SaleReturn(db.Model, TimestampMixin, AuditMixin):
     __tablename__ = "sale_returns"
@@ -7130,20 +7021,16 @@ class Invoice(db.Model, TimestampMixin):
                         total += split_amt
                     else:
                         try:
-                            rate = getattr(split, "fx_rate_used", None)
-                            if rate and float(rate) > 0:
-                                total += split_amt * D(str(rate))
-                            else:
-                                total += D(
-                                    str(
-                                        convert_amount(
-                                            split_amt,
-                                            split_currency,
-                                            invoice_currency,
-                                            getattr(payment, "payment_date", None),
-                                        )
+                            total += D(
+                                str(
+                                    convert_amount(
+                                        split_amt,
+                                        split_currency,
+                                        invoice_currency,
+                                        payment.payment_date,
                                     )
                                 )
+                            )
                         except Exception:
                             pass
             else:
@@ -7165,6 +7052,13 @@ class Invoice(db.Model, TimestampMixin):
                         )
                     except Exception:
                         pass
+
+        try:
+            from utils.allocation_amounts import sum_allocations
+            from decimal import Decimal as D
+            total += D(str(sum_allocations("INVOICE", int(self.id))))
+        except Exception:
+            pass
 
         return float(total)
 
@@ -7451,64 +7345,43 @@ def _invoice_delete_tax_entry(mapper, connection, target: "Invoice"):
 # ===== إنشاء قيود GL تلقائية للفواتير =====
 def _invoice_gl_upsert_core(connection, target: "Invoice") -> None:
     """منطق إنشاء/تحديث قيد GL للفاتورة (يُستدعى من معاملة منفصلة بعد commit)."""
-    # الفاتورة المرتبطة بمبيعة (sale_id) هي مستند ذمة/مستند فقط — الإيراد سُجّل أصلاً
-    # عبر قيد SALE/REVENUE في _sale_gl_upsert_core. ترحيل قيد INVOICE هنا يضاعف الإيراد.
-    # نُبقي القيد فقط للفواتير المستقلة (خدمات/مشتريات) بدون sale_id.
+    # الفاتورة المرتبطة بمبيعة (sale_id) هي مستند ذمة فقط — الإيراد سُجّل عبر SALE/REVENUE.
+    # ترحيل قيد INVOICE هنا يضاعف الإيراد. نُبقي القيد فقط للفواتير المستقلة.
     if getattr(target, "sale_id", None):
-        # إذا كانت الفاتورة ملغاة وكانت قد سجلت قيداً مستقلاً سابقاً (قبل ربطها بمبيعة)
-        # يترك عكس الإلغاء للمسار الآخر — هنا نتخطى لمنع الازدواج المستقبلي.
         return
     if target.cancelled_at:
-        amount = float(target.total_amount or 0)
-        if amount <= 0:
-            return
-        amount_ils = amount
-        if target.currency and target.currency != "ILS":
-            try:
-                rate = _fx_rate_local_via_connection(connection, target.currency, "ILS", target.invoice_date or datetime.now(timezone.utc))
-                if rate and rate > 0:
-                    amount_ils = float(amount * float(rate))
-            except Exception:
-                pass
-        entity_type = "CUSTOMER" if target.customer_id else ("SUPPLIER" if target.supplier_id else "PARTNER")
-        entity_id = target.customer_id or target.supplier_id or target.partner_id
-        if entity_type == "CUSTOMER":
-            ar_account = GL_ACCOUNTS.get("AR", "1100_AR")
-            revenue_account = (
-                GL_ACCOUNTS.get("SERVICE_REV", "4100_SERVICE_REVENUE")
-                if target.service_id
-                else GL_ACCOUNTS.get("SALES", "4000_SALES")
-            )
-            entries = [(revenue_account, amount_ils, 0), (ar_account, 0, amount_ils)]
-        else:
-            ap_account = GL_ACCOUNTS.get("AP", "2000_AP")
-            purchase_account = GL_ACCOUNTS.get("PURCHASES", "5100_PURCHASES")
-            entries = [(purchase_account, amount_ils, 0), (ap_account, 0, amount_ils)]
-        _gl_upsert_batch_and_entries(
+        _gl_reverse_posted_batches(
             connection,
-            source_type="INVOICE_REVERSAL",
+            source_type="INVOICE",
             source_id=target.id,
-            purpose="REVERSAL",
-            currency="ILS",
-            memo=f"Reversal - cancelled invoice #{target.id}",
-            entries=entries,
-            ref=f"REV-INV-{target.id}",
-            entity_type=entity_type,
-            entity_id=entity_id,
-            posted_at=getattr(target, "cancelled_at", None) or getattr(target, "invoice_date", None) or datetime.now(timezone.utc),
+            reversal_source_type="INVOICE_REVERSAL",
+            memo_prefix=f"Reversal - cancelled invoice #{target.id}",
+            purposes=["INVOICE"],
         )
         return
     amount = float(target.total_amount or 0)
     if amount <= 0:
         return
+    inv_at = target.invoice_date or datetime.now(timezone.utc)
     amount_ils = amount
-    if target.currency and target.currency != "ILS":
+    if target.currency and target.currency != DEFAULT_CURRENCY:
         try:
-            rate = _fx_rate_local_via_connection(connection, target.currency, "ILS", target.invoice_date or datetime.now(timezone.utc))
+            rate = _fx_rate_local_via_connection(connection, target.currency, DEFAULT_CURRENCY, inv_at)
             if rate and rate > 0:
                 amount_ils = float(amount * float(rate))
         except Exception:
             pass
+    tax_amount = float(target.tax_amount or 0)
+    tax_amount_ils = tax_amount
+    if target.currency and target.currency != DEFAULT_CURRENCY:
+        try:
+            rate = _fx_rate_local_via_connection(connection, target.currency, DEFAULT_CURRENCY, inv_at)
+            if rate and rate > 0:
+                tax_amount_ils = float(tax_amount * float(rate))
+        except Exception:
+            pass
+    tax_amount_ils = max(0.0, min(round(tax_amount_ils, 2), round(amount_ils, 2)))
+    net_amount_ils = round(amount_ils - tax_amount_ils, 2)
     entity_type = "CUSTOMER"
     entity_id = target.customer_id
     ar_account = GL_ACCOUNTS.get("AR", "1100_AR")
@@ -7526,36 +7399,28 @@ def _invoice_gl_upsert_core(connection, target: "Invoice") -> None:
             if target.service_id
             else GL_ACCOUNTS.get("REV", "4000_SALES")
         )
-        entries = [(ar_account, amount_ils, 0), (revenue_account, 0, amount_ils)]
+        entries = [(ar_account, amount_ils, 0)]
+        if net_amount_ils > 0:
+            entries.append((revenue_account, 0, net_amount_ils))
+        if tax_amount_ils > 0:
+            entries.append((GL_ACCOUNTS.get("VAT", "2100_VAT_PAYABLE"), 0, tax_amount_ils))
         memo = f"Invoice sale - {target.invoice_number}"
     else:
-        entries = [(GL_ACCOUNTS.get("PURCHASES", "5100_PURCHASES"), amount_ils, 0), (ar_account, 0, amount_ils)]
+        entries = []
+        if net_amount_ils > 0:
+            entries.append((GL_ACCOUNTS.get("PURCHASES", "5100_COGS"), net_amount_ils, 0))
+        if tax_amount_ils > 0:
+            entries.append((GL_ACCOUNTS.get("VAT_INPUT", "1500_VAT_INPUT"), tax_amount_ils, 0))
+        entries.append((ar_account, 0, amount_ils))
         memo = f"Invoice purchase - {target.invoice_number}"
-    # استبدال قيد الفاتورة عند التعديل (منع stale) مع حارس فترة مقفلة على القديم
-    try:
-        _inv_old = connection.execute(
-            sa_text("SELECT id, posted_at FROM gl_batches WHERE source_type='INVOICE' AND source_id=:sid AND purpose='INVOICE' AND status='POSTED'"),
-            {"sid": int(target.id)},
-        ).fetchall()
-        for _obid, _obposted in _inv_old:
-            _cs = _obposted.date() if hasattr(_obposted, "date") else _obposted
-            if _cs:
-                _lk = connection.execute(sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"), {"d": _cs}).first()
-                if _lk:
-                    raise ValueError("قيد الفاتورة الأصلي في فترة مقفلة")
-        for _obid, _obposted in _inv_old:
-            connection.execute(sa_text("DELETE FROM gl_entries WHERE batch_id=:bid"), {"bid": int(_obid)})
-            connection.execute(sa_text("DELETE FROM gl_batches WHERE id=:bid"), {"bid": int(_obid)})
-    except ValueError:
-        raise
-    except Exception:
-        pass
+    _gl_delete_batches(connection, source_type="INVOICE_REVERSAL", source_id=target.id, purposes=["INVOICE"])
+    _gl_delete_batches(connection, source_type="INVOICE", source_id=target.id, purposes=["INVOICE"])
     _gl_upsert_batch_and_entries(
         connection,
         source_type="INVOICE",
         source_id=target.id,
         purpose="INVOICE",
-        currency="ILS",
+        currency=DEFAULT_CURRENCY,
         memo=memo,
         entries=entries,
         ref=target.invoice_number,
@@ -7763,6 +7628,7 @@ class Payment(db.Model, TimestampMixin):
     invoice_id = Column(Integer, ForeignKey("invoices.id", ondelete="CASCADE"), index=True)
     preorder_id = Column(Integer, ForeignKey("preorders.id", ondelete="CASCADE"), index=True)
     service_id = Column(Integer, ForeignKey("service_requests.id", ondelete="CASCADE"), index=True)
+    supplier_invoice_id = Column(Integer, ForeignKey("supplier_invoices.id", ondelete="SET NULL"), index=True)
 
     refund_of_id = Column(Integer, ForeignKey("payments.id", ondelete="SET NULL"))
     is_refunded = Column(Boolean, default=False, nullable=False, index=True)
@@ -8146,6 +8012,19 @@ def _payment_update_supplier_balance_on_delete(mapper, connection, target: "Paym
     except Exception:
         pass
 
+def _payment_amount_to_ils(connection, target: "Payment") -> float:
+    """تحويل مبلغ الدفعة إلى ILS باستخدام السعر المحفوظ أولاً."""
+    return float(
+        _amount_to_ils_via_connection(
+            connection,
+            getattr(target, "total_amount", 0) or 0,
+            getattr(target, "currency", None),
+            getattr(target, "payment_date", None) or datetime.now(timezone.utc),
+            getattr(target, "fx_rate_used", None),
+        )
+    )
+
+
 def _payment_gl_upsert_core(connection, target: "Payment") -> None:
     """منطق إنشاء/تحديث قيد GL للدفعة (يُستدعى من معاملة منفصلة بعد commit)."""
     if hasattr(target, "_skip_gl_entry") and target._skip_gl_entry:
@@ -8294,28 +8173,24 @@ def _payment_gl_upsert_core(connection, target: "Payment") -> None:
             entity_type_for_gl = exp_entity_type
             entity_id_for_gl = exp_entity_id
 
-    # تحديث: حذف القيد القديم قبل إعادة الإنشاء حتى لا يبقى مبلغاً stale
-    # (نفس نمط _sale_gl_upsert_core). مع حارس فترة مقفلة على القيد القديم.
+    # استبدال عند التعديل (منع stale) + حارس قفل على القديم
     try:
-        _dialect = getattr(getattr(connection, "dialect", None), "name", "")
-        _bt = "public.gl_batches" if _dialect == "postgresql" else "gl_batches"
-        _et = "public.gl_entries" if _dialect == "postgresql" else "gl_entries"
-        _old_batches = connection.execute(
-            sa_text(f"SELECT id, posted_at FROM {_bt} WHERE source_type='PAYMENT' AND source_id=:sid AND purpose IN ('PAYMENT','PREORDER_PAYMENT') AND status='POSTED'"),
-            {"sid": int(target.id)},
+        _pay_old = connection.execute(
+            sa_text("SELECT id, posted_at FROM gl_batches WHERE source_type='PAYMENT' AND source_id=:pid AND purpose IN ('PAYMENT','PREORDER_PAYMENT') AND status='POSTED'"),
+            {"pid": int(target.id)},
         ).fetchall()
-        for _bid, _bposted in _old_batches:
-            _cs = _bposted.date() if isinstance(_bposted, datetime) else _bposted
+        for _obid, _obposted in _pay_old:
+            try:
+                _cs = _obposted.date()
+            except Exception:
+                _cs = _obposted
             if _cs:
-                _lock = connection.execute(
-                    sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"),
-                    {"d": _cs},
-                ).first()
-                if _lock:
-                    raise ValueError("القيد الأصلي في فترة مقفلة — لا يمكن تحديثه")
-        for _bid, _bposted in _old_batches:
-            connection.execute(sa_text(f"DELETE FROM {_et} WHERE batch_id=:bid"), {"bid": int(_bid)})
-            connection.execute(sa_text(f"DELETE FROM {_bt} WHERE id=:bid"), {"bid": int(_bid)})
+                _lk = connection.execute(sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"), {"d": _cs}).first()
+                if _lk:
+                    raise ValueError("قيد الدفع الأصلي في فترة مقفلة")
+        for _obid, _obposted in _pay_old:
+            connection.execute(sa_text("DELETE FROM gl_entries WHERE batch_id=:bid"), {"bid": int(_obid)})
+            connection.execute(sa_text("DELETE FROM gl_batches WHERE id=:bid"), {"bid": int(_obid)})
     except ValueError:
         raise
     except Exception:
@@ -9115,9 +8990,7 @@ def _payment_split_gl_batch_upsert_by_id(connection, *, split_id: int) -> None:
             )
             is_cancelled = payment_status == PaymentStatus.CANCELLED.value
             if not (is_refunded or is_cancelled):
-                dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
-                batch_table = "public.gl_batches" if dialect_name == "postgresql" else "gl_batches"
-                entry_table = "public.gl_entries" if dialect_name == "postgresql" else "gl_entries"
+                batch_table, entry_table = _gl_table_names(connection)
                 connection.execute(
                     sa_text(
                         f"""
@@ -9147,17 +9020,27 @@ def _payment_split_gl_batch_upsert_by_id(connection, *, split_id: int) -> None:
             split_currency = (split_row["converted_currency"] or split_row["currency"] or payment_row["currency"] or "ILS").upper()
             amount_ils = amount
             if split_currency != "ILS" and not float(split_row["converted_amount"] or 0):
-                try:
-                    rate = _fx_rate_local_via_connection(
-                        connection,
-                        split_currency,
-                        "ILS",
-                        payment_row["payment_date"] or datetime.now(timezone.utc),
-                    )
-                    if rate and float(rate) > 0:
-                        amount_ils = float(amount * float(rate))
-                except Exception:
-                    pass
+                split_fx = split_row.get("fx_rate_used")
+                rate = None
+                if split_fx is not None:
+                    try:
+                        rate = float(split_fx)
+                    except Exception:
+                        rate = None
+                if not rate or rate <= 0:
+                    try:
+                        rate = _fx_rate_local_via_connection(
+                            connection,
+                            split_currency,
+                            "ILS",
+                            payment_row["payment_date"] or datetime.now(timezone.utc),
+                        )
+                        if rate:
+                            rate = float(rate)
+                    except Exception:
+                        rate = None
+                if rate and rate > 0:
+                    amount_ils = float(amount * rate)
 
             split_method = str(split_row["method"] or PaymentMethod.CASH.value).strip().lower()
             is_check = ("check" in split_method) or ("cheque" in split_method)
@@ -9310,8 +9193,7 @@ def _payment_split_gl_batch_upsert_by_id(connection, *, split_id: int) -> None:
                     posted_at=payment_row.get("payment_date") or datetime.now(timezone.utc),
                 )
             else:
-                dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
-                batch_table = "public.gl_batches" if dialect_name == "postgresql" else "gl_batches"
+                batch_table, _ = _gl_table_names(connection)
                 original_batch_id = connection.execute(
                     sa_text(f"""
                         SELECT id FROM {batch_table}
@@ -9324,9 +9206,7 @@ def _payment_split_gl_batch_upsert_by_id(connection, *, split_id: int) -> None:
                     original_batch_id = int(original_batch_id)
 
             if (is_refunded or is_cancelled) and original_batch_id:
-                dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
-                batch_table = "public.gl_batches" if dialect_name == "postgresql" else "gl_batches"
-                entry_table = "public.gl_entries" if dialect_name == "postgresql" else "gl_entries"
+                batch_table, entry_table = _gl_table_names(connection)
 
                 existing_rev = connection.execute(
                     sa_text(f"""
@@ -9397,10 +9277,8 @@ def _update_sale_payment_totals(connection, sale_id):
         {"sale_id": sale_id}
     ).scalar() or 0
     
-    # balance_due = ذمة المستند (إجمالي البيع) — التحصيل على حساب الزبون
     balance_due = float(sale_total)
     
-    # تحديث الحقول في جدول Sales
     connection.execute(
         sa_text("""
             UPDATE sales 
@@ -9718,6 +9596,230 @@ def build_supplier_settlement_draft(
     ss.ensure_code()
     return ss
 
+class PurchaseOrder(db.Model, TimestampMixin, AuditMixin):
+    """أمر شراء — يكمّل مسار الشحنات (ليس بديلاً عنها)."""
+    __tablename__ = "purchase_orders"
+
+    id = db.Column(db.Integer, primary_key=True)
+    number = db.Column(db.String(50), unique=True, index=True)
+    supplier_id = db.Column(db.Integer, db.ForeignKey("suppliers.id", ondelete="RESTRICT"), nullable=False, index=True)
+    branch_id = db.Column(db.Integer, db.ForeignKey("branches.id", ondelete="RESTRICT"), nullable=False, index=True)
+    order_date = db.Column(db.Date, nullable=False, index=True)
+    expected_date = db.Column(db.Date, index=True)
+    status = db.Column(
+        sa_str_enum(
+            ["DRAFT", "ORDERED", "PARTIAL", "RECEIVED", "CANCELLED"],
+            name="purchase_order_status",
+        ),
+        nullable=False,
+        default="DRAFT",
+        server_default=sa_text("'DRAFT'"),
+        index=True,
+    )
+    currency = db.Column(db.String(10), nullable=False, server_default=sa_text("'ILS'"))
+    total_amount = db.Column(db.Numeric(14, 2), nullable=False, server_default=sa_text("0"))
+    notes = db.Column(db.Text)
+
+    supplier = db.relationship("Supplier", backref=db.backref("purchase_orders", lazy="dynamic"))
+    branch = db.relationship("Branch", backref=db.backref("purchase_orders", lazy="dynamic"))
+    shipments = db.relationship("Shipment", back_populates="purchase_order", foreign_keys="Shipment.purchase_order_id")
+    lines = db.relationship(
+        "PurchaseOrderLine",
+        back_populates="purchase_order",
+        cascade="all, delete-orphan",
+        order_by="PurchaseOrderLine.id",
+    )
+
+    __table_args__ = (
+        db.CheckConstraint("total_amount >= 0", name="ck_po_total_ge_0"),
+    )
+
+    def __repr__(self):
+        return f"<PurchaseOrder {self.number} {self.status}>"
+
+
+class PurchaseOrderLine(db.Model, TimestampMixin):
+    __tablename__ = "purchase_order_lines"
+
+    id = db.Column(db.Integer, primary_key=True)
+    purchase_order_id = db.Column(
+        db.Integer, db.ForeignKey("purchase_orders.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="RESTRICT"), nullable=False, index=True)
+    quantity = db.Column(db.Numeric(12, 3), nullable=False, default=1)
+    unit_price = db.Column(db.Numeric(12, 4), nullable=False, default=0)
+    received_qty = db.Column(db.Numeric(12, 3), nullable=False, server_default=sa_text("0"))
+    notes = db.Column(db.String(255))
+
+    purchase_order = db.relationship("PurchaseOrder", back_populates="lines")
+    product = db.relationship("Product")
+
+    __table_args__ = (
+        db.CheckConstraint("quantity > 0", name="ck_po_line_qty_pos"),
+        db.CheckConstraint("received_qty >= 0", name="ck_po_line_rcv_ge_0"),
+    )
+
+
+class SupplierInvoice(db.Model, TimestampMixin, AuditMixin):
+    """فاتورة مورد — تكملة دورة المشتريات بعد الاستلام."""
+    __tablename__ = "supplier_invoices"
+
+    id = db.Column(db.Integer, primary_key=True)
+    number = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    supplier_id = db.Column(db.Integer, db.ForeignKey("suppliers.id", ondelete="RESTRICT"), nullable=False, index=True)
+    purchase_order_id = db.Column(db.Integer, db.ForeignKey("purchase_orders.id", ondelete="SET NULL"), nullable=True, index=True)
+    branch_id = db.Column(db.Integer, db.ForeignKey("branches.id", ondelete="RESTRICT"), nullable=False, index=True)
+    invoice_date = db.Column(db.Date, nullable=False, index=True)
+    due_date = db.Column(db.Date, nullable=True)
+    status = db.Column(String(20), nullable=False, server_default=sa_text("'DRAFT'"), index=True)
+    currency = db.Column(db.String(10), nullable=False, server_default=sa_text("'ILS'"))
+    subtotal = db.Column(db.Numeric(14, 2), nullable=False, server_default=sa_text("0"))
+    vat_amount = db.Column(db.Numeric(14, 2), nullable=False, server_default=sa_text("0"))
+    total_amount = db.Column(db.Numeric(14, 2), nullable=False, server_default=sa_text("0"))
+    amount_paid = db.Column(db.Numeric(14, 2), nullable=False, server_default=sa_text("0"))
+    notes = db.Column(db.Text)
+
+    supplier = db.relationship("Supplier", backref=db.backref("supplier_invoices", lazy="dynamic"))
+    purchase_order = db.relationship("PurchaseOrder", backref=db.backref("supplier_invoices", lazy="dynamic"))
+    branch = db.relationship("Branch")
+    lines = db.relationship(
+        "SupplierInvoiceLine",
+        back_populates="supplier_invoice",
+        cascade="all, delete-orphan",
+    )
+
+
+class SupplierInvoiceLine(db.Model, TimestampMixin):
+    __tablename__ = "supplier_invoice_lines"
+
+    id = db.Column(db.Integer, primary_key=True)
+    supplier_invoice_id = db.Column(
+        db.Integer, db.ForeignKey("supplier_invoices.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
+    description = db.Column(db.String(255))
+    quantity = db.Column(db.Numeric(12, 3), nullable=False, default=1)
+    unit_price = db.Column(db.Numeric(12, 4), nullable=False, default=0)
+
+    supplier_invoice = db.relationship("SupplierInvoice", back_populates="lines")
+    product = db.relationship("Product")
+
+
+class GoodsReceipt(db.Model, TimestampMixin, AuditMixin):
+    """إشعار استلام بضاعة (GRN) — مستقل عن الشحنة."""
+    __tablename__ = "goods_receipts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    number = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    purchase_order_id = db.Column(
+        db.Integer, db.ForeignKey("purchase_orders.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    branch_id = db.Column(db.Integer, db.ForeignKey("branches.id", ondelete="RESTRICT"), nullable=False, index=True)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey("warehouses.id", ondelete="SET NULL"), nullable=True, index=True)
+    receipt_date = db.Column(db.Date, nullable=False, index=True)
+    status = db.Column(db.String(20), nullable=False, server_default=sa_text("'POSTED'"), index=True)
+    notes = db.Column(db.Text)
+
+    purchase_order = db.relationship("PurchaseOrder", backref=db.backref("goods_receipts", lazy="dynamic"))
+    branch = db.relationship("Branch")
+    warehouse = db.relationship("Warehouse")
+    lines = db.relationship("GoodsReceiptLine", back_populates="goods_receipt", cascade="all, delete-orphan")
+
+
+class GoodsReceiptLine(db.Model, TimestampMixin):
+    __tablename__ = "goods_receipt_lines"
+
+    id = db.Column(db.Integer, primary_key=True)
+    goods_receipt_id = db.Column(
+        db.Integer, db.ForeignKey("goods_receipts.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
+    quantity = db.Column(db.Numeric(12, 3), nullable=False)
+    unit_price = db.Column(db.Numeric(12, 4), nullable=False, default=0)
+
+    goods_receipt = db.relationship("GoodsReceipt", back_populates="lines")
+    product = db.relationship("Product")
+
+
+class PayrollRun(db.Model, TimestampMixin, AuditMixin):
+    __tablename__ = "payroll_runs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    period_key = db.Column(db.String(7), nullable=False, index=True)
+    branch_id = db.Column(db.Integer, db.ForeignKey("branches.id", ondelete="RESTRICT"), nullable=False, index=True)
+    status = db.Column(String(20), nullable=False, server_default=sa_text("'DRAFT'"), index=True)
+    run_date = db.Column(db.Date, nullable=False)
+    total_gross = db.Column(db.Numeric(14, 2), nullable=False, server_default=sa_text("0"))
+    total_deductions = db.Column(db.Numeric(14, 2), nullable=False, server_default=sa_text("0"))
+    total_net = db.Column(db.Numeric(14, 2), nullable=False, server_default=sa_text("0"))
+    currency = db.Column(db.String(10), nullable=False, server_default=sa_text("'ILS'"))
+    notes = db.Column(db.Text)
+    posted_at = db.Column(db.DateTime, nullable=True)
+
+    branch = db.relationship("Branch")
+    lines = db.relationship("PayrollLine", back_populates="payroll_run", cascade="all, delete-orphan")
+
+    __table_args__ = (db.UniqueConstraint("period_key", "branch_id", name="uq_payroll_period_branch"),)
+
+
+class PayrollLine(db.Model, TimestampMixin):
+    __tablename__ = "payroll_lines"
+
+    id = db.Column(db.Integer, primary_key=True)
+    payroll_run_id = db.Column(db.Integer, db.ForeignKey("payroll_runs.id", ondelete="CASCADE"), nullable=False, index=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey("employees.id", ondelete="RESTRICT"), nullable=False, index=True)
+    base_salary = db.Column(db.Numeric(14, 2), nullable=False, server_default=sa_text("0"))
+    allowances = db.Column(db.Numeric(14, 2), nullable=False, server_default=sa_text("0"))
+    deductions = db.Column(db.Numeric(14, 2), nullable=False, server_default=sa_text("0"))
+    net_pay = db.Column(db.Numeric(14, 2), nullable=False, server_default=sa_text("0"))
+
+    payroll_run = db.relationship("PayrollRun", back_populates="lines")
+    employee = db.relationship("Employee")
+
+
+class DocumentApproval(db.Model, TimestampMixin):
+    """اعتماد مستند (PO، دفعة، قيد يدوي، مسير رواتب)."""
+    __tablename__ = "document_approvals"
+
+    id = db.Column(db.Integer, primary_key=True)
+    document_type = db.Column(db.String(40), nullable=False, index=True)
+    document_id = db.Column(db.Integer, nullable=False, index=True)
+    level_no = db.Column(db.Integer, nullable=False, server_default=sa_text("1"))
+    status = db.Column(String(20), nullable=False, server_default=sa_text("'PENDING'"), index=True)
+    requested_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    approved_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    approved_at = db.Column(db.DateTime, nullable=True)
+    notes = db.Column(db.Text)
+
+    __table_args__ = (
+        db.Index("ix_doc_approval_type_id", "document_type", "document_id"),
+    )
+
+
+class PaymentAllocation(db.Model, TimestampMixin):
+    """توزيع يدوي للدفعة على مستندات مفتوحة (اختياري — لا يُفعّل تلقائياً)."""
+    __tablename__ = "payment_allocations"
+
+    id = db.Column(db.Integer, primary_key=True)
+    payment_id = db.Column(db.Integer, db.ForeignKey("payments.id", ondelete="CASCADE"), nullable=False, index=True)
+    entity_type = db.Column(
+        sa_str_enum(["SALE", "INVOICE", "SERVICE", "PREORDER"], name="payment_alloc_entity_type"),
+        nullable=False,
+        index=True,
+    )
+    entity_id = db.Column(db.Integer, nullable=False, index=True)
+    amount = db.Column(db.Numeric(14, 2), nullable=False)
+    currency = db.Column(db.String(10), default="ILS")
+    notes = db.Column(db.String(255))
+
+    payment = db.relationship("Payment", backref=db.backref("allocations", lazy="dynamic", cascade="all, delete-orphan"))
+
+    __table_args__ = (
+        db.UniqueConstraint("payment_id", "entity_type", "entity_id", name="uq_payment_alloc_target"),
+        db.CheckConstraint("amount > 0", name="ck_payment_alloc_amt_pos"),
+    )
+
+
 class ShipmentItem(db.Model):
     __tablename__ = "shipment_items"
 
@@ -9812,6 +9914,7 @@ class Shipment(db.Model, TimestampMixin, AuditMixin):
     fx_quote_currency = db.Column(db.String(10))
     
     sale_id = db.Column(db.Integer, db.ForeignKey("sales.id"), index=True)
+    purchase_order_id = db.Column(db.Integer, db.ForeignKey("purchase_orders.id", ondelete="SET NULL"), index=True)
     
     # حقول إضافية للشحنات
     weight = db.Column(db.Numeric(10, 3))  # الوزن بالكيلو
@@ -9836,6 +9939,7 @@ class Shipment(db.Model, TimestampMixin, AuditMixin):
     partners = db.relationship("ShipmentPartner", back_populates="shipment", cascade="all, delete-orphan", order_by="ShipmentPartner.id")
     payments = db.relationship("Payment", back_populates="shipment", order_by="Payment.id")
     sale     = db.relationship("Sale", back_populates="shipments")
+    purchase_order = db.relationship("PurchaseOrder", back_populates="shipments", foreign_keys=[purchase_order_id])
     destination_warehouse = db.relationship("Warehouse", back_populates="shipments_received", foreign_keys=[destination_id])
     expenses = db.relationship("Expense", back_populates="shipment", passive_deletes=True, order_by="Expense.id")
     archived_by_user = db.relationship("User", foreign_keys=[archived_by])
@@ -13511,10 +13615,12 @@ def _sale_normalize_insert(mapper, connection, target: "Sale"):
     if sale_currency != default_currency:
         try:
             at = getattr(target, "sale_date", None) or getattr(target, "created_at", None) or datetime.now(timezone.utc)
-            rate = _fx_rate_local_via_connection(connection, sale_currency, default_currency, at)
-            if rate and rate > 0:
-                target.fx_rate_used = Decimal(str(rate))
-                target.fx_rate_source = "manual"
+            from services.fx_resolution import resolve_fx_rate_for_date
+
+            info = resolve_fx_rate_for_date(sale_currency, default_currency, at)
+            if info.get("success") and info.get("rate"):
+                target.fx_rate_used = Decimal(str(info["rate"]))
+                target.fx_rate_source = info.get("source") or "manual"
                 target.fx_rate_timestamp = datetime.now(timezone.utc)
                 target.fx_base_currency = sale_currency
                 target.fx_quote_currency = default_currency
@@ -13538,73 +13644,81 @@ def _sale_return_gl_upsert_core(connection, target: "SaleReturn") -> None:
         return
         
     total_refund_dec = Decimal(str(total_refund))
+    return_at = target.return_date or datetime.now(timezone.utc)
+    refund_ils = _amount_to_ils_via_connection(
+        connection,
+        total_refund_dec,
+        target.currency,
+        return_at,
+        target.fx_rate_used,
+    )
+    if refund_ils <= 0:
+        return
 
-    # 1. Calculate Tax Share
+    # 1. Calculate Tax Share (on ILS amounts)
     tax_rate = Decimal("0")
     if target.sale_id:
         try:
-            # Use SQL to get tax_rate to avoid ORM loading issues
             res = connection.execute(
-                sa_text("SELECT tax_rate FROM sales WHERE id = :sid"), 
-                {"sid": target.sale_id}
+                sa_text("SELECT tax_rate FROM sales WHERE id = :sid"),
+                {"sid": target.sale_id},
             ).scalar()
             if res:
                 tax_rate = Decimal(str(res))
         except Exception:
             pass
 
-    # Net = Total / (1 + Rate/100)
     if tax_rate > 0:
-        net_sales = total_refund_dec / (Decimal("1") + (tax_rate / Decimal("100")))
+        net_sales = refund_ils / (Decimal("1") + (tax_rate / Decimal("100")))
         net_sales = net_sales.quantize(Decimal("0.01"), ROUND_HALF_UP)
-        tax_amount = total_refund_dec - net_sales
+        tax_amount = refund_ils - net_sales
     else:
-        net_sales = total_refund_dec
+        net_sales = refund_ils
         tax_amount = Decimal("0")
 
-    # 2. Calculate Cost of Returned Goods (For Inventory/COGS reversal)
+    # 2. Cost of returned goods in ILS (product currency → ILS)
     total_cost = Decimal("0")
     try:
         lines = connection.execute(
             sa_text("""
-                SELECT srl.quantity, p.purchase_price, p.cost_after_shipping
+                SELECT srl.quantity,
+                       COALESCE(NULLIF(p.cost_after_shipping, 0), p.purchase_price, 0),
+                       COALESCE(p.currency, :default_cur),
+                       p.fx_rate_used
                 FROM sale_return_lines srl
                 JOIN products p ON srl.product_id = p.id
                 WHERE srl.sale_return_id = :rid
             """),
-            {"rid": target.id}
+            {"rid": target.id, "default_cur": DEFAULT_CURRENCY},
         ).fetchall()
-        
+
         for ln in lines:
             qty = Decimal(str(ln[0] or 0))
-            # Use cost_after_shipping if available (>0), else purchase_price
-            c1 = Decimal(str(ln[2] or 0))
-            c2 = Decimal(str(ln[1] or 0))
-            cost = c1 if c1 > 0 else c2
-            total_cost += qty * cost
+            unit_cost_ils = _amount_to_ils_via_connection(
+                connection, ln[1], ln[2], return_at, ln[3]
+            )
+            total_cost += qty * unit_cost_ils
     except Exception:
         pass
 
     entries = []
-    
-    # A. Reversing Revenue & Tax (Debit Sales, Debit Tax, Credit Customer)
+
     entries.append((GL_ACCOUNTS.get("REV", "4000_SALES"), float(net_sales), 0))
     if tax_amount > 0:
         entries.append((GL_ACCOUNTS.get("TAX_OUT", "2100_VAT_PAYABLE"), float(tax_amount), 0))
-    
-    entries.append((GL_ACCOUNTS.get("AR", "1100_AR"), 0, float(total_refund_dec)))
 
-    # B. Reversing Cost (Debit Inventory, Credit COGS)
+    entries.append((GL_ACCOUNTS.get("AR", "1100_AR"), 0, float(refund_ils)))
+
     if total_cost > 0:
         entries.append((GL_ACCOUNTS.get("INVENTORY", "1200_INVENTORY"), float(total_cost), 0))
-        entries.append((GL_ACCOUNTS.get("COGS", "5000_COGS"), 0, float(total_cost)))
+        entries.append((GL_ACCOUNTS.get("COGS", "5100_COGS"), 0, float(total_cost)))
 
     _gl_upsert_batch_and_entries(
         connection,
         source_type="SALE_RETURN",
         source_id=target.id,
         purpose="RETURN",
-        currency=target.currency or "ILS",
+        currency=DEFAULT_CURRENCY,
         memo=f"Sale return #{target.id} (Tax: {tax_rate}%)",
         entries=entries,
         ref=f"RET-{target.id}",
@@ -13844,7 +13958,7 @@ class AuditLog(db.Model, TimestampMixin):
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id', ondelete='SET NULL'), index=True, nullable=True)
     user_id     = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), index=True, nullable=True)
 
-    action      = db.Column(db.String(64), nullable=False, index=True)
+    action      = db.Column(db.String(100), nullable=False, index=True)
     old_data    = db.Column(db.Text)
     new_data    = db.Column(db.Text)
 
@@ -14036,7 +14150,10 @@ class Account(db.Model, TimestampMixin):
     code = db.Column(db.String(50), unique=True, nullable=False, index=True)
     name = db.Column(db.String(100), nullable=False)
     type = db.Column(sa_str_enum(["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"], name="account_type"), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=True, index=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+
+    parent = db.relationship("Account", remote_side=[id], backref=db.backref("children", lazy="dynamic"))
 
     __table_args__ = ()
 
@@ -14068,16 +14185,19 @@ class GLBatch(db.Model, TimestampMixin):
     currency = db.Column(db.String(10), default=DEFAULT_CURRENCY, nullable=False)
     entity_type = db.Column(db.String(30), index=True)
     entity_id = db.Column(db.Integer, index=True)
-    branch_id = db.Column(db.Integer, index=True, nullable=True)
+    branch_id = db.Column(db.Integer, db.ForeignKey("branches.id"), nullable=True, index=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True, index=True)
     status = db.Column(sa_str_enum(["DRAFT", "POSTED", "VOID"], name="gl_batch_status"), default="DRAFT", nullable=False, index=True)
 
     entries = db.relationship("GLEntry", backref="batch", cascade="all, delete-orphan", passive_deletes=True, order_by="GLEntry.id")
+    branch = db.relationship("Branch", backref=db.backref("gl_batches", lazy="dynamic"))
 
     __table_args__ = (
         db.UniqueConstraint("source_type", "source_id", "purpose", name="uq_gl_source_purpose"),
         db.Index("ix_gl_entity", "entity_type", "entity_id"),
         db.Index("ix_gl_status_source", "status", "source_type", "source_id"),
         db.Index("ix_gl_posted_status", "status", "posted_at"),
+        db.Index("ix_gl_branch_posted", "branch_id", "posted_at"),
     )
 
     @validates("currency")
@@ -14098,7 +14218,7 @@ def _assert_gl_batch_not_in_locked_period(target: "GLBatch") -> None:
     if st != "POSTED":
         return
     src = (getattr(target, "source_type", None) or "").upper()
-    if src in ("CLOSING_ENTRY", "PERIOD_CLOSE", "OPENING_BALANCE") or "REVERSAL" in src or "CANCELLATION" in src:
+    if src in ("CLOSING_ENTRY", "REVERSAL", "PERIOD_CLOSE", "OPENING_BALANCE"):
         return
     posted = getattr(target, "posted_at", None)
     if not posted:
@@ -14141,7 +14261,11 @@ class GLEntry(db.Model, TimestampMixin):
     credit = db.Column(db.Numeric(12, 2), default=0, nullable=False)
     currency = db.Column(db.String(10), default=DEFAULT_CURRENCY, nullable=False)
     ref = db.Column(db.String(50))
-    cost_center_id = db.Column(db.Integer, index=True, nullable=True)
+    cost_center_id = db.Column(db.Integer, db.ForeignKey("cost_centers.id", ondelete="SET NULL"), nullable=True, index=True)
+    fx_rate = db.Column(db.Numeric(12, 6), nullable=True)
+    fx_currency = db.Column(db.String(10), nullable=True)
+
+    cost_center = db.relationship("CostCenter", backref=db.backref("gl_entries", lazy="dynamic"))
 
     __table_args__ = (
         db.CheckConstraint("debit >= 0", name="ck_gl_debit_ge_0"),
@@ -14205,7 +14329,114 @@ GL_ACCOUNTS = {
     "INVENTORY_RESERVE": "1300_INV_RSV",  # احتياطي المخزون للشركاء
     "DISCOUNT_ALLOWED": "4050_SALES_DISCOUNT",
     "SHIPPING_INCOME": "4200_SHIPPING_INCOME",
+    "PURCHASES": "5100_COGS",
+    "COGS": "5100_COGS",
+    "INVENTORY": "1200_INVENTORY",
+    "TAX_OUT": "2100_VAT_PAYABLE",
+    "VAT_INPUT": "1500_VAT_INPUT",
+    "PAYROLL_EXP": "6100_PAYROLL_EXPENSE",
+    "PAYROLL_PAYABLE": "2100_PAYROLL_PAYABLE",
+    "PREPAID": "1400_PREPAID_EXP",
+    "ACCRUED_EXP": "2205_ACCRUED_EXP",
 }
+
+
+def _gl_table_names(connection):
+    dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
+    if dialect_name == "postgresql":
+        return "public.gl_batches", "public.gl_entries"
+    return "gl_batches", "gl_entries"
+
+
+def _gl_delete_batches(connection, *, source_type: str, source_id: int, purposes=None) -> None:
+    """Delete generated GL batches for a source before rebuilding them."""
+    if not source_type or not source_id:
+        return
+    batch_table, entry_table = _gl_table_names(connection)
+    purpose_set = {str(p) for p in (purposes or [])}
+    rows = connection.execute(
+        sa_text(f"""
+            SELECT id, purpose, posted_at FROM {batch_table}
+             WHERE source_type = :st AND source_id = :sid
+        """),
+        {"st": source_type, "sid": int(source_id)},
+    ).mappings().all()
+    # حارس قفل: لا تحذف قيداً في فترة مقفلة (ما عدا الإقفال/العكس/الافتتاح)
+    _src_up = (source_type or "").upper()
+    _exempt = _src_up in ("CLOSING_ENTRY", "PERIOD_CLOSE", "OPENING_BALANCE") or "REVERSAL" in _src_up or "CANCELLATION" in _src_up
+    if not _exempt:
+        for row in rows:
+            _cs = row.get("posted_at")
+            try:
+                _cs = _cs.date() if hasattr(_cs, "date") else _cs
+            except Exception:
+                pass
+            if _cs:
+                _lk = connection.execute(sa_text("SELECT period_key FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"), {"d": _cs}).first()
+                if _lk:
+                    raise ValueError("لا يمكن حذف قيد في فترة مقفلة")
+    for row in rows:
+        purpose = str(row.get("purpose") or "")
+        if purpose_set and purpose not in purpose_set:
+            continue
+        batch_id = int(row["id"])
+        connection.execute(sa_text(f"DELETE FROM {entry_table} WHERE batch_id = :bid"), {"bid": batch_id})
+        connection.execute(sa_text(f"DELETE FROM {batch_table} WHERE id = :bid"), {"bid": batch_id})
+
+
+def _gl_reverse_posted_batches(
+    connection,
+    *,
+    source_type: str,
+    source_id: int,
+    reversal_source_type: str,
+    memo_prefix: str,
+    purposes=None,
+) -> None:
+    """Create idempotent reversing batches from existing POSTED batches."""
+    if not source_type or not source_id or not reversal_source_type:
+        return
+    batch_table, entry_table = _gl_table_names(connection)
+    purpose_set = {str(p) for p in (purposes or [])}
+    batches = connection.execute(
+        sa_text(f"""
+            SELECT id, purpose, currency, entity_type, entity_id, memo
+              FROM {batch_table}
+             WHERE source_type = :st AND source_id = :sid
+               AND status = 'POSTED'
+             ORDER BY id
+        """),
+        {"st": source_type, "sid": int(source_id)},
+    ).mappings().all()
+    for batch in batches:
+        purpose = str(batch.get("purpose") or "REVERSAL")[:30]
+        if purpose_set and purpose not in purpose_set:
+            continue
+        entries = connection.execute(
+            sa_text(f"SELECT account, debit, credit FROM {entry_table} WHERE batch_id = :bid ORDER BY id"),
+            {"bid": int(batch["id"])},
+        ).mappings().all()
+        reversed_entries = []
+        for entry in entries:
+            debit = float(entry.get("debit") or 0)
+            credit = float(entry.get("credit") or 0)
+            if debit <= 0 and credit <= 0:
+                continue
+            reversed_entries.append((str(entry.get("account") or "").strip().upper(), credit, debit))
+        if not reversed_entries:
+            continue
+        _gl_upsert_batch_and_entries(
+            connection,
+            source_type=reversal_source_type,
+            source_id=int(source_id),
+            purpose=purpose,
+            currency=(batch.get("currency") or DEFAULT_CURRENCY),
+            memo=f"{memo_prefix}: {batch.get('memo') or source_type}"[:255],
+            entries=reversed_entries,
+            ref=f"REV-{source_type}-{source_id}-{purpose}"[:50],
+            entity_type=batch.get("entity_type"),
+            entity_id=batch.get("entity_id"),
+        )
 
 
 def _gl_upsert_batch_and_entries(
@@ -14220,55 +14451,53 @@ def _gl_upsert_batch_and_entries(
     ref: str,
     entity_type: str | None,
     entity_id: int | None,
-    posted_at: datetime | None = None,
     branch_id: int | None = None,
-    cost_center_id: int | None = None,
+    posted_at: datetime | None = None,
+    company_id: int | None = None,
 ):
     if not entries:
         raise ValueError("entries required")
     effective_posted_at = posted_at or datetime.now(timezone.utc)
-    # منع الترحيل لفترة مقفلة عبر مسار SQL الخام (يغطي كل المصادر بما فيها _sale_gl)
+    if company_id is None:
+        company_id = 1
+    # منع الترحيل لفترة مقفلة (ما عدا الإقفال/العكس/الافتتاح)
     _src_up = (source_type or "").upper()
-    _exempt_lock = (
+    _exempt = (
         _src_up in ("CLOSING_ENTRY", "PERIOD_CLOSE", "OPENING_BALANCE")
         or "REVERSAL" in _src_up
         or "CANCELLATION" in _src_up
     )
-    if not _exempt_lock:
+    if not _exempt:
         try:
-            _check_date = effective_posted_at.date() if isinstance(effective_posted_at, datetime) else effective_posted_at
-            _locked_row = connection.execute(
-                sa_text(
-                    "SELECT period_key, name_ar FROM fiscal_periods "
-                    "WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"
-                ),
-                {"d": _check_date},
+            _cd = effective_posted_at.date() if isinstance(effective_posted_at, datetime) else effective_posted_at
+            _lr = connection.execute(
+                sa_text("SELECT period_key, name_ar FROM fiscal_periods WHERE status IN ('LOCKED','CLOSED') AND start_date <= :d AND end_date >= :d LIMIT 1"),
+                {"d": _cd},
             ).mappings().first()
-            if _locked_row:
-                raise ValueError(
-                    f"الفترة {_locked_row.get('name_ar')} ({_locked_row.get('period_key')}) مقفلة — لا يمكن الترحيل بتاريخ {_check_date}"
-                )
+            if _lr:
+                raise ValueError(f"الفترة {_lr.get('name_ar')} ({_lr.get('period_key')}) مقفلة — لا يمكن الترحيل بتاريخ {_cd}")
         except ValueError:
             raise
         except Exception:
-            # جدول الفترات قد لا يكون متاحاً في سياق tenant — لا نمنع الترحيل لخطأ فحص
             pass
-    dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
-    if dialect_name == "postgresql":
-        batch_table = "public.gl_batches"
-        entry_table = "public.gl_entries"
-    else:
-        batch_table = "gl_batches"
-        entry_table = "gl_entries"
-    rows = [(str(a or "").strip().upper(), float(d or 0), float(c or 0)) for a, d, c in entries]
-    if any(d < 0 or c < 0 for _, d, c in rows):
+    batch_table, entry_table = _gl_table_names(connection)
+    parsed = []
+    for item in entries:
+        if len(item) >= 4:
+            a, d, c, cc = item[0], item[1], item[2], item[3]
+        else:
+            a, d, c, cc = item[0], item[1], item[2], None
+        parsed.append((str(a or "").strip().upper(), float(d or 0), float(c or 0), cc))
+    rows = parsed
+    if any(d < 0 or c < 0 for _, d, c, _ in rows):
         raise ValueError("negative amounts not allowed")
-    total_debit = round(sum(d for _, d, _ in rows), 2)
-    total_credit = round(sum(c for _, _, c in rows), 2)
+    total_debit = round(sum(d for _, d, _, _ in rows), 2)
+    total_credit = round(sum(c for _, _, c, _ in rows), 2)
     if total_debit != total_credit or total_debit <= 0:
         raise ValueError("unbalanced or zero batch")
 
     accs = [r[0] for r in rows]
+    has_cc_col = hasattr(GLEntry, "cost_center_id")
     found_codes = connection.execute(
         select(Account.code).where(
             Account.code.in_(accs),
@@ -14320,14 +14549,21 @@ def _gl_upsert_batch_and_entries(
     )
 
     batch_code = f"{source_type}-{source_id}-{purpose}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
-    _insert_posted_at = effective_posted_at
+    posted_at = effective_posted_at
+    if branch_id is None:
+        try:
+            from utils.gl_branch_resolver import resolve_branch_for_gl
+
+            branch_id = resolve_branch_for_gl(source_type, source_id, connection=connection)
+        except Exception:
+            branch_id = None
 
     cur = connection.execute(
         sa_text(f"""
             INSERT INTO {batch_table}
-                (code, source_type, source_id, purpose, memo, posted_at, currency, entity_type, entity_id, branch_id, status, created_at, updated_at)
+                (code, source_type, source_id, purpose, memo, posted_at, currency, entity_type, entity_id, branch_id, company_id, status, created_at, updated_at)
             VALUES
-                (:code, :st, :sid, :p, :memo, :posted_at, :cur, :etype, :eid, :bid2, 'POSTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                (:code, :st, :sid, :p, :memo, :posted_at, :cur, :etype, :eid, :bid, :cid, 'POSTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             RETURNING id
         """),
         {
@@ -14340,21 +14576,48 @@ def _gl_upsert_batch_and_entries(
             "cur": (currency or "ILS").upper(),
             "etype": entity_type,
             "eid": entity_id,
-            "bid2": branch_id,
+            "bid": branch_id,
+            "cid": company_id,
         }
     )
     batch_id = cur.scalar_one()
 
-    for acct, debit, credit in rows:
-        connection.execute(
-            sa_text(f"""
-                INSERT INTO {entry_table}
-                    (batch_id, account, debit, credit, currency, ref, cost_center_id, created_at, updated_at)
-                VALUES
-                    (:bid, :acc, :d, :c, :cur, :ref, :ccid, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            """),
-            {"bid": batch_id, "acc": acct, "d": debit, "c": credit, "cur": (currency or "ILS").upper(), "ref": (ref or "").strip(), "ccid": cost_center_id}
-        )
+    for acct, debit, credit, cc_id in rows:
+        if has_cc_col and cc_id:
+            connection.execute(
+                sa_text(f"""
+                    INSERT INTO {entry_table}
+                        (batch_id, account, debit, credit, currency, ref, cost_center_id, created_at, updated_at)
+                    VALUES
+                        (:bid, :acc, :d, :c, :cur, :ref, :cc, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """),
+                {
+                    "bid": batch_id,
+                    "acc": acct,
+                    "d": debit,
+                    "c": credit,
+                    "cur": (currency or "ILS").upper(),
+                    "ref": (ref or "").strip(),
+                    "cc": cc_id,
+                },
+            )
+        else:
+            connection.execute(
+                sa_text(f"""
+                    INSERT INTO {entry_table}
+                        (batch_id, account, debit, credit, currency, ref, created_at, updated_at)
+                    VALUES
+                        (:bid, :acc, :d, :c, :cur, :ref, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """),
+                {
+                    "bid": batch_id,
+                    "acc": acct,
+                    "d": debit,
+                    "c": credit,
+                    "cur": (currency or "ILS").upper(),
+                    "ref": (ref or "").strip(),
+                },
+            )
 
     return int(batch_id)
 
@@ -15373,7 +15636,7 @@ class PeriodClose(db.Model, TimestampMixin):
     net_income = db.Column(db.Numeric(14, 2))
     total_revenue = db.Column(db.Numeric(14, 2))
     total_expenses = db.Column(db.Numeric(14, 2))
-    gl_batch_ids = db.Column(db.Text)
+    gl_batch_ids = db.Column(db.Text)  # JSON list of int
     carry_forward_done = db.Column(db.Boolean, nullable=False, server_default=sa_text("false"))
     reopened_at = db.Column(db.DateTime)
     reopened_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
@@ -15395,7 +15658,7 @@ class PeriodClose(db.Model, TimestampMixin):
 
 
 class EntityPeriodBalance(db.Model, TimestampMixin):
-    """رصيد إقفال زبون/مورد/شريك عند نهاية فترة."""
+    """رصيد إقفال زبون/مورد/شريك عند نهاية فترة (للتقارير والترحيل الافتتاحي)."""
     __tablename__ = "entity_period_balances"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -15434,6 +15697,16 @@ class Budget(db.Model, TimestampMixin, AuditMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     fiscal_year = db.Column(db.Integer, nullable=False, index=True)
+    period_type = db.Column(
+        sa_str_enum(["ANNUAL", "QUARTER", "HALF"], name="budget_period_type"),
+        nullable=False,
+        default="ANNUAL",
+        server_default=sa_text("'ANNUAL'"),
+        index=True,
+    )
+    period_number = db.Column(db.Integer, nullable=False, default=1, server_default=sa_text("1"))
+    period_start = db.Column(db.Date, index=True)
+    period_end = db.Column(db.Date, index=True)
     account_code = db.Column(db.String(50), db.ForeignKey("accounts.code", ondelete="RESTRICT"), nullable=False, index=True)
     branch_id = db.Column(db.Integer, db.ForeignKey("branches.id", ondelete="CASCADE"), index=True)
     site_id = db.Column(db.Integer, db.ForeignKey("sites.id", ondelete="CASCADE"), index=True)
@@ -15447,21 +15720,28 @@ class Budget(db.Model, TimestampMixin, AuditMixin):
     site = db.relationship("Site", backref=db.backref("budgets", lazy="dynamic"))
 
     __table_args__ = (
-        db.UniqueConstraint("fiscal_year", "account_code", "branch_id", "site_id", name="uq_budget_year_account_branch_site"),
+        db.UniqueConstraint(
+            "fiscal_year", "period_type", "period_number", "account_code", "branch_id", "site_id",
+            name="uq_budget_period_account_branch_site",
+        ),
         db.Index("ix_budget_year_branch", "fiscal_year", "branch_id"),
         db.Index("ix_budget_year_account", "fiscal_year", "account_code"),
         db.CheckConstraint("allocated_amount >= 0", name="ck_budget_allocated_ge_0"),
     )
 
+    def _expense_date_filters(self, q):
+        if self.period_start and self.period_end:
+            return q.filter(Expense.date >= self.period_start, Expense.date <= self.period_end)
+        return q.filter(db.extract("year", Expense.date) == self.fiscal_year)
+
     def get_actual_amount(self):
         from sqlalchemy import func
         expenses = db.session.query(func.sum(Expense.amount)).filter(
-            db.extract('year', Expense.date) == self.fiscal_year,
             Expense.branch_id == self.branch_id
         )
         if self.site_id:
             expenses = expenses.filter(Expense.site_id == self.site_id)
-        
+        expenses = self._expense_date_filters(expenses)
         return float(expenses.scalar() or 0)
 
     def get_committed_amount(self):
