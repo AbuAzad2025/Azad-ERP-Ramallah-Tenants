@@ -2380,9 +2380,7 @@ def _opening_balance_expected_net(opening_balance: float) -> float:
 
 
 def _opening_balance_posted_batch(connection, *, source_type: str, source_id: int, account_code: str):
-    dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
-    batch_table = "public.gl_batches" if dialect_name == "postgresql" else "gl_batches"
-    entry_table = "public.gl_entries" if dialect_name == "postgresql" else "gl_entries"
+    batch_table, entry_table = _gl_table_names(connection)
     return connection.execute(
         sa_text(
             f"""
@@ -2401,9 +2399,7 @@ def _opening_balance_posted_batch(connection, *, source_type: str, source_id: in
 
 
 def _delete_opening_balance_batches(connection, *, source_type: str, source_id: int):
-    dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
-    batch_table = "public.gl_batches" if dialect_name == "postgresql" else "gl_batches"
-    entry_table = "public.gl_entries" if dialect_name == "postgresql" else "gl_entries"
+    batch_table, entry_table = _gl_table_names(connection)
     connection.execute(
         sa_text(
             f"""
@@ -8914,9 +8910,7 @@ def _payment_split_gl_batch_upsert_by_id(connection, *, split_id: int) -> None:
             )
             is_cancelled = payment_status == PaymentStatus.CANCELLED.value
             if not (is_refunded or is_cancelled):
-                dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
-                batch_table = "public.gl_batches" if dialect_name == "postgresql" else "gl_batches"
-                entry_table = "public.gl_entries" if dialect_name == "postgresql" else "gl_entries"
+                batch_table, entry_table = _gl_table_names(connection)
                 connection.execute(
                     sa_text(
                         f"""
@@ -9118,8 +9112,7 @@ def _payment_split_gl_batch_upsert_by_id(connection, *, split_id: int) -> None:
                     entity_id=batch_entity_id,
                 )
             else:
-                dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
-                batch_table = "public.gl_batches" if dialect_name == "postgresql" else "gl_batches"
+                batch_table, _ = _gl_table_names(connection)
                 original_batch_id = connection.execute(
                     sa_text(f"""
                         SELECT id FROM {batch_table}
@@ -9132,9 +9125,7 @@ def _payment_split_gl_batch_upsert_by_id(connection, *, split_id: int) -> None:
                     original_batch_id = int(original_batch_id)
 
             if (is_refunded or is_cancelled) and original_batch_id:
-                dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
-                batch_table = "public.gl_batches" if dialect_name == "postgresql" else "gl_batches"
-                entry_table = "public.gl_entries" if dialect_name == "postgresql" else "gl_entries"
+                batch_table, entry_table = _gl_table_names(connection)
 
                 existing_rev = connection.execute(
                     sa_text(f"""
