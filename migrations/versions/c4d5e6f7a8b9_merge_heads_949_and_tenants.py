@@ -8,7 +8,7 @@ from alembic import op
 
 
 revision = "c4d5e6f7a8b9"
-down_revision = ("94948c531c03", "b2c3d4e5f6a7")
+down_revision = "94948c531c03"
 branch_labels = None
 depends_on = None
 
