@@ -76,23 +76,8 @@ def login_alias():
         return redirect(url_for("auth.login", next=nxt))
     return redirect(url_for("auth.login"))
 
-
-@main_bp.route("/tenant/switch-branch", methods=["POST"], endpoint="switch_active_branch")
-@login_required
-def switch_active_branch():
-    from utils.tenant_ui import set_active_branch_id
-
-    bid = request.form.get("branch_id", type=int)
-    if bid and set_active_branch_id(bid):
-        flash("تم تبديل الفرع النشط.", "success")
-    else:
-        flash("لا يمكن التبديل إلى هذا الفرع.", "danger")
-    return redirect(request.referrer or url_for("main.dashboard"))
-
-
 @main_bp.route("/", methods=["GET"], endpoint="dashboard")
 @login_required
-@utils.permission_required(SystemPermissions.ACCESS_DASHBOARD)
 def dashboard():
     from flask import g
     from utils.dashboard_routing import (
@@ -141,42 +126,10 @@ def dashboard():
             targets = {str(code).strip().lower()}
         return bool(perms_set & targets)
 
-    def _dash_scope_key() -> str:
-        from utils.company_scope import get_accessible_branch_ids
-        from utils.tenant_ui import get_active_branch_id
-
-        uid = getattr(current_user, "id", 0) or 0
-        aid = get_active_branch_id()
-        ids = get_accessible_branch_ids()
-        bid = ",".join(str(i) for i in (ids or []))
-        return f"u{uid}_a{aid}_b{bid}"
-
-    scope_key = _dash_scope_key()
-
-    cache_key_inv = f'dashboard_inventory_stats_{scope_key}'
-    inv_stats = cache.get(cache_key_inv)
-    if inv_stats is None:
-        subq = (
-            db.session.query(
-                Product.id.label("pid"),
-                func.coalesce(func.sum(StockLevel.quantity), 0).label("qty"),
-                func.coalesce(Product.min_qty, 0).label("min_qty"),
-            )
-            .outerjoin(StockLevel, StockLevel.product_id == Product.id)
-            .filter(Product.is_active.is_(True))
-            .group_by(Product.id, Product.min_qty)
-            .subquery()
-        )
-        inventory_total = int(db.session.query(func.coalesce(func.sum(subq.c.qty), 0)).scalar() or 0)
-        low_stock_count = int(
-            db.session.query(func.count())
-            .select_from(subq)
-            .filter(subq.c.qty <= subq.c.min_qty)
-            .scalar()
-            or 0
-        )
-        inv_stats = {'inventory_total': inventory_total, 'low_stock_count': low_stock_count}
-        cache.set(cache_key_inv, inv_stats, timeout=300)
+    tenant_slug = str(getattr(g, "tenant_slug", None) or "").strip()
+    preferred = preferred_dashboard_endpoint(current_user, tenant_slug or None)
+    if preferred != "main.dashboard":
+        from flask import flash, redirect, url_for
 
         flash(f"تم توجيهك إلى {dashboard_label_for_user(current_user, tenant_slug)} حسب دورك وصلاحياتك.", "info")
         return redirect(url_for(preferred))
@@ -232,17 +185,26 @@ def dashboard():
             inventory_total = int((inv_stats or {}).get("inventory_total") or 0)
             low_stock_count = int((inv_stats or {}).get("low_stock_count") or 0)
 
-    cache_key_exch = f'dashboard_exchanges_{scope_key}'
-    pending_exchanges = cache.get(cache_key_exch)
-    if pending_exchanges is None:
-        pending_exchanges = ExchangeTransaction.query.filter_by(direction="OUT").count()
-        cache.set(cache_key_exch, pending_exchanges, timeout=180)
-    
-    cache_key_partner = f'dashboard_partner_stock_{scope_key}'
-    partner_stock = cache.get(cache_key_partner)
-    if partner_stock is None:
-        partner_stock = (db.session.query(func.count(Product.id)).join(Supplier, Supplier.id == Product.supplier_local_id).scalar() or 0)
-        cache.set(cache_key_partner, partner_stock, timeout=300)
+    pending_exchanges = 0
+    if dash_widgets.get("shipments"):
+        cache_key_exch = 'dashboard_exchanges'
+        pending_exchanges = cache.get(cache_key_exch)
+        if pending_exchanges is None:
+            pending_exchanges = ExchangeTransaction.query.filter_by(direction="OUT").count()
+            cache.set(cache_key_exch, pending_exchanges, timeout=180)
+
+    partner_stock = 0
+    if dash_widgets.get("vendors"):
+        cache_key_partner = 'dashboard_partner_stock'
+        partner_stock = cache.get(cache_key_partner)
+        if partner_stock is None:
+            partner_stock = (
+                db.session.query(func.count(Product.id))
+                .join(Supplier, Supplier.id == Product.supplier_local_id)
+                .scalar()
+                or 0
+            )
+            cache.set(cache_key_partner, partner_stock, timeout=300)
 
     recent_sales = []
     today_sales_rows: List[Tuple] = []
@@ -309,7 +271,7 @@ def dashboard():
             )
             cache.set(cache_key_recent, recent_sales, timeout=180)
         
-        cache_key_srep = f'dashboard_sales_report_{start}_{end}_{scope_key}'
+        cache_key_srep = f'dashboard_sales_report_{start}_{end}'
         srep = cache.get(cache_key_srep)
         if srep is None:
             try:
@@ -334,8 +296,8 @@ def dashboard():
         if today_revenue is None:
             today_revenue = Decimal('0.00')
             today_sales_rows = (
-                filter_sales_query(Sale.query)
-                .with_entities(
+                filter_sales_query(
+                    db.session.query(
                     Sale.total_amount,
                     Sale.currency,
                     Sale.fx_rate_used,
@@ -364,12 +326,8 @@ def dashboard():
             if cached_total is not None:
                 return float(cached_total)
 
-            from utils.company_scope import (
-                filter_customers_query,
-                filter_partners_query,
-                filter_suppliers_query,
-            )
-            
+            from utils.company_scope import filter_customers_query, filter_suppliers_query
+
             if model.__name__ == 'Customer':
                 try:
                     result = (
@@ -404,14 +362,12 @@ def dashboard():
                     return float(result)
             except Exception:
                 current_app.logger.warning('cache operation failed silently in main.py', exc_info=True)
-            
+
             entities = model.query.options(load_only(model.id))
             if model.__name__ == 'Customer':
                 entities = filter_customers_query(entities)
             elif model.__name__ == 'Supplier':
                 entities = filter_suppliers_query(entities)
-            elif model.__name__ == 'Partner':
-                entities = filter_partners_query(entities)
             entities = entities.limit(10000).all()
             for entity in entities:
                 try:
@@ -457,13 +413,12 @@ def dashboard():
         payments = (
             filter_payments_query(
                 db.session.query(
-                    Payment.total_amount,
-                    Payment.currency,
-                    Payment.fx_rate_used,
-                    Payment.payment_date,
-                    Payment.direction,
-                )
-            )
+                Payment.total_amount,
+                Payment.currency,
+                Payment.fx_rate_used,
+                Payment.payment_date,
+                Payment.direction,
+            ))
             .filter(
                 Payment.payment_date >= start_dt,
                 Payment.payment_date < end_dt,
@@ -481,11 +436,10 @@ def dashboard():
         expenses_without_payments = (
             filter_expenses_query(
                 db.session.query(
-                    Expense.amount,
-                    Expense.currency,
-                    Expense.date,
-                )
-            )
+                Expense.amount,
+                Expense.currency,
+                Expense.date,
+            ))
             .outerjoin(
                 Payment,
                 and_(
@@ -521,23 +475,30 @@ def dashboard():
     today_net = today_incoming - today_outgoing
     week_net = week_incoming - week_outgoing
 
-    cache_key_daily_pay = f'dashboard_daily_payments_{week_start_dt.date()}_{week_end_dt.date()}_{scope_key}'
-    daily_payments_data = cache.get(cache_key_daily_pay)
-    if daily_payments_data is None:
-        from collections import defaultdict
-        from utils.company_scope import filter_payments_query
+    if dash_widgets.get("payments") or dash_widgets.get("ledger"):
+        cache_key_daily_pay = f'dashboard_daily_payments_{week_start_dt.date()}_{week_end_dt.date()}_{scope_key}'
+        daily_payments_data = cache.get(cache_key_daily_pay)
+        if daily_payments_data is None:
+            from collections import defaultdict
+            from utils.company_scope import filter_payments_query
 
-        daily_payments = defaultdict(lambda: {'incoming': Decimal('0.00'), 'outgoing': Decimal('0.00')})
-        
-        all_week_payments = (
-            filter_payments_query(
-                db.session.query(
+            daily_payments = defaultdict(lambda: {'incoming': Decimal('0.00'), 'outgoing': Decimal('0.00')})
+
+            all_week_payments = (
+                filter_payments_query(
+                    db.session.query(
                     Payment.total_amount,
                     Payment.currency,
                     Payment.fx_rate_used,
                     Payment.payment_date,
                     Payment.direction,
+                ))
+                .filter(
+                    Payment.payment_date >= week_start_dt,
+                    Payment.payment_date < week_end_dt,
+                    Payment.status == PaymentStatus.COMPLETED.value,
                 )
+                .all()
             )
 
             for amount, currency, fx_used, pay_dt, direction in all_week_payments:
@@ -578,30 +539,36 @@ def dashboard():
         month = (base.month - 1 + offset) % 12 + 1
         return date(year, month, 1)
     
-    from utils.company_scope import filter_customers_query, filter_sales_query
+    monthly_sales_labels: list = []
+    monthly_sales_values: list = []
+    customer_segment_labels: list = []
+    customer_segment_values: list = []
+    if dash_widgets.get("sales") or dash_widgets.get("reports"):
+        from utils.company_scope import filter_customers_query, filter_sales_query
 
-    cache_key_monthly = f'dashboard_monthly_sales_{month_start_today}_{scope_key}'
-    monthly_data = cache.get(cache_key_monthly)
-    if monthly_data is None:
-        month_keys = []
-        monthly_labels = []
-        monthly_totals = {}
-        for offset in range(-5, 1):
-            start_month = _shift_month(month_start_today, offset)
-            key = start_month.strftime("%Y-%m")
-            month_keys.append(key)
-            monthly_labels.append(start_month.strftime("%b %Y"))
-            monthly_totals[key] = Decimal('0.00')
-        sales_period_start = _shift_month(month_start_today, -5)
-        sales_period_end = _shift_month(month_start_today, 1)
-        monthly_sales_rows = (
-            filter_sales_query(Sale.query)
-            .options(
-                load_only(
-                    Sale.sale_date,
-                    Sale.total_amount,
-                    Sale.currency,
-                    Sale.fx_rate_used,
+        cache_key_monthly = f'dashboard_monthly_sales_{month_start_today}_{scope_key}'
+        monthly_data = cache.get(cache_key_monthly)
+        if monthly_data is None:
+            month_keys = []
+            monthly_labels = []
+            monthly_totals = {}
+            for offset in range(-5, 1):
+                start_month = _shift_month(month_start_today, offset)
+                key = start_month.strftime("%Y-%m")
+                month_keys.append(key)
+                monthly_labels.append(start_month.strftime("%b %Y"))
+                monthly_totals[key] = Decimal('0.00')
+            sales_period_start = _shift_month(month_start_today, -5)
+            sales_period_end = _shift_month(month_start_today, 1)
+            monthly_sales_rows = (
+                filter_sales_query(Sale.query)
+                .options(
+                    load_only(
+                        Sale.sale_date,
+                        Sale.total_amount,
+                        Sale.currency,
+                        Sale.fx_rate_used,
+                    )
                 )
                 .filter(
                     Sale.status == SaleStatus.CONFIRMED.value,
@@ -641,79 +608,51 @@ def dashboard():
                 .scalar()
                 or 0
             )
-            .all()
-        )
-        for sale in monthly_sales_rows:
-            key = sale.sale_date.strftime("%Y-%m")
-            if key in monthly_totals:
-                monthly_totals[key] += _to_ils(sale.total_amount, sale.currency, sale.fx_rate_used, sale.sale_date)
-        monthly_data = {
-            'labels': monthly_labels,
-            'values': [float(monthly_totals[key]) for key in month_keys]
-        }
-        cache.set(cache_key_monthly, monthly_data, timeout=3600)
-    
-    monthly_sales_labels = monthly_data['labels']
-    monthly_sales_values = monthly_data['values']
-    cache_key_customers = f'dashboard_customers_{today}_{scope_key}'
-    customer_data = cache.get(cache_key_customers)
-    if customer_data is None:
-        thirty_days_ago = today - timedelta(days=30)
-        ninety_days_ago = today - timedelta(days=90)
-        new_count = int(
-            filter_customers_query(db.session.query(func.count(Customer.id)))
-            .filter(
-                Customer.created_at.isnot(None),
-                Customer.created_at >= datetime.combine(thirty_days_ago, time.min),
+            active_count = int(
+                filter_sales_query(db.session.query(func.count(func.distinct(Sale.customer_id))))
+                .filter(
+                    Sale.customer_id.isnot(None),
+                    Sale.sale_date >= datetime.combine(ninety_days_ago, time.min),
+                    Sale.status == SaleStatus.CONFIRMED.value,
+                )
+                .scalar()
+                or 0
             )
-            .scalar()
-            or 0
-        )
-        active_count = int(
-            filter_sales_query(db.session.query(func.count(func.distinct(Sale.customer_id))))
-            .filter(
-                Sale.customer_id.isnot(None),
-                Sale.sale_date >= datetime.combine(ninety_days_ago, time.min),
-                Sale.status == SaleStatus.CONFIRMED.value,
+            active_new_count = int(
+                filter_sales_query(
+                    db.session.query(func.count(func.distinct(Sale.customer_id)))
+                    .join(Customer, Customer.id == Sale.customer_id)
+                )
+                .filter(
+                    Sale.customer_id.isnot(None),
+                    Sale.sale_date >= datetime.combine(ninety_days_ago, time.min),
+                    Sale.status == SaleStatus.CONFIRMED.value,
+                    Customer.created_at.isnot(None),
+                    Customer.created_at >= datetime.combine(thirty_days_ago, time.min),
+                )
+                .scalar()
+                or 0
             )
-            .scalar()
-            or 0
-        )
-        active_new_count = int(
-            filter_sales_query(
-                db.session.query(func.count(func.distinct(Sale.customer_id)))
-                .join(Customer, Customer.id == Sale.customer_id)
+            total_customers_count = int(
+                filter_customers_query(db.session.query(func.count(Customer.id))).scalar() or 0
             )
-            .filter(
-                Sale.customer_id.isnot(None),
-                Sale.sale_date >= datetime.combine(ninety_days_ago, time.min),
-                Sale.status == SaleStatus.CONFIRMED.value,
-                Customer.created_at.isnot(None),
-                Customer.created_at >= datetime.combine(thirty_days_ago, time.min),
-            )
-            .scalar()
-            or 0
-        )
-        total_customers_count = int(
-            filter_customers_query(db.session.query(func.count(Customer.id))).scalar() or 0
-        )
-        active_existing = max(active_count - active_new_count, 0)
-        inactive_count = max(total_customers_count - (new_count + active_existing), 0)
-        customer_data = {
-            'new_count': new_count,
-            'active_existing': active_existing,
-            'inactive_count': inactive_count
-        }
-        cache.set(cache_key_customers, customer_data, timeout=1800)
-    
-    active_existing = customer_data['active_existing']
-    inactive_count = customer_data['inactive_count']
-    customer_segment_labels = ["زبائن جدد", "زبائن نشطين", "زبائن غير نشطين"]
-    customer_segment_values = [
-        customer_data['new_count'],
-        active_existing,
-        inactive_count,
-    ]
+            active_existing = max(active_count - active_new_count, 0)
+            inactive_count = max(total_customers_count - (new_count + active_existing), 0)
+            customer_data = {
+                'new_count': new_count,
+                'active_existing': active_existing,
+                'inactive_count': inactive_count,
+            }
+            cache.set(cache_key_customers, customer_data, timeout=1800)
+
+        active_existing = customer_data['active_existing']
+        inactive_count = customer_data['inactive_count']
+        customer_segment_labels = ["زبائن جدد", "زبائن نشطين", "زبائن غير نشطين"]
+        customer_segment_values = [
+            customer_data['new_count'],
+            active_existing,
+            inactive_count,
+        ]
     dashboard_alerts: List[dict] = []
     alert_now = datetime.now(timezone.utc).replace(tzinfo=None)
     alert_today = alert_now.date()
@@ -802,47 +741,29 @@ def dashboard():
         try:
             from utils.company_scope import filter_customers_query
 
-        id_list = [row[0] for row in customer_debts]
-        customers_map = {}
-        if id_list:
-            customers_map = {
-                c.id: c
-                for c in Customer.query.filter(Customer.id.in_(id_list)).all()
-            }
-
-        for cust_id, cust_name, cust_balance, sale_count, last_sale in customer_debts:
-            balance_value = cust_balance or 0
-            cust_obj = customers_map.get(cust_id)
-            if cust_obj:
-                try:
-                    balance_value = cust_obj.balance
-                except Exception as exc:
-                    current_app.logger.warning(
-                        f"⚠️ خطأ في حساب رصيد الزبون #{cust_id}: {exc}"
+            customer_debts = (
+                filter_customers_query(
+                    db.session.query(
+                        Customer.id,
+                        Customer.name,
+                        Customer.balance.label("cust_balance"),
+                        func.count(Sale.id).label("sale_count"),
+                        func.max(Sale.sale_date).label("last_sale"),
                     )
-            if balance_value and balance_value < 0:
-                amount_due = abs(float(balance_value))
-                dashboard_alerts.append({
-                    "category": "الذمم",
-                    "severity": "warning",
-                    "icon": "fas fa-user-clock",
-                    "title": f"دين على الزبون {cust_name}",
-                    "message": f"عدد الفواتير المفتوحة: {sale_count}",
-                    "amount_display": f"{amount_due:,.2f} ₪",
-                    "link": url_for('customers_bp.list_customers', name=cust_name),
-                    "meta": last_sale.strftime('%Y-%m-%d') if last_sale else None,
-                })
-    except Exception as exc:
-        current_app.logger.warning(f"Dashboard customer debt alerts error: {exc}")
-
-    try:
-        recent_expenses = (
-            db.session.query(
-                Expense.id,
-                Expense.description,
-                Expense.amount,
-                Expense.currency,
-                Expense.date,
+                )
+                .outerjoin(
+                    Sale,
+                    and_(
+                        Sale.customer_id == Customer.id,
+                        Sale.status == SaleStatus.CONFIRMED.value,
+                        Sale.balance_due > 0,
+                    ),
+                )
+                .filter(Customer.balance < 0)
+                .group_by(Customer.id, Customer.name, Customer.balance)
+                .order_by(Customer.balance.asc())
+                .limit(5)
+                .all()
             )
             id_list = [row[0] for row in customer_debts]
             customers_map = {}

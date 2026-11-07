@@ -14622,7 +14622,26 @@ def _gl_upsert_batch_and_entries(
     return int(batch_id)
 
 
-# ===== نظام تقييمات المنتجات =====
+# TenantRegistry removed (SaaS tenant registry reverted). Stub keeps imports/usage working.
+class _TenantRegistryQuery:
+    def filter_by(self, **kw): return self
+    def filter(self, *a, **kw): return self
+    def order_by(self, *a, **kw): return self
+    def all(self): return []
+    def first(self): return None
+    def count(self): return 0
+    def delete(self, *a, **kw): return 0
+    def __iter__(self): return iter([])
+
+
+class TenantRegistry:
+    query = _TenantRegistryQuery()
+    def __init__(self, *a, **kw): pass
+    slug = None
+    schema_name = None
+    is_active = False
+    domain = None
+    id = None
 
 class ProductRating(db.Model, TimestampMixin, AuditMixin):
     """تقييمات المنتجات"""

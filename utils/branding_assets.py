@@ -459,3 +459,8 @@ def register_branding_cli(app) -> None:
     def sync_files():
         updates = sync_branding_settings(app)
         click.echo(f"Synced {len(updates)} setting(s).")
+
+
+def is_tenant_session_user() -> bool:
+    """Stub: tenant session detection (single-tenant mode => False)."""
+    return False

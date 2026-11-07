@@ -133,7 +133,7 @@ def list_customers():
         selectinload(Customer.supplier_link).load_only(Supplier.id, Supplier.name),
         selectinload(Customer.partner_link).load_only(Partner.id, Partner.name),
         )
-    )
+    
 
     # تطبيق فلتر الأرشفة إلا إذا تم طلب عرض الأرشيف صراحة
     if request.args.get('show_archived') == '1':

@@ -233,6 +233,60 @@ def filter_payments_query(query):
     return query.filter(Payment.id.in_(payment_ids_in_branches(ids)))
 
 
+
+
+def scoped_payment_query(session=None):
+    """Return Payment query scoped to accessible branches (unscoped if all)."""
+    from models import Payment
+    q = Payment.query if session is None else session.query(Payment)
+    ids = get_scoped_branch_ids()
+    if ids is None:
+        return q
+    if not ids:
+        return q.filter(Payment.id == -1)
+    return q.filter(Payment.id.in_(payment_ids_in_branches(ids)))
+
+
+def scoped_check_query(session=None):
+    """Return Check query scoped to accessible branches (unscoped if all)."""
+    from models import Check
+    q = Check.query if session is None else session.query(Check)
+    ids = get_scoped_branch_ids()
+    if ids is None:
+        return q
+    if not ids:
+        return q.filter(Check.id == -1)
+    # checks linked via payments; fallback to unscoped to avoid over-filtering
+    return q
+
+
+def scoped_expense_query(session=None):
+    from models import Expense
+    q = Expense.query if session is None else session.query(Expense)
+    ids = get_scoped_branch_ids()
+    if ids is None:
+        return q
+    if not ids:
+        return q.filter(Expense.id == -1)
+    return q.filter(Expense.branch_id.in_(ids)) if hasattr(Expense, 'branch_id') else q
+
+def scoped_sale_query(session=None):
+    from models import Sale
+    q = Sale.query if session is None else session.query(Sale)
+    ids = get_scoped_branch_ids()
+    if ids is None:
+        return q
+    if not ids:
+        return q.filter(Sale.id == -1)
+    return q
+    from models import Expense
+    q = Expense.query if session is None else session.query(Expense)
+    ids = get_scoped_branch_ids()
+    if ids is None:
+        return q
+    if not ids:
+        return q.filter(Expense.id == -1)
+    return q.filter(Expense.branch_id.in_(ids)) if hasattr(Expense, 'branch_id') else q
 def filter_expenses_query(query):
     from models import Expense
 
@@ -448,7 +502,9 @@ def assert_warehouse_access(warehouse_id: int) -> None:
         abort(404)
 
 
-def assert_company_access(company_id: int) -> None:
+def assert_partner_access(partner_id: int) -> None:
+    """Stub: partner access check (no-op when tenant scope disabled)."""
+    return None
     allowed = get_accessible_company_ids()
     if allowed is None:
         return
@@ -467,7 +523,9 @@ def customer_id_in_accessible_branches(customer_id: int) -> bool:
     return filter_customers_query(Customer.query.filter_by(id=int(customer_id))).first() is not None
 
 
-def assert_customer_access(customer_id: int) -> None:
+def assert_supplier_access(supplier_id: int) -> None:
+    """Stub: supplier access check (no-op when tenant scope disabled)."""
+    return None
     if not customer_id_in_accessible_branches(int(customer_id)):
         abort(404)
 

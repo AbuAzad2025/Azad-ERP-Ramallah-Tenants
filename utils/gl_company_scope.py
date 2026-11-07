@@ -10,6 +10,20 @@ from utils.company_scope import _sale_ids_in_branches, branch_ids_for_company
 
 
 def resolve_branch_filter(company_id: Optional[int] = None) -> Optional[List[int]]:
+    from utils.company_scope import get_report_branch_ids
+    return get_report_branch_ids(company_id)
+
+
+def apply_gl_branch_filter(query, company_id: Optional[int] = None):
+    """يُطبَّق على استعلام يحتوي GLBatch في الـ join."""
+    branch_ids = resolve_branch_filter(company_id)
+    if branch_ids is None:
+        return query
+    if not branch_ids:
+        from models import GLBatch
+
+        return query.filter(GLBatch.id == -1)
+    return query.filter(gl_batch_branch_clause(branch_ids))
     """None = كل الفروع (لمن يملك view_all فقط)، [] = لا شيء، list = فروع."""
     from utils.company_scope import get_report_branch_ids
 

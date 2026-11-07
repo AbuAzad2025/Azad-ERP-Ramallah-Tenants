@@ -18,7 +18,7 @@ from models import (
 )
 from forms import SaleReturnForm, SaleReturnLineForm
 from utils import permission_required
-from permissions_config.enums import SystemPermissions
+from permissions_config.enums import SystemPermissions as SP
 from utils.company_scope import filter_sale_returns_query, assert_sale_access, assert_sale_return_access
 
 # إنشاء Blueprint

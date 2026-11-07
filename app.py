@@ -44,13 +44,23 @@ from config import Config, ensure_runtime_dirs, assert_production_sanity
 from extensions import db, migrate, login_manager, socketio, mail, csrf, limiter, cache, setup_logging, setup_sentry
 from extensions import init_extensions
 import utils
-from models import (
-    User, Role, Permission, Customer, SystemSettings, TenantRegistry,
-    PaymentStatus, PaymentDirection, PaymentMethod, PaymentEntityType,
-    SaleStatus, ShipmentStatus, ServiceStatus, WarehouseType,
-    OnlinePaymentStatus, OnlineCartStatus, PreOrderStatus, CheckStatus,
-    TransferDirection, TimesheetStatus, TaskStatus, EngineeringTaskStatus
-)
+try:
+    from models import (
+        User, Role, Permission, Customer, SystemSettings, TenantRegistry,
+        PaymentStatus, PaymentDirection, PaymentMethod, PaymentEntityType,
+        SaleStatus, ShipmentStatus, ServiceStatus, WarehouseType,
+        OnlinePaymentStatus, OnlineCartStatus, PreOrderStatus, CheckStatus,
+        TransferDirection, TimesheetStatus, TaskStatus, EngineeringTaskStatus
+    )
+except ImportError:
+    from models import (
+        User, Role, Permission, Customer, SystemSettings,
+        PaymentStatus, PaymentDirection, PaymentMethod, PaymentEntityType,
+        SaleStatus, ShipmentStatus, ServiceStatus, WarehouseType,
+        OnlinePaymentStatus, OnlineCartStatus, PreOrderStatus, CheckStatus,
+        TransferDirection, TimesheetStatus, TaskStatus, EngineeringTaskStatus
+    )
+    TenantRegistry = None
 
 from acl import attach_acl
 from permissions_config.blueprint_guards import get_blueprint_guard_config
@@ -82,7 +92,7 @@ from routes.supplier_settlements import supplier_settlements_bp
 from routes.ledger_blueprint import ledger_bp
 from routes.ledger_control import ledger_control_bp
 from routes.fiscal_periods import fiscal_periods_bp
-from routes.companies import companies_bp
+from routes.tenant_fiscal_periods import tenant_fiscal_bp
 from routes.purchases import purchases_bp
 from routes.accounting_hub import accounting_hub_bp
 from routes.payroll import payroll_bp
@@ -923,7 +933,6 @@ def _register_blueprints(app):
         barcode_scanner_bp,
         ledger_control_bp,
         fiscal_periods_bp,
-        companies_bp,
         purchases_bp,
         accounting_hub_bp,
         payroll_bp,
